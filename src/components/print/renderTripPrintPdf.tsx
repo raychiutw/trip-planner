@@ -31,11 +31,13 @@ export async function renderTripPrintPdf(opts: {
   data?: TripPrintData;
   /** Filename base when no `trip` is available (share page). */
   fileBase?: string;
-}): Promise<void> {
-  if (pdfInFlight) return;
+  onPhase?: (phase: 'preparing' | 'saving') => void;
+}): Promise<'saved' | 'busy'> {
+  if (pdfInFlight) return 'busy';
   pdfInFlight = true;
   const { tripId, trip } = opts;
   try {
+    opts.onPhase?.('preparing');
     if (!opts.data && !tripId) throw new Error('renderTripPrintPdf: tripId required when data is not provided');
     const data = opts.data ?? (await loadTripPrintData(tripId!));
     const html2pdf = (await import('html2pdf.js')).default;
@@ -46,18 +48,21 @@ export async function renderTripPrintPdf(opts: {
     style.textContent = `${PRINT_CSS}\n${PRINT_PDF_DOC_CSS}`;
     const container = document.createElement('div');
     container.style.cssText = 'position:absolute;left:-9999px;top:0;width:794px;background:#fff';
-    document.head.appendChild(style);
-    document.body.appendChild(container);
-
-    const root = createRoot(container);
+    let root: ReturnType<typeof createRoot> | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
+      document.head.appendChild(style);
+      document.body.appendChild(container);
+      const mountedRoot = createRoot(container);
+      root = mountedRoot;
       // flushSync forces a synchronous commit so the DOM is laid out before snapshot.
       flushSync(() => {
-        root.render(createElement(TripPrintDocument, { data }));
+        mountedRoot.render(createElement(TripPrintDocument, { data }));
       });
       // Small settle for font/layout finalization before html2canvas rasterizes.
       await new Promise((resolve) => setTimeout(resolve, 50));
       const target = (container.querySelector('.tp-print-doc') as HTMLElement) ?? container;
+      opts.onPhase?.('saving');
       // The print document is text + inline SVG only (no <img>), so useCORS is a
       // harmless default — there are no cross-origin images that could taint the canvas.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,10 +79,12 @@ export async function renderTripPrintPdf(opts: {
         .save();
       await Promise.race([
         pdfRun,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('PDF 產生逾時')), PDF_TIMEOUT_MS)),
+        new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('PDF 產生逾時')), PDF_TIMEOUT_MS); }),
       ]);
+      return 'saved';
     } finally {
-      root.unmount();
+      if (timeout) clearTimeout(timeout);
+      root?.unmount();
       container.remove();
       style.remove();
     }
