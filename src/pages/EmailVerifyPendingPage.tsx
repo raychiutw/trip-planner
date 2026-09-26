@@ -11,7 +11,7 @@
  *   - 「重寄」按鈕有 60s cooldown 防濫用 (前端 throttle，後端有 rate limit 層)
  *   - mobile：「打開信箱 App」mailto: deep link
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -79,6 +79,7 @@ ${AUTH_LAYOUT_STYLES}
   margin-bottom: 20px;
 }
 .tp-verify-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
+.tp-verify-recovery-row { text-align: left; margin-bottom: 12px; }
 
 /* .tp-btn family 移到 css/tokens.css 共用。EmailVerifyPending 用 .tp-btn-block .tp-btn-lg + margin-bottom:12 (per-button)。 */
 .tp-btn { margin-bottom: 12px; }
@@ -101,10 +102,15 @@ const COOLDOWN_SEC = 60;
 export default function EmailVerifyPendingPage() {
   const [params] = useSearchParams();
   const email = params.get('email') ?? '';
-  const [cooldownEndsAt, setCooldownEndsAt] = useState(() => Date.now() + COOLDOWN_SEC * 1000);
+  const hasKnownEmail = Boolean(email.trim());
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [cooldownEndsAt, setCooldownEndsAt] = useState(() => hasKnownEmail ? Date.now() + COOLDOWN_SEC * 1000 : 0);
   const [tick, setTick] = useState(0);
   const [resending, setResending] = useState(false);
-  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sent' | 'error' | 'rate_limited' | 'invalid_email'>('idle');
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
+  const recoveryInputRef = useRef<HTMLInputElement>(null);
+  const resendingRef = useRef(false);
 
   // Single 1Hz interval re-renders to update countdown; cleaner than chained setTimeout.
   // v2.33.47 round 7b LOW: pause on tab hidden — long-open tabs 沒必要 burn
@@ -141,10 +147,17 @@ export default function EmailVerifyPendingPage() {
   // Suppress unused-var lint; tick triggers re-render so cooldown recomputes
   void tick;
 
-  const safeEmail = useMemo(() => email.trim().toLowerCase(), [email]);
+  const safeEmail = (hasKnownEmail ? email : recoveryEmail).trim().toLowerCase();
+  const hasSentContext = hasKnownEmail || (sentEmail !== null && safeEmail === sentEmail);
 
   async function handleResend() {
-    if (cooldown > 0 || !safeEmail) return;
+    if (cooldown > 0 || !safeEmail || resendingRef.current) return;
+    if (recoveryInputRef.current && !recoveryInputRef.current.checkValidity()) {
+      setResendStatus('invalid_email');
+      recoveryInputRef.current.focus();
+      return;
+    }
+    resendingRef.current = true;
     setResending(true);
     setResendStatus('idle');
     try {
@@ -156,14 +169,20 @@ export default function EmailVerifyPendingPage() {
       // when mac mini SMTP fails (Q7 strict UX). Don't show "sent" if the
       // backend explicitly failed to deliver.
       if (res.ok) {
+        setSentEmail(safeEmail);
         setResendStatus('sent');
         setCooldownEndsAt(Date.now() + COOLDOWN_SEC * 1000);
+      } else if (res.status === 429) {
+        const retryAfter = Number(res.headers.get('Retry-After'));
+        setCooldownEndsAt(Date.now() + (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : COOLDOWN_SEC) * 1000);
+        setResendStatus('rate_limited');
       } else {
         setResendStatus('error');
       }
     } catch {
       setResendStatus('error');
     } finally {
+      resendingRef.current = false;
       setResending(false);
     }
   }
@@ -179,8 +198,8 @@ export default function EmailVerifyPendingPage() {
             <polyline points="22,6 12,13 2,6" />
           </svg>
         </div>
-        <h1 className="tp-verify-title">查看你的信箱</h1>
-        <p className="tp-verify-subtitle">我們已寄出驗證信到</p>
+        <h1 className="tp-verify-title">{hasSentContext ? '查看你的信箱' : '重新取得驗證信'}</h1>
+        <p className="tp-verify-subtitle">{hasSentContext ? '我們已寄出驗證信到' : '輸入註冊時使用的電子郵件，重新取得驗證信'}</p>
         <p className="tp-verify-email" data-testid="verify-email">{safeEmail || '（沒有電子郵件）'}</p>
 
         <div className="tp-verify-banner" role="status">
@@ -188,43 +207,73 @@ export default function EmailVerifyPendingPage() {
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          <div>連結 24 小時內有效。記得檢查垃圾信件夾。</div>
+          <div>驗證連結寄出後 24 小時內有效。記得檢查垃圾信件夾。</div>
         </div>
 
-        <a className="tp-btn tp-btn-primary" href="mailto:" data-testid="verify-open-mail">
+        {hasSentContext && <a className="tp-btn tp-btn-primary" href="mailto:" data-testid="verify-open-mail">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
           </svg>
           打開信箱
-        </a>
+        </a>}
 
-        <button
-          className="tp-btn"
-          onClick={handleResend}
-          disabled={cooldown > 0 || resending || !safeEmail}
-          data-testid="verify-resend"
-        >
-          {cooldown > 0
-            ? `重新寄送（${cooldown} 秒後可重寄）`
-            : resending
-              ? '寄送中…'
-              : '重新寄送驗證信'}
-        </button>
+        <form onSubmit={(e) => { e.preventDefault(); void handleResend(); }} noValidate>
+          {!hasKnownEmail && (
+            <div className="tp-form-row tp-form--auth tp-verify-recovery-row">
+              <label htmlFor="verify-recovery-email">電子郵件</label>
+              <input
+                ref={recoveryInputRef}
+                id="verify-recovery-email"
+                type="email"
+                autoComplete="email"
+                required
+                value={recoveryEmail}
+                disabled={resending}
+                onChange={(e) => { setRecoveryEmail(e.target.value); setResendStatus('idle'); }}
+                aria-invalid={resendStatus === 'invalid_email' ? true : undefined}
+                aria-describedby={resendStatus === 'invalid_email' ? 'verify-recovery-email-error' : undefined}
+              />
+            </div>
+          )}
+          <button
+            type="submit"
+            className="tp-btn"
+            disabled={cooldown > 0 || resending || !safeEmail}
+            aria-live="off"
+            data-testid="verify-resend"
+          >
+            {cooldown > 0
+              ? `重新寄送（${cooldown} 秒後可重寄）`
+              : resending
+                ? '寄送中…'
+                : '重新寄送驗證信'}
+          </button>
+        </form>
 
         {resendStatus === 'sent' && (
-          <p className="tp-verify-footer" data-testid="verify-resend-sent">
-            已重寄。請查看信箱。
+          <p className="tp-verify-footer" role="status" data-testid="verify-resend-sent">
+            若帳號仍需驗證，請查看信箱。
           </p>
         )}
         {resendStatus === 'error' && (
-          <p className="tp-verify-footer" style={{ color: 'var(--color-destructive)' }} data-testid="verify-resend-error">
+          <p className="tp-verify-footer" role="alert" style={{ color: 'var(--color-destructive)' }} data-testid="verify-resend-error">
             重寄失敗，請稍後再試。
           </p>
         )}
+        {resendStatus === 'rate_limited' && (
+          <p className="tp-verify-footer" role="alert" style={{ color: 'var(--color-destructive)' }}>
+            寄送次數過多，請等倒數結束後再試。
+          </p>
+        )}
+        {resendStatus === 'invalid_email' && (
+          <p id="verify-recovery-email-error" className="tp-verify-footer" role="alert" style={{ color: 'var(--color-destructive)' }}>
+            請輸入有效的電子郵件。
+          </p>
+        )}
 
-        <p className="tp-verify-footer">
+        {hasKnownEmail && <p className="tp-verify-footer">
           打錯電子郵件？<a href="/signup">改用其他信箱</a>
-        </p>
+        </p>}
         </div>
       </div>
 
@@ -236,7 +285,7 @@ export default function EmailVerifyPendingPage() {
           {
             icon: <polyline points="20,6 9,17 4,12" />,
             title: '驗證後立即可用',
-            desc: '點完連結會自動回到這個頁面，可以直接開始規劃旅程。',
+            desc: '驗證完成後可前往登入，接著開始規劃旅程。',
           },
           {
             icon: (

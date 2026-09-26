@@ -7,13 +7,12 @@
  * Flow:
  *   1. Mount: read token from query → idle state 顯示「點此完成驗證」button
  *   2. User click button → POST `/api/oauth/verify` with body { token }
- *   3. Success → navigate /login?verified=1
- *   4. Error → 顯示對應訊息 + 提供「重寄」/ 「回首頁」 button
- *   5. No-JS fallback: noscript <form> 直接 POST /api/oauth/verify
+ *   3. Success → 提供 /login?verified=1 的明確入口
+ *   4. Error → 顯示對應訊息 + 提供重試／重寄／登入出口
  *
  * Defense vs 舊 GET-with-side-effect (v2.33.59):
  *   - Email client image-preview 不會 silent consume
- *   - Token 不留 browser history (URL 改為 SPA path，POST body 帶 token)
+ *   - POST body 帶 token，結果導向登入時不再將 token 帶入下一頁
  *   - Referer leak 透過 POST body 不放 URL
  *
  * v2.33.114 — 拔 auto-POST，require user gesture:
@@ -25,7 +24,7 @@
  *   require user gesture，scanner headless render 不會自動 click button。
  */
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetchRaw } from '../lib/apiClient';
 
 type Status = 'idle' | 'verifying' | 'success' | 'error';
@@ -41,8 +40,11 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const token = searchParams.get('token') ?? '';
+  return <VerifyEmailFlow key={token} token={token} />;
+}
+
+function VerifyEmailFlow({ token }: { token: string }) {
   // v2.33.114: missing_token 在 mount 時就 derive 進 initial state（避免 useEffect setState 副作用）
   const [status, setStatus] = useState<Status>(token ? 'idle' : 'error');
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(token ? null : 'missing_token');
@@ -56,14 +58,14 @@ export default function VerifyEmailPage() {
         body: JSON.stringify({ token }),
         headers: { 'content-type': 'application/json' },
       });
-      const data = (await res.json()) as { ok?: boolean; error?: ErrorCode };
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (res.ok && data.ok) {
         setStatus('success');
-        // 短暫顯示成功，跳轉 /login?verified=1
-        setTimeout(() => navigate('/login?verified=1'), 1500);
       } else {
         setStatus('error');
-        setErrorCode(data.error ?? 'server_error');
+        setErrorCode(data.error && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, data.error)
+          ? data.error as ErrorCode
+          : 'server_error');
       }
     } catch {
       setStatus('error');
@@ -128,20 +130,20 @@ export default function VerifyEmailPage() {
         ) : null}
 
         {status === 'verifying' ? (
-          <p style={{ color: 'var(--color-muted)', margin: 0 }} data-testid="verify-email-status-verifying">
+          <p role="status" style={{ color: 'var(--color-muted)', margin: 0 }} data-testid="verify-email-status-verifying">
             驗證中…
           </p>
         ) : null}
 
         {status === 'success' ? (
           <>
-            <p style={{ color: 'var(--color-priority-low-dot)', fontWeight: 700, margin: 0 }}
+            <p role="status" style={{ color: 'var(--color-priority-low-dot)', fontWeight: 700, margin: 0 }}
                data-testid="verify-email-status-success">
               ✓ Email 驗證成功！
             </p>
-            <p style={{ color: 'var(--color-muted)', marginTop: 12, fontSize: 14 }}>
-              即將跳轉登入頁…
-            </p>
+            <Link to="/login?verified=1" style={{ display: 'inline-block', marginTop: 20, padding: '10px 18px', borderRadius: 'var(--radius-full)', background: 'var(--color-accent)', color: '#fff', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
+              前往登入
+            </Link>
           </>
         ) : null}
 
@@ -149,14 +151,15 @@ export default function VerifyEmailPage() {
           <>
             <p
               style={{ color: 'var(--color-priority-high-dot)', margin: 0, lineHeight: 1.5 }}
+              role="alert"
               data-testid={`verify-email-status-error-${errorCode}`}
             >
               {ERROR_MESSAGES[errorCode]}
             </p>
             <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {errorCode === 'expired' ? (
+              {errorCode === 'expired' || errorCode === 'missing_token' ? (
                 <Link
-                  to="/login"
+                  to="/signup/check-email"
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
@@ -168,7 +171,7 @@ export default function VerifyEmailPage() {
                   }}
                   data-testid="verify-email-resend-link"
                 >
-                  重新申請
+                  重新取得驗證信
                 </Link>
               ) : null}
               {errorCode === 'used' ? (
@@ -227,29 +230,6 @@ export default function VerifyEmailPage() {
           </>
         ) : null}
 
-        {/* No-JS fallback: form auto-submits via attribute, JS bypasses with apiFetchRaw above */}
-        <noscript>
-          <form action="/api/oauth/verify" method="POST" style={{ marginTop: 20 }}>
-            <input type="hidden" name="token" value={token} />
-            <button
-              type="submit"
-              style={{
-                padding: '12px 24px',
-                borderRadius: 'var(--radius-full)',
-                background: 'var(--color-accent)',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              點此驗證
-            </button>
-            <p style={{ marginTop: 12, color: 'var(--color-muted)', fontSize: 13 }}>
-              你目前未啟用 JavaScript — 請手動點按上方按鈕完成驗證。
-            </p>
-          </form>
-        </noscript>
       </div>
     </div>
   );
