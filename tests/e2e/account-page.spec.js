@@ -38,10 +38,78 @@ test.describe('AccountPage — Section 2', () => {
 
   test('外觀設定 row click → /account/appearance', async ({ page }) => {
     await page.goto('/account');
+    await expect(page.getByTestId('account-row-appearance')).toContainText('跟隨系統、淺色、深色');
     await page.getByTestId('account-row-appearance').click();
     await expect(page).toHaveURL(/\/account\/appearance$/);
     // AppearanceSettingsPage TitleBar
     await expect(page.getByRole('heading', { name: '外觀設定' })).toBeVisible();
+  });
+
+  test('手動淺色覆蓋系統深色變化，重載後仍維持偏好', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/account/appearance');
+    const light = page.getByTestId('appearance-theme-light');
+    await light.focus();
+    await page.keyboard.press('Enter');
+    await expect(light).toBeFocused();
+    await expect(light).toHaveAttribute('aria-pressed', 'true');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.waitForTimeout(100);
+    await expect(page.locator('body')).not.toHaveClass(/\bdark\b/);
+    await page.reload();
+    await expect(page.getByTestId('appearance-theme-light')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('body')).not.toHaveClass(/\bdark\b/);
+  });
+
+  test('三種外觀選項說明系統跟隨與固定模式', async ({ page }) => {
+    await page.goto('/account/appearance');
+    const group = page.getByRole('group', { name: '深淺模式' });
+    await expect(group.getByRole('button', { name: '淺色' })).toBeVisible();
+    await expect(group.getByRole('button', { name: '跟隨系統' })).toBeVisible();
+    await expect(group.getByRole('button', { name: '深色' })).toBeVisible();
+    await expect(page.getByText('跟隨系統會依裝置設定切換；淺色與深色會固定顯示。')).toBeVisible();
+  });
+
+  test('跟隨系統只在自動模式隨裝置深淺色變化', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto('/account/appearance');
+    const auto = page.getByTestId('appearance-theme-auto');
+    await auto.click();
+    await expect(auto).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('body')).not.toHaveClass(/\bdark\b/);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('body')).toHaveClass(/\bdark\b/);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect(page.locator('body')).not.toHaveClass(/\bdark\b/);
+
+    const dark = page.getByTestId('appearance-theme-dark');
+    await dark.click();
+    await expect(dark).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('body')).toHaveClass(/\bdark\b/);
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.waitForTimeout(100);
+    await expect(page.locator('body')).toHaveClass(/\bdark\b/);
+  });
+
+  test('帳號 sheet 的外觀選擇會立即套用並保留鍵盤焦點', async ({ page, viewport }) => {
+    await page.goto('/trips');
+    if (viewport && viewport.width < 1024) {
+      await page.getByTestId('titlebar-account').click();
+    } else {
+      await page.getByTestId('sidebar-account-card').click();
+    }
+    const sheet = page.getByRole('dialog', { name: '帳號' });
+    await sheet.getByTestId('account-row-appearance').click();
+    const dark = sheet.getByTestId('appearance-theme-dark');
+    await dark.focus();
+    await page.keyboard.press('Enter');
+    await expect(dark).toBeFocused();
+    await expect(dark).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('body')).toHaveClass(/\bdark\b/);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(page.locator('body')).toHaveClass(/\bdark\b/);
   });
 
   test('通知設定 row click → /account/notifications', async ({ page }) => {
