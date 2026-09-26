@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { showToast } from '../components/shared/Toast';
@@ -316,14 +316,16 @@ export default function AccountPage() {
   // ESC 取消還原。Enter blur (trigger save)。
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState('');
-  const [confirmedName, setConfirmedName] = useState<string | undefined>(undefined);
+  const [confirmedName, setConfirmedName] = useState<{ value: string | null; userAtSave: CurrentUser | null | undefined } | null>(null);
+  const currentName = confirmedName && confirmedName.userAtSave === user
+    ? confirmedName.value : user?.displayName;
   const [savingName, setSavingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   // 進入編輯前的快照 — ESC 還原 / 比對是否真的有改 (無改省 API call)
   const draftBaselineRef = useRef('');
 
   const startEditName = useCallback(() => {
-    const current = confirmedName ?? user?.displayName ?? '';
+    const current = currentName ?? '';
     setDraftName(current);
     draftBaselineRef.current = current;
     setEditingName(true);
@@ -332,7 +334,7 @@ export default function AccountPage() {
       nameInputRef.current?.focus();
       nameInputRef.current?.select();
     }, 0);
-  }, [confirmedName, user?.displayName]);
+  }, [currentName]);
 
   const cancelEditName = useCallback(() => {
     setDraftName(draftBaselineRef.current);
@@ -348,12 +350,12 @@ export default function AccountPage() {
     }
     setSavingName(true);
     try {
-      await apiFetch('/account/profile', {
+      const saved: CurrentUser = await apiFetch('/account/profile', {
         method: 'PATCH',
         body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
         headers: { 'content-type': 'application/json' },
       });
-      setConfirmedName(trimmed);
+      setConfirmedName({ value: saved.displayName, userAtSave: user });
       reloadUser();
       setEditingName(false);
       // v2.33.142: 成功 silent (user feedback 「右上角不用顯示狀態」一脈相承)。
@@ -366,7 +368,7 @@ export default function AccountPage() {
     } finally {
       setSavingName(false);
     }
-  }, [draftName, reloadUser]);
+  }, [draftName, reloadUser, user]);
 
   useEffect(() => {
     if (!auth.user) return;
@@ -458,8 +460,7 @@ export default function AccountPage() {
 
   // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
   // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。
-  const displayName = (confirmedName === undefined ? user.displayName : confirmedName)
-    || user.email.split('@')[0] || user.email;
+  const displayName = currentName || user.email.split('@')[0] || user.email;
   const initial = displayName.charAt(0).toUpperCase();
 
   // v2.54.10「依設定分區三色」(mockup V1)：每組設定一色，由 group.tone 驅動 row icon chip。

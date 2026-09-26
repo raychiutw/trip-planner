@@ -15,6 +15,8 @@ let preview: unknown;
 let deleteResponse: Response;
 let statsResponse: Response;
 let profileResponse: Response;
+let reloadUserReply: Promise<Response> | null;
+let userinfoReads: number;
 let previewResponse: Response | null;
 let previewReplies: Promise<Response>[];
 let requests: { path: string; method: string; body: string | null }[];
@@ -26,6 +28,8 @@ beforeEach(() => {
   deleteResponse = json({ error: { code: 'ACCOUNT_DELETE_PASSWORD_INVALID' } }, 401);
   statsResponse = json({ tripCount: 3, totalDays: 7, collaboratorCount: 1 });
   profileResponse = json({ ...user, displayName: 'New Ray' });
+  reloadUserReply = null;
+  userinfoReads = 0;
   previewResponse = null;
   previewReplies = [];
   resetToasts();
@@ -33,7 +37,10 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), 'https://test').pathname;
     requests.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? init.body : null });
-    if (path === '/api/oauth/userinfo') return json(user);
+    if (path === '/api/oauth/userinfo') {
+      userinfoReads += 1;
+      return userinfoReads > 2 && reloadUserReply ? reloadUserReply : json(user);
+    }
     if (path === '/api/account/stats') return statsResponse;
     if (path === '/api/account/profile' && init?.method === 'PATCH') return profileResponse;
     if (path === '/api/account' && init?.method === 'DELETE') return deleteResponse;
@@ -61,14 +68,19 @@ it('keeps profile available and labels stats unavailable when stats loading fail
   expect(screen.getByTestId('account-row-delete-account')).toBeEnabled();
 });
 
-it('shows the confirmed name before a slow userinfo refresh resolves', async () => {
+it('shows the PATCH-confirmed name, then the newer userinfo name after refresh', async () => {
+  profileResponse = json({ ...user, displayName: 'Server Ray' });
+  let resolveReload!: (response: Response) => void;
+  reloadUserReply = new Promise<Response>((resolve) => { resolveReload = resolve; });
   showAccount();
   fireEvent.click(await screen.findByTestId('account-edit-name-btn'));
   const input = await screen.findByTestId('account-edit-name-input');
   fireEvent.change(input, { target: { value: 'New Ray' } });
   await act(async () => { (input as HTMLInputElement).focus(); (input as HTMLInputElement).blur(); });
   await waitFor(() => expect(requests.some((request) => request.path === '/api/account/profile' && request.method === 'PATCH')).toBe(true));
-  expect(await screen.findByText('New Ray')).toBeVisible();
+  expect(await screen.findByText('Server Ray')).toBeVisible();
+  await act(async () => { resolveReload(json({ ...user, displayName: 'Concurrent Ray' })); });
+  expect(await screen.findByText('Concurrent Ray')).toBeVisible();
 });
 
 it('keeps a failed name edit retryable and restores focus to the input', async () => {
