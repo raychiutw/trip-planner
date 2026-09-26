@@ -15,7 +15,7 @@ import { requestTravelRecompute } from './travelRecompute';
 import { EVENT } from './events';
 
 export type MutationResult<T = unknown> =
-  | { ok: true; data: T; /** 車程重算是否成功；caller 可據此顯示 info toast。 */ recompute: Promise<boolean> }
+  | { ok: true; data: T; /** 車程重算是否成功；caller 可據此顯示 info toast。 */ recompute: Promise<boolean>; /** 只重試失敗的車程 scope，不重送 entry 寫入。 */ retryRecompute: () => Promise<boolean> }
   | { ok: false; status: number; message: string; /** 後端 error.code（STALE_ENTRY / DUPLICATE_POI…），caller 據此分流。 */ code?: string; /** 解析後的 error body（例：409 conflictWith）。 */ payload?: unknown };
 
 type DayNum = number | string | null | undefined;
@@ -27,10 +27,18 @@ function emit(detail: { tripId: string; entryId?: number | string; dayNum?: DayN
   window.dispatchEvent(new CustomEvent(EVENT.entryUpdated, { detail: d }));
 }
 
-function recompute(tripId: string, dayNums: DayNum[]): Promise<boolean> {
-  return Promise.all(dayNums.map((d) => requestTravelRecompute(tripId, d)))
-    .then(() => true)
-    .catch(() => false);
+function recompute(tripId: string, dayNums: DayNum[]): { initial: Promise<boolean>; retry: () => Promise<boolean> } {
+  let pending = dayNums;
+  const retry = async () => {
+    const scopes = pending;
+    const results = await Promise.allSettled(scopes.map((d) => requestTravelRecompute(tripId, d)));
+    pending = scopes.filter((_, i) => {
+      const result = results[i];
+      return result?.status === 'rejected' || (result?.status === 'fulfilled' && !!result.value?.errorsDetail?.length);
+    });
+    return pending.length === 0;
+  };
+  return { initial: retry(), retry };
 }
 
 const NO_RECOMPUTE = Promise.resolve(true);
@@ -70,10 +78,10 @@ async function call<T>(
     try { data = (await res.json()) as T; } catch { /* 空 body 也算成功 */ }
   }
   const entryId = after.entryId ?? after.entryIdFrom?.(data);
-  const rc = after.recompute ? recompute(after.tripId, after.dayNums) : NO_RECOMPUTE;
+  const rc = after.recompute ? recompute(after.tripId, after.dayNums) : { initial: NO_RECOMPUTE, retry: () => NO_RECOMPUTE };
   // 先觸發 recompute 再 emit：listener 的 refetch 才看得到 in-flight 狀態。
   for (const dayNum of after.dayNums.length ? after.dayNums : [undefined]) emit({ tripId: after.tripId, entryId, dayNum });
-  return { ok: true, data, recompute: rc };
+  return { ok: true, data, recompute: rc.initial, retryRecompute: rc.retry };
 }
 
 const enc = encodeURIComponent;
@@ -105,9 +113,13 @@ export function updateEntry<T = Record<string, unknown>>(tripId: string, entryId
 }
 
 /** PATCH /trips/:id/entries/:eid { day_id } —— 跨天搬移：來源日與目標日都要重算。 */
-export function moveEntry(tripId: string, entryId: number | string, to: { fromDayNum: DayNum; toDayNum: DayNum; toDayId: number; sortOrder?: number }): Promise<MutationResult> {
+export function moveEntry(tripId: string, entryId: number | string, to: { fromDayNum: DayNum; toDayNum: DayNum; toDayId: number; sortOrder?: number; time?: { start: string; end: string } }): Promise<MutationResult> {
   const body: Record<string, unknown> = { day_id: to.toDayId };
   if (to.sortOrder !== undefined) body.sort_order = to.sortOrder;
+  if (to.time) {
+    body.start_time = to.time.start;
+    body.end_time = to.time.end;
+  }
   return call(`/trips/${enc(tripId)}/entries/${entryId}`, { method: 'PATCH', body: JSON.stringify(body) },
     { tripId, entryId, dayNums: to.fromDayNum === to.toDayNum ? [to.toDayNum] : [to.toDayNum, to.fromDayNum], recompute: true });
 }
@@ -151,8 +163,8 @@ export function replaceMasterPoi(tripId: string, entryId: number | string, dayNu
 }
 
 /** POST /trips/:id/entries/:eid/copy —— 複製到目標天。只重算目標天。 */
-export function copyEntry(tripId: string, entryId: number | string, to: { targetDayId: number; targetDayNum: DayNum }): Promise<MutationResult<{ id?: number }>> {
-  return call<{ id?: number }>(`/trips/${enc(tripId)}/entries/${entryId}/copy`, { method: 'POST', body: JSON.stringify({ targetDayId: to.targetDayId }) },
+export function copyEntry(tripId: string, entryId: number | string, to: { targetDayId: number; targetDayNum: DayNum; time?: { start: string; end: string } }): Promise<MutationResult<{ id?: number }>> {
+  return call<{ id?: number }>(`/trips/${enc(tripId)}/entries/${entryId}/copy`, { method: 'POST', body: JSON.stringify({ targetDayId: to.targetDayId, ...(to.time ? { time: `${to.time.start} - ${to.time.end}` } : {}) }) },
     { tripId, entryId, dayNums: [to.targetDayNum], recompute: true });
 }
 

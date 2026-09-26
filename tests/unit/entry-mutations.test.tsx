@@ -115,6 +115,12 @@ describe('updateEntryPoi（備註／分類／訂位，不動車程）', () => {
 });
 
 describe('moveEntry（跨天）', () => {
+  it('選擇時段時將起訖時間與目標日一併寫入', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    await moveEntry('t1', 7, { fromDayNum: 1, toDayNum: 3, toDayId: 300, time: { start: '12:00', end: '13:30' } });
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ day_id: 300, start_time: '12:00', end_time: '13:30' });
+  });
+
   it('PATCH day_id → 來源日與目標日各 recompute 一次，emit 兩個 day', async () => {
     apiFetchRawMock.mockResolvedValueOnce(res(200));
     const L = listen();
@@ -124,6 +130,30 @@ describe('moveEntry（跨天）', () => {
     expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ day_id: 300 });
     expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1]]);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 7, dayNum: 3 }, { tripId: 't1', entryId: 7, dayNum: 1 }]);
+  });
+
+  it('寫入成功但目標日車程失敗時，只重試未完成 scope，不重送 PATCH', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    recomputeMock.mockRejectedValueOnce(new Error('target failed')).mockResolvedValue(null);
+    const result = await moveEntry('t1', 7, { fromDayNum: 1, toDayNum: 3, toDayId: 300 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await result.recompute).toBe(false);
+    expect(await result.retryRecompute()).toBe(true);
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1], ['t1', 3]]);
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('交通 API 回 200 但仍有未完成 pair 時，該日期可重試', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    recomputeMock.mockResolvedValueOnce({ errorsDetail: [{ entryId: 7, message: 'Google error' }] }).mockResolvedValue(null);
+    const result = await copyEntry('t1', 7, { targetDayId: 300, targetDayNum: 3 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await result.recompute).toBe(false);
+    expect(await result.retryRecompute()).toBe(true);
+    expect(recomputeMock).toHaveBeenCalledTimes(2);
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -187,6 +217,12 @@ describe('#1261 新增動詞', () => {
     expect(r).toMatchObject({ ok: true, data: { id: 77 } });
     expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ targetDayId: 300 });
     expect(recomputeMock.mock.calls).toEqual([['t1', 3]]);
+  });
+
+  it('copyEntry 選擇時段時傳給現有 copy endpoint', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    await copyEntry('t1', 42, { targetDayId: 300, targetDayNum: 3, time: { start: '09:00', end: '11:30' } });
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ targetDayId: 300, time: '09:00 - 11:30' });
   });
 
   it('moveEntriesBatch：PATCH /entries/batch，來源日與目標日各重算一次、各 emit 一次', async () => {
