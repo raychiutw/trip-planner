@@ -15,6 +15,7 @@ interface CapturedTpMapProps {
   focusId?: number;
   pinsByDay?: Map<number, unknown>;
   dayNum?: number;
+  zoomControlPosition?: string;
   onMarkerClick?: (id: number) => void;
 }
 
@@ -139,6 +140,11 @@ describe('MapPage overview runtime — fitBounds vs flyTo', () => {
     expect(last.pinsByDay).toBeInstanceOf(Map);
     expect(last.pinsByDay!.size).toBeGreaterThan(0);
     expect(last.dayNum).toBeUndefined();
+  });
+
+  it('keeps Google zoom controls on the opposite side from map action buttons', async () => {
+    await mountMapPage('/trip/test-trip/map?day=all');
+    expect(tpMapCalls[tpMapCalls.length - 1]!.zoomControlPosition).toBe('LEFT_CENTER');
   });
 
   it('?day=2: TpMap receives dayNum=2 and pinsByDay=undefined (single-day mode)', async () => {
