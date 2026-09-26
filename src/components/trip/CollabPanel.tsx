@@ -20,6 +20,7 @@ import type { CollabRole } from '../../types/api';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 import ConfirmModal from '../shared/ConfirmModal';
+import ErrorBanner from '../shared/ErrorBanner';
 
 type AddRole = 'member' | 'viewer';
 type EditableRole = 'member' | 'viewer'; // 可由 owner 切換的 role
@@ -343,12 +344,16 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
   const [email, setEmail] = useState('');
   const [addRole, setAddRole] = useState<AddRole>('member');
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
   const [changingRoleId, setChangingRoleId] = useState<number | null>(null);
+  const [roleError, setRoleError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{ id: number; email: string } | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeError, setRemoveError] = useState('');
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
   const [revokingEmail, setRevokingEmail] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState('');
 
   useEffect(() => {
     if (tripId) loadPermissions(tripId);
@@ -375,6 +380,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
   async function handleAdd() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || !tripId) return;
+    setAddError('');
     setAdding(true);
     try {
       const r = await apiFetchRaw('/permissions', {
@@ -404,7 +410,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         : errObj?.message ?? errObj?.detail ?? '新增失敗';
       throw new Error(errMsg);
     } catch (err) {
-      showToast((err as Error).message, 'error');
+      setAddError(`新增未完成：${(err as Error).message}。電子郵件已保留，請重試。`);
     } finally {
       setAdding(false);
     }
@@ -412,6 +418,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
 
   async function handleChangeRole(id: number, newRole: EditableRole) {
     setOpenMenuId(null);
+    setRoleError('');
     setChangingRoleId(id);
     try {
       const r = await apiFetchRaw(`/permissions/${id}`, {
@@ -429,7 +436,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       showToast(`已改為${labelMap[newRole]}`, 'success');
       loadPermissions(tripId);
     } catch (err) {
-      showToast((err as Error).message, 'error');
+      setRoleError(`角色未變更：${(err as Error).message}。請重試。`);
     } finally {
       setChangingRoleId(null);
     }
@@ -438,6 +445,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
   async function confirmRemove() {
     if (!removeTarget) return;
     const { id, email: permEmail } = removeTarget;
+    setRemoveError('');
     setRemovingId(id);
     try {
       const r = await apiFetchRaw(`/permissions/${id}`, { method: 'DELETE' });
@@ -452,7 +460,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       loadPermissions(tripId);
       setRemoveTarget(null);
     } catch (err) {
-      showToast((err as Error).message, 'error');
+      setRemoveError(`移除未完成：${(err as Error).message}。成員仍在清單中，請重試。`);
     } finally {
       setRemovingId(null);
     }
@@ -461,6 +469,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
   async function confirmRevokeInvite() {
     if (!revokeTarget) return;
     const invitedEmail = revokeTarget;
+    setRevokeError('');
     setRevokingEmail(invitedEmail);
     try {
       const r = await apiFetchRaw('/invitations/revoke', {
@@ -476,7 +485,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       loadPermissions(tripId);
       setRevokeTarget(null);
     } catch (err) {
-      showToast((err as Error).message, 'error');
+      setRevokeError(`撤銷未完成：${(err as Error).message}。邀請仍在清單中，請重試。`);
     } finally {
       setRevokingEmail(null);
     }
@@ -498,6 +507,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
       <p className="tp-collab-hint">
         共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。輸入對方的電子郵件，他們下次登入會在自己的行程列表看到。
       </p>
+      {roleError && <ErrorBanner message={roleError} />}
 
       <section className="tp-collab-section">
         <div className="tp-collab-section-head">
@@ -592,7 +602,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
                       className="tp-collab-remove"
                       aria-label={`移除 ${p.email}`}
                       disabled={removingId === p.id}
-                      onClick={() => setRemoveTarget({ id: p.id, email: p.email })}
+                      onClick={() => { setRemoveError(''); setRemoveTarget({ id: p.id, email: p.email }); }}
                       data-testid={`collab-remove-${p.id}`}
                     >
                       移除
@@ -638,7 +648,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
                     className="tp-collab-remove"
                     aria-label={`撤銷對 ${inv.invitedEmail} 的邀請`}
                     disabled={revokingEmail === inv.invitedEmail}
-                    onClick={() => setRevokeTarget(inv.invitedEmail)}
+                    onClick={() => { setRevokeError(''); setRevokeTarget(inv.invitedEmail); }}
                     data-testid={`pending-revoke-${inv.invitedEmail}`}
                   >
                     撤銷
@@ -654,6 +664,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         <div className="tp-collab-section-head">
           <span className="tp-collab-section-title">新增成員</span>
         </div>
+        {addError && <ErrorBanner message={addError} testId="collab-add-error" />}
         <div className="tp-collab-add">
           <div className="tp-collab-add-row">
             <input
@@ -704,7 +715,9 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         busy={removingId !== null}
         onConfirm={() => void confirmRemove()}
         onCancel={() => setRemoveTarget(null)}
-      />
+      >
+        {removeError && <ErrorBanner message={removeError} testId="collab-remove-error" />}
+      </ConfirmModal>
       <ConfirmModal
         open={!!revokeTarget}
         title="撤銷邀請"
@@ -713,7 +726,9 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         busy={revokingEmail !== null}
         onConfirm={() => void confirmRevokeInvite()}
         onCancel={() => setRevokeTarget(null)}
-      />
+      >
+        {revokeError && <ErrorBanner message={revokeError} testId="collab-revoke-error" />}
+      </ConfirmModal>
     </div>
   );
 }

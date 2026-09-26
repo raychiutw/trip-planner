@@ -25,6 +25,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import OperationShell from '../components/shell/OperationShell';
 import CollabPanel from '../components/trip/CollabPanel';
 import ToastContainer from '../components/shared/Toast';
+import PageErrorState from '../components/shared/PageErrorState';
 
 const SCOPED_STYLES = `
 .tp-collab-shell {
@@ -58,24 +59,35 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   line-height: 1.55;
 }
-.tp-collab-page-state button {
-  margin-left: 8px;
+.tp-collab-page-error {
+  max-width: 720px;
+  margin: 24px 16px;
+  padding: 20px 16px;
+  border: 1px solid var(--color-destructive);
+  border-radius: var(--radius-md);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
+}
+.tp-collab-page-error-title { margin: 0 0 8px; font-weight: 700; }
+.tp-collab-page-error-desc { margin: 0 0 16px; line-height: 1.55; }
+.tp-collab-page-error-btn {
   min-height: var(--spacing-tap-min);
   padding: 0 16px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-destructive);
   border-radius: var(--radius-full);
   background: var(--color-background);
-  color: var(--color-foreground);
+  color: var(--color-destructive);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
-.tp-collab-page-state button:focus-visible {
+.tp-collab-page-error-btn:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 @media (min-width: 768px) {
   .tp-collab-page-title { font-size: var(--font-size-title); padding: 32px 24px 0; }
+  .tp-collab-page-error { margin: 24px auto; }
 }
 `;
 
@@ -158,10 +170,13 @@ export default function CollabPage() {
         {tripName ? <h2 className="tp-collab-page-title">{tripName}</h2> : null}
         {!current && <div className="tp-collab-page-state">正在確認行程…</div>}
         {current?.error && (
-          <div className="tp-collab-page-state" role="alert">
-            {current.error}（ID：{tripId}）{' '}
-            <button type="button" onClick={() => setRetry((value) => value + 1)}>重試</button>
-          </div>
+          <PageErrorState
+            className="tp-collab-page-error"
+            title="無法確認行程"
+            message={`${current.error}（ID：${tripId}）`}
+            onRetry={() => setRetry((value) => value + 1)}
+            testId="collab-page-error"
+          />
         )}
         {trip?.role === 'owner' && (
           <>
