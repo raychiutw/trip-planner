@@ -116,8 +116,9 @@ describe('AddCustomStopPage public form', () => {
     openPage();
     const address = screen.getByRole('combobox', { name: '地址或地標' });
     fireEvent.change(address, { target: { value: '東京塔-1326' } });
-    await screen.findByRole('option', { name: /東京塔/ });
+    const option = await screen.findByRole('option', { name: /東京塔/ });
     fireEvent.keyDown(address, { key: 'ArrowDown' });
+    await waitFor(() => expect(option).toHaveAttribute('aria-selected', 'true'));
     fireEvent.keyDown(address, { key: 'Enter' });
     await screen.findByText(/無法取得此地址的位置/);
     expect(screen.getByRole('button', { name: '完成' })).toBeDisabled();
