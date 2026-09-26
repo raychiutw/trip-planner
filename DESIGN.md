@@ -1,7 +1,21 @@
 # Design System — Tripline（V2 柔褐三色）
 
-> **🍎 Apple HIG＝UI/UX SoT（2026-07-23，grill v2 owner 拍板）。** 手機 iOS／桌機 macOS 的 IA、互動、色彩、材質、a11y 以 Apple HIG 為最終依據；**本文件（`DESIGN.md`）為衍生、須對齊 HIG**，衝突以 HIG 為準（先討論再改）。合規計畫（spec + 16 W-tickets + grill v2 五決策）：`docs/plans/apple-hig-compliance/`（**W0–W15 全 2026-07-24 ship 收官**，交付狀態表見 `tickets.md`）。**品牌保留例外**（HIG 允許、不對齊）：terracotta 受控 tint、Inter web font、timeline editorial no-glass。**此 effort 不使用 mockup 流程。**
+> **設計來源與適用範圍**：這是 Web/PWA。網頁的可測驗收以 [WCAG 2.2](https://www.w3.org/TR/WCAG22/) 的適用成功準則為準；Apple HIG 是 iOS/mobile 與 macOS/desktop 互動的設計參考，不能把 native pt 數值或平台 API 直接當成 Web/CSS 要求。`DESIGN.md` 記錄本專案已拍板的版面、品牌與高於標準的目標；`css/tokens.css` 是現行 token 值的權威。若來源衝突，先辨明「網頁要求／原生建議／owner 決策」並討論，不默默覆寫 owner 決策。具體口徑見下方「Web 設計驗收與來源」。
+> **歷史決策（2026-07-23，grill v2）**：owner 採 Apple HIG 作為平台互動方向，合規計畫見 `docs/plans/apple-hig-compliance/`（W0–W15 已完成）。品牌例外為 terracotta 受控 tint、Inter web font、timeline editorial no-glass。**該已完成 effort 的 mockup 豁免只適用當時工作；新 page/component 有 layout 變化仍須依 `AGENTS.md` 先做可比較 `/prototype`、取得 user sign-off。**
 > grill v2 五決策：① 平台模型 **C**（web 鏡像 app #82，桌機輸入走 macOS）｜② IA **4-tab + 帳號 header sheet**（supersede 同日 #1120 五-tab）｜③ 色彩 **system 語意色底 + terracotta 受控 tint**｜④ 刪除 **無 undo + server-confirm-before-remove + 高影響 reauth**｜⑤ 平台翻譯 SF-風描邊 icon／`backdrop-filter` glass+fallback／省 haptic／系統返回／留 Inter。
+
+## Web 設計驗收與來源
+
+| 問題 | 官方來源與適用範圍 | Tripline 的執行方式 |
+|---|---|---|
+| 指標尺寸 | [Apple HIG Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) 表列 iOS/iPadOS **預設 44×44 pt、最小 28×28 pt**；macOS **預設 28×28 pt、最小 20×20 pt**。這些是原生 point，不是 CSS pixel。[WCAG 2.2 2.5.8](https://www.w3.org/TR/WCAG22/#target-size-minimum) 的 Web AA 門檻為 **24×24 CSS px**，附 spacing、equivalent、inline 等例外；[2.5.5](https://www.w3.org/TR/WCAG22/#target-size-enhanced) 的 **44×44 CSS px 是 AAA**，亦有例外。 | 既有 mobile 主操作 **44×44 CSS px** 是 owner 採用的舒適度目標，非一項 HIG/WCAG AA「最小值」。小圖示可有較大的實際 hit area；對低於目標的既有例外，逐項驗 WCAG 2.5.8 的尺寸、間距或等效入口，不能因稱作 drag handle 就自動豁免。桌機也驗 Web AA，並依密度與操作情境採用已拍板的設計值。 |
+| 文字與圖形對比 | [WCAG 2.2 1.4.3](https://www.w3.org/TR/WCAG22/#contrast-minimum)：AA 一般文字 **4.5:1**，大字 **3:1**；[large scale 定義](https://www.w3.org/TR/WCAG22/#dfn-large-scale) 為至少 **18 pt** 或 **14 pt bold**（CJK 可用等效尺寸），不能套成「任何 bold 都 3:1」。[1.4.11](https://www.w3.org/TR/WCAG22/#non-text-contrast)：辨識 UI 元件／狀態或理解內容所必需的圖形 **3:1**，純裝飾不在此範圍。[Apple HIG Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility) 的 native 對比表另列 bold 3:1；它是 Apple app 指引，不取代 Web 門檻。 | Web 交付按實際字體大小、粗細、背景與用途驗 WCAG AA；品牌文字、插畫附帶文字和圖示逐項判斷是否屬 logo、裝飾或承載資訊。`5.0:1` 是部分 token 的內部安全邊際，非標準。已核准但低於 Web 門檻的視覺例外要記錄替代資訊和待決風險，不得宣稱合規。 |
+| 鍵盤焦點 | [WCAG 2.2 2.4.7](https://www.w3.org/TR/WCAG22/#focus-visible) 要求可見焦點（AA）；[2.4.11](https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum) 要求焦點不完全被遮住（AA）；[2.4.13](https://www.w3.org/TR/WCAG22/#focus-appearance) 的幾何／對比是 AAA。辨識焦點所必需的視覺資訊亦依 [1.4.11](https://www.w3.org/TR/WCAG22/#non-text-contrast) 檢查。 | 保留現行 `--color-focus-ring` 與 2px outline/offset 的 owner 選擇，驗證各背景與縮放下可見且不被遮住；不要稱作者自訂 CSS outline 為「系統效果」或把 2.4.13 說成 AA。 |
+| 地圖歸因 | [Google Maps JavaScript API policies](https://developers.google.com/maps/documentation/javascript/policies) 要求保留、不得遮蔽 Maps 內建歸因；Google Map 已可見歸因時無須另加一份。 | 版面、玻璃層與浮動 controls 不得蓋住內建 Google Maps logo／文字歸因；地圖內容在非 Google Map 呈現時另按來源政策檢查。 |
+
+**視覺範例的角色**：AI 產生的示意圖片只能幫助討論，不能當視覺 SoT 或照圖複製。實作以 owner 已核准的 mockup、此文件、現行 tokens 及可測的 Web 行為為準；檢視真實 mobile/desktop、字級縮放、對比、焦點、目標尺寸與地圖歸因。維持下方已拍板的暖色 editorial 方向與品牌例外，不以示意圖新增另一套風格政策。新 layout 依 `AGENTS.md` 的 prototype gate。
+
+**待決／逐頁驗證**：`LandingPage` 插畫白色數字的低對比已由 owner 選擇保留（下方 Day palette 記錄），但應按該 SVG 在實際頁面的語意與 WCAG 1.4.3 適用例外另行判定，不能僅憑 `aria-label` 宣稱視覺對比通過。24px drag handle、`prefers-contrast: more` 自訂色（#1176）與各地圖 overlay 對歸因的遮擋也須在實際頁面驗證。本票不更改上述已拍板視覺或替 owner 核准新的豁免。
 
 ## Product Context
 - **What this is:** 行程共享網站 — 旅伴可以瀏覽精美行程表（時間軸、餐廳推薦、飯店、地圖導航）
@@ -49,9 +63,9 @@
 >
 > **取值口徑**：淺色降亮度到「疊頁面底 `#FFFBF5` 與列印底 `#FFFFFF` 兩者的較差值 ≥5.0」；深色方向相反要更淺，且**原色有 9/10 本來就達標**（疊 `#1C1C1E`：lime 8.61…rose 4.63），只有 violet 4.02 真不足，故深色多數維持原值以保住與 polyline 的一致性，僅把 rose/violet/fuchsia 三顆往白插值到 ≥5.0。逐色數字寫在 `css/tokens.css` 的 `--day-text-*` 區塊，守衛在 `tests/unit/day-palette-text.test.ts`。
 >
-> ⚠️ **`5.0` 是本專案的內部安全邊際，不是任何標準的門檻，不得當成合規事實引用。** Apple HIG Accessibility 的表格是 `≤17pt 全部 4.5:1` / `18pt 全部 3:1` / `任何尺寸的 Bold 3:1`；WCAG 2.2 是 `4.5` / `3`。**`5.0` 在 HIG 與 WCAG 都不存在。** 之所以抓 5.0，純粹是因為貼著 4.5 的值在底色微調時會靜默掉到門檻以下，而這個 repo 已經因此痛過（見 §Color Approach 的對比雙軌）。
+> ⚠️ **`5.0` 是本專案的內部安全邊際，不是任何標準的門檻，不得當成合規事實引用。** Web 的 3:1 大字資格依上方 WCAG 1.4.3 的 large-scale 定義；Apple HIG 的 native bold 表格不能套到任何大小的 Web 粗體字。之所以抓 5.0，純粹是因為貼著 4.5 的值在底色微調時會靜默掉到門檻以下，而這個 repo 已經因此痛過（見 §Color Approach 的對比雙軌）。
 >
-> 🔴 **不要用「某個既有 token 只有 4.2、不到 5.0」當作必須新造 token 的理由** —— 那是把內部邊際講成合規需求。2026-07-26 的 #1176 評估就犯過這個錯：拿「`--color-success-deep` 只有 4.12」推導出要新增兩顆 token，但 4.12 對 bold 文字在 HIG 表下本來就過。**先確認標準門檻，再談邊際。**
+> 🔴 **不要用「某個既有 token 只有 4.2、不到 5.0」當作必須新造 token 的理由** —— 那是把內部邊際講成合規需求。#1176 的歷史評估曾以 Apple HIG 的 native bold 表格討論 11px 粗體；Web 文字仍須按上方 WCAG 1.4.3 判定，4.12:1 的 11px 粗體未達一般文字 4.5:1。**先確認適用標準，再談邊際與修法。**
 >
 > ⚠ **`num` 的對比 e2e 掃不到**：day 序號在行程 ≤9 天時是單一字元，axe 的 color-contrast 對 1 字元元素一律歸 incomplete（`messageKey: shortTextContent`），而 e2e 只讀 violations。它只能靠上述單元守衛，別以為 e2e 全綠就代表沒問題（同 §Color Approach 記的 accent 徽章盲區，這是第二現場）。
 
@@ -308,7 +322,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Token | Value | 用途 |
 |-------|-------|------|
 | padding-h | 16px compact / 24px desktop | 標準頁面水平 padding |
-| tap-min | 44px | 最小觸控目標（Apple HIG） |
+| tap-min | 44px | 本專案 mobile 主操作的 CSS hit-area 目標；HIG 原生 pt 與 WCAG Web AA 分見「Web 設計驗收與來源」 |
 | page-max-w | 1440px | 桌面頁面最大寬 |
 | content-max-w | 1040px | 一般內容頁最大寬度；地圖頁例外可 full bleed |
 | info-panel-w | 320px | 桌面版側邊資訊欄參考寬度 |
@@ -324,7 +338,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 ### Unified App Shell
 > **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
 - **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 —— **4-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**帳號移出 tab slot**：手機 header 右上 `person.crop.circle` 圓圈 → 開有自己 Navigation Stack 的 **Account sheet**（關閉回原頁原狀態、deep-link 相容）；桌機 sidebar 左下 account chip → 同 Account sheet／popover。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
-  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82；Apple HIG 為 UI/UX SoT）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— 兩者皆以 HIG 為由，owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈放大到 44pt（原 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
+  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
@@ -335,7 +349,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **Map exception:** 地圖頁可 full bleed，仍保留統一 sidebar / titlebar / bottom nav 行為。
 - **Trip detail DayNav:** sticky 在 titlebar 下方，**常駐不隨捲動隱藏**（與 bottom nav 同 2026-07-21 決策）。
 - **Trip detail source:** 行程明細頁 desktop / compact 必須共用同一個內容結構與狀態來源；只允許外層 layout responsive，避免兩套明細頁造成行為與 UI 漂移。
-- **Operation stacking（rev2，v2.55.96）:** 6 條操作流程（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）在**桌機（≥1024）以右欄堆疊面板**呈現、**不是整頁**：`TripStackLayout`（pathless layout route，包 6 條操作路由）render 三欄 host（sidebar｜`<TripPage noShell>` 中欄行程詳情｜右欄 sheet = 操作面板），操作面板走 `OperationShell` bare 形態（`StackPanelHeader` = `‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留。**堆疊層級語意（rev2 F9，mockup `layer.l2/l3`）**：桌機**第一層**（從 timeline / ⋯ menu 進的操作，L2 modal）**只給右上「✕」關閉、不給「‹」**；**從另一操作 push 進來**（如 編輯景點 →「變更景點」，L3+）才左上「‹」回前頁 + 右上「✕」。操作是 route-swap（`SheetStackContext` 只有 `inStack` boolean、無真 component stack），故靠 `navigate` 帶 `state.depth`（L3 push 時 +1；EditEntry→ChangePoi 帶 depth:2）標記層級；`OperationShell` 的 `showBack = !inStack || depth>1`（手機全頁下鑽一律 ‹+✕）。**‹ 的 Back 語意（G-S1「Back moves one level」）**：`depth>1` → `navigate(-1)` 退回上一操作頁（委派瀏覽器 history，與 back/forward 同步）；`depth≤1`（手機 L2 / deep-link 冷啟）→ 頁自帶 explicit `back`（回 trip，**不** navigate(-1) → 不踢出 app；depth gate 避開 v2.33.139 移除 blanket navigate(-1) 的 footgun）。`✕`=closeStack 回 trip。**`StackPanelHeader` ‹/✕ 皆 44pt**（G-H6a HIG 觸控區）。**手機（<1024）維持整頁 drill-down**（`OperationShell` render `AppShell + TitleBar`）。URL 不變（`/trip/:id/*`），deep-link 不破。
+- **Operation stacking（rev2，v2.55.96）:** 6 條操作流程（加景點 / 新增 / 複製移動 / 換景點 / 編輯景點 / 編輯行程）在**桌機（≥1024）以右欄堆疊面板**呈現、**不是整頁**：`TripStackLayout`（pathless layout route，包 6 條操作路由）render 三欄 host（sidebar｜`<TripPage noShell>` 中欄行程詳情｜右欄 sheet = 操作面板），操作面板走 `OperationShell` bare 形態（`StackPanelHeader` = `‹` 前一頁 / `✕` 整個關閉），中欄詳情 context 全程保留。**堆疊層級語意（rev2 F9，mockup `layer.l2/l3`）**：桌機**第一層**（從 timeline / ⋯ menu 進的操作，L2 modal）**只給右上「✕」關閉、不給「‹」**；**從另一操作 push 進來**（如 編輯景點 →「變更景點」，L3+）才左上「‹」回前頁 + 右上「✕」。操作是 route-swap（`SheetStackContext` 只有 `inStack` boolean、無真 component stack），故靠 `navigate` 帶 `state.depth`（L3 push 時 +1；EditEntry→ChangePoi 帶 depth:2）標記層級；`OperationShell` 的 `showBack = !inStack || depth>1`（手機全頁下鑽一律 ‹+✕）。**‹ 的 Back 語意（G-S1「Back moves one level」）**：`depth>1` → `navigate(-1)` 退回上一操作頁（委派瀏覽器 history，與 back/forward 同步）；`depth≤1`（手機 L2 / deep-link 冷啟）→ 頁自帶 explicit `back`（回 trip，**不** navigate(-1) → 不踢出 app；depth gate 避開 v2.33.139 移除 blanket navigate(-1) 的 footgun）。`✕`=closeStack 回 trip。**`StackPanelHeader` ‹/✕ 皆有 44 CSS px hit area**（專案目標，見 Web 驗收表）。**手機（<1024）維持整頁 drill-down**（`OperationShell` render `AppShell + TitleBar`）。URL 不變（`/trip/:id/*`），deep-link 不破。
   - **手機的堆疊層級語意（2026-07-23 補齊；原本此段只規範桌機）**：手機不像桌機能「第一層只給 ✕」—— 因為整頁下鑽時使用者需要一個明確的返回。現況是 `showBack` 在手機恆真（‹ 與 ✕ 都顯），但**10/11 條操作路由的 ‹ 與 ✕ 落在同一個目的地**（都回 `/trips?selected=:id`，只差 push/replace），兩顆鈕語意無法區分。**判定為落差**（wayfinder map #1110，P0-5）：手機第一層應收斂為單一返回鍵（回行程詳情），只有從另一操作 push 進來（depth>1）才同時給「‹ 回上一操作」與「✕ 回行程」。**本輪只立規範，收斂實作屬後續變更**（會牽動 `OperationShell` 的 `showBack` 與各頁 explicit `back`）。新操作頁一律用 `OperationShell` 取代 hardcode `<AppShell>+<TitleBar>`，並把路由掛進 `TripStackLayout` group 才會有右欄堆疊行為。`.tp-page-bottom-bar` 在 sheet 內須 `sticky`（非整頁 `fixed`）以收進 panel 寬度。
 
 ### Content Width
@@ -418,7 +432,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   - 左側: 36×36 chevron-left back button + `aria-label`（或 §10.5 的 labeled 返回）
   - 中間: page identity (「共編設定」/「探索」)
   - 右側: optional primary confirm action (「儲存」/「完成」)
-  - ⚠️ **操作面板（編輯行程 / 加景點 / 換景點…）已不走這套** —— 它們改用 `StackPanelHeader`（`‹` 前一層 / `✕` 整個關閉，兩者皆 44pt、無右側 confirm slot、完成鈕走 children 內 `.tp-page-bottom-bar`），見上「Operation stacking / Operation drill-down」段。此處「第二層 = form 全頁」的舊描述僅適用**未納入 `TripStackLayout` group 的獨立子頁**；納入 group 的操作以 Operation stacking 段為準（2026-07-23 標註分界）。
+  - ⚠️ **操作面板（編輯行程 / 加景點 / 換景點…）已不走這套** —— 它們改用 `StackPanelHeader`（`‹` 前一層 / `✕` 整個關閉，兩者皆有 44 CSS px hit area、無右側 confirm slot、完成鈕走 children 內 `.tp-page-bottom-bar`），見上「Operation stacking / Operation drill-down」段。此處「第二層 = form 全頁」的舊描述僅適用**未納入 `TripStackLayout` group 的獨立子頁**；納入 group 的操作以 Operation stacking 段為準（2026-07-23 標註分界）。
 
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
@@ -939,7 +953,7 @@ v2.57.70 依此修了三處：`AccountSheet`（宣告了但只有一個 window E
 | Backdrop animation | 150ms fade-in |
 | Modal animation | 200ms slide-up + scale (98% → 100%) |
 | Button radius | `--radius-full` (pill) |
-| Button min-height | 44px (Apple HIG tap target) |
+| Button min-height | 44 CSS px（本專案目標；見「Web 設計驗收與來源」） |
 | Cancel button bg | `--color-secondary` + 1px `--color-border` |
 | Cancel hover | `--color-hover` |
 | Confirm focus ring | `2px outline` + `2px offset` —— ✅ 這是 §Focus Indicator 拍板的寫法 |
@@ -1035,9 +1049,9 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 | 項目 | 規定 | 依據 |
 |---|---|---|
-| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | **HIG**：「Rely on system-provided focus effects … Consider creating custom focus effects only if it's absolutely necessary.」`outline` 就是系統機制本身 |
-| **禁止** | `outline: none` 之後用 `box-shadow` 自畫環 | 同上 —— 這正是 HIG 勸阻的「殺掉系統效果再自畫」。被殺掉的那個環是接使用者 System Settings accent 與 Full Keyboard Access 偏好的那一個 |
-| **顏色** | `--color-focus-ring`（已落地，值見下方表），**不是** `--color-accent` | **HIG** Color 的 macOS 動態系統色表把 `Keyboard focus indicator color` 與 `Control accent` 列為兩個分開的條目 |
+| **機制** | `outline: 2px solid var(--color-focus-ring); outline-offset: 2px`（**offset 必須為正** —— 見下方負值失效模式） | 本專案的 Web/CSS 實作選擇；CSS outline 仍是作者定義的樣式，不等同 Apple 原生系統焦點效果。驗 WCAG 2.4.7、2.4.11 與適用對比要求 |
+| **禁止** | `outline: none` 後沒有等效且可見的焦點指示 | WCAG 2.4.7；本專案避免以單一 `box-shadow` 取代現行 outline，因其已在下列背景案例失效。這是實測與 owner 選擇，不是 Apple 對 CSS 的禁令 |
+| **顏色** | `--color-focus-ring`（已落地，值見下方表），**不是** `--color-accent` | 本專案 token 角色分離；Apple macOS 色彩語意提供設計參考，Web token 不會自動跟隨 macOS 系統設定 |
 | **幾何** | `2px` / `offset 2px` | ⚠️ **專案選擇，不是 HIG 規定** —— 整份 HIG `focus-and-selection` 對 thickness／offset／色值完全沉默。要改數值不必找 HIG 依據，但要一起改 |
 | **對比** | 焦點指示器對相鄰色 ≥ `3:1` | **WCAG 1.4.11 Non-text Contrast（AA）**。`outline-offset` 天生留間隙、露出的是**父層底色**，所以只要驗父層一種底色即可 |
 | **清單／集合** | 用 highlight（選取態底色），不要 ring | **HIG**：「use a focus ring for a text or search field, but **use a highlight in a list or collection**」。`.tp-map-day-tab`、entry card 屬於 collection |
@@ -1046,7 +1060,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 
 被否決的是 `outline: none` + `box-shadow: var(--shadow-ring)`。兩個獨立理由：
 
-1. **HIG 明文勸阻**（上表「禁止」列）—— 這是拍板的主因，不是對比數字。
+1. **既有 owner 選擇**是保留明顯的焦點框；把 Apple 原生焦點建議直接當作 Web `box-shadow` 禁令並不準確。
 2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。
 
 第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
@@ -1086,12 +1100,11 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 深色刻意**不用** `--color-accent`（`#CBA06E`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
 
 ## Accessibility
-- **Touch target:** 最小 44×44px (Apple HIG)
-  - Exception: drag handles (e.g. `.ocean-rail-grip`) 24×24px — 跟 row 主點擊區並存時避免 click target 衝突，以 `:focus-visible` ring + 持續可見 opacity 補 a11y
-- **Color contrast:** 依門檻表，不是一律 4.5 —— **`≤17pt` 全部 `4.5:1`／`18pt` 全部 `3:1`／任何尺寸的 **Bold** `3:1`**（Apple HIG Accessibility 表；WCAG 2.2 是 `4.5` / `3`）。非文字 UI 元件走 `3:1`（WCAG 1.4.11）。持續驗證的重點是 muted text（light `#6F5A47` / dark `#A1A1A6`）。
-  > ⚠️ **2026-07-26 更正兩處**：(a) 原寫「文字對比度 WCAG AA 4.5:1」，一律 4.5 會把大字與 Bold 誤判成不合格 —— 這正是 §Palette 記的 #1176 事故機制（拿「某 token 只有 4.12」推導出必須新造 token，而該處是 11px **Bold**、門檻其實是 3:1）。(b) dark muted 原寫 `#B5A08A`，實際是 `#A1A1A6`（本檔 §Dark Mode 表另有第三個值 `#B89E84`，也已一併更正）。**`5.0` 是本專案內部安全邊際，不是任何標準的門檻，不得當合規事實引用。**
+- **Touch target:** mobile 主操作以 44×44 CSS px 為本專案目標；Web AA 的 24×24 CSS px 與例外、Apple native 預設／最小 pt 值見「Web 設計驗收與來源」。
+  - 既有 drag handle（如 `.ocean-rail-grip`）若 hit area 為 24×24 CSS px，須逐項驗 WCAG 2.5.8 與鍵盤焦點；它不是對 44px 專案目標的通用豁免。
+- **Color contrast:** Web 以 WCAG 2.2 1.4.3/1.4.11 為驗收；一般文字 4.5:1、符合 large-scale 定義的大字 3:1，必要的非文字 UI／圖形 3:1。**11px bold 不因粗體自動降到 3:1**。持續驗證 muted text（light `#6F5A47` / dark `#A1A1A6`）；`5.0` 是內部安全邊際，不是合規門檻。
 - **Focus:** 所有互動元素 SHALL 有可見的鍵盤焦點指示。**拿掉 `outline` 就一定要補等效的替代指示** —— 不能只拿掉卻不補（那會讓純鍵盤使用者無法定位）。例外：表單輸入（`input`/`textarea`/`select`）以文字游標 + `border-color` 變化當焦點指示。〔本條的「不得無指示」意圖遷自已歸檔的 `css-hig-discipline` spec；曾於 `8ead450b` 被整段移除只留 `outline: none`，判定為誤刪、已補回〕
-  > ⚠️ **2026-07-26 更正**：本條原本把**機制**寫死成「SHALL 同時宣告 `box-shadow: var(--shadow-ring)`」。**意圖對、機制不該寫死** —— 那個寫法正是同檔 §Focus Indicator 判定為缺陷的「慣例 A」（疊 `--color-accent-fill` 實測淺色 1.46:1、深色 1.00:1，違反 WCAG 1.4.11），而且 HIG Accessibility 明文「**Rely on system-provided focus effects.** … Consider creating custom focus effects only if it's absolutely necessary」—— `outline: none` + 自畫 box-shadow 正是被勸阻的那一邊。**用哪個機制見 §Focus Indicator**，本條只管「不得無指示」。
+  > ⚠️ **2026-07-26 更正**：本條原本把**機制**寫死成「SHALL 同時宣告 `box-shadow: var(--shadow-ring)`」。**意圖對、機制不該寫死** —— 那個寫法正是同檔 §Focus Indicator 判定為缺陷的「慣例 A」（疊 `--color-accent-fill` 實測淺色 1.46:1、深色 1.00:1）。Web 的作者自訂 outline 與 box-shadow 都不是 Apple 原生系統效果；按 WCAG 可見性、遮擋和適用對比驗證。**用哪個機制見 §Focus Indicator**，本條只管「不得無指示」。
 - **Increased contrast（HIG 對自訂色的明文要求）**：`@media (prefers-contrast: more)` SHALL 為自訂色提供更高對比的變體。HIG Color：「If you define a custom color, make sure to supply light and dark variants, **and an increased contrast option for each variant**」。
   > ⚠️ **現況落差（2026-07-26 盤點）**：`css/tokens.css` 的 `prefers-contrast: more` 區塊**只處理玻璃模糊與 tabbar tint，一顆語意色、一個焦點色都沒碰**。而本 repo 的 `--color-success` / `--color-warning` **都是自訂色**（Apple 系統色是 `#34C759` / `#FF8D28`），正落在這條要求的範圍內。追蹤於 #1176。
 - **Motion:** 尊重 `prefers-reduced-motion`（骨架屏動畫、過渡效果）

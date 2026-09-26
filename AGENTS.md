@@ -101,7 +101,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first.
+For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` and approved mockups to product styling. Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
 
 ## Skill Routing
 
