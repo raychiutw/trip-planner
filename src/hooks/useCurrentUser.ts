@@ -11,7 +11,8 @@
  * 副作用：每次結果落定會寫一個「上次是否已登入」的布林旗標到 localStorage
  * （見 lib/authHint）。那不是 user 資料快取，是給「首次 paint 就得決定畫什麼」
  * 的頁面（目前只有 LandingPage）用的同步提示；授權判斷一律仍以本 hook 的
- * userinfo 回應為準。AbortError 不寫旗標 —— 請求被取消不等於未登入。
+ * userinfo 回應為準。共享 fetch 不會因為單一 consumer 卸載而被取消（見下方
+ * dedup 說明），旗標一律依實際回應寫入。
  *
  * 不依賴 React Query / SWR — keep dependency surface small。Vanilla useState/useEffect。
  *
@@ -49,8 +50,8 @@ const USERINFO_ENDPOINT = '/api/oauth/userinfo';
 // fetch，下一輪 microtask 就清空（見檔頭註解）。
 let sharedFetchPromise: Promise<CurrentUser | null> | null = null;
 
-function fetchCurrentUser(): Promise<CurrentUser | null> {
-  if (!sharedFetchPromise) {
+function fetchCurrentUser(forceFresh = false): Promise<CurrentUser | null> {
+  if (!sharedFetchPromise || forceFresh) {
     const promise: Promise<CurrentUser | null> = fetch(USERINFO_ENDPOINT, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) {
@@ -82,8 +83,12 @@ export function useCurrentUser(): UseCurrentUserResult {
   useEffect(() => {
     // v2.33.39 round 4 起沿用的「新請求蓋掉舊請求」保護：改用 closure 變數而非
     // AbortController，因為共享 fetch 不該被單一 consumer 取消。
+    // reloadCount > 0 代表這輪是 reload() 觸發，強制忽略任何剛好還在同一輪
+    // microtask 內、屬於別的元件 mount 的 dedup 快取 —— 否則 reload 有極小機率
+    // 撞上別人的 in-flight fetch，被誤判成「已經有一份了」而拿到舊資料，
+    // 違反 reload() 的「強制拿新資料」承諾。
     let stale = false;
-    fetchCurrentUser().then((result) => {
+    fetchCurrentUser(reloadCount > 0).then((result) => {
       if (!stale) setUser(result);
     });
     return () => {

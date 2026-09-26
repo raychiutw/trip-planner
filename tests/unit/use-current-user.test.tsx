@@ -70,6 +70,23 @@ describe('useCurrentUser', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it('reload() forces a fresh fetch even when called before the mount dedup window clears', async () => {
+    let callCount = 0;
+    const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+      callCount++;
+      return new Response(JSON.stringify({ ...SAMPLE_USER, displayName: `Call ${callCount}` }), { status: 200 });
+    });
+
+    const { result, rerender } = renderHook(() => useCurrentUser());
+    // 故意不 await 任何東西 —— mount 的 dedup 快取要下一輪 microtask 才清空，
+    // 這裡在同一個同步呼叫堆疊裡立刻 reload()，撞上快取還活著的那個瞬間。
+    result.current.reload();
+    rerender();
+
+    await waitFor(() => expect(result.current.user?.displayName).toBe('Call 2'));
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('fetch uses credentials: include for cookie-based auth', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
