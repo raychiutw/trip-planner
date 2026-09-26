@@ -725,11 +725,12 @@ export default function EditTripPage() {
   // v2.33.0: days management — immediate-mutation pattern (cascade delete 不可
   // 復原，atomic 比 queue-and-commit 安全)。「儲存變更」只管 scalar fields。
   const [days, setDays] = useState<DaySummary[] | null>(null);
+  const [daysLoadError, setDaysLoadError] = useState(false);
   const [daysMutating, setDaysMutating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const refetchDays = useCallback(async () => {
-    if (!tripId) return;
+    if (!tripId) return false;
     try {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`);
       if (!res.ok) throw new Error(`days fetch failed: ${res.status}`);
@@ -744,9 +745,14 @@ export default function EditTripPage() {
           totalKm: computeTotalKm(d.timeline),
         })),
       );
+      setDaysLoadError(false);
+      return true;
     } catch (err) {
       // 非阻擋：days fetch fail 只影響 days section，scalar form 仍可用
       console.error('refetchDays failed', err);
+      setDays(null);
+      setDaysLoadError(true);
+      return false;
     }
   }, [tripId]);
 
@@ -819,9 +825,9 @@ export default function EditTripPage() {
         } catch { /* not JSON */ }
         throw new Error(message);
       }
-      await refetchDays();
+      const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
-      showToast(position === 'start' ? '已在最前加入一天' : '已在最後加入一天', 'success');
+      showToast(refreshed ? (position === 'start' ? '已在最前加入一天' : '已在最後加入一天') : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
     } catch (err) {
       showToast(err instanceof Error ? err.message : '新增天數失敗', 'error');
     } finally {
@@ -850,9 +856,9 @@ export default function EditTripPage() {
         } catch { /* not JSON */ }
         throw new Error(message);
       }
-      await refetchDays();
+      const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
-      showToast(`已加回 ${formatShortDate(date)}`, 'success');
+      showToast(refreshed ? `已加回 ${formatShortDate(date)}` : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
     } catch (err) {
       showToast(err instanceof Error ? err.message : '加回天數失敗', 'error');
     } finally {
@@ -898,9 +904,9 @@ export default function EditTripPage() {
         } catch { /* not JSON */ }
         throw new Error(message);
       }
-      await refetchDays();
+      const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
-      showToast(`出發日期已變更為 ${formatShortDate(shiftNewDate)}`, 'success');
+      showToast(refreshed ? `出發日期已變更為 ${formatShortDate(shiftNewDate)}` : '日期變更已送出，但無法重新讀取；請重試讀取。', refreshed ? 'success' : 'info');
       setShiftModalOpen(false);
     } catch (err) {
       showToast(err instanceof Error ? err.message : '平移失敗', 'error');
@@ -938,11 +944,12 @@ export default function EditTripPage() {
       }
       const result = (await res.json()) as { removedEntryCount?: number };
       const removed = result.removedEntryCount ?? 0;
-      await refetchDays();
+      const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(
-        removed > 0 ? `Day ${dayNum} 已刪除（連同 ${removed} 個景點）` : `Day ${dayNum} 已刪除`,
-        'success',
+        refreshed ? (removed > 0 ? `Day ${dayNum} 已刪除（連同 ${removed} 個景點）` : `Day ${dayNum} 已刪除`)
+          : '刪除已送出，但無法重新讀取日期；請重試讀取。',
+        refreshed ? 'success' : 'info',
       );
       setPendingDelete(null);
     } catch (err) {
@@ -1267,7 +1274,14 @@ export default function EditTripPage() {
                   <div className="tp-edit-row" data-testid="edit-trip-days-section">
                     <label>行程天數</label>
                     {days === null ? (
-                      <div className="tp-edit-loading" data-testid="edit-trip-days-loading">載入中⋯</div>
+                      daysLoadError ? (
+                        <div className="tp-edit-loading" role="alert">
+                          無法取得最新行程日期。
+                          <button type="button" className="tp-edit-day-shift-btn" onClick={() => void refetchDays()}>
+                            重新讀取行程日期
+                          </button>
+                        </div>
+                      ) : <div className="tp-edit-loading" data-testid="edit-trip-days-loading">載入中⋯</div>
                     ) : (
                       <>
                         <p className="tp-edit-date-helper" style={{ marginBottom: 8 }}>
@@ -1467,11 +1481,9 @@ export default function EditTripPage() {
               : `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${formatShortDate(pendingDelete.date)}）` : ''}目前是空的。確認移除？`
             : ''
         }
-        warning={
-          pendingDelete && pendingDelete.entryCount > 0
-            ? '後續天數的 Day 編號會往前遞補（日期保留，可能會留下空檔的日子）。'
-            : undefined
-        }
+        warning={pendingDelete && days && pendingDelete.dayNum < days.length
+          ? '後續天數的 Day 編號會往前遞補（日期保留，可能會留下空檔的日子）。'
+          : undefined}
         confirmLabel={pendingDelete ? `刪除 Day ${pendingDelete.dayNum}` : '刪除'}
         busy={daysMutating}
         onConfirm={handleConfirmDelete}
@@ -1481,8 +1493,8 @@ export default function EditTripPage() {
           backdrop，避免依賴 ConfirmModal SCOPED_STYLES) */}
       {shiftModalOpen && days && days[0]?.date && (
         <div ref={shiftBackdropRef} className="tp-shift-backdrop" role="presentation" onClick={daysMutating ? undefined : () => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
-          <div ref={shiftPanelRef} tabIndex={-1} className="tp-shift-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} onKeyDown={shiftPanelKeyDown} data-testid="edit-trip-shift-modal">
-            <h2 className="tp-shift-modal-title">變更出發日期</h2>
+          <div ref={shiftPanelRef} tabIndex={-1} className="tp-shift-modal" role="dialog" aria-modal="true" aria-labelledby="edit-trip-shift-title" onClick={(e) => e.stopPropagation()} onKeyDown={shiftPanelKeyDown} data-testid="edit-trip-shift-modal">
+            <h2 id="edit-trip-shift-title" className="tp-shift-modal-title">變更出發日期</h2>
             <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">出發日期</label>
             <div data-testid="edit-trip-shift-date-input">
               <TripDatePicker
@@ -1499,7 +1511,9 @@ export default function EditTripPage() {
                 const oldEnd = days[days.length - 1]!.date ?? oldStart;
                 const delta = daysBetween(oldStart, shiftNewDate);
                 const newEnd = shiftDateByDays(oldEnd, delta);
-                return `${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
+                const impact = delta === 0 ? '日期不變'
+                  : `${days.length} 天日期將${delta > 0 ? '往後' : '往前'}平移 ${Math.abs(delta)} 天；景點與每日時段保留`;
+                return `${impact}。${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
               })()}
             </div>
             <div className="tp-shift-modal-actions">

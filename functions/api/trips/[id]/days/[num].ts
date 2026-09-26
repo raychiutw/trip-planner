@@ -568,9 +568,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .first<{ c: number }>();
   const removedEntryCount = Number(entryCountRow?.c || 0);
 
-  // Delete the day（trip_entries 透過 FK ON DELETE CASCADE 自動清掉）
-  await db.prepare('DELETE FROM trip_days WHERE id = ?').bind(target.id).run();
-
   // 後續 days: day_num -= 1（date / day_of_week 不動，避免「日期 shift up」
   // 違反 prepend / delete-first 對稱性）。
   //
@@ -586,17 +583,12 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .bind(id, dayNum)
     .all<{ id: number; day_num: number }>();
 
-  if (subsequent && subsequent.length > 0) {
-    const stmts: D1PreparedStatement[] = [];
-    for (const r of subsequent) {
-      stmts.push(
-        db
-          .prepare('UPDATE trip_days SET day_num = ? WHERE id = ?')
-          .bind(r.day_num - 1, r.id),
-      );
-    }
-    if (stmts.length > 0) await db.batch(stmts);
+  // Delete + cascade + renumber must commit together; a failed renumber keeps the old day.
+  const stmts: D1PreparedStatement[] = [db.prepare('DELETE FROM trip_days WHERE id = ?').bind(target.id)];
+  for (const r of subsequent ?? []) {
+    stmts.push(db.prepare('UPDATE trip_days SET day_num = ? WHERE id = ?').bind(r.day_num - 1, r.id));
   }
+  await db.batch(stmts);
 
   return json({ ok: true, removedEntryCount });
 };
