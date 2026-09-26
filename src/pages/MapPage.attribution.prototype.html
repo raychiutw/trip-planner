@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>T23 地圖 attribution 安全區 prototype</title>
+<style>
+  /* Prototype only: approved error alert A stays fixed; compare map/card placement. */
+  * { box-sizing: border-box }
+  body { margin: 0; font: 15px/1.4 Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #2a1f18; background: #faf7f2 }
+  .page { width: 100%; height: 100dvh; position: relative; overflow: hidden; background: #f9f5ef }
+  .header { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: #fffdf8; border-bottom: 1px solid #e4d8ca; position: relative; z-index: 3 }
+  .header strong { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 17px }
+  .map { position: absolute; top: 56px; left: 0; right: 0; background: #e9e4db; border: 1px solid #d8d0c7 }
+  .a .map { bottom: 160px }
+  .b .map { bottom: 72px }
+  .road { position: absolute; top: 38%; left: 0; width: 100%; height: 2px; background: #d0c7b8; transform: rotate(-20deg) }
+  .pin { position: absolute; top: 45%; left: 48%; background: #91643f; color: white; border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; font-size: 12px }
+  .attribution { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; height: 25px; padding: 2px 7px; background: #fffdfa; color: #424242; font-size: 10px; border-top: 1px solid #ddd }
+  .days { position: absolute; z-index: 4; top: 68px; left: 12px; right: 12px; height: 44px; display: flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap; background: #fffdf8; border: 1px solid #e8dbcd; border-radius: 25px; padding: 4px }
+  .days span { flex: none; padding: 8px 12px; color: #65564a; font-size: 11px; font-weight: 700 }
+  .days .active { color: white; background: #91643f; border-radius: 20px }
+  .error { position: absolute; z-index: 4; top: 127px; left: 12px; right: 12px; background: #fdecec; color: #7d2414; border: 1px solid #e8a196; border-radius: 8px; padding: 14px }
+  .error b { display: block; margin-bottom: 5px }
+  .error p { margin: 0 0 12px }
+  .error button, .error a { display: inline-flex; align-items: center; min-height: 44px; padding: 9px 14px; border-radius: 8px; font: inherit; font-weight: 700; text-decoration: none }
+  .error button { background: #c13515; color: white; border: 1px solid #c13515; margin-right: 8px }
+  .error a { background: #fffdfa; color: #a52b12; border: 1px solid #c13515 }
+  .cards { position: absolute; z-index: 5; left: 0; right: 0; display: flex; gap: 10px; padding: 0 12px; overflow: hidden }
+  .a .cards { bottom: 80px }
+  .b .cards { bottom: 115px }
+  .card { flex: 0 0 200px; height: 70px; background: #fffdfa; border: 1px solid #e8dbcd; border-radius: 12px; padding: 9px 12px }
+  .card small { display: block; color: #91643f; font-weight: 700 }
+  .card strong { display: block; margin-top: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
+  .nav { position: absolute; z-index: 6; bottom: 12px; left: 50%; transform: translateX(-50%); width: 268px; height: 60px; display: flex; align-items: center; justify-content: space-around; background: #fffdfa; border: 1px solid #e8dbcd; border-radius: 32px; font-size: 12px }
+  .nav b { background: #91643f; color: white; padding: 11px 18px; border-radius: 22px }
+  .switch { position: fixed; z-index: 10; top: 310px; right: 8px; padding: 5px; background: #29211e; color: white; border-radius: 8px }
+  .switch a { color: white; padding: 4px 8px; text-decoration: none }
+  .switch a.current { background: #6c5548; border-radius: 4px }
+  @media (min-width: 800px) { .page { max-width: 1100px; margin: auto; border-inline: 1px solid #ddd } .nav { display: none } }
+</style>
+<div class="page" id="page">
+  <div class="header"><span>‹</span><strong>2026 沖繩七日遊行程表 ⌄</strong><span>R</span></div>
+  <div class="map"><div class="road"></div><div class="pin">1</div><div class="attribution"><span>Google</span><span>鍵盤快速鍵 · 地圖資料 © Google</span></div></div>
+  <div class="days"><span class="active">總覽</span><span>DAY 1</span><span>DAY 2</span><span>DAY 3</span><span>DAY 4</span></div>
+  <section class="error"><b>地圖暫停服務</b><p>地圖載入失敗，行程其他功能不受影響。</p><button>重試</button><a href="#trips">查看行程</a></section>
+  <div class="cards"><div class="card"><small>① D1 · 20:50</small><strong>那覇空港</strong></div><div class="card"><small>② D1 · 22:07</small><strong>メルキュール沖縄那覇</strong></div></div>
+  <div class="nav"><span>聊天</span><span>行程</span><b>地圖</b><span>收藏</span></div>
+</div>
+<div class="switch"><a id="a" href="?variant=A">A</a><a id="b" href="?variant=B">B</a></div>
+<script>
+  const variant = new URL(location.href).searchParams.get('variant') === 'B' ? 'B' : 'A';
+  document.getElementById('page').classList.add(variant.toLowerCase());
+  document.getElementById(variant.toLowerCase()).classList.add('current');
+  document.addEventListener('keydown', e => { if (['ArrowLeft','ArrowRight'].includes(e.key) && !e.target.matches('input,textarea,[contenteditable]')) location.search = `?variant=${variant === 'A' ? 'B' : 'A'}`; });
+</script>
+</html>
