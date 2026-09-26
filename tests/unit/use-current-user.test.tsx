@@ -143,4 +143,28 @@ describe('useCurrentUser', () => {
     expect(hooks[2].result.current.user).toEqual(SAMPLE_USER);
     // No assertion needed for hooks[1] — vitest/RTL warns if setState fired on the unmounted instance.
   });
+
+  it('dedup window does not survive a real microtask tick (no accidental long-lived cache)', async () => {
+    // Pins the invariant the header comment promises: the shared in-flight
+    // promise only lives for one microtask, so two mounts separated by even
+    // a single `await Promise.resolve()` must NOT dedup onto each other.
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
+    );
+    renderHook(() => useCurrentUser());
+    await Promise.resolve();
+    renderHook(() => useCurrentUser());
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+  });
+
+  it('a shared in-flight request that fails resolves every concurrent subscriber to null', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: 'AUTH_REQUIRED' } }), { status: 401 }),
+    );
+    const hooks = Array.from({ length: 3 }, () => renderHook(() => useCurrentUser()));
+    await Promise.all(
+      hooks.map(({ result }) => waitFor(() => expect(result.current.user).not.toBeUndefined())),
+    );
+    hooks.forEach(({ result }) => expect(result.current.user).toBeNull());
+  });
 });

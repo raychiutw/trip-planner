@@ -28,9 +28,13 @@ import { AUTH_HINT_KEY, readAuthHint, writeAuthHint } from '../../src/lib/authHi
 /**
  * /trips 的替身必須跟真的一樣呼叫 useCurrentUser —— 真實的 TripsListPage 走
  * useRequireAuth()，而那個 hook 內部就是 useCurrentUser。這件事對「樂觀判斷猜錯」
- * 的案例是關鍵：LandingPage 一旦轉址就 unmount，它自己的 userinfo 請求會被
- * AbortController 取消，永遠等不到回應 —— hint 的校正**必然**發生在目標頁那端。
- * 替身若只是一個靜態 div，測到的就不是產品真正的行為。
+ * 的案例是關鍵：LandingPage 轉址 unmount 後，它自己的 userinfo 請求不會被取消
+ * （useCurrentUser 改用共享 in-flight promise，不再靠 AbortController；見
+ * src/hooks/useCurrentUser.ts 檔頭註解）——該請求仍會落地並寫 hint，只是
+ * LandingPage 自己的 hook instance 已卸載、不會再 setState。真正驗證的是
+ * 「使用者最終看到正確畫面」：hint 校正要靠**某個仍在畫面上**的 useCurrentUser
+ * consumer（此處是目標頁）落地才看得到效果，替身若只是一個靜態 div，測到的就不是
+ * 產品真正的行為。
  */
 function TripsStub() {
   useCurrentUser();
