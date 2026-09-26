@@ -148,6 +148,7 @@ export default function ConfirmModal({
   // focus-trap + body scroll-lock。z-index 維持 --z-modal；public props + testid 全不動。
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
     initialFocusRef: cancelRef,
+    canDismiss: !busy,
   });
 
   if (!open) return null;
@@ -160,7 +161,7 @@ export default function ConfirmModal({
         ref={backdropRef}
         className="tp-confirm-backdrop"
         role="presentation"
-        onClick={onCancel}
+        onClick={busy ? undefined : onCancel}
         data-testid="confirm-modal-backdrop"
       >
         <div
