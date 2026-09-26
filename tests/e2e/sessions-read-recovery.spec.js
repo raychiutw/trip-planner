@@ -53,7 +53,10 @@ test('320px GET failure keeps the list frame and keyboard retry restores local d
   await expect(page.getByTestId('sessions-load-error')).toHaveCount(0);
   await expect(page.getByTestId('titlebar').getByRole('button', { name: '返回' })).toBeFocused();
   expect(loads).toBe(2);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  expect(await page.evaluate(() => {
+    const root = document.documentElement;
+    return root.scrollWidth <= root.clientWidth;
+  })).toBe(true);
 });
 
 test('read failure back action returns to Account by keyboard', async ({ page }) => {
