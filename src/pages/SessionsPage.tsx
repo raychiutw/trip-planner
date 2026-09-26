@@ -180,6 +180,7 @@ export default function SessionsPage() {
   const [revokingSid, setRevokingSid] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
   const [revokeAllConfirmOpen, setRevokeAllConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function load() {
     setError(null);
@@ -200,6 +201,7 @@ export default function SessionsPage() {
     try {
       await apiFetch(`/account/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
       setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
+      setError(null);
     } catch {
       setError('登出此裝置失敗，請稍後再試。');
     } finally {
@@ -213,9 +215,9 @@ export default function SessionsPage() {
     setRevokingAll(true);
     try {
       await apiFetch('/account/sessions', { method: 'DELETE' });
-      // Optimistic: remove all non-current rows locally — match revokeOne() pattern,
-      // saves a round-trip vs reloading the list
+      // The server confirmed the revoke; remove only non-current rows locally.
       setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
+      setError(null);
     } catch {
       setError('登出其他裝置失敗，請稍後再試。');
     } finally {
@@ -357,20 +359,39 @@ export default function SessionsPage() {
             type="button"
             className="tp-account-logout-btn"
             data-testid="sessions-logout"
+            disabled={loggingOut}
             onClick={async () => {
+              if (loggingOut) return;
+              setLoggingOut(true);
+              setError(null);
               try {
-                await apiFetchRaw('/oauth/logout', { method: 'POST' });
+                const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
+                if (!response.ok) throw new Error('Logout failed');
+                writeAuthHint(false);
+                navigate('/login', { replace: true });
               } catch {
-                /* ignore — navigate to /login regardless */
+                // The server may have revoked the session even if its response was lost.
+                try {
+                  const status = await apiFetchRaw('/oauth/userinfo');
+                  if (status.status === 401) {
+                    writeAuthHint(false);
+                    navigate('/login', { replace: true });
+                    return;
+                  }
+                  if (status.ok) {
+                    setError('登出失敗，請稍後再試。');
+                    return;
+                  }
+                } catch {
+                  // The session result remains unknown until connectivity returns.
+                }
+                setError('無法確認登出結果，請檢查連線後再試。');
+              } finally {
+                setLoggingOut(false);
               }
-              // 同 AccountPage 的登出：清掉「上次已登入」旗標（見 lib/authHint），
-              // 否則登出後第一次進 `/` 會被轉去 /trips 再彈回 /login。
-              // 放在 try/catch 之外 —— 登出請求失敗與否，使用者的意圖都是登出。
-              writeAuthHint(false);
-              navigate('/login', { replace: true });
             }}
           >
-            登出此帳號
+            {loggingOut ? '登出中…' : '登出此帳號'}
           </button>
         </div>
       </div>
