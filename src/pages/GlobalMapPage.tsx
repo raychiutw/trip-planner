@@ -24,7 +24,9 @@ export default function GlobalMapPage() {
   const { user } = useCurrentUser();
   const { openModal: openNewTrip } = useNewTrip();
   const { activeTripId, trips, status } = useTripSelection(user?.id);
-  const targetId = activeTripId ?? (status === 'ready' ? trips?.[0]?.tripId : null);
+  const targetId = status === 'ready'
+    ? (trips?.some((trip) => trip.tripId === activeTripId) ? activeTripId : trips?.[0]?.tripId)
+    : status === 'error' ? activeTripId : null;
 
   if (targetId) return <Navigate to={`/trip/${encodeURIComponent(targetId)}/map`} replace />;
   if (status === 'loading') return null;
