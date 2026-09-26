@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype — 登入頁隱私權政策入口</title>
+  <link rel="stylesheet" href="../../css/tokens.css">
+  <style>
+    /* Raw @theme needs Tailwind compilation in the app; static prototype mirrors its tokens. */
+    :root { --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-accent:#A97A4A; --color-accent-deep:#8A6038; --color-border:#E8DCCB; --radius-md:12px; --radius-xl:20px; --shadow-md:0 8px 24px rgba(42,31,24,.08); --shadow-lg:0 16px 40px rgba(42,31,24,.16); --font-size-headline:17px; --font-size-title:28px; --font-size-subheadline:15px; --font-size-footnote:13px; --font-size-caption:12px; }
+    body { margin:0; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--color-foreground); background:var(--color-secondary); }
+    .page { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:48px 24px 110px; box-sizing:border-box; }
+    .home { position:absolute; top:16px; left:16px; color:var(--color-accent-deep); text-decoration:none; font-size:var(--font-size-callout); font-weight:600; }
+    .card { width:min(440px,100%); box-sizing:border-box; background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:40px 36px; box-shadow:var(--shadow-md); }
+    .brand { text-align:center; font-size:var(--font-size-headline); font-weight:800; margin-bottom:28px; }
+    .brand b { color:var(--color-accent); }
+    h1 { margin:0 0 8px; font-size:var(--font-size-title); }
+    .sub { color:var(--color-muted); margin:0 0 28px; font-size:var(--font-size-subheadline); }
+    label { display:block; margin:0 0 6px; font-weight:600; font-size:var(--font-size-subheadline); }
+    input { display:block; width:100%; box-sizing:border-box; margin:0 0 18px; padding:12px 14px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-background); color:var(--color-foreground); font:inherit; }
+    .submit { width:100%; min-height:44px; border:0; border-radius:var(--radius-md); background:var(--color-accent); color:white; font:inherit; font-weight:700; }
+    .footer { text-align:center; color:var(--color-muted); font-size:var(--font-size-footnote); margin-top:26px; }
+    a { color:var(--color-accent-deep); font-weight:600; }
+    .inline { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; }
+    .quiet { margin-top:16px; font-size:var(--font-size-caption); }
+    .separator { border-top:1px solid var(--color-border); padding-top:18px; }
+    .privacy-top { text-align:right; margin:-8px 0 18px; font-size:var(--font-size-footnote); }
+    .switcher { position:fixed; z-index:10; bottom:14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:999px; background:var(--color-foreground); color:var(--color-background); box-shadow:var(--shadow-lg); white-space:nowrap; font-size:13px; }
+    .switcher button { border:0; border-radius:999px; width:32px; height:32px; background:var(--color-background); color:var(--color-foreground); font:inherit; cursor:pointer; }
+    .switcher a { color:var(--color-background); }
+    .baseline-note { position:fixed; top:12px; right:12px; max-width:200px; padding:7px 10px; border-radius:8px; background:var(--color-tertiary); font-size:12px; }
+    @media (max-width:480px) { .card { padding:32px 24px; } .baseline-note { display:none; } }
+  </style>
+</head>
+<body>
+  <!-- Throwaway UI prototype. Question: where should Login expose the existing Privacy policy without distracting from sign-in? Variants A/B/C are URL-stable via ?variant=. -->
+  <div class="page">
+    <a class="home" href="#home">‹ 返回首頁</a>
+    <main class="card">
+      <div class="brand">Tripline<b>.</b></div>
+      <h1>歡迎回來</h1>
+      <p class="sub">登入後繼續規劃你的行程。</p>
+      <div id="top-slot"></div>
+      <label for="email">電子郵件</label><input id="email" type="email" placeholder="name@example.com">
+      <label for="password">密碼</label><input id="password" type="password" placeholder="輸入密碼">
+      <button class="submit" type="button">登入</button>
+      <div id="footer-slot"></div>
+    </main>
+  </div>
+  <div class="baseline-note">基準版：登入頁只有「建立帳號」，沒有政策入口。</div>
+  <div class="switcher" aria-label="Prototype variants">
+    <button id="prev" type="button" aria-label="上一個方案">←</button>
+    <span id="variant-label"></span>
+    <button id="next" type="button" aria-label="下一個方案">→</button>
+  </div>
+  <script>
+    const variants = ['A','B','C'];
+    const names = { A:'同列並置', B:'獨立低調列', C:'表單上方工具連結' };
+    const initial = new URLSearchParams(location.search).get('variant');
+    let current = variants.includes(initial) ? initial : 'A';
+    function draw() {
+      document.getElementById('top-slot').innerHTML = current === 'C' ? '<p class="privacy-top"><a href="#privacy">隱私權政策</a></p>' : '';
+      document.getElementById('footer-slot').innerHTML = current === 'A'
+        ? '<p class="footer inline"><span>沒有帳號？<a href="#signup">建立帳號</a></span><span aria-hidden="true">·</span><a href="#privacy">隱私權政策</a></p>'
+        : current === 'B'
+        ? '<div class="footer"><p>沒有帳號？<a href="#signup">建立帳號</a></p><p class="quiet separator"><a href="#privacy">隱私權政策</a></p></div>'
+        : '<p class="footer">沒有帳號？<a href="#signup">建立帳號</a></p>';
+      document.getElementById('variant-label').textContent = current + ' — ' + names[current];
+      const url = new URL(location.href); url.searchParams.set('variant', current); history.replaceState(null, '', url);
+    }
+    function cycle(delta) { current = variants[(variants.indexOf(current) + delta + variants.length) % variants.length]; draw(); }
+    document.getElementById('prev').onclick = () => cycle(-1);
+    document.getElementById('next').onclick = () => cycle(1);
+    document.addEventListener('keydown', (e) => {
+      if (['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      if (e.key === 'ArrowLeft') cycle(-1);
+      if (e.key === 'ArrowRight') cycle(1);
+    });
+    draw();
+  </script>
+</body>
+</html>
