@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import { showToast } from '../components/shared/Toast';
@@ -32,6 +32,15 @@ interface AccountStats {
   tripCount: number;
   totalDays: number;
   collaboratorCount: number;
+}
+
+function isDeleteAccountPreview(value: unknown): value is DeleteAccountPreview {
+  if (!value || typeof value !== 'object') return false;
+  const preview = value as Record<string, unknown>;
+  return typeof preview.hasPassword === 'boolean'
+    && typeof preview.tripsOwned === 'number' && Number.isSafeInteger(preview.tripsOwned) && preview.tripsOwned >= 0
+    && typeof preview.collaboratorsAffected === 'number' && Number.isSafeInteger(preview.collaboratorsAffected)
+    && preview.collaboratorsAffected >= 0;
 }
 
 const SCOPED_STYLES = `
@@ -296,6 +305,7 @@ export default function AccountPage() {
    * 那兩個數字前端算不出來，由 GET /api/account 提供。 */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePreview, setDeletePreview] = useState<DeleteAccountPreview | null>(null);
+  const deletePreviewGeneration = useRef(0);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -306,13 +316,16 @@ export default function AccountPage() {
   // ESC 取消還原。Enter blur (trigger save)。
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState('');
+  const [confirmedName, setConfirmedName] = useState<{ value: string | null; userAtSave: CurrentUser | null | undefined } | null>(null);
+  const currentName = confirmedName && confirmedName.userAtSave === user
+    ? confirmedName.value : user?.displayName;
   const [savingName, setSavingName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   // 進入編輯前的快照 — ESC 還原 / 比對是否真的有改 (無改省 API call)
   const draftBaselineRef = useRef('');
 
   const startEditName = useCallback(() => {
-    const current = user?.displayName ?? '';
+    const current = currentName ?? '';
     setDraftName(current);
     draftBaselineRef.current = current;
     setEditingName(true);
@@ -321,7 +334,7 @@ export default function AccountPage() {
       nameInputRef.current?.focus();
       nameInputRef.current?.select();
     }, 0);
-  }, [user?.displayName]);
+  }, [currentName]);
 
   const cancelEditName = useCallback(() => {
     setDraftName(draftBaselineRef.current);
@@ -337,11 +350,12 @@ export default function AccountPage() {
     }
     setSavingName(true);
     try {
-      await apiFetch('/account/profile', {
+      const saved: CurrentUser = await apiFetch('/account/profile', {
         method: 'PATCH',
         body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
         headers: { 'content-type': 'application/json' },
       });
+      setConfirmedName({ value: saved.displayName, userAtSave: user });
       reloadUser();
       setEditingName(false);
       // v2.33.142: 成功 silent (user feedback 「右上角不用顯示狀態」一脈相承)。
@@ -350,10 +364,11 @@ export default function AccountPage() {
       const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '更新失敗';
       showToast(msg, 'error');
       // 失敗保留 editing=true 讓 user retry
+      setTimeout(() => nameInputRef.current?.focus(), 0);
     } finally {
       setSavingName(false);
     }
-  }, [draftName, reloadUser]);
+  }, [draftName, reloadUser, user]);
 
   useEffect(() => {
     if (!auth.user) return;
@@ -371,15 +386,23 @@ export default function AccountPage() {
 
   /** 開啟刪除確認前先抓預覽 —— 沒有數字就不該讓使用者按下不可逆的按鈕。 */
   const openDeleteModal = useCallback(async () => {
+    const generation = ++deletePreviewGeneration.current;
     setDeleteError(null);
     setDeleteInput('');
     setDeletePreview(null);
     setShowDeleteModal(true);
     try {
-      setDeletePreview(await apiFetch<DeleteAccountPreview>('/account'));
+      const preview = await apiFetch<unknown>('/account');
+      if (!isDeleteAccountPreview(preview)) throw new Error('Invalid delete preview');
+      if (deletePreviewGeneration.current === generation) setDeletePreview(preview);
     } catch {
-      setDeleteError('無法取得刪除影響範圍，請稍後再試');
+      if (deletePreviewGeneration.current === generation) setDeleteError('無法取得刪除影響範圍，請稍後再試');
     }
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    deletePreviewGeneration.current += 1;
+    setShowDeleteModal(false);
   }, []);
 
   /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */
@@ -392,7 +415,7 @@ export default function AccountPage() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await apiFetchRaw('/account', {
+      await apiFetch('/account', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
@@ -437,7 +460,7 @@ export default function AccountPage() {
 
   // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
   // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。
-  const displayName = user.displayName || user.email.split('@')[0] || user.email;
+  const displayName = currentName || user.email.split('@')[0] || user.email;
   const initial = displayName.charAt(0).toUpperCase();
 
   // v2.54.10「依設定分區三色」(mockup V1)：每組設定一色，由 group.tone 驅動 row icon chip。
@@ -617,7 +640,7 @@ export default function AccountPage() {
         message={
           deletePreview
             ? `這個動作無法復原。你的 ${deletePreview.tripsOwned} 個行程會一併刪除。`
-            : '正在確認刪除影響範圍⋯'
+            : deleteError ? '無法確認刪除影響範圍。請取消後重試。' : '正在確認刪除影響範圍⋯'
         }
         warning={
           deletePreview && deletePreview.collaboratorsAffected > 0
@@ -626,9 +649,10 @@ export default function AccountPage() {
         }
         confirmLabel="永久刪除"
         cancelLabel="取消"
-        busy={deleting || !canConfirmDelete}
+        busy={deleting}
+        confirmDisabled={!canConfirmDelete}
         onConfirm={deleteAccount}
-        onCancel={() => setShowDeleteModal(false)}
+        onCancel={closeDeleteModal}
       >
         {deletePreview && (
           <div className="tp-account-delete-confirm">
