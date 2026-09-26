@@ -1,8 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTestDb } from './setup';
 import { mockContext, mockEnv, seedTrip, seedUser, userIdFor } from './helpers';
 import { onRequestGet } from '../../functions/api/invitations';
-import { onRequestPost } from '../../functions/api/invitations/accept';
 import { issueSession } from '../../functions/api/_session';
 import { hashInvitationToken } from '../../src/server/invitation-token';
 
@@ -12,6 +11,7 @@ const invitee = 'invite-role-viewer@test.com';
 const tripId = 'invitation-role-trip';
 const token = 'invitation-role-viewer-token';
 let db: D1Database;
+let onRequestPost: typeof import('../../functions/api/invitations/accept').onRequestPost;
 
 async function acceptAs(email: string, invitationToken = token): Promise<Response> {
   const env = mockEnv(db, { SESSION_SECRET: secret });
@@ -29,6 +29,9 @@ async function acceptAs(email: string, invitationToken = token): Promise<Respons
 }
 
 beforeAll(async () => {
+  vi.doUnmock('../../functions/api/_session');
+  vi.resetModules();
+  onRequestPost = (await import('../../functions/api/invitations/accept')).onRequestPost;
   db = await createTestDb();
   await seedTrip(db, { id: tripId, owner });
   await seedUser(db, invitee);
