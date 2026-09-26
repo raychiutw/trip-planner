@@ -66,11 +66,10 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.resto
 function show(sheet = false) { return render(<MemoryRouter initialEntries={['/chat?sheet=chat']}><ActiveTripProvider>
   {sheet ? <TripSheet tripId="t1" allPins={[]} pinsByDay={new Map()} /> : <ChatPage />}
 </ActiveTripProvider></MemoryRouter>); }
-async function send(text: string) {
-  await act(async () => {
-    fireEvent.change(screen.getByTestId('chat-input'), { target: { value: text } });
-    fireEvent.click(screen.getByTestId('chat-send'));
-  });
+async function send(text: string, waitUntilReady = true) {
+  if (waitUntilReady) await waitFor(() => expect(screen.getByTestId('chat-input')).not.toBeDisabled());
+  await act(async () => { fireEvent.change(screen.getByTestId('chat-input'), { target: { value: text } }); });
+  await act(async () => { fireEvent.click(screen.getByTestId('chat-send')); });
 }
 async function pick(id: string) {
   fireEvent.click(screen.getByTestId('chat-trip-title'));
@@ -87,7 +86,7 @@ describe('conversation lifecycle through the real chat', () => {
     expect(screen.getByTestId('chat-input')).not.toBeDisabled();
     postStatus = 200;
     vi.useFakeTimers();
-    await send('第二筆可正常回覆');
+    await send('第二筆可正常回覆', false);
     const events = RequestEvents.instances.at(-1)!;
     await act(async () => { events.onerror?.(); });
     rows[0] = { ...rows[0]!, status: 'completed', reply: '斷線後由輪詢補回的成果' };
@@ -131,7 +130,7 @@ describe('conversation lifecycle through the real chat', () => {
     await send('只送出一次');
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(screen.getByTestId('chat-input')).toBeDisabled();
-    await send('不應送出第二筆');
+    await send('不應送出第二筆', false);
     expect(posts).toHaveLength(1);
     await act(async () => { posted.resolve(); });
     expect(screen.getAllByTestId('chat-stop-waiting')).toHaveLength(1);
