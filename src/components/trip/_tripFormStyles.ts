@@ -242,6 +242,16 @@ body.dark .tp-edit-row select {
   color: var(--color-muted);
   text-align: center;
 }
+.tp-dest-retry {
+  margin-left: 8px;
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.tp-dest-retry:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-new-dest-result,
 .tp-edit-dest-result {
   display: flex; flex-direction: column; gap: 2px;

@@ -54,6 +54,7 @@ import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
 import AiAuthorizeCard from '../components/AiAuthorizeCard';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { handleSearchOptionKeys } from '../lib/searchOptionKeys';
 import type { PoiSearchResult } from '../types/poi';
 
 const POPULAR_DESTINATIONS: ReadonlyArray<{ key: string; label: string }> = [
@@ -429,16 +430,9 @@ export default function NewTripPage() {
   // Destination uses POI autocomplete. User can select multiple POIs.
   const [destQuery, setDestQuery] = useState('');
   const [selectedPois, setSelectedPois] = useState<PoiSearchResult[]>([]);
-  const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+  const { state: poiSearch, retry: retryPoiSearch } = usePoiSearch({
     query: destQuery,
     limit: 10,
-    normalise: (raw) => {
-      // API returns `{ results: [] }` wrapper
-      const arr = Array.isArray(raw) ? raw : (raw as { results?: PoiSearchResult[] })?.results ?? [];
-      return arr as PoiSearchResult[];
-    },
-    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
   });
 
   const [dateMode, setDateMode] = useState<DateMode>('select');
@@ -450,6 +444,7 @@ export default function NewTripPage() {
   const [error, setError] = useState<string | null>(null);
   const [recentDests, setRecentDests] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+  const destInputRef = useRef<HTMLInputElement>(null);
 
   const [destDays, setDestDays] = useState<Record<string, number>>({});
   // v2.31.36 (migration 0068): selfDrive* state removed — dead columns dropped。
@@ -500,17 +495,12 @@ export default function NewTripPage() {
     });
   }
 
-  // Clear error when query empties
-  useEffect(() => {
-    if (destQuery.trim().length < 2) setPoiSearchError(null);
-  }, [destQuery]);
-
   function selectPoi(poi: PoiSearchResult) {
     setSelectedPois((prev) => (
       prev.some((p) => p.place_id === poi.place_id) ? prev : [...prev, poi]
     ));
-    setDestQuery(''); // Clearing query auto-clears poiResults via hook
-    setPoiSearchError(null);
+    setDestQuery('');
+    destInputRef.current?.focus();
     pushRecentDest(poi.name);
     setRecentDests(loadRecentDests());
   }
@@ -647,7 +637,7 @@ export default function NewTripPage() {
 
               <div className="tp-new-form-row">
                 <label htmlFor="new-trip-destination">目的地（可加多筆，拖拉排序）</label>
-                <div className="tp-new-dest-wrap">
+                <div className="tp-new-dest-wrap" onKeyDown={(event) => handleSearchOptionKeys(event, () => setDestQuery(''))}>
                   {selectedPois.length > 0 && (
                     <SortableDestinationList
                       pois={selectedPois}
@@ -706,8 +696,13 @@ export default function NewTripPage() {
                     </div>
                   )}
                   <input
+                    ref={destInputRef}
                     id="new-trip-destination"
                     type="text"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={poiSearch.status !== 'idle'}
+                    aria-controls={poiSearch.status !== 'idle' ? 'new-trip-dest-dropdown' : undefined}
                     value={destQuery}
                     onChange={(e) => setDestQuery(e.target.value)}
                     placeholder={selectedPois.length > 0 ? '繼續搜尋下一個目的地⋯' : '搜尋景點、城市、地址⋯'}
@@ -716,18 +711,22 @@ export default function NewTripPage() {
                     autoComplete="off"
                     data-testid="new-trip-destination-input"
                   />
-                  {(poiSearching || poiResults.length > 0 || poiSearchError) && destQuery.trim().length >= 2 && (
-                    <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
-                      {poiSearching && <div className="tp-new-dest-status">搜尋中⋯</div>}
-                      {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}
-                      {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
+                  {poiSearch.status !== 'idle' && (
+                    <div id="new-trip-dest-dropdown" className="tp-new-dest-dropdown" role={poiSearch.status === 'success' && poiSearch.results.length > 0 ? 'listbox' : undefined} data-testid="new-trip-dest-dropdown">
+                      {poiSearch.status === 'loading' && <div className="tp-new-dest-status" role="status">搜尋中⋯</div>}
+                      {poiSearch.status === 'error' && <div className="tp-new-dest-status" role="alert">
+                        {poiSearch.error === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'}
+                        <button type="button" className="tp-dest-retry" onClick={retryPoiSearch}>重試搜尋</button>
+                      </div>}
+                      {poiSearch.status === 'success' && poiSearch.results.length === 0 && (
                         <div className="tp-new-dest-status">沒找到結果，試試別的關鍵字</div>
                       )}
-                      {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
+                      {poiSearch.status === 'success' && poiSearch.results.map((p) => (
                         <button
                           key={p.place_id}
                           type="button"
                           role="option"
+                          aria-selected={false}
                           className="tp-new-dest-result"
                           onClick={() => selectPoi(p)}
                           data-testid={`new-trip-dest-result-${p.place_id}`}

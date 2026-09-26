@@ -46,6 +46,7 @@ import { TripSelect } from '../components/TripSelect';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { handleSearchOptionKeys } from '../lib/searchOptionKeys';
 import type { PoiSearchResult } from '../types/poi';
 
 interface DestinationRow {
@@ -702,22 +703,20 @@ export default function EditTripPage() {
 
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
+  const addDestinationButtonRef = useRef<HTMLButtonElement>(null);
+  const focusAddDestinationRef = useRef(false);
   const [destQuery, setDestQuery] = useState('');
-  const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+  const { state: poiSearch, retry: retryPoiSearch } = usePoiSearch({
     enabled: showSearch,
     query: destQuery,
     limit: 10,
-    normalise: (raw) => {
-      const arr = (raw as { results?: PoiSearchResult[] })?.results ?? [];
-      return Array.isArray(arr) ? arr : [];
-    },
-    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
   });
-
   useEffect(() => {
-    if (destQuery.trim().length < 2) setPoiSearchError(null);
-  }, [destQuery]);
+    if (!showSearch && focusAddDestinationRef.current) {
+      addDestinationButtonRef.current?.focus();
+      focusAddDestinationRef.current = false;
+    }
+  }, [showSearch]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -968,6 +967,7 @@ export default function EditTripPage() {
   );
 
   function selectPoi(poi: PoiSearchResult) {
+    focusAddDestinationRef.current = true;
     if (destinations.some((d) => d.place_id === poi.place_id)) {
       setShowSearch(false); setDestQuery('');
       return;
@@ -1206,6 +1206,7 @@ export default function EditTripPage() {
                     <div className="tp-edit-dest-add-wrap">
                       {!showSearch ? (
                         <button
+                          ref={addDestinationButtonRef}
                           type="button"
                           className="tp-edit-dest-add-btn"
                           onClick={() => setShowSearch(true)}
@@ -1215,9 +1216,14 @@ export default function EditTripPage() {
                           <span>加入目的地</span>
                         </button>
                       ) : (
-                        <div className="tp-edit-dest-search-wrap">
+                        <div className="tp-edit-dest-search-wrap" onKeyDown={(event) => handleSearchOptionKeys(event, () => setDestQuery(''))}>
                           <input
                             type="text"
+                            role="combobox"
+                            aria-label="搜尋目的地"
+                            aria-autocomplete="list"
+                            aria-expanded={poiSearch.status !== 'idle'}
+                            aria-controls={poiSearch.status !== 'idle' ? 'edit-trip-dest-dropdown' : undefined}
                             value={destQuery}
                             onChange={(e) => setDestQuery(e.target.value)}
                             placeholder="搜尋景點、城市、地址⋯"
@@ -1225,18 +1231,22 @@ export default function EditTripPage() {
                             autoComplete="off"
                             data-testid="edit-trip-dest-search-input"
                           />
-                          {destQuery.trim().length >= 2 && (
-                            <div className="tp-edit-dest-dropdown" role="listbox" data-testid="edit-trip-dest-dropdown">
-                              {poiSearching && <div className="tp-edit-dest-status">搜尋中⋯</div>}
-                              {!poiSearching && poiSearchError && <div className="tp-edit-dest-status">{poiSearchError}</div>}
-                              {!poiSearching && !poiSearchError && poiResults.length === 0 && (
+                          {poiSearch.status !== 'idle' && (
+                            <div id="edit-trip-dest-dropdown" className="tp-edit-dest-dropdown" role={poiSearch.status === 'success' && poiSearch.results.length > 0 ? 'listbox' : undefined} data-testid="edit-trip-dest-dropdown">
+                              {poiSearch.status === 'loading' && <div className="tp-edit-dest-status" role="status">搜尋中⋯</div>}
+                              {poiSearch.status === 'error' && <div className="tp-edit-dest-status" role="alert">
+                                {poiSearch.error === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'}
+                                <button type="button" className="tp-dest-retry" onClick={retryPoiSearch}>重試搜尋</button>
+                              </div>}
+                              {poiSearch.status === 'success' && poiSearch.results.length === 0 && (
                                 <div className="tp-edit-dest-status">沒找到結果，試試別的關鍵字</div>
                               )}
-                              {!poiSearching && poiResults.length > 0 && poiResults.map((p) => (
+                              {poiSearch.status === 'success' && poiSearch.results.map((p) => (
                                 <button
                                   key={p.place_id}
                                   type="button"
                                   role="option"
+                                  aria-selected={false}
                                   className="tp-edit-dest-result"
                                   onClick={() => selectPoi(p)}
                                   data-testid={`edit-trip-dest-result-${p.place_id}`}

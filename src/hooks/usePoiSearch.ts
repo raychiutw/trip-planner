@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PoiSearchResult } from '../types/poi';
 // v2.33.39 round 4: 改走 apiFetchRaw，與 sibling hook (useTrip / useChatPagination)
 // 一致。bare fetch 會繞過 reportFetchResult → useOnlineStatus offline-toast 失效。
@@ -20,16 +20,23 @@ interface UsePoiSearchOptions {
   /** Debounce window in ms. Default: 300. */
   debounceMs?: number;
   /**
-   * Optional caller-side response normaliser. API may return either a bare
-   * array or `{ results: [...] }` wrapper, with snake_case vs camelCase row
-   * shapes. Default: cast as `PoiSearchResult[]` (assumes API returns canonical shape).
+   * Optional normaliser for callers with a different POI row shape.
+   * Default accepts the POI search API's `{ results: [...] }` and bare arrays.
    */
   normalise?: (raw: unknown) => PoiSearchResult[];
-  /** Optional error callback. Default: silent. Called for non-OK HTTP + network errors (not AbortError). */
+  /** Legacy callback for callers migrating in T05; current errors are also returned in state. */
   onError?: (kind: 'http-error' | 'network-error', err?: unknown) => void;
 }
 
 interface UsePoiSearchResult {
+  /** Current query/region result. Never contains a previous search's rows or error. */
+  state: {
+    status: 'idle' | 'loading' | 'success' | 'error';
+    results: PoiSearchResult[];
+    error: 'http-error' | 'network-error' | null;
+  };
+  retry: () => void;
+  /** Transitional fields for AddStopPage/ChangePoiPage until T05. */
   results: PoiSearchResult[];
   searching: boolean;
 }
@@ -77,8 +84,19 @@ export function usePoiSearch({
   normalise,
   onError,
 }: UsePoiSearchOptions): UsePoiSearchResult {
-  const [results, setResults] = useState<PoiSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [result, setResult] = useState<{
+    key: object;
+    status: 'loading' | 'success' | 'error';
+    results: PoiSearchResult[];
+    error: 'http-error' | 'network-error' | null;
+  } | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const retry = useCallback(() => setGeneration((value) => value + 1), []);
+  const trimmed = query.trim();
+  // Each change is a new search, including A → B → A and disable → enable.
+  const key = useMemo(() => ({ enabled, trimmed, region, limit, generation }), [enabled, trimmed, region, limit, generation]);
+  const currentKeyRef = useRef(key);
+  currentKeyRef.current = key;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -90,18 +108,11 @@ export function usePoiSearch({
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
-    if (!enabled) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
+    if (!enabled || trimmed.length < 2) return;
+    setResult({ key, status: 'loading', results: [], error: null });
     debounceRef.current = setTimeout(async () => {
-      abortRef.current?.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
-      setSearching(true);
       try {
         const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
         const resp = await apiFetchRaw(
@@ -109,27 +120,38 @@ export function usePoiSearch({
           { signal: ctrl.signal },
         );
         if (!resp.ok) {
-          onErrorRef.current?.('http-error');
-          if (abortRef.current === ctrl) setResults([]);
+          if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+            onErrorRef.current?.('http-error');
+            setResult({ key, status: 'error', results: [], error: 'http-error' });
+          }
           return;
         }
         const raw = await resp.json() as unknown;
-        const normalised = normaliseRef.current ? normaliseRef.current(raw) : (raw as PoiSearchResult[]);
+        const normalised = normaliseRef.current
+          ? normaliseRef.current(raw)
+          : Array.isArray(raw) ? raw : (raw as { results?: unknown } | null)?.results;
         const rows = Array.isArray(normalised) ? normalised.filter(isValidPoi) : [];
-        if (abortRef.current === ctrl) setResults(rows);
+        if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+          setResult({ key, status: 'success', results: rows, error: null });
+        }
       } catch (err) {
         if ((err as { name?: string })?.name === 'AbortError') return;
-        onErrorRef.current?.('network-error', err);
-        if (abortRef.current === ctrl) setResults([]);
-      } finally {
-        if (abortRef.current === ctrl) setSearching(false);
+        if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+          onErrorRef.current?.('network-error', err);
+          setResult({ key, status: 'error', results: [], error: 'network-error' });
+        }
       }
     }, debounceMs);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       abortRef.current?.abort();
     };
-  }, [enabled, query, region, limit, debounceMs]);
+  }, [enabled, trimmed, region, limit, debounceMs, key]);
 
-  return { results, searching };
+  const state = !enabled || trimmed.length < 2
+    ? { status: 'idle' as const, results: [], error: null }
+    : result?.key === key
+      ? { status: result.status, results: result.results, error: result.error }
+      : { status: 'loading' as const, results: [], error: null };
+  return { state, retry, results: state.results, searching: state.status === 'loading' };
 }
