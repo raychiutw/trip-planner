@@ -23,10 +23,10 @@
  *   - dirty.segment → PATCH /trips/:id/segments/:sid { mode, min }
  *   - 兩者皆失敗 → 整體 error；單邊失敗 → 顯示警示但保留 dirty 值。
  *
- * 取消（左 ←）：dirty 跳 ConfirmModal「丟棄變更」 → confirm 才 navigate。
+ * 離開：等待已接受的編輯保存；失敗或逾時則留頁並提供重試與明確放棄。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
@@ -793,6 +793,8 @@ function extractSiblingCoords(
   return out;
 }
 
+type NoteSave = { flush: () => Promise<boolean>; cancel: () => void; pending: () => boolean };
+
 interface PerPoiNoteRowProps {
   tripId: string;
   entryId: number;
@@ -814,7 +816,7 @@ interface PerPoiNoteRowProps {
    */
   onSecondary?: boolean;
   /** 把本行 autosave 的 flush 註冊給父頁（EditEntryPage）→ 回前頁前統一 await（v2.55.x stale-race 修）。 */
-  registerFlush?: (flush: () => Promise<boolean>) => () => void;
+  registerFlush?: (save: NoteSave) => () => void;
 }
 
 /**
@@ -856,9 +858,13 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 
   // v2.55.x：把本行 autosave 的 flush 註冊給 EditEntryPage — 回前頁前統一 await 沖出 pending
   // 備註 PATCH，避免返回時 days GET 搶先讀到未 commit 的舊值（stale race，見 goBackFocused）。
-  const flushRef = useRef(noteAutosave.flush);
-  flushRef.current = noteAutosave.flush;
-  useEffect(() => registerFlush?.(() => flushRef.current()), [registerFlush]);
+  const saveRef = useRef(noteAutosave);
+  saveRef.current = noteAutosave;
+  useEffect(() => registerFlush?.({
+    flush: () => saveRef.current.flush(),
+    cancel: () => saveRef.current.cancel(),
+    pending: () => saveRef.current.hasUnsaved(),
+  }), [registerFlush]);
 
   // autosave error → toast（對齊 TimelineRail；監聽 error state transition，
   // 避免每 re-render 重複 toast）。
@@ -878,8 +884,7 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   }, [initialNote]);
 
   const closeEdit = useCallback(async () => {
-    await noteAutosave.flush();
-    setEditing(false);
+    if (await noteAutosave.flush()) setEditing(false);
   }, [noteAutosave]);
 
   const handleChange = (value: string) => {
@@ -971,6 +976,27 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 export default function EditEntryPage() {
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
   return <EditEntryPageContent key={`${tripId}:${entryId}`} />;
+}
+
+function EditRouteBlocker({ shouldBlock, onBlocked, resetRef }: {
+  shouldBlock: () => boolean;
+  onBlocked: (proceed: () => void) => void;
+  resetRef: React.RefObject<(() => void) | null>;
+}) {
+  const blocker = useBlocker(shouldBlock);
+  const handledRef = useRef(false);
+  useEffect(() => {
+    if (blocker.state !== 'blocked') {
+      handledRef.current = false;
+      resetRef.current = null;
+      return;
+    }
+    resetRef.current = blocker.reset;
+    if (handledRef.current) return;
+    handledRef.current = true;
+    onBlocked(blocker.proceed);
+  }, [blocker, onBlocked, resetRef]);
+  return null;
 }
 
 function EditEntryPageContent() {
@@ -1250,6 +1276,17 @@ function EditEntryPageContent() {
   const entryDirty = startTime !== original.startTime || endTime !== original.endTime || description !== original.description;
   const segmentDirty = noTravel !== original.noTravel || mode !== original.mode || (mode === 'transit' && transitMin !== original.transitMin);
   const dirty = { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
+  const draftSignature = JSON.stringify([startTime, endTime, description, mode, transitMin, noTravel]);
+  const failedAutoSaveRef = useRef<string | null>(null);
+  const currentFormRef = useRef({ startTime, endTime, description, mode, transitMin, noTravel });
+  currentFormRef.current = { startTime, endTime, description, mode, transitMin, noTravel };
+  const hasFormChanges = useCallback(() => {
+    const current = currentFormRef.current;
+    const saved = originalRef.current;
+    return current.startTime !== saved.startTime || current.endTime !== saved.endTime ||
+      current.description !== saved.description || current.mode !== saved.mode ||
+      (current.mode === 'transit' && current.transitMin !== saved.transitMin) || current.noTravel !== saved.noTravel;
+  }, []);
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1271,9 +1308,9 @@ function EditEntryPageContent() {
     return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
-  const handleSave = useCallback(async () => {
-    if (!tripId || !entry || submitting) return;
-    if (validation || !dirty.any) return;
+  const saveChanges = useCallback(async (): Promise<boolean> => {
+    if (!tripId || !entry || validation) return false;
+    if (!dirty.any) return true;
     const saveScope = saveScopeRef.current;
     setSubmitting(true);
 
@@ -1320,12 +1357,14 @@ function EditEntryPageContent() {
     // 鎖死的怪行為，直接 setSubmitting(false) early return。
     if (requests.length === 0) {
       setSubmitting(false);
-      return;
+      if (!hasFormChanges()) return true;
+      failedAutoSaveRef.current = draftSignature;
+      return false;
     }
 
     try {
       const results = await Promise.all(requests);
-      if (saveScope !== saveScopeRef.current) return;
+      if (saveScope !== saveScopeRef.current) return false;
       const failures = results.filter((r) => !r.ok);
       if (results.some((r) => r.ok)) {
         // 各 scope 獨立提交：另一個 scope 失敗也不能重送已儲存的修改。
@@ -1336,9 +1375,11 @@ function EditEntryPageContent() {
         };
       }
       if (failures.length === 0) {
+        failedAutoSaveRef.current = null;
         setSubmitting(false);
-        return;
+        return true;
       }
+      failedAutoSaveRef.current = draftSignature;
       const msg = failures
         .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
         .join('；');
@@ -1347,60 +1388,106 @@ function EditEntryPageContent() {
       // 顯示。
       showToast(msg, 'error', 6000);
       setSubmitting(false);
+      return false;
     } catch (err) {
-      if (saveScope !== saveScopeRef.current) return;
+      if (saveScope !== saveScopeRef.current) return false;
       const msg = err instanceof Error ? err.message : '儲存失敗';
+      failedAutoSaveRef.current = draftSignature;
       showToast(msg, 'error', 6000);
       setSubmitting(false);
+      return false;
     }
   }, [
-    tripId, entry, entryId, submitting, validation, dirty.any, dirty.entryDirty, dirty.segmentDirty,
-    startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry,
+    tripId, entry, entryId, validation, dirty.any, dirty.entryDirty, dirty.segmentDirty,
+    startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry, draftSignature, hasFormChanges,
   ]);
+
+  const saveTaskRef = useRef<Promise<boolean> | null>(null);
+  const handleSave = useCallback((): Promise<boolean> => {
+    if (saveTaskRef.current) return saveTaskRef.current;
+    const task = saveChanges();
+    saveTaskRef.current = task;
+    void task.finally(() => { if (saveTaskRef.current === task) saveTaskRef.current = null; });
+    return task;
+  }, [saveChanges]);
 
   // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
   // 確保返回時重新 fetch 的 days 讀到已 commit 的新值（否則 debounce PATCH 未 commit 就被返回的
   // GET 搶先讀到舊值 = 「改備註返回沒生效、F5 才對」的 stale race）。
-  const noteFlushersRef = useRef<Set<() => Promise<boolean>>>(new Set());
-  const registerNoteFlush = useCallback((flush: () => Promise<boolean>) => {
-    noteFlushersRef.current.add(flush);
-    return () => { noteFlushersRef.current.delete(flush); };
+  const noteSavesRef = useRef<Set<NoteSave>>(new Set());
+  const registerNoteFlush = useCallback((save: NoteSave) => {
+    noteSavesRef.current.add(save);
+    return () => { noteSavesRef.current.delete(save); };
   }, []);
 
-  // 回前頁：先 flush 備註，再帶 ?focus=<entryId>&focusDay=<dayNum> → TripPage 切到該天、
-  // TimelineRail 掛載即展開該景點（回到「當下景點展開」）。
-  const goBackFocused = useCallback(async () => {
-    // flush 每行的 pending 備註 PATCH，但加 1.2s 上限 — 離線/慢網時 useAutosave 會保留 patch
-    // 等重連，flush 可能不 resolve；不能讓返回鍵卡住。
-    const capped = (p: Promise<unknown>) => {
-      let t: ReturnType<typeof setTimeout>;
-      return Promise.race([
-        p,
-        new Promise<void>((resolve) => { t = setTimeout(resolve, 1200); }),
-      ]).finally(() => clearTimeout(t));
-    };
-    await Promise.all([...noteFlushersRef.current].map((f) => capped(f().catch(() => undefined))));
+  // 1.2 秒只停止等待；逾時、離線與失敗都留在原處，由使用者重試或明確放棄。
+  const leaveAttemptRef = useRef(0);
+  useEffect(() => () => { leaveAttemptRef.current++; }, []);
+  const allowLeaveRef = useRef(false);
+  const blockedResetRef = useRef<(() => void) | null>(null);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const cappedSave = useCallback((task: Promise<boolean>): Promise<boolean> => {
+    let timer: ReturnType<typeof setTimeout>;
+    return Promise.race([
+      task.catch(() => false),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), 1200); }),
+    ]).finally(() => clearTimeout(timer));
+  }, []);
+  const attemptLeave = useCallback(async (proceed: () => void) => {
+    const attempt = ++leaveAttemptRef.current;
+    pendingLeaveRef.current = proceed;
+    setShowDiscardModal(false);
+    setLeaveBusy(true);
+    const results = await Promise.all([
+      cappedSave(saveTaskRef.current ?? (hasFormChanges() ? handleSave() : Promise.resolve(true))),
+      ...[...noteSavesRef.current].map((save) => cappedSave(save.flush())),
+    ]);
+    if (attempt !== leaveAttemptRef.current) return;
+    setLeaveBusy(false);
+    if (results.every(Boolean) && !hasFormChanges() && ![...noteSavesRef.current].some((save) => save.pending())) {
+      pendingLeaveRef.current = null;
+      proceed();
+    } else {
+      setShowDiscardModal(true);
+    }
+  }, [cappedSave, handleSave, hasFormChanges]);
+
+  const goBackFocused = useCallback(() => {
     if (!tripId) { navigate('/trips'); return; }
     const day = entryDayNumRef.current;
     const dayQuery = typeof day === 'number' ? `&focusDay=${day}` : '';
     navigate(`/trips?selected=${encodeURIComponent(tripId)}&focus=${entryId}${dayQuery}`);
   }, [tripId, entryId, navigate]);
 
-  // v2.33.108: auto-save 後不再需要 discard confirmation — handleCancel 直接 back，
-  // pending patch 由 handleSave debounce 內 flush（user 等 800ms 後 navigate）。
   const handleCancel = useCallback(() => {
-    void goBackFocused();
-  }, [goBackFocused]);
+    void attemptLeave(goBackFocused);
+  }, [attemptLeave, goBackFocused]);
+
+  const shouldBlockRoute = useCallback(() => !allowLeaveRef.current && (
+    hasFormChanges() || !!saveTaskRef.current || [...noteSavesRef.current].some((save) => save.pending())
+  ), [hasFormChanges]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasFormChanges() && !saveTaskRef.current && ![...noteSavesRef.current].some((save) => save.pending())) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasFormChanges]);
 
   // v2.33.108: debounce auto-save effect — dirty+valid+!submitting 800ms 後 fire handleSave。
   // 取代「儲存」button reassurance（user 改完 800ms 自動 PATCH，SaveStatus 顯示進度）。
   useEffect(() => {
-    if (!dirty.any || validation || submitting) return;
+    if (failedAutoSaveRef.current !== draftSignature) failedAutoSaveRef.current = null;
+    if (!dirty.any || validation || submitting || failedAutoSaveRef.current === draftSignature) return;
     const timer = setTimeout(() => {
       void handleSave();
     }, 800);
     return () => clearTimeout(timer);
-  }, [dirty.any, validation, submitting, startTime, endTime, description, mode, transitMin, handleSave]);
+  }, [dirty.any, validation, submitting, startTime, endTime, description, mode, transitMin, handleSave, draftSignature]);
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
@@ -1628,6 +1715,8 @@ function EditEntryPageContent() {
       shellClassName="tp-app"
       title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
       back={handleCancel}
+      close={handleCancel}
+      confirmBeforeBack={(proceed) => { void attemptLeave(proceed); }}
       scopedStyles={SCOPED_STYLES}
     >
       <main className="tp-page-content">
@@ -2000,16 +2089,39 @@ function EditEntryPageContent() {
         </div>
       </main>
 
-      {/* Discard confirm modal — shared <ConfirmModal> 取代 inline rolled-own */}
+      {/* Failed or slow save: stay, retry, or explicitly discard before leaving. */}
       <ConfirmModal
         open={showDiscardModal}
-        title="丟棄變更？"
-        message="未儲存的變更會遺失。"
-        confirmLabel="丟棄變更"
+        title="尚未確認儲存"
+        message={`尚未確認儲存：${[
+          dirty.entryDirty && '時間／活動說明',
+          dirty.segmentDirty && '移動方式',
+          [...noteSavesRef.current].some((save) => save.pending()) && '景點備註／訂位資訊',
+        ].filter(Boolean).join('、') || '目前編輯'}。其他已保存的修改會保留；可重試、繼續編輯或放棄。`}
+        confirmLabel="放棄變更"
         cancelLabel="繼續編輯"
-        onConfirm={() => { setShowDiscardModal(false); void goBackFocused(); }}
-        onCancel={() => setShowDiscardModal(false)}
-      />
+        busy={leaveBusy}
+        onConfirm={() => {
+          leaveAttemptRef.current++;
+          allowLeaveRef.current = true;
+          for (const save of noteSavesRef.current) save.cancel();
+          setShowDiscardModal(false);
+          const proceed = pendingLeaveRef.current;
+          pendingLeaveRef.current = null;
+          proceed?.();
+        }}
+        onCancel={() => {
+          leaveAttemptRef.current++;
+          blockedResetRef.current?.();
+          pendingLeaveRef.current = null;
+          setShowDiscardModal(false);
+        }}
+      >
+        <button type="button" disabled={leaveBusy} onClick={() => {
+          const proceed = pendingLeaveRef.current;
+          if (proceed) void attemptLeave(proceed);
+        }}>重試儲存</button>
+      </ConfirmModal>
 
       {/* Master swap confirm (v2.27.0) with optional cross-region warning */}
       <ConfirmModal
@@ -2056,6 +2168,11 @@ function EditEntryPageContent() {
 
   return (
     <>
+      <EditRouteBlocker
+        shouldBlock={shouldBlockRoute}
+        onBlocked={(proceed) => { void attemptLeave(proceed); }}
+        resetRef={blockedResetRef}
+      />
       <ToastContainer />
       {main}
     </>

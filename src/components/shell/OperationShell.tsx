@@ -29,6 +29,8 @@ export interface OperationShellProps {
   title: ReactNode;
   /** ‹「前一頁」callback（各頁既有 handleBack）。 */
   back: () => void;
+  /** Override the stack close action when the page must settle edits before leaving. */
+  close?: () => void;
   /**
    * W1d：depth>1 時 ‹ 的 pop（navigate(-1)）未存確認 gate。有未存編輯的頁面（被 push 成
    * depth>1）提供此 callback，OperationShell 在 pop 前先呼叫它、由頁面決定要不要跳「丟棄
@@ -55,6 +57,7 @@ export default function OperationShell({
   testId,
   title,
   back,
+  close,
   confirmBeforeBack,
   scopedStyles,
   bottomNav,
@@ -120,17 +123,17 @@ export default function OperationShell({
       }
       e.preventDefault();
       if (showBack) handleBack();
-      else closeStack();
+      else (close ?? closeStack)();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [inStack, showBack, handleBack, closeStack]);
+  }, [inStack, showBack, handleBack, close, closeStack]);
 
   // 共用 drill-down panel（‹ 前一頁 / ✕ 整個關閉）— 桌機右欄 + 手機全頁同一套。
   const panel = (
     <div className={shellClassName} data-testid={testId} ref={panelRef} tabIndex={-1}>
       {scopedStyles && <style>{scopedStyles}</style>}
-      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={closeStack} />
+      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={close ?? closeStack} />
       {children}
     </div>
   );

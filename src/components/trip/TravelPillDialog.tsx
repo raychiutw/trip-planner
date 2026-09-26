@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
+import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { saveSegment } from '../../lib/segmentMutations';
@@ -318,8 +319,23 @@ export default function TravelPillDialog({
     submit(selectedMethod.mode, selectedMethod.submode, undefined);
   }, [selectedMethod, submit]);
 
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const leaveAttemptRef = useRef(0);
+  useEffect(() => () => { leaveAttemptRef.current++; }, []);
   const handleClose = useCallback(() => {
-    void autosave.flush().finally(onClose);
+    const attempt = ++leaveAttemptRef.current;
+    setLeaveBusy(true);
+    let timer: ReturnType<typeof setTimeout>;
+    void Promise.race([
+      autosave.flush().catch(() => false),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), 1200); }),
+    ]).then((saved) => {
+      if (attempt !== leaveAttemptRef.current) return;
+      setLeaveBusy(false);
+      if (saved && !autosave.hasUnsaved()) onClose();
+      else setLeaveOpen(true);
+    }).finally(() => clearTimeout(timer));
   }, [autosave, onClose]);
 
   // #1161：接共用 sheet 引擎。本元件宣告 aria-modal="true" 卻是手刻覆蓋層，Tab 會跑出
@@ -510,6 +526,18 @@ export default function TravelPillDialog({
           </div>
         </div>
       </div>
+      <ConfirmModal
+        open={leaveOpen}
+        title="交通方式尚未儲存"
+        message="儲存失敗或等待逾時。可留在原處、重試儲存或放棄變更。"
+        confirmLabel="放棄變更"
+        cancelLabel="繼續編輯"
+        busy={leaveBusy}
+        onConfirm={() => { leaveAttemptRef.current++; autosave.cancel(); onClose(); }}
+        onCancel={() => { leaveAttemptRef.current++; setLeaveOpen(false); }}
+      >
+        <button type="button" disabled={leaveBusy} onClick={handleClose}>重試儲存</button>
+      </ConfirmModal>
     </>,
     document.body,
   );

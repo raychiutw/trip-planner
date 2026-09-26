@@ -542,7 +542,7 @@ export default function NewTripPage() {
     if (dirty) setDiscardOpen(true);
     else handleBack();
   }, [dirty, handleBack]);
-  // beforeunload 補 tab-close / refresh（in-app 導航走 discard modal；無 useBlocker 因用 BrowserRouter）。
+  // beforeunload 補 tab-close / refresh（in-app 返回走本頁 discard modal）。
   useEffect(() => {
     if (!dirty) return;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
