@@ -18,7 +18,7 @@
  *
  * 不負責：
  *   - LocalStorage offline queue（A8 task 另作）
- *   - beforeunload guard（caller 自己 wire）— hook 提供 state.hasPending 供 caller 判斷
+ *   - beforeunload guard（caller 自己 wire）— hook 提供 hasUnsaved() 供 caller 判斷
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { registerNetworkCallbacks } from '../lib/networkBus';
@@ -52,6 +52,8 @@ export interface UseAutosaveReturn<T> {
   error: string | null;
   /** 有 pending update 等 save。caller 可用來 beforeunload guard。 */
   hasPending: boolean;
+  /** Current accepted edits not yet confirmed saved, including an in-flight batch. */
+  hasUnsaved: () => boolean;
   /** Schedule debounced save with field updates. */
   patch: (updates: Partial<T>) => void;
   /** Force save on blur/submit; true only when this call's accepted edits are saved. */
@@ -68,6 +70,7 @@ interface SaveScope<T extends object> {
   acceptedRevision: number;
   savedRevision: number;
   sendingRevision: number;
+  discardGeneration: number;
   version: number | undefined;
   inFlight: Promise<boolean> | null;
   timer: ReturnType<typeof setTimeout> | null;
@@ -85,7 +88,7 @@ export function useAutosave<T extends object>(
   let renderScope = scopesRef.current.get(scopeKey);
   if (!renderScope) {
     renderScope = {
-      key: scopeKey, pending: {}, acceptedRevision: 0, savedRevision: 0, sendingRevision: 0,
+      key: scopeKey, pending: {}, acceptedRevision: 0, savedRevision: 0, sendingRevision: 0, discardGeneration: 0,
       version: initialVersion, inFlight: null, timer: null, savedTimer: null,
       state: 'idle', error: null,
     };
@@ -139,6 +142,7 @@ export function useAutosave<T extends object>(
     }
 
     const bodyRevision = scope.acceptedRevision;
+    const discardGeneration = scope.discardGeneration;
     scope.sendingRevision = bodyRevision;
     scope.pending = {};
     let resolveInFlight!: (saved: boolean) => void;
@@ -151,6 +155,11 @@ export function useAutosave<T extends object>(
     let saveSucceeded = false;
     const complete = (result: Record<string, unknown>) => {
       if (typeof result.version === 'number') scope.version = result.version;
+      if (scope.discardGeneration !== discardGeneration) {
+        scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'idle';
+        publish(scope);
+        return false;
+      }
       scope.savedRevision = bodyRevision;
       saveSucceeded = true;
       scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'saved';
@@ -165,6 +174,11 @@ export function useAutosave<T extends object>(
       return true;
     };
     const fail = (reason: unknown, fallback: string) => {
+      if (scope.discardGeneration !== discardGeneration) {
+        scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'idle';
+        publish(scope);
+        return false;
+      }
       clearDebounceTimer(scope);
       scope.pending = { ...body, ...scope.pending };
       scope.state = 'error';
@@ -190,7 +204,7 @@ export function useAutosave<T extends object>(
       scope.inFlight = null;
       resolveInFlight(saveSucceeded);
       if (
-        saveSucceeded && isMountedRef.current &&
+        (saveSucceeded || scope.discardGeneration !== discardGeneration) && isMountedRef.current &&
         Object.keys(scope.pending).length > 0 && isOnlineRef.current && scope.timer === null
       ) {
         scope.timer = setTimeout(() => {
@@ -232,12 +246,19 @@ export function useAutosave<T extends object>(
     return activeScopeRef.current === scope;
   }, [scopeKey, clearDebounceTimer, performSave]);
 
+  const hasUnsaved = useCallback((): boolean => {
+    const scope = activeScopeRef.current;
+    return scope.key === scopeKey && scope.acceptedRevision > scope.savedRevision;
+  }, [scopeKey]);
+
   const cancel = useCallback((): void => {
     const scope = activeScopeRef.current;
     if (scope.key !== scopeKey) return;
     clearDebounceTimer(scope);
+    scope.discardGeneration += 1;
     scope.pending = {};
-    scope.acceptedRevision = scope.inFlight ? scope.sendingRevision : scope.savedRevision;
+    if (scope.inFlight) scope.savedRevision = Math.max(scope.savedRevision, scope.sendingRevision);
+    scope.acceptedRevision = scope.savedRevision;
     scope.state = 'idle';
     scope.error = null;
     publish(scope);
@@ -286,5 +307,5 @@ export function useAutosave<T extends object>(
     };
   }, [clearDebounceTimer, clearSavedTimer]);
 
-  return { state, error, hasPending, patch, flush, cancel, retry };
+  return { state, error, hasPending, hasUnsaved, patch, flush, cancel, retry };
 }

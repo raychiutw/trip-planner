@@ -128,9 +128,10 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   };
 
   const closeEditNote = useCallback(async () => {
-    await noteAutosave.flush();
-    setEditingNote(false);
-    setDraftNote('');
+    if (await noteAutosave.flush()) {
+      setEditingNote(false);
+      setDraftNote('');
+    }
   }, [noteAutosave]);
 
   const handleNoteChange = (value: string) => {
@@ -578,4 +579,3 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
     </>
   );
 });
-

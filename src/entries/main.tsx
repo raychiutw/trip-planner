@@ -31,7 +31,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
 import { ActiveTripProvider } from '../contexts/ActiveTripContext';
@@ -251,10 +251,9 @@ if (el) {
   const root = existingRoot ?? createRoot(el);
   (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
 
-  root.render(
-    <StrictMode>
-      <ErrorBoundary>
-        <BrowserRouter>
+  // Data router lets edit sessions block internal navigation, including browser Back.
+  // The existing descendant Routes keep account-sheet background-location behavior.
+  const router = createBrowserRouter([{ path: '*', element: (
           <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
@@ -374,7 +373,12 @@ if (el) {
           </NewTripProvider>
           </ActiveTripProvider>
           </AccountSheetProvider>
-        </BrowserRouter>
+  ) }]);
+
+  root.render(
+    <StrictMode>
+      <ErrorBoundary>
+        <RouterProvider router={router} />
       </ErrorBoundary>
     </StrictMode>
   );

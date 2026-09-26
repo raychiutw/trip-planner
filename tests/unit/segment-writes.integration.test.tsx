@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
+import { createMemoryRouter, Link, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vitest';
 import EditEntryPage from '../../src/pages/EditEntryPage';
 import TimelineRail from '../../src/components/trip/TimelineRail';
@@ -64,9 +64,10 @@ function renderRail() {
 }
 
 function renderEdit() {
-  render(<MemoryRouter initialEntries={['/trip/t1/stop/42/edit']}>
-    <Routes><Route path="/trip/:tripId/stop/:entryId/edit" element={<EditEntryPage />} /></Routes>
-  </MemoryRouter>);
+  const router = createMemoryRouter([
+    { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
+  ], { initialEntries: ['/trip/t1/stop/42/edit'] });
+  render(<RouterProvider router={router} />);
 }
 
 it('時間軸既有 segment 改方式後重讀並顯示新方式', async () => {
@@ -260,14 +261,20 @@ it.each([false, true])('切換行程%s後晚到的交通失敗不顯示舊提示
   writes.mockImplementation(async (path) => path.endsWith('/segments/9')
     ? new Promise<Response>((resolve) => { release = resolve; })
     : new Response('{}', { status: 200 }));
-  render(<MemoryRouter initialEntries={['/trip/t1/stop/42/edit']}>
-    <Link to="/trip/t2/stop/52/edit">切換乙行程</Link>
-    <Link to="/trip/t1/stop/42/edit">返回甲行程</Link>
-    <Routes><Route path="/trip/:tripId/stop/:entryId/edit" element={<EditEntryPage />} /></Routes>
-  </MemoryRouter>);
+  const router = createMemoryRouter([
+    { path: '/trip/:tripId/stop/:entryId/edit', element: <>
+      <Link to="/trip/t2/stop/52/edit">切換乙行程</Link>
+      <Link to="/trip/t1/stop/42/edit">返回甲行程</Link>
+      <EditEntryPage />
+    </> },
+  ], { initialEntries: ['/trip/t1/stop/42/edit'] });
+  render(<RouterProvider router={router} />);
   fireEvent.click(await screen.findByTestId('edit-entry-mode-walking'));
   await waitFor(() => expect(writes.mock.calls.some(([path]) => path.endsWith('/segments/9'))).toBe(true), { timeout: 2500 });
   fireEvent.click(screen.getByText('切換乙行程'));
+  await waitFor(() => expect(screen.getByText('放棄變更')).toBeInTheDocument(), { timeout: 1800 });
+  expect(screen.getByTestId('edit-entry-description-input')).toHaveValue('原說明');
+  fireEvent.click(screen.getByText('放棄變更'));
   await waitFor(() => expect(screen.getByTestId('edit-entry-description-input')).toHaveValue('乙說明'));
   if (returnToA) {
     fireEvent.click(screen.getByText('返回甲行程'));
@@ -290,14 +297,19 @@ it('新行程讀取緩慢時不把舊行程未儲存表單送到新行程', asyn
   writes.mockImplementation(async (path) => path.endsWith('/trips/t1/segments/9')
     ? new Promise<Response>((resolve) => { releaseWrite = resolve; })
     : new Response('{}', { status: 200 }));
-  render(<MemoryRouter initialEntries={['/trip/t1/stop/42/edit']}>
-    <Link to="/trip/t2/stop/52/edit">切換乙行程</Link>
-    <Routes><Route path="/trip/:tripId/stop/:entryId/edit" element={<EditEntryPage />} /></Routes>
-  </MemoryRouter>);
+  const router = createMemoryRouter([
+    { path: '/trip/:tripId/stop/:entryId/edit', element: <>
+      <Link to="/trip/t2/stop/52/edit">切換乙行程</Link>
+      <EditEntryPage />
+    </> },
+  ], { initialEntries: ['/trip/t1/stop/42/edit'] });
+  render(<RouterProvider router={router} />);
   fireEvent.click(await screen.findByTestId('edit-entry-mode-walking'));
   await waitFor(() => expect(writes.mock.calls.some(([path]) => path.endsWith('/trips/t1/segments/9'))).toBe(true), { timeout: 2500 });
   fireEvent.click(screen.getByText('切換乙行程'));
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await waitFor(() => expect(screen.getByText('放棄變更')).toBeInTheDocument(), { timeout: 1800 });
+  expect(screen.getByTestId('edit-entry-description-input')).toHaveValue('原說明');
+  fireEvent.click(screen.getByText('放棄變更'));
   expect(writes.mock.calls.some(([path]) => path.includes('/trips/t2/'))).toBe(false);
   releaseWrite(new Response('{}', { status: 200 }));
   releaseRead({ id: 52, dayId: 8, startTime: '13:00', endTime: '14:00', description: '乙說明' });

@@ -28,6 +28,36 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe('useAutosave — in-flight 競態（Codex #4）', () => {
+  it('明確放棄後，晚到的失敗不把已放棄批次放回 pending', async () => {
+    const late = deferred<Record<string, unknown>>();
+    const save = vi.fn().mockReturnValue(late.promise);
+    const { result } = renderHook(() => useAutosave<{ note: string }>({ scopeKey: 'entry', save }));
+    act(() => { result.current.patch({ note: '放棄的內容' }); });
+    const flush = result.current.flush();
+    expect(result.current.hasUnsaved()).toBe(true);
+    act(() => { result.current.cancel(); });
+    await act(async () => { late.reject(new Error('晚到失敗')); });
+    expect(await flush).toBe(false);
+    expect(result.current.hasUnsaved()).toBe(false);
+    expect(result.current.hasPending).toBe(false);
+    expect(result.current.state).toBe('idle');
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('放棄 in-flight 批次後的新編輯仍可獨立保存', async () => {
+    const late = deferred<Record<string, unknown>>();
+    const save = vi.fn().mockReturnValueOnce(late.promise).mockResolvedValueOnce({ version: 3 });
+    const { result } = renderHook(() => useAutosave<{ note: string }>({ scopeKey: 'entry', save }));
+    act(() => { result.current.patch({ note: '放棄' }); });
+    const oldFlush = result.current.flush();
+    act(() => { result.current.cancel(); result.current.patch({ note: '新的內容' }); });
+    await act(async () => { late.reject(new Error('晚到失敗')); });
+    expect(await oldFlush).toBe(false);
+    await act(async () => { expect(await result.current.flush()).toBe(true); });
+    expect(save).toHaveBeenNthCalledWith(2, { note: '新的內容' }, undefined);
+    expect(result.current.hasUnsaved()).toBe(false);
+  });
+
   it('切換 entity 後舊回覆不改新 entity 的 pending、版本或結果', async () => {
     const oldSave = deferred<Record<string, unknown>>();
     const saveA = vi.fn().mockReturnValue(oldSave.promise);
