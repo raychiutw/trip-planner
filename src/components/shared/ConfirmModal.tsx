@@ -116,6 +116,8 @@ export interface ConfirmModalProps {
   cancelLabel?: string;
   /** 確認 button 是否 disabled(loading state) */
   busy?: boolean;
+  /** Disable confirmation while keeping cancel, Escape, and backdrop available. */
+  confirmDisabled?: boolean;
   /** 點 confirm 觸發 */
   onConfirm: () => void;
   /** 點 cancel / Escape / backdrop 觸發 */
@@ -136,6 +138,7 @@ export default function ConfirmModal({
   confirmLabel = '確認',
   cancelLabel = '取消',
   busy = false,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
   children,
@@ -200,7 +203,7 @@ export default function ConfirmModal({
               type="button"
               className="tp-confirm-btn tp-confirm-btn-danger"
               onClick={onConfirm}
-              disabled={busy}
+              disabled={busy || confirmDisabled}
               data-testid="confirm-modal-confirm"
             >
               {busy ? '處理中…' : confirmLabel}
