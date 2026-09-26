@@ -96,6 +96,7 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── travelRecompute.ts   車程重算 single-flight、gap signature、403 停用與失敗狀態
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
@@ -109,6 +110,8 @@ src/
 1. **Server state** — `useTrip`（SWR-style fetch + cache），`useRequests`（SSE）
 2. **Cross-component UI state** — React context（`DarkModeProvider`、`PermissionsProvider`）
 3. **Local state** — `useState` / `useRef`，不外流
+
+`useTripSegments` 是 segment 讀取與自動補算的共同入口。TripPage provider 共用一次讀取給時間軸與日區塊；獨立編輯頁自行讀取。entry/segment 更新會使舊讀取失效，完成新讀取後才判定相鄰 entry 的缺口，並交由 `travelRecompute` 按 day scope 去重與回報待更新狀態。
 
 ### CSS 架構
 
