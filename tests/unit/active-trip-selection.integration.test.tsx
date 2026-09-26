@@ -63,7 +63,7 @@ it('暫時讀取失敗後重新進入聊天會重試可存取清單', async () =
   first.unmount();
   listReply = async () => response(trips);
   render(<MemoryRouter initialEntries={['/chat']}><ActiveTripProvider><ChatPage /></ActiveTripProvider></MemoryRouter>);
-  expect(await screen.findByTestId('sidebar-trip-t1')).toHaveClass('is-active');
+  await waitFor(() => expect(screen.getByTestId('sidebar-trip-t1')).toHaveClass('is-active'));
   expect(requests.mock.calls.filter(([input]) => String(input).endsWith('/api/my-trips'))).toHaveLength(2);
 });
 

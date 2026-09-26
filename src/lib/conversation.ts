@@ -15,6 +15,8 @@ export interface ChatMessage {
   /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
    *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
   terminated?: boolean;
+  /** Stop request could not be confirmed; the AI operation may still be running. */
+  stopUnconfirmed?: boolean;
   /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
