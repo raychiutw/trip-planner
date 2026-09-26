@@ -7,9 +7,9 @@
  *   1. mount → fetch GET /api/invitations?token=...（公開 endpoint，未登入也可預覽）
  *   2. parallel: useCurrentUser → 知道是否已登入 + 哪個 email
  *   3. 三種主分支：
- *      a. error (410 / 400) → 顯示錯誤 + 「請聯絡邀請者重寄」
+ *      a. error → 已接受、過期、暫時讀取失敗各顯示對應結果
  *      b. logged-in + email match → 「接受邀請」 button → POST /accept → redirect /trips?selected=:tripId
- *      c. logged-in + email mismatch → 「此邀請不屬於你的帳號」
+ *      c. logged-in + email mismatch → 切換帳號並保留 invitation token
  *      d. anonymous → 兩個 CTA「登入並加入」 / 「註冊並加入」（query 含 invitation token）
  */
 import { useEffect, useState } from 'react';
@@ -17,6 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { normalizeEmail } from '../server/email-utils';
 
 const SCOPED_STYLES = `
 .tp-invite-shell {
@@ -85,6 +86,7 @@ interface InvitationDetails {
   tripId: string;
   tripTitle: string;
   invitedEmail: string;
+  role: 'member' | 'viewer';
   inviterDisplayName: string | null;
   inviterEmail: string;
   expiresAt: string;
@@ -92,54 +94,66 @@ interface InvitationDetails {
 
 type FetchState =
   | { status: 'loading' }
-  | { status: 'ok'; data: InvitationDetails }
-  | { status: 'error'; code: string; message: string };
+  | { status: 'ok'; token: string; data: InvitationDetails }
+  | { status: 'error'; token: string; code: string; message: string };
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const { user } = useCurrentUser();
   const [state, setState] = useState<FetchState>({ status: 'loading' });
+  const [retryCount, setRetryCount] = useState(0);
+  const currentState = state.status !== 'loading' && state.token !== token ? { status: 'loading' } as const : state;
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
+    setState({ status: 'loading' });
+    setAcceptError(null);
     if (!token) {
-      setState({ status: 'error', code: 'INVITATION_TOKEN_MISSING', message: '邀請連結無效（缺少 token）' });
+      setState({ status: 'error', token, code: 'INVITATION_TOKEN_MISSING', message: '邀請連結無效（缺少 token）' });
       return;
     }
     let cancelled = false;
     apiFetch<InvitationDetails>(`/invitations?token=${encodeURIComponent(token)}`)
       .then((data) => {
         if (cancelled) return;
-        setState({ status: 'ok', data });
+        setState({ status: 'ok', token, data });
       })
       .catch((err) => {
         if (cancelled) return;
         if (err instanceof ApiError) {
           setState({
             status: 'error',
+            token,
             code: err.code ?? 'INVITATION_INVALID',
-            message: err.detail ?? '邀請連結無效',
+            message: err.status === 0 || err.status >= 500 ? '無法載入邀請，請稍後再試' : (err.detail ?? '邀請連結無效'),
           });
         } else {
-          setState({ status: 'error', code: 'NETWORK', message: '無法載入邀請，請稍後再試' });
+          setState({ status: 'error', token, code: 'NETWORK', message: '無法載入邀請，請稍後再試' });
         }
       });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, retryCount]);
 
   async function handleAccept() {
+    if (accepting || currentState.status !== 'ok' || currentState.token !== token) return;
     setAccepting(true);
     setAcceptError(null);
     try {
       const data = await apiFetch<{ ok: true; tripId: string; tripTitle: string }>('/invitations/accept', {
         method: 'POST',
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token: currentState.token }),
       });
       window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
     } catch (err) {
-      setAcceptError(err instanceof ApiError ? (err.detail ?? '接受失敗') : '網路錯誤，請稍後再試');
+      if (err instanceof ApiError && ['INVITATION_ACCEPTED', 'INVITATION_EXPIRED', 'INVITATION_INVALID'].includes(err.code)) {
+        setState({ status: 'error', token, code: err.code, message: err.detail ?? err.message });
+      } else {
+        setAcceptError(err instanceof ApiError && err.status > 0 && err.status < 500
+          ? (err.detail ?? '接受失敗')
+          : '網路錯誤，請稍後再試');
+      }
     } finally {
       setAccepting(false);
     }
@@ -149,30 +163,32 @@ export default function InvitePage() {
     <main className="tp-invite-shell" data-testid="invite-page">
       <style>{SCOPED_STYLES}</style>
       <div className="tp-invite-card">
-        {state.status === 'loading' && <div className="tp-invite-body">載入中…</div>}
+        {currentState.status === 'loading' && <div className="tp-invite-body">載入中…</div>}
 
-        {state.status === 'error' && (
+        {currentState.status === 'error' && (
           <>
             <div className="tp-invite-eyebrow">行程邀請</div>
             <div className="tp-invite-error" role="alert" data-testid="invite-error">
-              {state.message}
+              {currentState.message}
             </div>
-            <p className="tp-invite-hint">
-              請聯絡邀請者重寄一份新的邀請連結。
-            </p>
+            {currentState.code === 'INVITATION_EXPIRED' || currentState.code === 'INVITATION_INVALID' || currentState.code === 'INVITATION_TOKEN_MISSING'
+              ? <p className="tp-invite-hint">請聯絡邀請者重寄一份新的邀請連結。</p>
+              : currentState.code === 'INVITATION_ACCEPTED'
+                ? <a href="/trips" className="tp-invite-hint">查看我的行程</a>
+                : <button type="button" className="tp-invite-btn tp-invite-btn-secondary" onClick={() => setRetryCount((n) => n + 1)} data-testid="invite-retry">重試載入</button>}
           </>
         )}
 
-        {state.status === 'ok' && (
+        {currentState.status === 'ok' && (
           <>
             <div className="tp-invite-eyebrow">行程邀請</div>
             <h1 className="tp-invite-title">
-              {state.data.inviterDisplayName ?? state.data.inviterEmail} 邀請你加入
+              {currentState.data.inviterDisplayName ?? currentState.data.inviterEmail} 邀請你加入
               <br />
-              「<span className="tp-invite-trip-name">{state.data.tripTitle}</span>」
+              「<span className="tp-invite-trip-name">{currentState.data.tripTitle}</span>」
             </h1>
             <p className="tp-invite-body">
-              你被邀請成為此行程的共編成員。
+              你被邀請成為此行程的{currentState.data.role === 'viewer' ? '檢視成員' : '共編成員'}。邀請寄給 {currentState.data.invitedEmail}。
             </p>
 
             {/* Loading user state */}
@@ -199,14 +215,15 @@ export default function InvitePage() {
             )}
 
             {/* Logged in but email mismatch */}
-            {user && user.email.toLowerCase() !== state.data.invitedEmail.toLowerCase() && (
+            {user && normalizeEmail(user.email) !== normalizeEmail(currentState.data.invitedEmail) && (
               <div className="tp-invite-error" role="alert" data-testid="invite-mismatch">
-                此邀請不屬於你的帳號（邀請寄給 {state.data.invitedEmail}，你登入的是 {user.email}）。請改用對應 email 登入或聯絡邀請者重寄。
+                此邀請不屬於你的帳號（邀請寄給 {currentState.data.invitedEmail}，你登入的是 {user.email}）。
+                <a href={`/api/oauth/logout?redirect_after=${encodeURIComponent(`/login?invitation=${encodeURIComponent(token)}`)}`} data-testid="invite-switch-account">切換帳號並繼續邀請</a>
               </div>
             )}
 
             {/* Logged in + email match */}
-            {user && user.email.toLowerCase() === state.data.invitedEmail.toLowerCase() && (
+            {user && normalizeEmail(user.email) === normalizeEmail(currentState.data.invitedEmail) && (
               <div className="tp-invite-cta">
                 {acceptError && (
                   <div className="tp-invite-error" role="alert">{acceptError}</div>

@@ -278,7 +278,7 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     expect(acceptCall).toBeFalsy();
   });
 
-  it('login OK but accept fails: still redirects to /trips with toast hint (graceful)', async () => {
+  it('login OK but accept fails: returns to the original invitation for its result', async () => {
     stubByRoute([
       { match: /\/api\/public-config/, status: 200, body: {} },
       { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
@@ -296,6 +296,21 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
     fireEvent.click(screen.getByTestId('login-submit'));
 
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/invite?token=expired-tok'));
+  });
+
+  it('Google login returns to the same invitation for manual acceptance', async () => {
+    stubByRoute([{ match: /\/api\/public-config/, status: 200, body: { providers: { google: true } } }]);
+    vi.useRealTimers();
+    renderAt('invitation=google-tok');
+    await waitFor(() => screen.getByTestId('login-google'));
+    expect((screen.getByTestId('login-google') as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/api/oauth/login/google?redirect_after_login=%2Finvite%3Ftoken%3Dgoogle-tok');
+  });
+
+  it('signup link preserves the invitation context', () => {
+    renderAt('invitation=invite-tok');
+    expect((screen.getByTestId('login-signup-link') as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/signup?invitation=invite-tok');
   });
 });

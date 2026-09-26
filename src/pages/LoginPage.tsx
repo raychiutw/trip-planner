@@ -9,7 +9,7 @@
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
- *   ?invitation=token → 登入成功後自動 POST /api/invitations/accept → redirect 該 trip
+ *   ?invitation=token → 登入後接受邀請；失敗回原邀請頁顯示結果
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -250,8 +250,9 @@ export default function LoginPage() {
   const verified = params.get('verified') === '1';
   const verifyError = params.get('verify_error');
   const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
-  /** V2 共編：登入完成後接受邀請 + 導頁到該 trip。失敗 graceful → 走 default redirect。 */
   const invitationToken = params.get('invitation');
+  const invitationPath = invitationToken ? `/invite?token=${encodeURIComponent(invitationToken)}` : null;
+  const googleRedirect = invitationPath ?? redirectAfter;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -315,7 +316,7 @@ export default function LoginPage() {
       if (res.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
-        if (invitationToken) {
+        if (invitationPath) {
           try {
             const acceptRes = await apiFetchRaw('/invitations/accept', {
               method: 'POST',
@@ -326,9 +327,11 @@ export default function LoginPage() {
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
-            // accept failed → fall through to default redirect (使用者體驗：仍登入成功)
+            navigate(invitationPath);
+            return;
           } catch {
-            // network error → fall through
+            navigate(invitationPath);
+            return;
           }
         }
         navigate(redirectAfter ?? '/trips');
@@ -541,7 +544,7 @@ export default function LoginPage() {
             <div className="tp-divider">或</div>
             <a
               className="tp-btn tp-btn-secondary"
-              href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
+              href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
               data-testid="login-google"
             >
               <GoogleLogo />
@@ -551,7 +554,7 @@ export default function LoginPage() {
         )}
 
         <div className="tp-login-footer">
-          沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
+          沒有帳號？<a href={invitationToken ? `/signup?invitation=${encodeURIComponent(invitationToken)}` : '/signup'} data-testid="login-signup-link">建立帳號</a>
         </div>
         </div>
       </div>

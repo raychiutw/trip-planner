@@ -260,6 +260,11 @@ describe('SignupPage', () => {
 });
 
 describe('SignupPage with ?invitation=token (V2 共編)', () => {
+  it('login link preserves the invitation context', () => {
+    render(<MemoryRouter initialEntries={['/signup?invitation=invite-tok']}><SignupPage /></MemoryRouter>);
+    expect((screen.getByText('直接登入') as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/login?invitation=invite-tok');
+  });
   it('passes invitationToken to /api/oauth/signup body', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
@@ -311,7 +316,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
     expect(navigateMock.mock.calls[0]![0]).toBe('/trips?selected=trip-1');
   });
 
-  it('joinedTrip null but invitationError set → still goes to /signup/check-email (signup OK, invite failed silently)', async () => {
+  it('signup succeeds but invitation fails: returns to the same invitation for recovery', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({
         ok: true, userId: 'u', email: 'new@x.com', requiresVerification: true,
@@ -330,10 +335,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
     fireEvent.click(screen.getByTestId('signup-submit'));
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalled());
-    // 仍走 check-email flow (signup 成功)，但 query 加 invitationError 給 toast
-    const navTo = navigateMock.mock.calls[0]![0] as string;
-    expect(navTo).toContain('/signup/check-email');
-    expect(navTo).toContain('invitationError=INVITATION_EXPIRED');
+    expect(navigateMock.mock.calls[0]![0]).toBe('/invite?token=expired-tok');
   });
 
   it('未勾選個資條款 → 送出鈕 disabled（owner 決策：建帳號需同意）', () => {
