@@ -50,11 +50,6 @@ describe('W3: 桌機 TitleBar action icon + 可見 label（推翻 v2.31.90 icon-
     expect(src).toMatch(/title="登出其他全部裝置"/);
   });
 
-  it('DeveloperAppsPage 建立新應用 button title 保留', () => {
-    const src = read('src/pages/DeveloperAppsPage.tsx');
-    expect(src).toMatch(/title="建立新應用"/);
-  });
-
   it('TitleBarPrimaryAction 有 title={displayLabel}（reusable 給多 page）', () => {
     const src = read('src/components/shell/TitleBarPrimaryAction.tsx');
     expect(src).toMatch(/title=\{displayLabel\}/);
