@@ -650,7 +650,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         </section>
       )}
 
-      <section className="tp-collab-section">
+      {!permLoading && !permError && <section className="tp-collab-section">
         <div className="tp-collab-section-head">
           <span className="tp-collab-section-title">新增成員</span>
         </div>
@@ -694,7 +694,7 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       <ConfirmModal
         open={!!removeTarget}

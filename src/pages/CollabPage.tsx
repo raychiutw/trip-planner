@@ -19,8 +19,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import type { CollabRole } from '../types/api';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import OperationShell from '../components/shell/OperationShell';
 import CollabPanel from '../components/trip/CollabPanel';
@@ -51,32 +51,67 @@ const SCOPED_STYLES = `
   max-width: 720px;
   margin-left: auto; margin-right: auto;
 }
+.tp-collab-page-state {
+  max-width: 720px;
+  margin: 16px auto 0;
+  padding: 20px 16px;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+.tp-collab-page-state button {
+  margin-left: 8px;
+  min-height: var(--spacing-tap-min);
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tp-collab-page-state button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
 @media (min-width: 768px) {
   .tp-collab-page-title { font-size: var(--font-size-title); padding: 32px 24px 0; }
 }
 `;
 
 interface TripMeta {
+  tripId: string;
   title?: string | null;
   name?: string | null;
+  role: CollabRole;
 }
 
 export default function CollabPage() {
   const auth = useRequireAuth();
-  const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
 
-  const [tripMeta, setTripMeta] = useState<TripMeta | null>(null);
+  const [tripResult, setTripResult] = useState<{ tripId: string; trip?: TripMeta; error?: string } | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     if (!auth.user || !tripId) return;
     let cancelled = false;
-    apiFetch<TripMeta>(`/trips/${tripId}`)
-      .then((data) => { if (!cancelled) setTripMeta(data); })
-      .catch(() => { /* 載入失敗不擋 panel — panel 內 fetch /permissions 仍可獨立顯示 */ });
+    setTripResult(null);
+    // /my-trips contains both the trip's display name and this user's authoritative role.
+    apiFetch<TripMeta[]>('/my-trips')
+      .then((trips) => {
+        if (cancelled) return;
+        const trip = Array.isArray(trips) ? trips.find((item) => item.tripId === tripId) : undefined;
+        setTripResult((trip?.role === 'owner' || trip?.role === 'member' || trip?.role === 'viewer') && (trip.title || trip.name)
+          ? { tripId, trip }
+          : { tripId, error: '無法確認此行程或你的權限，請返回行程清單後重試。' });
+      })
+      .catch(() => {
+        if (!cancelled) setTripResult({ tripId, error: '無法確認要管理的行程，請重試。' });
+      });
     return () => { cancelled = true; };
-  }, [auth.user, tripId]);
+  }, [auth.user, tripId, retry]);
 
   // v2.33.139: 拔 history.back 改 explicit URL (對齊 useNavigateBack hook
   // 的新行為)。回 trip detail（/trips?selected=:id）或 /trips fallback。
@@ -96,7 +131,7 @@ export default function CollabPage() {
         testId="collab-page"
         title="共編設定"
         back={() => navigate('/trips')}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
+        bottomNav={<GlobalBottomNav authed={auth.user !== null} />}
       >
         <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
           無效的行程 ID
@@ -105,7 +140,9 @@ export default function CollabPage() {
     );
   }
 
-  const tripName = tripMeta?.title || tripMeta?.name || '行程';
+  const current = tripResult?.tripId === tripId ? tripResult : null;
+  const trip = current?.trip;
+  const tripName = trip?.title || trip?.name;
 
   return (
     <>
@@ -115,11 +152,29 @@ export default function CollabPage() {
         testId="collab-page"
         title="共編設定"
         back={handleBack}
-        bottomNav={<GlobalBottomNav authed={user !== null} />}
+        bottomNav={<GlobalBottomNav authed={auth.user !== null} />}
       >
         <style>{SCOPED_STYLES}</style>
-        <h2 className="tp-collab-page-title">{tripName}</h2>
-        <CollabPanel tripId={tripId} />
+        {tripName ? <h2 className="tp-collab-page-title">{tripName}</h2> : null}
+        {!current && <div className="tp-collab-page-state">正在確認行程…</div>}
+        {current?.error && (
+          <div className="tp-collab-page-state" role="alert">
+            {current.error}（ID：{tripId}）{' '}
+            <button type="button" onClick={() => setRetry((value) => value + 1)}>重試</button>
+          </div>
+        )}
+        {trip?.role === 'owner' && (
+          <>
+            <div className="tp-collab-page-state">你是擁有者，可以邀請、變更角色與移除成員。</div>
+            <CollabPanel tripId={tripId} />
+          </>
+        )}
+        {trip?.role === 'member' && (
+          <div className="tp-collab-page-state">你是共編成員，可以檢視與編輯此行程。只有擁有者能管理邀請與成員。</div>
+        )}
+        {trip?.role === 'viewer' && (
+          <div className="tp-collab-page-state">你是檢視成員，只能檢視此行程。只有擁有者能管理邀請與成員。</div>
+        )}
       </OperationShell>
     </>
   );
