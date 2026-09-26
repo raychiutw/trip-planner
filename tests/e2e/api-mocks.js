@@ -19,6 +19,7 @@ const MOCK_TRIPS_LIST = [
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
+    role: 'owner',
     countries: '["JP"]',
     published: 1,
     lang: 'zh-TW',
@@ -33,6 +34,7 @@ const MOCK_TRIPS_LIST = [
     name: '釜山三日遊',
     owner: 'Demo',
     title: '2026 釜山三日遊',
+    role: 'owner',
     countries: '["KR"]',
     published: 1,
     lang: 'zh-TW',
@@ -704,7 +706,7 @@ async function setupApiMocks(page) {
   // 這個 mock 就成了唯一還在假設舊契約的地方 —— e2e 因此看不到標題。
   //
   // 真實 /api/my-trips 本來就帶 name/title/countries/totalDays/startDate/
-  // endDate/memberCount，mock 照實回才不會再與 prod 脫節。
+  // endDate/memberCount/role，mock 照實回才不會再與 prod 脫節。
   await page.route(/\/api\/my-trips$/, (route) => {
     route.fulfill({
       status: 200,
