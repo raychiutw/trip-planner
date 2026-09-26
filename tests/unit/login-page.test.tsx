@@ -40,11 +40,11 @@ afterEach(() => {
 describe('LoginPage form', () => {
   it('renders email + password + submit + signup link (Google hidden until probe confirms)', () => {
     renderAt();
-    expect(screen.getByTestId('login-email')).toBeTruthy();
-    expect(screen.getByTestId('login-password')).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '電子郵件' }).getAttribute('autocomplete')).toBe('email');
+    expect(screen.getByLabelText('密碼', { exact: true }).getAttribute('autocomplete')).toBe('current-password');
     expect(screen.getByTestId('login-submit')).toBeTruthy();
     expect(screen.getByTestId('login-signup-link')).toBeTruthy();
-    expect(screen.getByTestId('login-forgot-link')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '忘記密碼？' })).toBeTruthy();
     // Google button is gated on /api/public-config probe (not stubbed here, so absent)
     expect(screen.queryByTestId('login-google')).toBeNull();
   });
@@ -137,12 +137,12 @@ describe('LoginPage form', () => {
 
   it('?verified=1 → success banner', () => {
     renderAt('verified=1');
-    expect(screen.getByTestId('login-banner-verified')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('驗證成功');
   });
 
   it('?verify_error=expired → warning banner', () => {
     renderAt('verify_error=expired');
-    expect(screen.getByTestId('login-banner-verify-error').textContent).toContain('過期');
+    expect(screen.getByRole('alert').textContent).toContain('過期');
   });
 
   it('shows defensive warning when failure count ≥ 4', () => {
@@ -184,6 +184,7 @@ describe('LoginPage lockout', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(screen.queryByTestId('login-page-locked')).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: '登入嘗試太多次' }));
     expect(screen.getByTestId('login-locked-countdown').textContent).toBe('30:00');
     expect(screen.getByTestId('login-locked-reset')).toBeTruthy();
   });
