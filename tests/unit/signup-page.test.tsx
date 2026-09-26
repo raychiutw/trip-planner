@@ -88,6 +88,23 @@ describe('SignupPage', () => {
     expect(fetchMock.mock.calls[1]![0]).toBe('/api/oauth/send-verification');
   });
 
+  it('slow verification delivery does not hold the successful signup page', async () => {
+    const pendingVerification = new Promise<Response>(() => {});
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        ok: true, userId: 'u1', email: 'new@example.com', requiresVerification: true,
+      }), { status: 201 }))
+      .mockReturnValueOnce(pendingVerification);
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+    fillForm({ email: 'new@example.com', password: 'longpassword123' });
+    fireEvent.click(screen.getByTestId('signup-submit'));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(navigateMock).toHaveBeenCalledWith('/signup/check-email?email=new%40example.com');
+  });
+
   it('SIGNUP_INVALID_EMAIL → inline email error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(
@@ -106,7 +123,30 @@ describe('SignupPage', () => {
     fireEvent.click(screen.getByTestId('signup-submit'));
 
     await waitFor(() => expect(screen.getByTestId('signup-email-error')).toBeTruthy());
+    const email = screen.getByTestId('signup-email');
+    expect(email.getAttribute('aria-invalid')).toBe('true');
+    expect(email.getAttribute('aria-describedby')).toBe('signup-email-error');
+    expect(document.activeElement).toBe(email);
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('server weak-password response → linked password error and retained values', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: { code: 'SIGNUP_PASSWORD_TOO_SHORT', message: 'short' } }),
+      { status: 400 },
+    )));
+    vi.useRealTimers();
+    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+    fillForm({ email: 'new@example.com', password: 'short', name: 'Traveler' });
+    fireEvent.click(screen.getByTestId('signup-submit'));
+
+    await waitFor(() => expect(screen.getByTestId('signup-password-error').textContent).toContain('8 字元'));
+    const password = screen.getByTestId('signup-password');
+    expect(password.getAttribute('aria-invalid')).toBe('true');
+    expect(password.getAttribute('aria-describedby')).toContain('signup-password-error');
+    expect(document.activeElement).toBe(password);
+    expect((screen.getByTestId('signup-email') as HTMLInputElement).value).toBe('new@example.com');
+    expect((screen.getByTestId('signup-display-name') as HTMLInputElement).value).toBe('Traveler');
   });
 
   it('SIGNUP_EMAIL_TAKEN → banner with login + forgot links', async () => {
@@ -128,7 +168,12 @@ describe('SignupPage', () => {
 
     await waitFor(() => expect(screen.getByTestId('signup-banner-error')).toBeTruthy());
     const banner = screen.getByTestId('signup-banner-error');
-    expect(banner.textContent).toContain('已註冊');
+    const email = screen.getByTestId('signup-email') as HTMLInputElement;
+    expect(screen.getByTestId('signup-email-error').textContent).toContain('已註冊');
+    expect(email.getAttribute('aria-invalid')).toBe('true');
+    expect(email.getAttribute('aria-describedby')).toBe('signup-email-error');
+    expect(document.activeElement).toBe(email);
+    expect(email.value).toBe('taken@x.com');
     expect(banner.querySelector('a[href="/login"]')).toBeTruthy();
     expect(banner.querySelector('a[href="/login/forgot"]')).toBeTruthy();
   });
@@ -186,7 +231,31 @@ describe('SignupPage', () => {
     fireEvent.click(btn);
 
     await waitFor(() => expect(btn.disabled).toBe(true));
+    expect(btn.textContent).toBe('建立中…');
     resolve!(new Response(JSON.stringify({ ok: true, userId: 'u', email: 'x@y.com', requiresVerification: true }), { status: 201 }));
+  });
+
+  it('repeated submit during a slow request creates one account', async () => {
+    let resolveSignup: (response: Response) => void;
+    const pendingSignup = new Promise<Response>((resolve) => { resolveSignup = resolve; });
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(pendingSignup)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+    fillForm({ email: 'new@example.com', password: 'longpassword123' });
+    const form = screen.getByTestId('signup-submit').closest('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/oauth/signup')).toHaveLength(1);
+
+    resolveSignup!(new Response(JSON.stringify({
+      ok: true, userId: 'u', email: 'new@example.com', requiresVerification: true,
+    }), { status: 201 }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledOnce());
+    fireEvent.submit(form);
+    expect(fetchMock.mock.calls.filter(([url]) => url === '/api/oauth/signup')).toHaveLength(1);
   });
 });
 
@@ -268,6 +337,8 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
   });
 
   it('未勾選個資條款 → 送出鈕 disabled（owner 決策：建帳號需同意）', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
     render(
       <MemoryRouter>
         <SignupPage />
@@ -275,6 +346,12 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
     );
     fillForm({ email: 'a@b.com', password: 'longpassword123', consent: false });
     expect((screen.getByTestId('signup-submit') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('signup-submit').getAttribute('aria-describedby')).toBe('signup-consent-hint');
+    expect(screen.getByTestId('signup-privacy-consent').getAttribute('aria-describedby')).toBe('signup-consent-hint');
+    expect(screen.getByTestId('signup-consent-hint').textContent).toContain('請先同意');
+    fireEvent.submit(screen.getByTestId('signup-submit').closest('form')!);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByTestId('signup-privacy-consent'));
   });
 
   it('勾選後送出鈕啟用，且 body 帶 privacyConsent', async () => {

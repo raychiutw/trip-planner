@@ -12,7 +12,7 @@
  *   - SIGNUP_RATE_LIMITED → 429 banner with retry-after countdown
  *   - Network failure → generic banner
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
@@ -46,6 +46,11 @@ ${AUTH_LAYOUT_STYLES}
   line-height: 1.6; cursor: pointer;
 }
 .tp-signup-consent a { color: var(--color-accent-text); }
+.tp-signup-consent-hint {
+  margin: -10px 0 0;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+}
 
 .tp-auth-card {
   width: 100%; max-width: 440px;
@@ -127,13 +132,31 @@ export default function SignupPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ kind: 'error' | 'warning'; node: React.ReactNode } | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const consentRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const submissionRef = useRef(false);
+
+  useEffect(() => {
+    if (emailError) emailRef.current?.focus();
+    else if (passwordError) passwordRef.current?.focus();
+    else if (banner) bannerRef.current?.focus();
+  }, [emailError, passwordError, banner]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submissionRef.current) return;
+    if (!privacyConsent) {
+      consentRef.current?.focus();
+      return;
+    }
+    submissionRef.current = true;
     setEmailError(null);
     setPasswordError(null);
     setBanner(null);
     setSubmitting(true);
+    let completed = false;
 
     try {
       const res = await apiFetchRaw('/oauth/signup', {
@@ -150,23 +173,21 @@ export default function SignupPage() {
 
       if (res.ok) {
         const json = (await res.json()) as SignupOk;
-        // Best-effort send-verification (don't block on failure)
-        try {
-          await apiFetchRaw('/oauth/send-verification', {
-            method: 'POST',
-            body: JSON.stringify({ email: json.email }),
-          });
-        } catch {
-          /* ignore */
-        }
+        // Sending the email is best-effort; a slow mail service must not hold navigation.
+        void apiFetchRaw('/oauth/send-verification', {
+          method: 'POST',
+          body: JSON.stringify({ email: json.email }),
+        }).catch(() => {});
         // V2 共編：若 signup 同時 accept 了 invitation → 直接帶到該 trip
         if (json.joinedTrip?.id) {
+          completed = true;
           navigate(`/trips?selected=${encodeURIComponent(json.joinedTrip.id)}`);
           return;
         }
         // signup 成功但 invitation 失敗 → check-email flow + 帶 errCode 給該頁顯示 toast
         const checkEmailQuery = new URLSearchParams({ email: json.email });
         if (json.invitationError) checkEmailQuery.set('invitationError', json.invitationError);
+        completed = true;
         navigate(`/signup/check-email?${checkEmailQuery.toString()}`);
         return;
       }
@@ -178,14 +199,19 @@ export default function SignupPage() {
           setEmailError('電子郵件格式無效');
           break;
         case 'SIGNUP_INVALID_PASSWORD':
+        case 'SIGNUP_PASSWORD_TOO_SHORT':
           setPasswordError('密碼至少 8 字元');
           break;
+        case 'SIGNUP_PASSWORD_FORMAT':
+          setPasswordError('密碼格式無法使用，請更換密碼後再試');
+          break;
         case 'SIGNUP_EMAIL_TAKEN':
+          setEmailError('此電子郵件已註冊');
           setBanner({
             kind: 'error',
             node: (
               <span>
-                此電子郵件已註冊。<a href="/login">改用登入</a> 或{' '}
+                <a href="/login">改用登入</a> 或{' '}
                 <a href="/login/forgot">忘記密碼</a>。
               </span>
             ),
@@ -210,7 +236,10 @@ export default function SignupPage() {
     } catch {
       setBanner({ kind: 'error', node: <span>網路連線失敗，請檢查後再試。</span> });
     } finally {
-      setSubmitting(false);
+      if (!completed) {
+        submissionRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
@@ -230,6 +259,8 @@ export default function SignupPage() {
 
         {banner && (
           <div
+            ref={bannerRef}
+            tabIndex={-1}
             className={`tp-banner tp-banner-${banner.kind}`}
             role="alert"
             data-testid={`signup-banner-${banner.kind}`}
@@ -242,20 +273,24 @@ export default function SignupPage() {
           <div className="tp-form-row">
             <label htmlFor="signup-email">電子郵件</label>
             <input
+              ref={emailRef}
               id="signup-email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
               data-testid="signup-email"
+              aria-invalid={emailError ? true : undefined}
+              aria-describedby={emailError ? 'signup-email-error' : undefined}
             />
-            {emailError && <InlineError message={emailError} testId="signup-email-error" />}
+            {emailError && <div id="signup-email-error"><InlineError message={emailError} testId="signup-email-error" /></div>}
           </div>
 
           <div className="tp-form-row">
             <label htmlFor="signup-password">密碼</label>
             <input
+              ref={passwordRef}
               id="signup-password"
               type="password"
               autoComplete="new-password"
@@ -263,13 +298,14 @@ export default function SignupPage() {
               minLength={8}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(null); }}
               data-testid="signup-password"
-              aria-describedby="signup-password-hint"
+              aria-invalid={passwordError ? true : undefined}
+              aria-describedby={passwordError ? 'signup-password-hint signup-password-error' : 'signup-password-hint'}
             />
             {/* §9.3：密碼規則改常駐 helper（原只在 placeholder，打字即消失）。 */}
             <p id="signup-password-hint" className="tp-hint" data-testid="signup-password-hint">密碼至少 8 字元</p>
-            {passwordError && <InlineError message={passwordError} testId="signup-password-error" />}
+            {passwordError && <div id="signup-password-error"><InlineError message={passwordError} testId="signup-password-error" /></div>}
           </div>
 
           <div className="tp-form-row">
@@ -289,11 +325,13 @@ export default function SignupPage() {
 
           <div className="tp-signup-consent">
             <input
+              ref={consentRef}
               id="signup-privacy-consent"
               type="checkbox"
               checked={privacyConsent}
               onChange={(e) => setPrivacyConsent(e.target.checked)}
               data-testid="signup-privacy-consent"
+              aria-describedby={!privacyConsent ? 'signup-consent-hint' : undefined}
             />
             <label htmlFor="signup-privacy-consent">
               我已閱讀並同意
@@ -302,10 +340,13 @@ export default function SignupPage() {
             </label>
           </div>
 
+          {!privacyConsent && <p id="signup-consent-hint" className="tp-signup-consent-hint" data-testid="signup-consent-hint">請先同意個資條款與隱私權政策，才能建立帳號。</p>}
+
           <button
             type="submit"
             className="tp-btn tp-btn-primary"
             disabled={submitting || !privacyConsent}
+            aria-describedby={!privacyConsent ? 'signup-consent-hint' : undefined}
             data-testid="signup-submit"
           >
             {submitting ? '建立中…' : '建立帳號'}
