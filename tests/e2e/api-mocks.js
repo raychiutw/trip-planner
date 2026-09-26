@@ -967,6 +967,7 @@ async function setupApiMocks(page) {
 module.exports = {
   setupApiMocks,
   MOCK_TRIPS_LIST,
+  MOCK_USER,
   MOCK_TRIP_META_OKINAWA,
   MOCK_TRIP_META_BUSAN,
   MOCK_DAYS_OKINAWA,
