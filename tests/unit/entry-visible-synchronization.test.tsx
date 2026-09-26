@@ -200,7 +200,11 @@ describe('entry 變更的可見資料協調', () => {
     expect(within(day(1)).queryByText('甲景點1')).not.toBeInTheDocument();
     await within(day(2)).findByText('車程待更新');
     expect(writes).toEqual(['t1:entries/11']);
+    await screen.findByText(/景點已儲存，但交通更新失敗/);
     recomputeStatus = 200;
+    fireEvent.click(screen.getByText('重試更新交通'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/trips?selected=t1'));
+    expect(writes).toEqual(['t1:entries/11']);
     fireEvent.click(screen.getByText('移動甲景點'));
     fireEvent.click(await screen.findByTestId('entry-action-day-3'));
     fireEvent.click(screen.getByTestId('entry-action-confirm'));

@@ -14,6 +14,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import EntryActionPage from '../../src/pages/EntryActionPage';
 import { dayNumFromId, type DayOption } from '../../src/lib/entryAction';
+import { pickFromTripSelect } from './__helpers__/tripSelect';
+import { pickTime } from './__helpers__/tripTimePicker';
 
 const navigateSpy = vi.fn();
 // 穩定 reference — 每 render 回新 object 會讓依賴 auth.user 的 load effect
@@ -33,7 +35,6 @@ vi.mock('../../src/components/shell/AppShell', () => ({
 }));
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
-vi.mock('../../src/components/TripSelect', () => ({ TripSelect: () => null }));
 
 const apiFetchMock = vi.fn();
 const apiFetchRawMock = vi.fn();
@@ -76,6 +77,88 @@ beforeEach(() => {
 });
 
 describe('EntryActionPage — move/copy 車程重算 scope', () => {
+  it('自訂時段驗證起訖並寫入目標日', async () => {
+    renderPage('move');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    await pickFromTripSelect('entry-action-timeslot', /自訂時段/);
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    expect(await screen.findByText(/請設定有效的自訂時段/)).toBeInTheDocument();
+    expect(apiFetchRawMock).not.toHaveBeenCalled();
+    pickTime('entry-action-custom-start', '14:00');
+    pickTime('entry-action-custom-end', '16:30');
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(body).toEqual({ day_id: 72, start_time: '14:00', end_time: '16:30' });
+  });
+
+  it('時段選擇實際寫入複製的目標 entry', async () => {
+    renderPage('copy');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    await pickFromTripSelect('entry-action-timeslot', /午餐/);
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body));
+    expect(body).toEqual({ targetDayId: 72, time: '12:00 - 13:30' });
+  });
+
+  it('copy 可選目前日，move 仍須換日', async () => {
+    const page = renderPage('copy');
+    fireEvent.click(await screen.findByTestId('entry-action-day-1'));
+    expect(screen.getByTestId('entry-action-confirm')).toBeEnabled();
+    page.unmount();
+    renderPage('move');
+    fireEvent.click(await screen.findByTestId('entry-action-day-1'));
+    expect(screen.getByTestId('entry-action-confirm')).toBeDisabled();
+  });
+
+  it('雙擊送出只建立一次', async () => {
+    let resolveWrite!: (value: unknown) => void;
+    apiFetchRawMock.mockReturnValueOnce(new Promise((resolve) => { resolveWrite = resolve; }));
+    renderPage('copy');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    const confirm = screen.getByTestId('entry-action-confirm');
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+    resolveWrite({ ok: true, status: 200, json: () => Promise.resolve({}), text: () => Promise.resolve('') });
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledTimes(1));
+  });
+
+  it('409 保留選擇與錯誤，可重新提交', async () => {
+    apiFetchRawMock.mockResolvedValueOnce({ ok: false, status: 409, text: () => Promise.resolve('{"error":{"message":"目標日期衝突"}}') });
+    renderPage('move');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    expect(await screen.findByText('目標日期衝突')).toBeInTheDocument();
+    expect(screen.getByTestId('entry-action-day-2')).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('entry-action-confirm')).toBeEnabled();
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('日期載入失敗可重試', async () => {
+    apiFetchMock.mockRejectedValueOnce(new Error('日期載入失敗'));
+    renderPage('copy');
+    expect(await screen.findByText('日期載入失敗')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('重試載入'));
+    expect(await screen.findByTestId('entry-action-day-2')).toBeInTheDocument();
+  });
+
+  it('寫入成功但目標日交通失敗時保留頁面，重試不重送 copy', async () => {
+    recomputeMock.mockRejectedValueOnce(new Error('travel failed')).mockResolvedValue(null);
+    renderPage('copy');
+    fireEvent.click(await screen.findByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+
+    expect(await screen.findByText(/交通更新失敗/)).toBeInTheDocument();
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledTimes(1));
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+    expect(recomputeMock).toHaveBeenCalledTimes(2);
+  });
+
   it('copy → 恰 1 次 recompute，scope = 目標日 dayNum', async () => {
     renderPage('copy');
     // 等 day 選項載入（entry 在 day 71 / dayNum 1，選 day 72 / dayNum 2）

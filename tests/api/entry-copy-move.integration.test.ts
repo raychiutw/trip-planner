@@ -42,6 +42,26 @@ beforeAll(async () => {
 afterAll(disposeMiniflare);
 
 describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
+  it('同日複製可指定新時段，來源時間不變', async () => {
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${entryDay1Id}/copy`, 'POST', {
+        targetDayId: day1Id, time: '09:00 - 11:30',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-cm', eid: String(entryDay1Id) },
+    });
+    const resp = await callHandler(onRequestPostCopy, ctx);
+    expect(resp.status).toBe(200);
+    const copy = await resp.json() as { id: number };
+    const rows = await db.prepare('SELECT id, day_id, start_time, end_time FROM trip_entries WHERE id IN (?, ?) ORDER BY id')
+      .bind(entryDay1Id, copy.id).all<{ id: number; day_id: number; start_time: string; end_time: string }>();
+    expect(rows.results).toEqual([
+      { id: entryDay1Id, day_id: day1Id, start_time: '11:30', end_time: '14:00' },
+      { id: copy.id, day_id: day1Id, start_time: '09:00', end_time: '11:30' },
+    ]);
+  });
+
   it('複製 entry 到目標 day → 200 + 新 row + 原 entry 仍存在', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${entryDay1Id}/copy`, 'POST', {
@@ -167,6 +187,21 @@ describe('PATCH /api/trips/:id/entries/:eid — Item 3 move 跨天 via day_id', 
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT day_id FROM trip_entries WHERE id = ?').bind(movableEid).first() as Record<string, unknown>;
     expect(row.day_id).toBe(day2Id);
+  });
+
+  it('跨日移動與新時段一起持久化', async () => {
+    const entryId = await seedEntry(db, day1Id);
+    const ctx = mockContext({
+      request: jsonRequest(`https://test.com/api/trips/trip-cm/entries/${entryId}`, 'PATCH', {
+        day_id: day3Id, start_time: '18:00', end_time: '20:00',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-cm', eid: String(entryId) },
+    });
+    expect((await callHandler(onRequestPatchEntry, ctx)).status).toBe(200);
+    const row = await db.prepare('SELECT day_id, start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
+    expect(row).toEqual({ day_id: day3Id, start_time: '18:00', end_time: '20:00' });
   });
 
   it('PATCH day_id 屬於別 trip → 403', async () => {

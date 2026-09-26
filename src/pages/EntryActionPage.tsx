@@ -50,6 +50,14 @@ import OperationShell from '../components/shell/OperationShell';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripSelect } from '../components/TripSelect';
+import { TripTimePicker } from '../components/TripTimePicker';
+
+const SLOT_TIMES: Record<string, { start: string; end: string }> = {
+  morning: { start: '09:00', end: '11:30' },
+  noon: { start: '12:00', end: '13:30' },
+  afternoon: { start: '14:00', end: '16:30' },
+  evening: { start: '18:00', end: '20:00' },
+};
 
 interface DaysApiRow {
   id: number;
@@ -164,6 +172,10 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+.tp-entry-action-custom-times {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+.tp-entry-action-custom-times label { display: grid; gap: 8px; min-width: 0; }
 .tp-entry-action-time-label {
   font-size: var(--font-size-caption); color: var(--color-muted);
   text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
@@ -195,14 +207,20 @@ body.dark .tp-entry-action-time-select {
 .tp-entry-action-error {
   margin: 16px 0 0;
   padding: 10px 12px;
-  background: var(--color-priority-high-bg);
-  border: 1px solid var(--color-priority-high-dot);
+  background: var(--color-destructive-bg);
+  border: 1px solid var(--color-destructive);
+  border-left-width: 4px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-footnote);
-  color: var(--color-priority-high-dot);
+  color: var(--color-destructive);
   display: flex; align-items: flex-start; gap: 6px;
 }
 .tp-entry-action-error .svg-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+.tp-entry-action-error button {
+  margin-left: auto; border: 0; background: transparent; color: inherit;
+  font: inherit; text-decoration: underline; cursor: pointer;
+  min-width: 44px; min-height: 44px; padding: 0 8px;
+}
 
 .tp-entry-action-loading {
   padding: 60px 24px;
@@ -258,14 +276,21 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   const [currentDayId, setCurrentDayId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [timeSlot, setTimeSlot] = useState<string>('same');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const retryRecompute = useRef<(() => Promise<boolean>) | null>(null);
+  const submittingRef = useRef(false);
   const operationGeneration = useRef(0);
   useEffect(() => {
     const generation = ++operationGeneration.current;
+    submittingRef.current = false;
+    retryRecompute.current = null;
     setSubmitting(false);
     setSelectedDayId(null);
     setSubmitError(null);
@@ -305,37 +330,60 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       }
     })();
     return () => { cancelled = true; };
-  }, [auth.user, tripId, entryIdNum]);
+  }, [auth.user, tripId, entryIdNum, loadAttempt]);
 
 
   async function handleConfirm() {
-    if (!tripId || entryIdNum == null || selectedDayId == null) return;
+    if (!tripId || entryIdNum == null || selectedDayId == null || submittingRef.current) return;
     const generation = operationGeneration.current;
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
 
     const targetDayNum = dayNumFromId(days, selectedDayId);
     try {
-      // #1261：複製只重算目標天；移動兩天各一次 —— 都在 module。
-      const r = action === 'copy'
-        ? await copyEntry(tripId, entryIdNum, { targetDayId: selectedDayId, targetDayNum })
-        : await moveEntry(tripId, entryIdNum, { fromDayNum: dayNumFromId(days, currentDayId), toDayNum: targetDayNum, toDayId: selectedDayId });
-      if (operationGeneration.current !== generation) return;
-      if (!r.ok) {
-        throw new Error(r.message || (action === 'copy' ? '複製失敗' : '移動失敗'));
+      if (retryRecompute.current) {
+        if (!await retryRecompute.current()) {
+          if (operationGeneration.current === generation) setSubmitError('景點已儲存，但交通更新失敗，請重試更新交通');
+          return;
+        }
+      } else {
+        const time = timeSlot === 'custom' ? { start: customStart, end: customEnd } : SLOT_TIMES[timeSlot];
+        if (timeSlot === 'custom' && (!time?.start || !time.end || time.start >= time.end)) {
+          setSubmitError('請設定有效的自訂時段，抵達時間須早於離開時間');
+          return;
+        }
+        // #1261：複製只重算目標天；移動兩天各一次 —— 都在 module。
+        const r = action === 'copy'
+          ? await copyEntry(tripId, entryIdNum, { targetDayId: selectedDayId, targetDayNum, time })
+          : await moveEntry(tripId, entryIdNum, { fromDayNum: dayNumFromId(days, currentDayId), toDayNum: targetDayNum, toDayId: selectedDayId, time });
+        if (operationGeneration.current !== generation) return;
+        if (!r.ok) {
+          throw new Error(r.message || (action === 'copy' ? '複製失敗' : '移動失敗'));
+        }
+        retryRecompute.current = r.retryRecompute;
+        if (!await r.recompute) {
+          if (operationGeneration.current === generation) setSubmitError('景點已儲存，但交通更新失敗，請重試更新交通');
+          return;
+        }
       }
+      if (operationGeneration.current !== generation) return;
       showToast(action === 'copy' ? '景點已複製' : '景點已移動', 'success');
       handleBack();
     } catch (err) {
       if (operationGeneration.current !== generation) return;
       setSubmitError(err instanceof Error ? err.message : '操作失敗');
-      setSubmitting(false);
+    } finally {
+      if (operationGeneration.current === generation) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
   const canConfirm = useMemo(
-    () => !loading && !submitting && selectedDayId != null && selectedDayId !== currentDayId,
-    [loading, submitting, selectedDayId, currentDayId],
+    () => !loading && !submitting && selectedDayId != null && (action === 'copy' || selectedDayId !== currentDayId),
+    [loading, submitting, selectedDayId, currentDayId, action],
   );
 
   if (!auth.user) return null;
@@ -375,6 +423,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                 <div className="tp-entry-action-error" role="alert">
                   <Icon name="warning" />
                   <span>{loadError}</span>
+                  <button type="button" onClick={() => setLoadAttempt((n) => n + 1)}>重試載入</button>
                 </div>
               )}
 
@@ -394,10 +443,10 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                           type="button"
                           role="radio"
                           className="tp-entry-action-day"
-                          aria-disabled={isCurrent || undefined}
+                          aria-disabled={(submitting || !!retryRecompute.current || (action === 'move' && isCurrent)) || undefined}
                           aria-checked={isSelected}
                           aria-pressed={isSelected}
-                          onClick={() => { if (!isCurrent) setSelectedDayId(d.dayId); }}
+                          onClick={() => { if (!submittingRef.current && !retryRecompute.current && (action === 'copy' || !isCurrent)) setSelectedDayId(d.dayId); }}
                           data-testid={`entry-action-day-${d.dayNum}`}
                         >
                           <span
@@ -432,10 +481,18 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                       id="entry-action-timeslot"
                       value={timeSlot}
                       onChange={setTimeSlot}
+                      disabled={submitting || !!retryRecompute.current}
                       ariaLabel={`${ctaLabel}到時段`}
                       options={ENTRY_ACTION_TIME_SLOTS.map((s) => ({ value: s.key, label: s.label }))}
                     />
                   </div>
+
+                  {timeSlot === 'custom' && (
+                    <div className="tp-entry-action-time-row tp-entry-action-custom-times">
+                      <label data-testid="entry-action-custom-start">抵達 <TripTimePicker value={customStart} onChange={setCustomStart} ariaLabel="抵達時間" disabled={submitting || !!retryRecompute.current} /></label>
+                      <label data-testid="entry-action-custom-end">離開 <TripTimePicker value={customEnd} onChange={setCustomEnd} ariaLabel="離開時間" disabled={submitting || !!retryRecompute.current} /></label>
+                    </div>
+                  )}
 
                   {submitError && (
                     <div className="tp-entry-action-error" role="alert">
@@ -465,7 +522,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                   disabled={!canConfirm}
                   data-testid="entry-action-confirm"
                 >
-                  {submitting ? `${ctaLabel}中⋯` : ctaLabel}
+                  {submitting ? '處理中⋯' : retryRecompute.current ? '重試更新交通' : ctaLabel}
                 </button>
               </div>
             )}
