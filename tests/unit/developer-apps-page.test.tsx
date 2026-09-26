@@ -246,7 +246,8 @@ describe('DeveloperAppsPage', () => {
     expect(error.compareDocumentPosition(screen.getByTestId('dev-apps-content')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
     expect(screen.queryByRole('button', { name: '建立新應用' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '返回帳號' }));
+    expect(screen.getByTestId('titlebar').querySelectorAll('button')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('titlebar').querySelector('button')!);
     await waitFor(() => expect(screen.getByTestId('account-stub')).toBeTruthy());
   });
 

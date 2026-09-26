@@ -50,7 +50,8 @@ test('403 顯示無權且不引導建立，返回帳號可由鍵盤操作', asyn
       && Boolean(banner.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING);
   })).toBe(true);
   await expect(page.getByRole('button', { name: '建立新應用' })).toHaveCount(0);
-  const back = page.getByRole('button', { name: '返回帳號' });
+  await expect(page.getByTestId('titlebar').getByRole('button')).toHaveCount(1);
+  const back = page.getByTestId('titlebar').getByRole('button', { name: '返回' });
   await back.focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/account$/);

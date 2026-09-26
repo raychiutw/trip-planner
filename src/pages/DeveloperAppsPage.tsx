@@ -182,7 +182,7 @@ export default function DeveloperAppsPage() {
     return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
 
-  const actionLabel = retrying ? '載入中…' : error === 'forbidden' ? '返回帳號' : error === 'failed' ? '重新載入應用列表' : '建立新應用';
+  const actionLabel = retrying ? '載入中…' : error === 'failed' ? '重新載入應用列表' : '建立新應用';
   async function retryApps() {
     setRetrying(true);
     try { await loadApps(); }
@@ -190,8 +190,7 @@ export default function DeveloperAppsPage() {
   }
   function handleTitleBarAction() {
     if (retrying) return;
-    if (error === 'forbidden') navigate('/account');
-    else if (error === 'failed') void retryApps();
+    if (error === 'failed') void retryApps();
     else navigate('/developer/apps/new');
   }
 
@@ -205,7 +204,7 @@ export default function DeveloperAppsPage() {
       <TitleBar
         title="應用"
         back={() => navigate('/account')}
-        actions={
+        actions={error !== 'forbidden' ? (
           <button
             type="button"
             ref={titlebarActionRef}
@@ -218,13 +217,12 @@ export default function DeveloperAppsPage() {
             data-testid={!error && !retrying ? 'dev-apps-new' : undefined}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              {error === 'forbidden' && <path d="M19 12H5m7-7-7 7 7 7" />}
               {(error === 'failed' || retrying) && <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" />}
               {!error && !retrying && <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
             </svg>
             <span className="tp-titlebar-action-label">{actionLabel}</span>
           </button>
-        }
+        ) : undefined}
       />
       {error === 'forbidden' && <ErrorBanner
         message="沒有權限查看開發者應用，請返回帳號。"
