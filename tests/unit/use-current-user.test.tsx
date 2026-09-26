@@ -124,4 +124,23 @@ describe('useCurrentUser', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     hooks.forEach(({ result }) => expect(result.current.user).toEqual(SAMPLE_USER));
   });
+
+  it('unmounting one of several deduped concurrent mounts does not affect the others', async () => {
+    // Real pageloads mix components with different lifetimes (e.g. a sidebar
+    // that unmounts on route change vs. a page body that stays) sharing the
+    // same in-flight fetch. The unmounted instance's `stale` closure guard
+    // must not interfere with the module-level dedup the others still rely on.
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
+    );
+    const hooks = Array.from({ length: 3 }, () => renderHook(() => useCurrentUser()));
+    hooks[1].unmount();
+    await Promise.all(
+      [hooks[0], hooks[2]].map(({ result }) => waitFor(() => expect(result.current.user).not.toBeUndefined())),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(hooks[0].result.current.user).toEqual(SAMPLE_USER);
+    expect(hooks[2].result.current.user).toEqual(SAMPLE_USER);
+    // No assertion needed for hooks[1] — vitest/RTL warns if setState fired on the unmounted instance.
+  });
 });
