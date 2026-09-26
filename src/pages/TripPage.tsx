@@ -10,13 +10,10 @@ import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
 import { moveEntriesBatch } from '../lib/entryMutations';
 import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
-import { apiFetch } from '../lib/apiClient';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
-import { mapRow } from '../lib/mapRow';
-import { lsGet, lsSet, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
-import { resolveTripId } from '../lib/resolveTripId';
+import { lsRenewAll } from '../lib/localStorage';
+import { useTripSelection } from '../hooks/useMyTrips';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -49,18 +46,6 @@ import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
-import type { TripListItem } from '../types/trip';
-
-// 只認 tripId 與 name —— 這是切換器與導頁真正需要的。
-//
-// 曾把 owner 列為必要而讓匿名檢視公開行程時整頁全空；2026-07-21 又因為
-// `published` 被列為必要，在清單來源換成 `/api/my-trips`（不回該欄）後
-// **每一筆都被 filter 掉**。教訓一樣：這個 guard 只該檢查真正會用到的欄位，
-// 多列一個就多一種讓清單靜默清空的方式。
-function isTripListItem(item: Record<string, unknown>): item is Record<string, unknown> & TripListItem {
-  return typeof item.tripId === 'string'
-    && typeof item.name === 'string';
-}
 
 import '../../css/tokens.css';
 
@@ -161,7 +146,9 @@ const LOADING_VIEW = (
 
 // Legacy query-string compat (React Router handles path-based routing)
 function getQueryTrip(): string | null {
-  return new URLSearchParams(window.location.search).get('trip');
+  if (typeof window === 'undefined') return null;
+  const tripId = new URLSearchParams(window.location.search).get('trip');
+  return tripId && /^[\w-]+$/.test(tripId) ? tripId : null;
 }
 
 /* ===== Scroll helpers ===== */
@@ -249,8 +236,13 @@ function TripPageInner(
   const effectiveUrlTripId = propTripId ?? urlTripId;
   const navigate = useNavigate();
   const { user: currentUser } = useCurrentUser();
-  const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
-  const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
+  const explicitTripId = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId))
+    ? effectiveUrlTripId : getQueryTrip();
+  const { activeTripId, status: tripsStatus } = useTripSelection(currentUser?.id, { explicitTripId });
+  const resolveState = useMemo<ResolveState>(() => activeTripId
+    ? { status: 'resolved', tripId: activeTripId }
+    : tripsStatus === 'ready' ? { status: 'unpublished' } : { status: 'loading' },
+  [activeTripId, tripsStatus]);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
   // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
@@ -264,6 +256,7 @@ function TripPageInner(
   const initialScrollDone = useRef(false);
   // ⑨ 連續捲動：scroll-spy 最後同步過的 day，避免每個 scroll frame 都 switchDay。
   const scrollDayRef = useRef(0);
+  useEffect(() => { initialScrollDone.current = false; }, [activeTripId]);
 
   /* --- Scroll restore when returning from StopDetailPage --- */
   useScrollRestoreOnBack();
@@ -344,86 +337,12 @@ function TripPageInner(
     }
   }, []);
 
-  /* --- Resolve trip ID from URL / localStorage / default (#6: cancelled guard) --- */
-  /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
-  useEffect(() => {
-    let cancelled = false;
-    // Priority 1: React Router params (/trip/:tripId)
-    // Priority 2: legacy query string ?trip=xxx
-    // Priority 3: localStorage
-    let tripId: string | null = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)) ? effectiveUrlTripId : null;
-    if (!tripId) tripId = getQueryTrip();
-    // 明確導航目標 = 來自 URL param / prop(?selected=) / 舊 ?trip=（非 localStorage pref）。
-    // 決定「比對不到 /api/trips 時是否信任此 tripId」（見 resolveTripId / v2.43.x fix）。
-    const isExplicitTarget = !!tripId && /^[\w-]+$/.test(tripId);
-    if (!tripId || !/^[\w-]+$/.test(tripId)) {
-      tripId = lsGet<string>(LS_KEY_TRIP_PREF);
-    }
-
-    // Reset scroll tracking for new trip
-    initialScrollDone.current = false;
-
-    // 2026-07-21：改用 /my-trips（`FROM trip_permissions WHERE user_id = ?`）。
-    // 原本打 /trips —— 那支只回 `published = 1`，等於用「全站公開行程」冒充
-    // 「我的行程」。過去看起來能用純粹因為前端建立行程時寫死 published=1；
-    // v2.57.0 移除該預設、v2.57.1 把既有行程改為不公開後，切換器就只剩 tripId
-    // 顯示不出名稱（owner 2026-07-21 回報）。
-    apiFetch<Record<string, unknown>[]>('/my-trips')
-      .then((raw) => {
-        if (cancelled) return;
-        const trips: TripListItem[] = raw.map(r => mapRow(r)).filter(isTripListItem);
-
-        // Migration 0045 dropped trips.is_default。/my-trips 回的每一筆都是使用者
-        // 有權限的行程，published 與可否存取無關 —— 直接取第一筆。舊版是
-        // `find(t => t.published === 1)`，既有行程全部改為不公開後回 undefined，
-        // 連預設行程都導不了。
-        // 舊版在此自行算 defaultTrip / match，並攔截 `match.published === 0` 顯示
-        // 「已取消發布」。改用 /my-trips 後那條不成立 —— 清單裡的就是你有權限的；
-        // 比對與 fallback 也都已在 resolveTripId 內完成，不需在這裡重算一次。
-        // 真正無權限的情況由下方 useTrip(activeTripId) 的 403/404 處理。
-
-        // v2.43.x fix：明確導航目標（URL/prop/?trip=）即使不在 permission-filtered
-        // /api/trips（排除使用者自己的私人 clone, published=0）也信任它，不再 silently
-        // fallback 到第一個 published trip（QA 2026-06-02 prod bug：從列表點自己的私人
-        // clone 卻看到「別的 trip 的行程」）。存取權由下方 useTrip(activeTripId) 的實際
-        // fetch 驗證（403/404 → error state，而非 silently 顯示另一個 trip）。
-        const resolvedId = resolveTripId(tripId, isExplicitTarget, trips);
-
-        if (!resolvedId) {
-          setResolveState({ status: 'unpublished' });
-          return;
-        }
-
-        lsSet(LS_KEY_TRIP_PREF, resolvedId);
-        setResolveState({ status: 'resolved', tripId: resolvedId });
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // API 失敗時仍嘗試用現有 tripId（離線容錯）
-        if (tripId) {
-          lsSet(LS_KEY_TRIP_PREF, tripId);
-          setResolveState({ status: 'resolved', tripId });
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [resolveKey, effectiveUrlTripId, navigate]);
-
-  /* --- Derive active tripId for the hook --- */
-  const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
   eventTripRef.current = activeTripId;
   const operationGeneration = useRef(0);
   useEffect(() => {
     const generation = ++operationGeneration.current;
     return () => { operationGeneration.current = generation + 1; };
   }, [effectiveUrlTripId, activeTripId]);
-
-  /* Section 5 (E4)：將 resolved trip id 寫入 ActiveTripContext，提供給
-   * /chat /map /explore 等 global route 之預設 active trip。 */
-  const { setActiveTrip } = useActiveTrip();
-  useEffect(() => {
-    if (activeTripId) setActiveTrip(activeTripId);
-  }, [activeTripId, setActiveTrip]);
 
   // 持續記住 .app-shell-main 捲動位置（rAF-throttled），供編輯 / 新增景點 / 子頁返回
   // 時還原（不移動頁面）。不能等 unmount 才讀 — 屆時 timeline 已被移除、scrollTop 被
@@ -843,7 +762,7 @@ function TripPageInner(
               title="無法載入行程"
               message={`找不到此行程或載入失敗（ID：${activeTripId}）。請確認連結是否正確，或回行程列表挑選其他。`}
               actionLabel="重試"
-              onAction={() => setResolveKey((k) => k + 1)}
+              onAction={() => window.location.reload()}
             />
             <div className="text-center p-10 text-foreground">
               <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/trips">回行程列表</a>

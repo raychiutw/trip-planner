@@ -93,3 +93,74 @@ test('#1140 story 1–3：切 tab 帶著同一個 active trip，重整後仍在'
     '重整後應仍是同一條行程（localStorage persist）',
   ).toContainText(TRIP_B_TITLE_FRAGMENT);
 });
+
+test('#1302：行程清單、側欄與明細共用同一次可存取清單讀取', async ({ page }) => {
+  const reads = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/my-trips') reads.push(request.url());
+  });
+  await page.goto(`/trips?selected=${TRIP_A}`);
+  await expect(page.getByTestId('trips-trip-title')).toBeVisible();
+  await expect(page.getByTestId('sidebar-trips')).toContainText(MOCK_TRIPS_LIST[0].name);
+  await expect.poll(() => reads.length).toBe(1);
+});
+
+test('#1302：明確指定但不在清單的行程由明細顯示讀取錯誤', async ({ page }) => {
+  const target = 'private-link';
+  await page.goto(`/trips?selected=${target}`);
+  await expect(page).toHaveURL(new RegExp(`selected=${target}`));
+  await expect(page.getByText(`找不到此行程或載入失敗（ID：${target}）`, { exact: false })).toBeVisible();
+  await expect(page.getByTestId('sidebar-trips')).toContainText(MOCK_TRIPS_LIST[0].name);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/trips?selected=${target}`);
+  await expect(page).toHaveURL(new RegExp(`selected=${target}`));
+  await expect(page.getByText(`找不到此行程或載入失敗（ID：${target}）`, { exact: false })).toBeVisible();
+});
+
+test('#1302：舊 /trip/:id 連結仍保留明確目標', async ({ page }) => {
+  const target = 'private-link';
+  await page.goto(`/trip/${target}`);
+  await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${target}`));
+  await expect(page.getByText(`找不到此行程或載入失敗（ID：${target}）`, { exact: false })).toBeVisible();
+});
+
+test('#1302：沒有 active 偏好時桌機恢復上次檢視行程，手機仍留在清單', async ({ page }) => {
+  await page.goto('/chat');
+  await page.evaluate((tripId) => {
+    localStorage.removeItem('tp-trip-pref');
+    localStorage.setItem('tp-last-trip-view', JSON.stringify({
+      v: { tripId, dayNum: 2 }, exp: Date.now() + 86400000,
+    }));
+  }, TRIP_B);
+  await page.goto('/trips');
+  await expect(page).toHaveURL(new RegExp(`selected=${TRIP_B}#day2`));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => localStorage.removeItem('tp-trip-pref'));
+  await page.goto('/trips');
+  await expect(page).toHaveURL(/\/trips$/);
+  await expect(page.getByTestId(`trips-list-card-${TRIP_B}`)).toBeVisible();
+});
+
+test('#1302：從行程卡切換後聊天發送到同一行程', async ({ page }) => {
+  await page.route('**/api/account/ai-authorization', (route) => route.fulfill({ json: { authorized: true } }));
+  await page.goto('/trips');
+  await page.getByTestId(`trips-list-card-${TRIP_B}`).click();
+  await expect(page).toHaveURL(new RegExp(`selected=${TRIP_B}`));
+  await page.goto('/chat');
+  await expect(page.getByTestId('chat-trip-title')).toContainText(TRIP_B_TITLE_FRAGMENT);
+  await page.getByTestId('chat-input').fill('確認行程');
+  const sent = page.waitForRequest((request) => request.method() === 'POST' && new URL(request.url()).pathname === '/api/requests');
+  await page.getByTestId('chat-send').click();
+  expect((await sent).postDataJSON().tripId).toBe(TRIP_B);
+});
+
+test('#1302：手機從有日期的明細切換行程，不沿用舊行程日期連結', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/trips?selected=${TRIP_A}#day2`);
+  await expect(page.getByTestId('trips-trip-title')).toBeVisible();
+  await page.getByTestId('trips-trip-title').click();
+  await page.getByTestId(`trips-trip-pick-${TRIP_B}`).click();
+  await expect(page).toHaveURL(new RegExp(`selected=${TRIP_B}#day1$`));
+  await expect(page.getByTestId('trips-trip-title')).toContainText(TRIP_B_TITLE_FRAGMENT);
+});

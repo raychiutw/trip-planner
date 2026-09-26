@@ -114,7 +114,7 @@ src/
 
 `useTripSegments` 是 segment 讀取與自動補算的共同入口。TripPage provider 共用一次讀取給時間軸與日區塊；獨立編輯頁自行讀取。entry/segment 更新會使舊讀取失效，完成新讀取後才判定相鄰 entry 的缺口，並交由 `travelRecompute` 按 day scope 去重與回報待更新狀態。
 `segmentMutations.saveSegment` 負責兩個手動編輯入口的 POST／PATCH 與成功事件；版本重試及表單錯誤提示留在各入口。刷新結果由 `useTripSegments` 處理，不改寫已成功的儲存結果。
-`useMyTrips` 依使用者共用 `/my-trips` 清單讀取、同時請求、刷新與最新結果；`useTripSelection` 將清單與 `ActiveTripContext` 偏好接合。聊天依成功清單決定無明確目標時的 fallback，側欄沿用同一清單與偏好；明確 URL／行程 sheet 目標仍優先。失敗讀取不確認空清單。
+`useMyTrips` 依使用者共用 `/my-trips` 清單讀取、同時請求、刷新與最新結果；`useTripSelection` 將清單與 `ActiveTripContext` 偏好接合。聊天、行程清單、行程明細與側欄沿用同一清單與偏好；明確 URL／行程 sheet 目標仍優先，存取權由明細讀取判定。失敗讀取不確認空清單。桌機 `/trips` 的上次檢視行程及日期還原留在清單頁，手機仍先呈現清單。
 
 ### CSS 架構
 
