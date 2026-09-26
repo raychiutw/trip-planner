@@ -16,12 +16,17 @@ export async function applyHealthCheckCompletion(
   // 只有 pending 可套用成果。重試從已保存的報告重建摘要，不能重新解析摘要為空 findings。
   await db.prepare(
     `UPDATE trip_health_reports
-       SET status = ?, findings_json = ?, error_message = ?, completed_at = datetime('now')
+       SET status = ?,
+           findings_json = CASE WHEN ? = 1 THEN findings_json ELSE ? END,
+           error_message = ?,
+           completed_at = CASE WHEN ? = 1 THEN completed_at ELSE datetime('now') END
      WHERE trip_id = ? AND request_id = ? AND status = 'pending'`,
   ).bind(
     failed ? 'failed' : 'completed',
-    failed ? null : JSON.stringify(parseFindings(reply)),
+    failed ? 1 : 0,
+    JSON.stringify(parseFindings(reply)),
     failed ? (needsConsent ? '需要行程擁有者授權 AI 才能執行健檢' : reply || '健檢失敗').slice(0, 500) : null,
+    failed ? 1 : 0,
     tripId, requestId,
   ).run();
   if (needsConsent) return; // request 保留完整的授權操作指引。

@@ -196,6 +196,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 // POST — 觸發新一輪 health check
+function storedFindings(raw: unknown): unknown[] {
+  try {
+    const parsed = JSON.parse(String(raw || '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return []; // GET logs and alerts on corrupt stored rows.
+  }
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
   const auth = requireAuth(context);
@@ -238,12 +247,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         userId: existing.user_id,
         status: existing.status,
         requestId: existing.request_id,
-        findings: [],
+        findings: storedFindings(existing.findings_json),
         createdAt: existing.created_at,
         completedAt: existing.completed_at,
       },
     }, 200);
   }
+
+  const previous = await env.DB.prepare(
+    'SELECT findings_json, completed_at FROM trip_health_reports WHERE trip_id = ?',
+  ).bind(tripId).first<{ findings_json: string | null; completed_at: string | null }>();
+  const previousFindings = storedFindings(previous?.findings_json);
 
   // v2.55.x: 把 trip_segments 記錄的移動時間/距離嵌進 prompt，作為 timing/distance
   // 的唯一權威來源。之前 prompt 只給靜態指示、沒給實際數字 → Claude 憑地理位置瞎估 →
@@ -312,10 +326,9 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
          user_id = excluded.user_id,
          status = 'pending',
          request_id = excluded.request_id,
-         findings_json = NULL,
          error_message = NULL,
-         created_at = datetime('now'),
-         completed_at = NULL`,
+         -- Keep the last finished report until a new completion replaces it.
+         created_at = datetime('now')`,
     )
     .bind(tripId, auth.userId, requestId)
     .run();
@@ -375,8 +388,9 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
         userId: auth.userId,
         status: 'pending',
         requestId,
-        findings: [],
+        findings: previousFindings,
         createdAt: new Date().toISOString(),
+        completedAt: previous?.completed_at ?? null,
       },
     },
     202,
