@@ -7,13 +7,13 @@
    專案 public/ 下零圖片素材且是刻意的。插畫用 token 上色 → 深淺色自動適應、
    UI 改版不會過期、bundle 只增加約 3KB。
 
-   落地方式：整份 CSS 進 src/pages/LandingPage.tsx 的 SCOPED_STYLES，
-   SVG 保持 inline（不要抽成檔案，否則就變成第一批圖片資產）。
+   This is a throwaway hierarchy comparison. Production keeps the existing
+   LandingPage CSS, token roles and approved inline SVG; only chosen hierarchy moves.
    ═══════════════════════════════════════════════════════════════ */
 
 /* ---------- Terracotta tokens（自 css/tokens.css；落地時直接吃 token 不要複製）---------- */
 :root {
-  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F4EDE3;
+  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9;
   --color-hover:#F9EDE0; --color-foreground:#2A1F18; --color-muted:#6F5A47;
   --color-border:#EADFCF; --color-accent:#A97A4A; --color-accent-fill:#8A6038;
   --color-accent-foreground:#FFFFFF; --color-accent-subtle:#F4EDE3;
@@ -24,6 +24,7 @@
   --shadow-md:0 6px 16px rgba(42,31,24,.09);
   --shadow-lg:0 10px 28px rgba(42,31,24,.12);
 
+  --color-focus-ring:#8A6038; --font-size-caption2:.6875rem; --font-size-body:1rem; --font-size-callout:1rem; --font-size-subheadline:.9375rem; --font-size-footnote:.875rem; --font-size-title3:1.25rem; --transition-duration-fast:150ms; --transition-timing-function-apple:cubic-bezier(.2,.8,.2,1); --hover-brightness:.92;
   --font-family-system:'Inter','Noto Sans TC',-apple-system,BlinkMacSystemFont,"PingFang TC",system-ui,sans-serif;
   --ease-apple:cubic-bezier(.2,.8,.2,1);
 
@@ -31,7 +32,7 @@
   --d1:#C9857F; --d2:#7FA8C9; --d3:#8FBF8A; --d4:#C9A97F; --d5:#A98FC9;
 }
 body.dark {
-  --color-background:#1C1C1E; --color-secondary:#2C2C2E; --color-tertiary:#3A3A3C;
+  --color-focus-ring:#E0BC90; --color-background:#1C1C1E; --color-secondary:#2C2C2E; --color-tertiary:#3A3A3C;
   --color-hover:#48484A; --color-foreground:#F5F5F7; --color-muted:#A1A1A6;
   --color-border:#48484A; --color-accent:#CBA06E; --color-accent-fill:#CBA06E;
   --color-accent-foreground:#1C1C1E; --color-accent-subtle:#2A2418;
@@ -49,10 +50,18 @@ body{
 }
 @media (min-width:761px){ body{font-size:17px} }
 
-/* ═══════════ 頂列 ═══════════ */
+/* Current master f30dc75c LandingPage SCOPED_STYLES; keep approved SVG and page shell. */
+
+.tp-lp{background:var(--color-background);color:var(--color-foreground);min-height:100dvh}
+
+/* 插畫示意色，值取自視覺 SoT mockup。刻意不用 DAY_PALETTE —— DESIGN.md 規定
+ * day palette 只用於地圖 polyline 與 entry card。這組沒定義時 SVG 不報錯、直接隱形。 */
+.tp-lp{--d1:#C9857F;--d2:#7FA8C9;--d3:#8FBF8A;--d4:#C9A97F}
+body.dark .tp-lp{--d1:#D9968F;--d2:#8FB8D9;--d3:#9FCF9A;--d4:#D9B98F}
+
+/* ── 頂列 ── */
 .tp-lp-nav{
-  position:sticky; top:0; z-index:20;
-  display:flex; align-items:center; gap:12px;
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
   padding:12px 18px;
   background:color-mix(in srgb,var(--color-background) 88%,transparent);
   backdrop-filter:blur(20px) saturate(180%);
@@ -63,72 +72,67 @@ body{
 .tp-lp-brand span{color:var(--color-accent-text)}
 .tp-lp-nav-spacer{flex:1}
 .tp-lp-nav-login{
-  font-size:15px; font-weight:700; text-decoration:none;
-  color:var(--color-accent-text);
-  min-height:44px; padding:0 16px;
-  display:inline-flex; align-items:center;
+  font-size:15px;font-weight:700;text-decoration:none;color:var(--color-accent-text);
+  min-height:44px;padding:0 16px;display:inline-flex;align-items:center;
   border-radius:var(--radius-full);
 }
 .tp-lp-nav-login:hover{background:var(--color-hover)}
-.tp-lp-nav-login:focus-visible{outline:none;box-shadow:0 0 0 2px var(--color-accent)}
+.tp-lp-nav-login:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background)}
 
-/* ═══════════ Hero ═══════════ */
-.tp-lp-hero{padding:36px 18px 12px; max-width:1160px; margin:0 auto}
+/* ── Hero ── */
+.tp-lp-hero{padding:36px 18px 12px;max-width:1160px;margin:0 auto}
 .tp-lp-eyebrow{
-  font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--color-accent-text); margin-bottom:12px;
+  font-size:var(--font-size-caption2);font-weight:800;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--color-accent-text);margin-bottom:12px;
 }
 .tp-lp-h1{
-  font-size:clamp(30px,7vw,34px); line-height:1.2; font-weight:900;
-  margin:0 0 14px; letter-spacing:-.03em;
+  font-size:clamp(30px,7vw,34px);line-height:1.2;font-weight:900;
+  margin:0 0 14px;letter-spacing:-.03em;
 }
 .tp-lp-h1 em{font-style:normal;color:var(--color-accent-text)}
-.tp-lp-sub{
-  font-size:16px; line-height:1.7; color:var(--color-muted);
-  margin:0 0 26px; max-width:50ch;
-}
+.tp-lp-sub{font-size:var(--font-size-body);line-height:1.7;color:var(--color-muted);margin:0 0 26px;max-width:50ch}
 .tp-lp-cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .tp-lp-cta{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:52px;padding:0 26px;border-radius:var(--radius-full);
   background:var(--color-accent-fill);color:var(--color-accent-foreground);
-  font-size:17px;font-weight:700;text-decoration:none;border:none;cursor:pointer;
-  box-shadow:var(--shadow-md); transition:filter 150ms var(--ease-apple);
+  font-size:var(--font-size-callout);font-weight:700;text-decoration:none;border:none;cursor:pointer;
+  box-shadow:var(--shadow-md);
+  transition:filter var(--transition-duration-fast) var(--transition-timing-function-apple);
 }
-.tp-lp-cta:hover{filter:brightness(.92)}
-.tp-lp-cta:focus-visible{outline:none;box-shadow:0 0 0 3px var(--color-accent-bg),var(--shadow-md)}
+.tp-lp-cta:hover{filter:brightness(var(--hover-brightness))}
+.tp-lp-cta:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background),var(--shadow-md)}
 .tp-lp-hero-visual{margin-top:28px}
+.tp-lp-art{width:100%;height:auto;max-width:460px;margin:0 auto;display:block}
 
-/* ═══════════ 功能區 ═══════════ */
-.tp-lp-features{padding:44px 18px; max-width:1160px; margin:0 auto}
-.tp-lp-sec-title{font-size:23px;font-weight:800;margin:0 0 8px;letter-spacing:-.02em}
-.tp-lp-sec-sub{font-size:15px;color:var(--color-muted);margin:0 0 26px;max-width:54ch}
+/* ── 功能區 ── */
+.tp-lp-features{padding:44px 18px;max-width:1160px;margin:0 auto}
+.tp-lp-sec-title{font-size:var(--font-size-title3);font-weight:800;margin:0 0 8px;letter-spacing:-.02em}
+.tp-lp-sec-sub{font-size:var(--font-size-callout);color:var(--color-muted);margin:0 0 26px;max-width:54ch}
 .tp-lp-grid{display:grid;grid-template-columns:1fr;gap:16px}
 .tp-lp-card{
-  border:1px solid var(--color-border); border-radius:var(--radius-lg);
-  background:var(--color-secondary); padding:20px; overflow:hidden;
+  border:1px solid var(--color-border);border-radius:var(--radius-lg);
+  background:var(--color-secondary);padding:20px;overflow:hidden;
 }
 .tp-lp-card-art{width:100%;height:auto;display:block;margin-bottom:16px;border-radius:var(--radius-md)}
-.tp-lp-card h3{font-size:17px;font-weight:700;margin:0 0 7px;letter-spacing:-.01em}
-.tp-lp-card p{font-size:15px;line-height:1.65;color:var(--color-muted);margin:0}
+.tp-lp-card h3{font-size:var(--font-size-callout);font-weight:700;margin:0 0 7px;letter-spacing:-.01em}
+.tp-lp-card p{font-size:var(--font-size-subheadline);line-height:1.65;color:var(--color-muted);margin:0}
 
-/* ═══════════ 收尾 CTA ═══════════ */
-.tp-lp-close{
-  padding:44px 18px; max-width:1160px; margin:0 auto; text-align:center;
-}
+/* ── 收尾 CTA ── */
+.tp-lp-close{padding:44px 18px;max-width:1160px;margin:0 auto;text-align:center}
 .tp-lp-close-inner{
-  border:1px solid var(--color-border); border-radius:var(--radius-xl);
-  background:var(--color-secondary); padding:34px 22px;
+  border:1px solid var(--color-border);border-radius:var(--radius-xl);
+  background:var(--color-secondary);padding:34px 22px;
 }
-.tp-lp-close h2{font-size:22px;font-weight:800;margin:0 0 10px;letter-spacing:-.02em}
-.tp-lp-close p{font-size:15px;color:var(--color-muted);margin:0 0 22px}
+.tp-lp-close h2{font-size:var(--font-size-title3);font-weight:800;margin:0 0 10px;letter-spacing:-.02em}
+.tp-lp-close p{font-size:var(--font-size-callout);color:var(--color-muted);margin:0 0 22px}
 
-/* ═══════════ 頁尾 ═══════════ */
+/* ── 頁尾 ── */
 .tp-lp-foot{
-  border-top:1px solid var(--color-border); padding:24px 18px 34px;
-  max-width:1160px; margin:0 auto;
+  border-top:1px solid var(--color-border);padding:24px 18px 34px;
+  max-width:1160px;margin:0 auto;
   display:flex;gap:8px 20px;flex-wrap:wrap;align-items:center;
-  font-size:14px;color:var(--color-muted);
+  font-size:var(--font-size-footnote);color:var(--color-muted);
 }
 .tp-lp-foot a{
   color:var(--color-accent-text);text-decoration:none;
@@ -137,7 +141,7 @@ body{
 .tp-lp-foot a:hover{text-decoration:underline}
 .tp-lp-foot-spacer{flex:1}
 
-/* ═══════════ 桌機 ≥761px ═══════════ */
+/* ── 桌機 ≥761px（同一份 component，非兩套）── */
 @media (min-width:761px){
   .tp-lp-nav{padding:14px 40px}
   .tp-lp-hero{
@@ -145,24 +149,12 @@ body{
     display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center;
   }
   .tp-lp-h1{font-size:clamp(40px,4.4vw,52px)}
-  .tp-lp-sub{font-size:18px}
   .tp-lp-hero-visual{margin-top:0}
   .tp-lp-features{padding:76px 40px}
   .tp-lp-grid{grid-template-columns:repeat(3,1fr);gap:20px}
-  .tp-lp-sec-title{font-size:29px}
   .tp-lp-close{padding:64px 40px}
   .tp-lp-close-inner{padding:48px 40px}
-  .tp-lp-close h2{font-size:27px}
   .tp-lp-foot{padding:30px 40px 44px}
-}
-
-/* mockup 專用 —— 落地時整段刪除 */
-.mk-toggle{
-  position:fixed;right:16px;bottom:16px;z-index:99;
-  min-height:44px;padding:0 18px;border-radius:var(--radius-full);
-  border:1px solid var(--color-border);background:var(--color-secondary);
-  color:var(--color-foreground);font:inherit;font-size:14px;font-weight:600;
-  cursor:pointer;box-shadow:var(--shadow-lg);
 }
 
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{transition-duration:1ms!important} }
@@ -170,7 +162,7 @@ body{
 
 /* PROTOTYPE ONLY: compare content hierarchy; retain the approved palette and SVG. */
 [data-variant]{display:none}body[data-active="A"] [data-variant="A"],body[data-active="B"] [data-variant="B"],body[data-active="C"] [data-variant="C"]{display:block}
-.prototype-note{color:var(--color-muted);font-size:var(--font-size-callout);line-height:1.5;margin:16px 0 0}
+.tp-lp-import-note{color:var(--color-muted);font-size:var(--font-size-callout);line-height:1.5;margin:16px 0 0}
 .prototype-choice-hero{padding-bottom:0}
 .prototype-choices{max-width:1160px;margin:0 auto;padding:24px 18px 40px;display:grid;gap:16px}
 .prototype-choice{border:1px solid var(--color-border);background:var(--color-secondary);border-radius:var(--radius-xl);padding:26px}
@@ -303,7 +295,7 @@ body{
     <h1 class="tp-lp-h1">開始規劃<br><em>下一趟旅程</em></h1>
     <p class="tp-lp-sub">登入後建立行程，安排景點與每天的路線。想調整時，說一句話就能改，並看見車程與停留點如何變動。</p>
     <div class="tp-lp-cta-row"><a class="tp-lp-cta" href="/login">登入後開始規劃</a></div>
-    <p class="prototype-note">已有行程？登入後可用 JSON 匯入，再接著編排。</p>
+    <p class="tp-lp-import-note">已有行程？登入後可用 JSON 匯入，再接著編排。</p>
   </div>
   <div class="tp-lp-hero-visual">
     <!-- Hero 插畫：一條每日換色的路線串起停留點，上方浮一則使用者指令 -->
