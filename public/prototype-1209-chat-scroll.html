@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>聊天捲動狀態示意 · #1209</title>
+  <style>
+    :root { font-family: Inter, "Noto Sans TC", "PingFang TC", system-ui, sans-serif; color: #2A1F18; background: #F4EDE3; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button { font: inherit; cursor: pointer; }
+    .review { max-width: 880px; margin: auto; padding: 20px 16px 36px; }
+    .review h1 { font-size: 20px; line-height: 28px; margin: 0 0 6px; }
+    .review p { font-size: 14px; line-height: 22px; margin: 0 0 16px; color: #665B52; }
+    .switches { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+    .switches button { min-height: 44px; border: 1px solid #D8CEC1; border-radius: 12px; background: #FFFBF5; color: #2A1F18; padding: 8px 14px; }
+    .switches button[aria-pressed="true"] { background: #8A6038; color: white; border-color: #8A6038; }
+    .explain { min-height: 44px; }
+    .frame { position: relative; width: min(100%, 390px); height: 630px; margin: 0 auto; background: #FFFBF5; border: 1px solid #D8CEC1; border-radius: 22px; overflow: hidden; box-shadow: 0 8px 28px rgb(42 31 24 / .12); display: flex; flex-direction: column; }
+    .header { min-height: 58px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: #FFFBF5; border-bottom: 1px solid #E9DBC8; }
+    .back { font-size: 22px; width: 32px; text-align: center; }
+    .header strong { flex: 1; font-size: 17px; }
+    .avatar { width: 32px; height: 32px; display: grid; place-items: center; background: #E9DBC8; border-radius: 50%; font-size: 14px; font-weight: 700; }
+    .messages { position: relative; flex: 1; padding: 24px 16px 18px; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
+    .date { align-self: center; font-size: 12px; color: #665B52; }
+    .row { display: flex; gap: 8px; align-items: end; max-width: 86%; }
+    .row.mine { align-self: end; flex-direction: row-reverse; }
+    .face { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; background: #E4E9DE; border-radius: 50%; font-size: 12px; }
+    .mine .face { background: #A97A4A; color: white; }
+    .bubble { background: white; border: 1px solid #E9DBC8; border-radius: 16px; padding: 11px 13px; font-size: 16px; line-height: 25px; }
+    .mine .bubble { background: #F4EDE3; border-color: transparent; }
+    .time { color: #665B52; font-size: 12px; margin: -10px 36px 0; }
+    .mine + .time { align-self: end; }
+    .history { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2; white-space: nowrap; min-height: 44px; padding: 10px 14px; border-radius: 12px; background: #FFFBF5; border: 1px solid #D8CEC1; box-shadow: 0 2px 10px rgb(42 31 24 / .12); display: none; align-items: center; gap: 8px; font-size: 14px; }
+    .history button { border: 0; background: transparent; color: #8A6038; font-weight: 600; padding: 0; }
+    .composer { position: relative; z-index: 3; min-height: 72px; padding: 10px 14px; border-top: 1px solid #E9DBC8; background: #FFFBF5; display: flex; gap: 8px; align-items: center; }
+    .input { flex: 1; min-height: 44px; display: flex; align-items: center; padding: 10px 12px; border: 1px solid #D8CEC1; border-radius: 12px; font-size: 16px; color: #665B52; }
+    .send { width: 44px; height: 44px; border: 0; border-radius: 12px; background: #A97A4A; color: white; font-size: 22px; }
+    .latest { position: absolute; z-index: 4; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); min-width: 44px; min-height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; border: 1px solid #D8CEC1; background: #FFFBF5; color: #2A1F18; box-shadow: 0 2px 8px rgb(42 31 24 / .13); }
+    [data-variant="b"] .latest { background: #8A6038; color: white; border-color: #8A6038; }
+    [data-variant="c"] .latest { background: #F4EDE3; color: #8A6038; border-color: #E9DBC8; box-shadow: none; }
+    .spin { display: inline-block; width: 18px; height: 18px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spin { animation: none; border-right-color: currentColor; } }
+    .latest .spin { width: 20px; height: 20px; }
+    .latest.retry { width: auto; border-radius: 22px; padding: 0 14px; font-size: 14px; font-weight: 600; }
+    [data-state="history-loading"] .history, [data-state="history-error"] .history { display: flex; }
+    [data-state="refreshing"] .latest, [data-state="refresh-error"] .latest { font-size: 14px; }
+    .note { margin: 14px auto 0; max-width: 390px; font-size: 13px; line-height: 20px; color: #665B52; }
+  </style>
+</head>
+<body>
+  <main class="review">
+    <h1>#1209 聊天捲動狀態示意</h1>
+    <p>只比較回到最新訊息控制項的視覺權重；位置、尺寸與五種狀態遵守既定規格。這是等待簽核的 prototype。</p>
+    <div class="switches" role="group" aria-label="視覺方案">
+      <button data-pick-variant="a">A · 細框中性</button><button data-pick-variant="b">B · 柔褐實心</button><button data-pick-variant="c">C · 柔褐淡底</button>
+    </div>
+    <div class="switches" role="group" aria-label="操作狀態">
+      <button data-pick-state="away">離開底部</button><button data-pick-state="refreshing">最新刷新中</button><button data-pick-state="refresh-error">最新刷新失敗</button><button data-pick-state="history-loading">載入舊訊息</button><button data-pick-state="history-error">舊訊息載入失敗</button>
+    </div>
+    <p class="explain" id="explain"></p>
+    <div class="frame" id="frame" data-variant="a" data-state="away">
+      <div class="header"><span class="back" aria-hidden="true">‹</span><strong>沖繩五日自駕</strong><span class="avatar">R</span></div>
+      <div class="messages">
+        <div class="history" id="history" role="status"></div>
+        <div class="date">今天</div>
+        <div class="row mine"><span class="face">我</span><div class="bubble">明天上午想改去首里城，下午留給國際通。</div></div><div class="time">10:24</div>
+        <div class="row"><span class="face">AI</span><div class="bubble">可以。我會先檢查明天的停留時間與交通，再列出需要調整的安排。</div></div><div class="time">10:25</div>
+        <div class="row mine"><span class="face">我</span><div class="bubble">保留晚餐，不用動預約。</div></div><div class="time">10:28</div>
+      </div>
+      <div class="composer">
+        <button class="latest" id="latest" aria-label="回到最新訊息">↓</button>
+        <div class="input">輸入訊息或語音指令…</div><button class="send" aria-label="送出">↑</button>
+      </div>
+    </div>
+    <div class="note">示意資料僅供比較。桌機聊天欄沿用相同相對位置；深色模式沿用產品現有 semantic tokens。</div>
+  </main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const variants = ['a', 'b', 'c'];
+    const states = ['away', 'refreshing', 'refresh-error', 'history-loading', 'history-error'];
+    let variant = variants.includes(params.get('variant')) ? params.get('variant') : 'a';
+    let state = states.includes(params.get('state')) ? params.get('state') : 'away';
+    const descriptions = {
+      away: '離開最新端時，44 × 44 圓形箭頭固定在聊天欄中央、輸入框上方 12px。',
+      refreshing: '回到底部後，原位置以 spinner 呈現最新訊息刷新；既有訊息保留。',
+      'refresh-error': '最新刷新失敗時原位置提供可鍵盤操作的重試控制項。',
+      'history-loading': '往上讀舊訊息時，頂部 sticky 狀態不推動訊息位置。',
+      'history-error': '舊訊息讀取失敗在頂部原位置提供重試，與最新刷新錯誤分離。',
+    };
+    function render() {
+      document.getElementById('frame').dataset.variant = variant;
+      document.getElementById('frame').dataset.state = state;
+      document.getElementById('explain').textContent = descriptions[state];
+      for (const button of document.querySelectorAll('[data-pick-variant]')) button.setAttribute('aria-pressed', String(button.dataset.pickVariant === variant));
+      for (const button of document.querySelectorAll('[data-pick-state]')) button.setAttribute('aria-pressed', String(button.dataset.pickState === state));
+      const historyEl = document.getElementById('history');
+      historyEl.innerHTML = state === 'history-loading' ? '<span class="spin" aria-hidden="true"></span>載入較早訊息…' : '無法載入較早訊息 <button type="button" id="retry-history">重試</button>';
+      const latest = document.getElementById('latest');
+      latest.classList.toggle('retry', state === 'refresh-error');
+      latest.innerHTML = state === 'refreshing' ? '<span class="spin" aria-hidden="true"></span>' : state === 'refresh-error' ? '更新失敗 · 重試' : '↓';
+      latest.setAttribute('aria-label', state === 'refreshing' ? '正在更新最新訊息' : state === 'refresh-error' ? '重新更新最新訊息' : '回到最新訊息');
+      latest.style.display = state.startsWith('history') ? 'none' : 'grid';
+      historyEl.style.display = state.startsWith('history') ? 'flex' : 'none';
+      document.getElementById('retry-history')?.addEventListener('click', () => { state = 'history-loading'; render(); });
+      const next = new URL(location.href); next.searchParams.set('variant', variant); next.searchParams.set('state', state); window.history.replaceState(null, '', next);
+    }
+    for (const button of document.querySelectorAll('[data-pick-variant]')) button.addEventListener('click', () => { variant = button.dataset.pickVariant; render(); });
+    for (const button of document.querySelectorAll('[data-pick-state]')) button.addEventListener('click', () => { state = button.dataset.pickState; render(); });
+    document.getElementById('latest').addEventListener('click', () => { state = 'refreshing'; render(); });
+    render();
+  </script>
+</body>
+</html>
