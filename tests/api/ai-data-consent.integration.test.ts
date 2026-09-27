@@ -6,6 +6,7 @@ import { issueSession } from '../../functions/api/_session';
 import { onRequestGet, onRequestPost, onRequestDelete } from '../../functions/api/account/ai-data-consent';
 import { onRequestGet as listRequests, onRequestPost as sendRequest } from '../../functions/api/requests';
 import { onRequestGet as getQueuedRequest, onRequestPatch as updateQueuedRequest } from '../../functions/api/requests/[id]/index';
+import { onRequestGet as streamQueuedRequest } from '../../functions/api/requests/[id]/events';
 import { onRequestPost as mintRestricted } from '../../functions/api/oauth/mint-restricted';
 import { requireAiDataConsentForTrip, requireAiDataConsentForQueuedRequest } from '../../functions/api/_aiDataConsent';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
@@ -131,21 +132,21 @@ describe('versioned AI data consent', () => {
   });
 
   it('does not show another submitter’s revoked or legacy request to a restricted AI worker', async () => {
-    const owner = 'ai-list-owner'; const current = 'ai-list-current';
+    const owner = 'ai-list-owner'; const current = 'ai-list-current'; const older = 'ai-list-older';
     const revoked = 'ai-list-revoked'; const legacy = 'ai-list-legacy';
     const tripId = 'ai-list-trip';
-    for (const uid of [owner, current, revoked, legacy]) await seed(uid);
+    for (const uid of [owner, older, current, revoked, legacy]) await seed(uid);
     await db.prepare('INSERT INTO trips (id, name, owner_user_id, published) VALUES (?, ?, ?, 1)')
       .bind(tripId, 'AI list test', owner).run();
     await db.prepare("INSERT INTO trip_permissions (trip_id, user_id, role) VALUES (?, ?, 'owner')")
       .bind(tripId, owner).run();
     await activate('test-list-v1');
-    for (const uid of [owner, current, revoked]) {
+    for (const uid of [owner, older, current, revoked]) {
       expect((await decide(uid, 'test-list-v1', 'accept')).status).toBe(200);
     }
     expect((await decide(revoked, 'test-list-v1', 'revoke')).status).toBe(200);
     const ids = new Map<string, number>();
-    for (const uid of [current, revoked, legacy]) {
+    for (const uid of [older, current, revoked, legacy]) {
       const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
         .bind(tripId, `message from ${uid}`, `${uid}@example.com`).first<{ id: number }>();
       ids.set(uid, row!.id);
@@ -180,6 +181,11 @@ describe('versioned AI data consent', () => {
     const read = (auth: ReturnType<typeof mockAuth>) => callHandler(listRequests, mockContext({ request: request(), env, auth }));
     const worker = mockAuth({ userId: owner, email: `${owner}@example.com`, restrictTrip: tripId,
       restrictRequestId: String(ids.get(current)), scopes: [] });
+    const createFromBoundToken = await callHandler(sendRequest, mockContext({
+      request: new Request('https://x.com/api/requests', { method: 'POST',
+        body: JSON.stringify({ tripId, message: 'cross-request write' }) }), env, auth: worker,
+    }));
+    expect(createFromBoundToken.status).toBe(403);
     const visible = await read(worker);
     expect(visible.status).toBe(200);
     expect((await visible.json() as Array<{ message: string }>).map(row => row.message))
@@ -187,7 +193,21 @@ describe('versioned AI data consent', () => {
 
     // A normal trip member still sees the full conversation history.
     const ordinary = await read(mockAuth({ userId: owner, email: `${owner}@example.com` }));
-    expect((await ordinary.json() as Array<{ message: string }>)).toHaveLength(3);
+    expect((await ordinary.json() as Array<{ message: string }>)).toHaveLength(4);
+
+    const unbound = mockAuth({ userId: owner, email: `${owner}@example.com`, restrictTrip: tripId, scopes: [] });
+    const page = await callHandler(listRequests, mockContext({
+      request: new Request(`https://x.com/api/requests?tripId=${tripId}&status=open&limit=1`), env, auth: unbound,
+    }));
+    const firstPage = await page.json() as { items: Array<{ id: number; createdAt: string; message: string }>; hasMore: boolean };
+    expect(firstPage.items.map(row => row.message)).toEqual([`message from ${current}`]);
+    expect(firstPage.hasMore).toBe(true);
+    const secondPage = await callHandler(listRequests, mockContext({
+      request: new Request(`https://x.com/api/requests?tripId=${tripId}&status=open&limit=1&before=${encodeURIComponent(firstPage.items[0]!.createdAt)}&beforeId=${firstPage.items[0]!.id}`), env, auth: unbound,
+    }));
+    expect((await secondPage.json() as { items: Array<{ message: string }>; hasMore: boolean })).toMatchObject({
+      items: [{ message: `message from ${older}` }], hasMore: false,
+    });
 
     const patch = (uid: string) => callHandler(updateQueuedRequest, mockContext({
       request: new Request(`https://x.com/api/requests/${ids.get(uid)}`, {
@@ -208,6 +228,16 @@ describe('versioned AI data consent', () => {
       }));
       expect(get.status).toBe(403);
       expect((await patch(uid)).status).toBe(403);
+      const sse = await callHandler(streamQueuedRequest, mockContext({
+        request: new Request(`https://x.com/api/requests/${ids.get(uid)}/events`),
+        env, auth: worker, params: { id: String(ids.get(uid)) },
+      }));
+      expect(sse.status).toBe(403);
+      const legacyScopeSse = await callHandler(streamQueuedRequest, mockContext({
+        request: new Request(`https://x.com/api/requests/${ids.get(uid)}/events`),
+        env, auth: unbound, params: { id: String(ids.get(uid)) },
+      }));
+      expect(legacyScopeSse.status).toBe(403);
     }
     const processing = await callHandler(listRequests, mockContext({
       request: new Request(`https://x.com/api/requests?tripId=${tripId}&status=processing`), env, auth: worker,
@@ -215,6 +245,17 @@ describe('versioned AI data consent', () => {
     expect((await processing.json() as Array<{ message: string }>).map(row => row.message))
       .toEqual([`message from ${current}`]);
     expect((await decide(current, 'test-list-v1', 'revoke')).status).toBe(200);
+    const stillIssued = await callHandler(listRequests, mockContext({
+      request: new Request(`https://x.com/api/requests?tripId=${tripId}&status=processing`), env, auth: worker,
+    }));
+    expect((await stillIssued.json() as Array<{ message: string }>).map(row => row.message))
+      .toEqual([`message from ${current}`]);
+    const ownStream = await callHandler(streamQueuedRequest, mockContext({
+      request: new Request(`https://x.com/api/requests/${ids.get(current)}/events`),
+      env, auth: worker, params: { id: String(ids.get(current)) },
+    }));
+    expect(ownStream.status).toBe(200);
+    await ownStream.body?.cancel();
     const finishOwnWork = await callHandler(updateQueuedRequest, mockContext({
       request: new Request(`https://x.com/api/requests/${ids.get(current)}`, {
         method: 'PATCH', body: JSON.stringify({ status: 'completed', reply: 'done' }),

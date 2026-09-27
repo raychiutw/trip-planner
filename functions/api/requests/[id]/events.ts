@@ -12,6 +12,7 @@
 
 import { hasPermission, requireAuth} from '../../_auth';
 import { AppError } from '../../_errors';
+import { requireAiDataConsentForQueuedRequest } from '../../_aiDataConsent';
 import type { Env } from '../../_types';
 
 const POLL_INTERVAL_MS = 10_000;
@@ -24,10 +25,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const id = params.id as string;
 
   // 驗證使用者有權限看這個 request 所屬的 trip
-  const req = await env.DB.prepare('SELECT trip_id FROM trip_requests WHERE id = ?').bind(id).first() as { trip_id: string } | null;
+  const req = await env.DB.prepare('SELECT trip_id, status, submitted_by FROM trip_requests WHERE id = ?').bind(id)
+    .first() as { trip_id: string; status: string; submitted_by: string | null } | null;
   if (!req) throw new AppError('DATA_NOT_FOUND');
   if (!await hasPermission(env.DB, auth, req.trip_id)) {
     throw new AppError('PERM_DENIED');
+  }
+  if (auth.restrictRequestId !== undefined && auth.restrictRequestId !== id) {
+    throw new AppError('PERM_DENIED');
+  }
+  if (auth.restrictTrip !== undefined && (auth.restrictRequestId === undefined || req.status === 'open')) {
+    await requireAiDataConsentForQueuedRequest(env.DB, auth.userId!, req.submitted_by);
   }
 
   let lastStatus = '';
