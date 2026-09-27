@@ -12,7 +12,8 @@
  * （見 lib/authHint）。那不是 user 資料快取，是給「首次 paint 就得決定畫什麼」
  * 的頁面（目前只有 LandingPage）用的同步提示；授權判斷一律仍以本 hook 的
  * userinfo 回應為準。共享 fetch 不會因為單一 consumer 卸載而被取消（見下方
- * dedup 說明），旗標一律依實際回應寫入。
+ * dedup 說明），旗標依實際回應寫入；但若請求發出後已有更新的寫入（例如登出），
+ * 這次就丟棄（見 lib/authHint 的序號）。
  *
  * 不依賴 React Query / SWR — keep dependency surface small。Vanilla useState/useEffect。
  *
