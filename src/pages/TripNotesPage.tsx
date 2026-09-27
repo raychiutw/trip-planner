@@ -41,6 +41,7 @@ import { apiFetch } from '../lib/apiClient';
 import { showToast } from '../components/shared/Toast';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useAiDataConsentAction } from '../hooks/useAiDataConsentAction';
 import { routes } from '../lib/routes';
 import { TripContext } from '../contexts/TripContext';
 
@@ -387,6 +388,9 @@ function TripNotes() {
   }, [loadData]);
   const ai = useNoteAiJobs(tripId, onAiCompleted);
   const {jobs: aiJobs, refresh: loadAiState, generate: handleAiTrigger} = ai;
+  const latestGenerate = useRef(handleAiTrigger);
+  latestGenerate.current = handleAiTrigger;
+  const consent = useAiDataConsentAction(`${tripId}:${user?.id}`);
 
   const counts = useMemo(() => {
     if (!data) return { flights: 0, lodgings: 0, reservations: 0, pretrip: 0, emergency: 0, total: 0 };
@@ -505,7 +509,7 @@ function TripNotes() {
                         className="tp-notes-ai-btn"
                         aria-label="AI 生成一般行前須知"
                         data-testid="trip-notes-ai-btn-pretrip"
-                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
+                        onClick={(e) => { e.stopPropagation(); void consent.attempt('AI 生成一般行前須知', () => latestGenerate.current('tips')); }}
                         disabled={!ai.canGenerate('tips')}
                         title={isActiveAiJob(aiJobs.tips) ? '一般行前須知正在生成' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
                       >
@@ -524,7 +528,7 @@ function TripNotes() {
                             showToast('請先在住宿 section 填寫至少 1 間飯店才能 AI 生成在地建議', 'info', 4000);
                             return;
                           }
-                          void handleAiTrigger('lodging-tips');
+                          void consent.attempt('AI 生成住宿在地建議', () => latestGenerate.current('lodging-tips'));
                         }}
                         disabled={!ai.canGenerate('lodging-tips') || counts.lodgings === 0}
                         title={
@@ -544,7 +548,7 @@ function TripNotes() {
                       className="tp-notes-ai-btn"
                       aria-label="AI 生成緊急聯絡"
                       data-testid="trip-notes-ai-btn-emergency"
-                      onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
+                      onClick={(e) => { e.stopPropagation(); void consent.attempt('AI 生成緊急聯絡', () => latestGenerate.current('emergency')); }}
                       disabled={!ai.canGenerate('emergency')}
                       title={isActiveAiJob(aiJobs.emergency) ? '緊急聯絡正在生成' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
                     >
@@ -557,6 +561,7 @@ function TripNotes() {
                   </span>
                 </div>
               </div>
+              {consent.pendingLabel && (sec.key === 'pretrip' ? consent.pendingLabel !== 'AI 生成緊急聯絡' : sec.key === 'emergency' && consent.pendingLabel === 'AI 生成緊急聯絡') && consent.card}
               {sec.key === 'flights' && tripId ? (
                 <div
                   id={`trip-notes-body-${sec.key}`}

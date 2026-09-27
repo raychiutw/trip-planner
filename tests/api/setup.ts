@@ -25,10 +25,15 @@ function getMigrationFiles(): string[] {
  */
 function extractStatements(sql: string): string[] {
   const cleaned = sql.replace(/--[^\n]*/g, '');
-  return cleaned
-    .split(';')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  const statements: string[] = [];
+  let pending = '';
+  for (const part of cleaned.split(';')) {
+    pending += `${part};`;
+    if (/^\s*CREATE TRIGGER\b/i.test(pending) && !/\bEND;\s*$/i.test(pending)) continue;
+    if (pending.trim() !== ';') statements.push(pending.trim());
+    pending = '';
+  }
+  return statements;
 }
 
 // v2.33.84: globalThis singleton — Vitest 4 即使在 isolate: false +
@@ -46,7 +51,7 @@ const _cache = globalThis as unknown as GlobalCache;
 /**
  * schema 是否已跑完 migration。
  *
- * ⚠ 判定用**最後一個改 schema 的 migration**（0094 DROP trip_docs），不是
+ * ⚠ 判定用**最後一個改 schema 的 migration**（0097 AI consent state），不是
  * `trip_entries` 的形狀。`trip_entries` 建於 **0047**，而 migration 總數是 94 ——
  * 拿它當判定，「已遷移」在 0048–0094 全部還沒跑時就會成立（少 `account_notification_preferences`、
  * `poi_favorites` 的 soft-delete 欄位、`users` 的隱私同意欄位…）。
@@ -55,7 +60,7 @@ const _cache = globalThis as unknown as GlobalCache;
  */
 async function hasMigratedSchema(db: D1Database): Promise<boolean> {
   try {
-    // 0094_drop_trip_docs.sql —— 目前最後一個 schema 變更。
+    // 0094 drop + 0097 consent state —— 同時檢查既有完成錨點與最新表。
     //
     // ⚠️ DROP 型判定**不能只驗「表不見了」** —— 空 DB 上那也成立，會判成「已遷移」
     // 而讓 migration 整個不跑（實測：整批 integration test 掛在 no such table: users）。
@@ -67,7 +72,10 @@ async function hasMigratedSchema(db: D1Database): Promise<boolean> {
     const dropped = await db
       .prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='trip_docs'")
       .first<{ n: number }>();
-    return (dropped?.n ?? 1) === 0;
+    if ((dropped?.n ?? 1) !== 0) return false;
+    const consentState = await db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='ai_data_disclosure_state'")
+      .first<{ n: number }>();
+    return (consentState?.n ?? 0) === 1;
   } catch {
     return false;
   }

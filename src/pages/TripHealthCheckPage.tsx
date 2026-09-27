@@ -24,7 +24,7 @@
  *   button class）。詳見 docs/design-sessions/2026-07-21-desktop-third-column-panelization.html。
  */
 import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import {useTripHealthCheck, type Severity, type Dimension, type Finding} from '../hooks/useTripHealthCheck';
 import { useNavigate, useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
@@ -33,6 +33,7 @@ import Icon from '../components/shared/Icon';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useAiDataConsentAction } from '../hooks/useAiDataConsentAction';
 import { routes } from '../lib/routes';
 
 const DIMENSION_LABEL: Record<Dimension, string> = {
@@ -442,14 +443,18 @@ export default function TripHealthCheckPage() {
   const { user } = auth;
   const {tripId} = useParams<{tripId: string}>();
   if (!user) return <AuthStatus auth={auth} />;
-  return tripId ? <HealthReader key={tripId} tripId={tripId} /> : null;
+  return tripId ? <HealthReader key={tripId} tripId={tripId} userId={user.id} /> : null;
 }
 
-function HealthReader({tripId}: {tripId: string}) {
+function HealthReader({tripId, userId}: {tripId: string; userId: string}) {
   const navigate = useNavigate();
   const handleBack = useNavigateBack(routes.tripsSelected(tripId));
   const health = useTripHealthCheck(tripId);
   const {report, lastReport, entryCount, submitting, error, start: handleStart} = health;
+  const latestStart = useRef(handleStart);
+  latestStart.current = handleStart;
+  const consent = useAiDataConsentAction(`${tripId}:${userId}`);
+  const startWithConsent = () => { void consent.attempt('開始 AI 行程健檢', () => latestStart.current()); };
   const initialLoading = health.loading && !health.loaded;
 
   const goToDay = useCallback((day: number) => {
@@ -509,7 +514,7 @@ function HealthReader({tripId}: {tripId: string}) {
               <button
                 type="button"
                 className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
-                onClick={handleStart}
+                onClick={startWithConsent}
                 disabled={!health.canStart}
                 aria-label={ctaLabel}
                 title={ctaLabel}
@@ -565,7 +570,7 @@ function HealthReader({tripId}: {tripId: string}) {
             <button
               type="button"
               className="tp-ai-health-body-cta"
-              onClick={handleStart}
+              onClick={startWithConsent}
               disabled={!health.canStart}
               data-testid="ai-health-start-btn"
             >
@@ -574,6 +579,8 @@ function HealthReader({tripId}: {tripId: string}) {
             </button>
           </div>
         )}
+
+        {consent.card}
 
         {!initialLoading && health.freshness === 'fresh' && isPending && !isRegenerating && (
           <div className="tp-ai-health-loading" role="status" aria-live="polite" data-testid="ai-health-loading">

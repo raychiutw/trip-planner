@@ -24,6 +24,7 @@ import { recordEmailEvent } from '../../_audit';
 import { alertAdminTelegram } from '../../_alert';
 import { TRAVEL_MODE_LABEL, type TravelMode } from '../../../../src/lib/travelMode';
 import type { Env } from '../../_types';
+import { requireAiDataConsentForTrip } from '../../_aiDataConsent';
 
 // 識別 health-check request — 寫 trip_requests.message 時固定 prefix，
 // PATCH /api/requests/:id 完成 hook 看這個 prefix 識別。修改 prefix 須
@@ -204,6 +205,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!(await hasWritePermission(env.DB, auth, tripId))) {
     throw new AppError('PERM_DENIED');
   }
+  await requireAiDataConsentForTrip(env.DB, auth.userId, tripId);
 
   // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
   // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable

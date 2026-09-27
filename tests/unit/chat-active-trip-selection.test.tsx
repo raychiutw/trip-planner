@@ -46,6 +46,7 @@ beforeEach(() => {
     if (path.includes('/oauth/userinfo')) return new Response(JSON.stringify(user));
     if (path.includes('/my-trips')) { listReads++; return listResponse(); }
     if (path.includes('/account/ai-authorization')) return init?.method === 'POST' && authorize ? authorize() : new Response(JSON.stringify({ authorized }));
+    if (path.includes('/account/ai-data-consent')) return new Response(JSON.stringify({ disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null }));
     if (path.includes('/requests')) return historyResponse();
     return new Response('{}');
   });

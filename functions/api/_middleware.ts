@@ -23,6 +23,7 @@ interface AccessTokenPayload extends AdapterPayload {
   grantId: string;
   /** v2.55.56: set by /api/oauth/downscope — token may only touch this one trip. */
   restrict_trip?: string;
+  restrict_request_id?: string;
 }
 
 function getCookie(request: Request, name: string): string | null {
@@ -521,6 +522,7 @@ async function handleAuth(
             ),
             // v2.55.56: trip-scoped downscope restriction — enforced in _auth.ts.
             restrictTrip: typeof tokenRow.restrict_trip === 'string' ? tokenRow.restrict_trip : undefined,
+            restrictRequestId: typeof tokenRow.restrict_request_id === 'string' ? tokenRow.restrict_request_id : undefined,
           };
           return context.next();
         }

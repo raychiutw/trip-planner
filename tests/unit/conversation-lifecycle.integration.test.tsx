@@ -42,6 +42,7 @@ beforeEach(() => {
     if (url.pathname === '/api/oauth/userinfo') return response({ id: 'owner', email: 'owner@test.com', displayName: 'Owner' });
     if (url.pathname === '/api/my-trips') return response([{ tripId: 't1', name: '甲行程' }, { tripId: 't2', name: '乙行程' }]);
     if (url.pathname === '/api/account/ai-authorization') return response({ authorized: true });
+    if (url.pathname === '/api/account/ai-data-consent') return response({ disclosure: null, status: 'unconfigured', acceptedVersion: null, acceptedAt: null, decidedAt: null });
     if (url.pathname === '/api/requests') {
       if (init?.method === 'POST') {
         if (postStatus !== 200) return response({ error: '送出服務暫時失敗' }, postStatus);
@@ -85,6 +86,7 @@ describe('conversation lifecycle through the real chat', () => {
     postStatus = 503;
     await send('第一筆送出失敗');
     await screen.findByText(/送出失敗：/);
+    expect(screen.getByTestId('chat-input')).toHaveValue('第一筆送出失敗');
     expect(screen.getByTestId('chat-input')).not.toBeDisabled();
     postStatus = 200;
     vi.useFakeTimers();

@@ -36,6 +36,7 @@ import TitleBar from '../components/shell/TitleBar';
 import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
+import AiDataConsentCard, { type AiDataConsentState } from '../components/AiDataConsentCard';
 import MarkdownText from '../components/shared/MarkdownText';
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
@@ -393,6 +394,12 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   /* The shell reserves keyboard space for both messages and composer. */
   flex-shrink: 0;
 }
+.tp-chat-data-consent-manage {
+  align-self: flex-end; margin: 4px 14px 0; padding: 6px 4px;
+  border: 0; background: transparent; color: var(--color-accent);
+  text-decoration: underline; font: inherit; font-size: var(--font-size-footnote);
+  min-height: 44px; cursor: pointer;
+}
 @media (max-width: 760px) {
 .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 }
@@ -492,11 +499,28 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   const consentOperation = useRef<object | null>(null);
+  const [dataConsent, setDataConsent] = useState<AiDataConsentState | null>(null);
+  const [dataConsentGate, setDataConsentGate] = useState<{ tripId: string; text: string } | null>(null);
+  const [dataConsentBusy, setDataConsentBusy] = useState(false);
+  const [dataConsentError, setDataConsentError] = useState<string | null>(null);
+  const dataConsentRequest = useRef<{ version: string; decision: 'accept' | 'decline' | 'revoke'; id: string } | null>(null);
+  const dataConsentUser = useRef(user?.id);
+  const dataConsentScopeRef = useRef({ tripId: activeTripId, userId: user?.id, active: true });
+  if (dataConsentScopeRef.current.tripId !== activeTripId || dataConsentScopeRef.current.userId !== user?.id) {
+    dataConsentScopeRef.current = { tripId: activeTripId, userId: user?.id, active: true };
+  }
+  const dataConsentScope = dataConsentScopeRef.current;
   useEffect(() => {
     consentOperation.current = null;
     setConsentGate(null); setConsentBusy(false); setConsentError(null);
-    return () => { consentOperation.current = null; };
-  }, [activeTripId, user?.id]);
+    setDataConsentGate(null); setDataConsentBusy(false); setDataConsentError(null);
+    if (dataConsentUser.current !== user?.id) {
+      dataConsentUser.current = user?.id;
+      setDataConsent(null);
+    }
+    dataConsentRequest.current = null;
+    return () => { consentOperation.current = null; dataConsentScope.active = false; };
+  }, [dataConsentScope, user?.id]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stoppedFrom = useRef<{ tripId: string | null; button: HTMLButtonElement } | null>(null);
@@ -557,16 +581,54 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
 
+  const refreshDataConsent = useCallback(async () => {
+    try {
+      const result = await apiFetch<AiDataConsentState>('/account/ai-data-consent');
+      if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return null;
+      setDataConsent(result);
+      setDataConsentError(null);
+      return result;
+    } catch {
+      if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return null;
+      setDataConsent(null);
+      setDataConsentError('無法讀取 AI 資料處理說明，請稍後重試。');
+      return null;
+    }
+  }, [dataConsentScope]);
+
+  useEffect(() => { void refreshDataConsent(); }, [refreshDataConsent]);
+
   const doSend = useCallback(async (text: string) => {
+    if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return;
     setInput('');
-    await sendMessage(text, user);
-  }, [sendMessage, user, setInput]);
+    const result = await sendMessage(text, user);
+    if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) {
+      if (result !== true && activeTripId) {
+        setDrafts(previous => previous.get(activeTripId) ? previous : new Map(previous).set(activeTripId, text));
+      }
+      return;
+    }
+    if (result !== true) setInput(text);
+    if ((result === 'consent_required' || result === 'owner_consent_required') && activeTripId) {
+      inputRef.current?.blur();
+      setDataConsentGate({ tripId: activeTripId, text });
+      const refreshed = await refreshDataConsent();
+      if (dataConsentScopeRef.current === dataConsentScope && dataConsentScope.active && (result === 'owner_consent_required' || refreshed?.status === 'current')) {
+        setDataConsentError('行程擁有者也需要同意目前版本，才能使用此行程的 AI 功能。');
+      }
+    }
+  }, [sendMessage, user, setInput, dataConsentScope, activeTripId, refreshDataConsent]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
     if (!text) return;
     if (!activeTripId) return;
     if (busy) return;
+    if (!dataConsent || (dataConsent.status !== 'unconfigured' && dataConsent.status !== 'current')) {
+      inputRef.current?.blur();
+      setDataConsentGate({ tripId: activeTripId, text });
+      return;
+    }
     // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
@@ -575,7 +637,48 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       return;
     }
     void doSend(text);
-  }, [activeTripId, busy, aiAuthorized, doSend]);
+  }, [activeTripId, busy, dataConsent, aiAuthorized, doSend]);
+
+  const decideDataConsent = useCallback(async (decision: 'accept' | 'decline' | 'revoke') => {
+    if (!dataConsentGate || dataConsentGate.tripId !== activeTripId || !dataConsent?.disclosure || dataConsentBusy) return;
+    const version = dataConsent.disclosure.version;
+    const key = dataConsentRequest.current?.version === version && dataConsentRequest.current.decision === decision
+      ? dataConsentRequest.current.id : crypto.randomUUID();
+    dataConsentRequest.current = { version, decision, id: key };
+    setDataConsentBusy(true); setDataConsentError(null);
+    try {
+      const result = await apiFetch<AiDataConsentState>('/account/ai-data-consent', {
+        method: decision === 'revoke' ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version, decision, requestId: key }),
+      });
+      if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return;
+      dataConsentRequest.current = null;
+      setDataConsent(result);
+      if (decision === 'accept' && result.status !== 'current') throw new Error('consent not current');
+      if (decision === 'revoke' && result.status !== 'revoked') throw new Error('consent not revoked');
+      const pending = dataConsentGate.text;
+      setDataConsentGate(null);
+      if (decision === 'accept' && pending) {
+        if (aiAuthorized === false) setConsentGate({ tripId: activeTripId, text: pending });
+        else void doSend(pending);
+      }
+    } catch {
+      if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return;
+      const refreshed = await refreshDataConsent();
+      if (dataConsentScopeRef.current !== dataConsentScope || !dataConsentScope.active) return;
+      if (decision === 'accept' && refreshed?.status === 'current') {
+        const pending = dataConsentGate.text;
+        dataConsentRequest.current = null;
+        setDataConsentGate(null);
+        if (pending) {
+          if (aiAuthorized === false) setConsentGate({ tripId: activeTripId, text: pending });
+          else void doSend(pending);
+        }
+        return;
+      }
+      setDataConsentError('同意狀態儲存失敗或版本已更新，訊息仍保留。請確認目前版本後重試。');
+    } finally { if (dataConsentScopeRef.current === dataConsentScope && dataConsentScope.active) setDataConsentBusy(false); }
+  }, [dataConsentGate, activeTripId, dataConsent, dataConsentBusy, aiAuthorized, doSend, refreshDataConsent, dataConsentScope]);
 
   // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
   const authorizeAndSend = useCallback(async () => {
@@ -844,6 +947,18 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
       </div>
 
+      {dataConsent?.status === 'current' && !dataConsentGate && <button type="button" className="tp-chat-data-consent-manage" onClick={() => activeTripId && setDataConsentGate({ tripId: activeTripId, text: '' })}>管理 AI 資料同意</button>}
+      {dataConsentGate?.tripId === activeTripId && <AiDataConsentCard
+        state={dataConsent}
+        message={dataConsentGate.text}
+        busy={dataConsentBusy}
+        error={dataConsentError}
+        onAccept={() => { void decideDataConsent('accept'); }}
+        onDecline={() => { void decideDataConsent('decline'); }}
+        onRevoke={() => { void decideDataConsent('revoke'); }}
+        onRetry={() => { void refreshDataConsent(); }}
+        onCancel={() => { setDataConsentGate(null); setDataConsentError(null); }}
+      />}
       <form
         className="tp-chat-composer"
         onSubmit={(e) => { e.preventDefault(); void send(input); }}

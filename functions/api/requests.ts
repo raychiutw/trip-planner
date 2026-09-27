@@ -18,6 +18,7 @@ import { hasPermission, hasWritePermission, requireAuth, hasOpsScope } from './_
 import { AppError } from './_errors';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
+import { requireAiDataConsentForTrip } from './_aiDataConsent';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -60,6 +61,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     conditions.push('r.status = ?');
     params.push(status);
   }
+  if (auth.restrictRequestId !== undefined) {
+    conditions.push('r.id = ?');
+    params.push(auth.restrictRequestId);
+  }
+  if (auth.restrictTrip !== undefined) {
+    // Apply consent before LIMIT/cursor paging. The latest decision is ordered
+    // by event id, matching requireAiDataConsentForQueuedRequest. A bound job
+    // that already entered processing may finish after a later revocation.
+    const accepted = (userId: string) => `EXISTS (
+      SELECT 1 FROM ai_data_disclosure_state s
+      JOIN ai_data_consent_events e ON e.id = (
+        SELECT MAX(id) FROM ai_data_consent_events WHERE user_id = ${userId}
+      )
+      WHERE e.decision = 'accept' AND e.version = s.active_version
+    )`;
+    conditions.push(`(${auth.restrictRequestId !== undefined ? "r.status = 'processing' OR " : ''}
+      NOT EXISTS (SELECT 1 FROM ai_data_disclosure_state)
+      OR (u.id IS NOT NULL AND ${accepted('?')} AND ${accepted('u.id')}))`);
+    params.push(auth.userId ?? '');
+  }
   if (before) {
     if (beforeId) {
       conditions.push('(r.created_at < ? OR (r.created_at = ? AND r.id < ?))');
@@ -92,7 +113,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   sql += isPaginated ? ` LIMIT ${limit + 1}` : ' LIMIT 50';
 
   const { results } = await env.DB.prepare(sql).bind(...params).all();
-
   if (isPaginated) {
     const hasMore = (results ?? []).length > limit;
     const items = hasMore ? (results ?? []).slice(0, limit) : (results ?? []);
@@ -107,6 +127,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
   const auth = requireAuth(context);
+  if (auth.restrictRequestId !== undefined) throw new AppError('PERM_DENIED');
 
   type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
   const body = await parseJsonBody<RequestBody>(request);
@@ -125,6 +146,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!await hasWritePermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
   }
+  await requireAiDataConsentForTrip(env.DB, auth.userId, tripId);
 
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入。
   // 只去重「仍在跑」的請求（open/processing）——終結狀態（failed/completed）不得遮蔽合法重送：
