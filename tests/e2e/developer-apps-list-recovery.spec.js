@@ -100,3 +100,23 @@ test('C 卡片清單在窄寬螢幕完整顯示並可用鍵盤複製每筆 URI',
   await expect(secondCopy).toContainText('已複製');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(secondUri);
 });
+
+test('200 回應混合有效與異常舊 URI 資料時，其他應用仍可讀可複製', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const validUri = 'https://example.com/oauth/callback';
+  const common = { client_type: 'public', allowed_scopes: ['openid'], status: 'active', created_at: '2026-09-26T00:00:00Z', updated_at: '2026-09-26T00:00:00Z' };
+  await page.route('**/api/dev/apps', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ apps: [
+      { ...common, client_id: 'tp_valid', app_name: 'Valid App', redirect_uris: [validUri] },
+      { ...common, client_id: 'tp_legacy', app_name: 'Legacy App', redirect_uris: { unexpected: true } },
+    ] }),
+  }));
+  await page.goto('/developer/apps');
+  await expect(page.getByTestId('dev-apps-row-tp_valid')).toContainText(validUri);
+  await expect(page.getByTestId('dev-apps-row-tp_legacy')).toContainText('尚未設定');
+  await page.getByTestId('dev-apps-row-tp_valid').getByRole('button').focus();
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(validUri);
+});

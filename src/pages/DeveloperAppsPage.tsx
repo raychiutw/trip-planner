@@ -276,14 +276,17 @@ export default function DeveloperAppsPage() {
           <div className="tp-app-grid">
             {apps.map((app) => {
               const pill = statusPill(app.status);
+              const uris = Array.isArray(app.redirect_uris)
+                ? app.redirect_uris.filter((uri): uri is string => typeof uri === 'string')
+                : [];
               return (
                 <article className="tp-app-card" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
                   <h2 className="tp-app-name">{app.app_name}</h2>
                   <div className="tp-app-cid">{app.client_id}</div>
                   <div className="tp-app-uri-list">
                     <div className="tp-app-uri-label">重新導向 URI</div>
-                    {app.redirect_uris.length === 0 && <div className="tp-app-uri-label">尚未設定</div>}
-                    {app.redirect_uris.map((uri, index) => {
+                    {uris.length === 0 && <div className="tp-app-uri-label">尚未設定</div>}
+                    {uris.map((uri, index) => {
                       const key = `${app.client_id}:${index}`;
                       return <div className="tp-app-uri" key={key}>
                         <code>{uri}</code>
