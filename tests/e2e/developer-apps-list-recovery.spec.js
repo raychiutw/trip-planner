@@ -71,3 +71,32 @@ test('空 registry 的建立入口可用鍵盤前往表單', async ({ page }) =>
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/developer\/apps\/new$/);
 });
+
+test('C 卡片清單在窄寬螢幕完整顯示並可用鍵盤複製每筆 URI', async ({ page, context }) => {
+  const firstUri = 'https://example.com/a/very/long/path/to/the/oauth/callback/endpoint/for/tripline';
+  const secondUri = 'https://accounts.example.com/integrations/tripline/another/long/callback/path';
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.route('**/api/dev/apps', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ apps: [
+      { client_id: 'tp_long', app_name: 'A very long developer application name for a travel integration with many words and no clear short form', client_type: 'public', redirect_uris: [firstUri, secondUri], allowed_scopes: ['openid'], status: 'active', created_at: '2026-09-26T00:00:00Z', updated_at: '2026-09-26T00:00:00Z', client_secret: 'tps-never-render-this' },
+      { client_id: 'tp_empty', app_name: 'Empty URI app', client_type: 'public', redirect_uris: [], allowed_scopes: ['openid'], status: 'pending_review', created_at: '2026-09-26T00:00:00Z', updated_at: '2026-09-26T00:00:00Z' },
+    ] }),
+  }));
+  for (const width of [320, 375, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    if (width === 320) await page.goto('/developer/apps');
+    const card = page.getByTestId('dev-apps-row-tp_long');
+    await expect(card).toContainText(firstUri);
+    await expect(card).toContainText(secondUri);
+    await expect(page.getByTestId('dev-apps-row-tp_empty')).toContainText('尚未設定');
+    await expect(page.getByTestId('developer-apps-page')).not.toContainText('tps-never-render-this');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  const secondCopy = page.getByTestId('dev-apps-row-tp_long').getByRole('button').nth(1);
+  await secondCopy.focus();
+  await page.keyboard.press('Enter');
+  await expect(secondCopy).toContainText('已複製');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(secondUri);
+});

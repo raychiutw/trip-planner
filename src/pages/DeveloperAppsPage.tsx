@@ -40,34 +40,32 @@ const SCOPED_STYLES = `
 
 /* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
-.tp-list-table {
+.tp-app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.tp-app-card {
+  min-width: 0; padding: 16px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
 }
-.tp-list-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  align-items: center;
-  gap: 16px; padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-subheadline);
-}
-.tp-list-row:last-child { border-bottom: none; }
-.tp-list-header {
-  background: var(--color-secondary);
-  font-size: var(--font-size-caption2);
-  font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-.tp-app-name { font-weight: 600; }
+.tp-app-name { margin: 0; font-size: var(--font-size-subheadline); font-weight: 600; overflow-wrap: anywhere; }
 .tp-app-cid {
   font-family: 'SF Mono', ui-monospace, monospace;
   font-size: var(--font-size-caption);
   color: var(--color-muted);
+  overflow-wrap: anywhere;
 }
+.tp-app-uri-list { margin-top: 12px; }
+.tp-app-uri-label { color: var(--color-muted); font-size: var(--font-size-caption); font-weight: 600; }
+.tp-app-uri { margin-top: 8px; }
+.tp-app-uri code { display: block; font-size: var(--font-size-caption); overflow-wrap: anywhere; }
+.tp-app-uri .tp-btn { margin-top: 6px; }
+.tp-app-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.tp-app-created { color: var(--color-muted); font-size: var(--font-size-caption); text-align: right; }
+@media (max-width: 760px) { .tp-app-grid { grid-template-columns: minmax(0, 1fr); } }
 .tp-pill {
   display: inline-flex; padding: 2px 8px;
   border-radius: var(--radius-xs);
@@ -153,12 +151,14 @@ export default function DeveloperAppsPage() {
   const [apps, setApps] = useState<ClientApp[] | null>(null);
   const [error, setError] = useState<'forbidden' | 'failed' | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [copyState, setCopyState] = useState<{ key: string; success: boolean } | null>(null);
   const loadSequence = useRef(0);
   const titlebarActionRef = useRef<HTMLButtonElement>(null);
 
   async function loadApps() {
     const sequence = ++loadSequence.current;
     setError(null);
+    setCopyState(null);
     try {
       const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
       if (sequence === loadSequence.current) setApps(json.apps);
@@ -192,6 +192,15 @@ export default function DeveloperAppsPage() {
     if (retrying) return;
     if (error === 'failed') void retryApps();
     else navigate('/developer/apps/new');
+  }
+  async function copyUri(key: string, uri: string) {
+    const sequence = loadSequence.current;
+    try {
+      await navigator.clipboard.writeText(uri);
+      if (sequence === loadSequence.current) setCopyState({ key, success: true });
+    } catch {
+      if (sequence === loadSequence.current) setCopyState({ key, success: false });
+    }
   }
 
   return (
@@ -264,25 +273,31 @@ export default function DeveloperAppsPage() {
         )}
 
         {apps !== null && apps.length > 0 && (
-          <div className="tp-list-table">
-            <div className="tp-list-row tp-list-header">
-              <div>應用</div>
-              <div>狀態</div>
-              <div>建立日期</div>
-              <div></div>
-            </div>
+          <div className="tp-app-grid">
             {apps.map((app) => {
               const pill = statusPill(app.status);
               return (
-                <div className="tp-list-row" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
-                  <div>
-                    <div className="tp-app-name">{app.app_name}</div>
-                    <div className="tp-app-cid">{app.client_id}</div>
+                <article className="tp-app-card" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
+                  <h2 className="tp-app-name">{app.app_name}</h2>
+                  <div className="tp-app-cid">{app.client_id}</div>
+                  <div className="tp-app-uri-list">
+                    <div className="tp-app-uri-label">重新導向 URI</div>
+                    {app.redirect_uris.length === 0 && <div className="tp-app-uri-label">尚未設定</div>}
+                    {app.redirect_uris.map((uri, index) => {
+                      const key = `${app.client_id}:${index}`;
+                      return <div className="tp-app-uri" key={key}>
+                        <code>{uri}</code>
+                        <button type="button" className="tp-btn tp-btn-secondary" onClick={() => void copyUri(key, uri)} aria-label={`${copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製重新導向 URI'} ${index + 1}，${app.app_name}（${app.client_id}）`} aria-live="polite">
+                          {copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製 URI'}
+                        </button>
+                      </div>;
+                    })}
                   </div>
-                  <div><span className={pill.className}>{pill.label}</span></div>
-                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</div>
-                  <div></div>
-                </div>
+                  <div className="tp-app-card-bottom">
+                    <span className={pill.className}>{pill.label}</span>
+                    <span className="tp-app-created">建立 {parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</span>
+                  </div>
+                </article>
               );
             })}
           </div>

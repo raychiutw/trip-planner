@@ -95,6 +95,70 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText('使用中')).toBeTruthy();
   });
 
+  it('shows every long redirect URI and copies the selected URI without exposing a secret', async () => {
+    const firstUri = 'https://example.com/a/very/long/path/to/the/oauth/callback/endpoint/for/tripline';
+    const secondUri = 'https://accounts.example.com/integrations/tripline/another/long/callback/path';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [{
+        ...SAMPLE_APP,
+        app_name: 'A very long developer application name for a travel integration with many words and no clear short form',
+        redirect_uris: [firstUri, secondUri],
+        client_secret: 'tps-never-render-this',
+      }] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const app = await screen.findByTestId('dev-apps-row-tp_abc');
+    expect(app.textContent).toContain('A very long developer application name');
+    expect(app.textContent).toContain(firstUri);
+    expect(app.textContent).toContain(secondUri);
+    expect(app.textContent).not.toContain('tps-never-render-this');
+    const copyButtons = Array.from(app.querySelectorAll('button')).filter((button) => button.getAttribute('aria-label')?.includes('複製重新導向 URI'));
+    expect(copyButtons).toHaveLength(2);
+    copyButtons[1].focus();
+    expect(document.activeElement).toBe(copyButtons[1]);
+    fireEvent.click(copyButtons[1]);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(secondUri));
+  });
+
+  it('keeps URI visible and reports clipboard failure without claiming success', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('permission denied'));
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const app = await screen.findByTestId('dev-apps-row-tp_abc');
+    fireEvent.click(screen.getByRole('button', { name: /複製重新導向 URI 1，Trip Buddy（tp_abc）/ }));
+    await waitFor(() => expect(app.textContent).toContain('複製失敗'));
+    expect(app.textContent).toContain('https://example.com/cb');
+    expect(app.textContent).not.toContain('已複製');
+  });
+
+  it('distinguishes copy controls by app and clears stale copy feedback after refetch', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    const updated = { ...SAMPLE_APP, redirect_uris: ['https://example.com/new-callback'] };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP, { ...SAMPLE_APP, client_id: 'tp_other', app_name: 'Other App' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [updated, { ...SAMPLE_APP, client_id: 'tp_other', app_name: 'Other App' }] }), { status: 200 })));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const originalCopy = await screen.findByRole('button', { name: /複製重新導向 URI 1，Trip Buddy（tp_abc）/ });
+    expect(screen.getByRole('button', { name: /複製重新導向 URI 1，Other App（tp_other）/ })).toBeTruthy();
+    fireEvent.click(originalCopy);
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).toContain('已複製'));
+    act(() => window.dispatchEvent(new CustomEvent('tp-developer-app-created')));
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).toContain('https://example.com/new-callback'));
+    expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).not.toContain('已複製');
+  });
+
   it('does not expose a secret even if an API payload includes one', async () => {
     const secret = 'tps-sensitive-secret-value';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
