@@ -140,6 +140,9 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
 }
 .tp-chat-history-status > button { cursor: pointer; }
+.tp-chat-history-status > button:focus-visible {
+  outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
+}
 .tp-chat-spinner {
   width: 16px; height: 16px; border: 2px solid var(--color-border);
   border-top-color: var(--color-foreground); border-radius: 50%;
