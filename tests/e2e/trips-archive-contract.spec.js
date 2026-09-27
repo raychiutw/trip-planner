@@ -128,3 +128,28 @@ test('320px short viewport keeps the card archive action tappable above bottom n
   await expect(page.getByTestId('confirm-modal')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
+
+test('keyboard cancellation returns focus to the archive menu trigger', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await installArchiveHttp(page);
+  await page.goto('/trips');
+  const trigger = page.getByTestId(`trip-card-menu-trigger-${tripId}`);
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await page.getByTestId(`trip-card-menu-archive-${tripId}`).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('confirm-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('confirm-modal')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await page.getByTestId(`trips-list-card-${tripId}`).click();
+  const detailTrigger = page.getByTestId('trips-embedded-menu-trigger');
+  await detailTrigger.focus();
+  await page.keyboard.press('Enter');
+  await page.getByTestId(`trip-embedded-menu-archive-${tripId}`).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('confirm-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('confirm-modal')).toHaveCount(0);
+  await expect(detailTrigger).toBeFocused();
+});

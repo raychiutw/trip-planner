@@ -210,6 +210,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
     e.stopPropagation();
     onArchive?.(tripId);
     close();
+    triggerRef.current?.focus();
   }
 
   const dropdown = open && pos ? createPortal((

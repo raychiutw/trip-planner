@@ -219,7 +219,8 @@ export default function TripActionsMenu({ tripId, tripPageRef, onEdit, onCollab,
       )}
       {onArchive && (
         <button type="button" role="menuitem" className="tp-embedded-menu-item"
-          onClick={runAndClose(onArchive)} data-testid={`trip-embedded-menu-archive-${tripId}`}>
+          onClick={() => { onArchive(); close(); triggerRef.current?.focus(); }}
+          data-testid={`trip-embedded-menu-archive-${tripId}`}>
           <Icon name="folder" />
           <span>{archived ? '取消歸檔' : '歸檔行程'}</span>
         </button>
