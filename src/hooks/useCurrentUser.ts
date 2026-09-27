@@ -31,7 +31,7 @@
  * 新 mount 拿到登出前 in-flight 請求舊身分的問題。
  */
 import { useEffect, useState } from 'react';
-import { writeAuthHint } from '../lib/authHint';
+import { nextAuthHintSeq, writeAuthHint } from '../lib/authHint';
 
 export interface CurrentUser {
   id: string;
@@ -57,20 +57,22 @@ let sharedFetchPromise: Promise<CurrentUser | null> | null = null;
 
 function fetchCurrentUser(forceFresh = false): Promise<CurrentUser | null> {
   if (!sharedFetchPromise || forceFresh) {
+    // 共享 fetch 不能被單一 consumer abort，改用序號擋掉「比登出等較新寫入還舊」的落地結果。
+    const hintSeq = nextAuthHintSeq();
     const promise: Promise<CurrentUser | null> = fetch(USERINFO_ENDPOINT, { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) {
           // 401 / 503 / etc. → 視為未登入
-          writeAuthHint(false);
+          writeAuthHint(false, hintSeq);
           return null;
         }
         const data = (await res.json()) as CurrentUser;
         // 記住結果供下次「首次 paint 就要決定畫什麼」的頁面用（見 lib/authHint）。
-        writeAuthHint(true);
+        writeAuthHint(true, hintSeq);
         return data;
       })
       .catch(() => {
-        writeAuthHint(false);
+        writeAuthHint(false, hintSeq);
         return null;
       });
     sharedFetchPromise = promise;

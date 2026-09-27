@@ -24,7 +24,19 @@ export function readAuthHint(): boolean {
   }
 }
 
-export function writeAuthHint(authed: boolean): void {
+// 序號越大代表資訊越新。useCurrentUser 在發 request 時先取號、落地時帶號寫入；
+// 直接呼叫（例如登出）自動拿最新號。這樣登出前發出、登出後才落地的 userinfo
+// 回應不會把登出寫的 false 蓋回 true。
+let issuedSeq = 0;
+let appliedSeq = 0;
+
+export function nextAuthHintSeq(): number {
+  return ++issuedSeq;
+}
+
+export function writeAuthHint(authed: boolean, seq = nextAuthHintSeq()): void {
+  if (seq < appliedSeq) return;
+  appliedSeq = seq;
   try {
     if (authed) localStorage.setItem(AUTH_HINT_KEY, '1');
     else localStorage.removeItem(AUTH_HINT_KEY);

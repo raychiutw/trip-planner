@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useCurrentUser } from '../../src/hooks/useCurrentUser';
+import { readAuthHint, writeAuthHint } from '../../src/lib/authHint';
 
 const SAMPLE_USER = {
   id: 'uid-1',
@@ -123,6 +124,24 @@ describe('useCurrentUser', () => {
     });
     expect(result.current.user?.displayName).toBe('Fresh');
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('a userinfo response that lands after logout does not overwrite the logout auth hint', async () => {
+    // 登出前發出、登出後才落地的請求不能把 hint 蓋回 true（見 lib/authHint 序號）。
+    // 舊版靠每個 instance 的 AbortController 擋；共享 fetch 不能被單一 consumer
+    // abort，改靠序號。
+    writeAuthHint(true);
+    let resolveFetch: (res: Response) => void = () => undefined;
+    vi.spyOn(global, 'fetch').mockImplementation(() => new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    }));
+    const { result } = renderHook(() => useCurrentUser());
+
+    writeAuthHint(false); // AccountPage / SessionsPage 登出成功後的寫入
+    resolveFetch(new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
+    // user 落地代表 fetchCurrentUser 的 .then（含寫 hint）已經跑完。
+    await waitFor(() => expect(result.current.user).toEqual(SAMPLE_USER));
+    expect(readAuthHint()).toBe(false);
   });
 
   it('fetch uses credentials: include for cookie-based auth', async () => {
