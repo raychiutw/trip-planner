@@ -24,6 +24,11 @@
  * microtask 就自動清空，不會變成長效跨頁面快取（維持「不快取 across
  * navigation」的既有語意），也不會被「fetch 永不 resolve」的 loading-state 測試
  * 卡死。
+ *
+ * ponytail: 只合併「同一個 commit」的 mount。之後才載入的 lazy route chunk（例如
+ * /stop/:id/copy 的 EntryActionPage）落在下一個 commit，會各自再打一次（dev 冷載入
+ * 實測 copy 19→2、map 25→3）。要改成「請求 settle 前都共用」，得先處理 logout 後
+ * 新 mount 拿到登出前 in-flight 請求舊身分的問題。
  */
 import { useEffect, useState } from 'react';
 import { writeAuthHint } from '../lib/authHint';
