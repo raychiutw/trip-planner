@@ -126,10 +126,33 @@ const SCOPED_STYLES = `
   padding: 20px 24px;
   display: flex; flex-direction: column; gap: 12px;
 }
+.tp-chat-history-status {
+  position: sticky; top: 0; z-index: 2;
+  height: 0; flex: 0 0 0; margin-bottom: -12px;
+  display: flex; justify-content: center;
+}
+.tp-chat-history-status > span,
+.tp-chat-history-status > button {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border: 1px solid var(--color-border);
+  border-radius: 999px; background: var(--color-background);
+  color: var(--color-foreground); font: inherit;
+  font-size: var(--font-size-footnote);
+}
+.tp-chat-history-status > button { cursor: pointer; }
+.tp-chat-history-status > button:focus-visible {
+  outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
+}
+.tp-chat-spinner {
+  width: 16px; height: 16px; border: 2px solid var(--color-border);
+  border-top-color: var(--color-foreground); border-radius: 50%;
+  animation: tp-chat-spin 0.7s linear infinite;
+}
+@keyframes tp-chat-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tp-chat-spinner { animation: none; } }
 @media (max-width: 760px) { .tp-chat-body { padding: 16px; } }
 
-/* Load error banner — sticky-top inside chat body, 出現在 401/network/loadOlder
- * 失敗時。Retry button 重觸 loadOlder; hook 內 ERROR_BACKOFF_MS gate 防 storm。 */
+/* Initial history load error stays visible while messages sent during the outage remain mounted. */
 .tp-chat-load-error {
   position: sticky; top: 0; z-index: 1;
   display: flex; gap: 12px; align-items: center; justify-content: space-between;
@@ -357,15 +380,15 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   outline-offset: 2px;
 }
 
-/* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
+/* 跳到最新：聊天欄置中、composer 之上。只在 user 捲離底部時渲染。
    以 composer 為定位容器，跟隨輸入區高度與鍵盤位移，避免壓到送出按鈕。 */
 .tp-chat-jump-latest {
   position: absolute;
-  inset-inline-end: 20px;
+  inset-inline-start: 50%;
   inset-block-end: calc(100% + 12px);
   z-index: 4;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: 44px;
+  block-size: 44px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
   background: var(--color-background);
@@ -373,7 +396,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  transform: translateX(-50%);
   display: grid;
   place-items: center;
 }
@@ -382,6 +405,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+.tp-chat-jump-latest:disabled { cursor: default; }
 
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
@@ -519,7 +543,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   const {
     messages, sendMessage, inflightId, busy, historyLoading,
-    loadError, retryLoadOlder, isAtBottom, scrollToBottom,
+    loadError, initialLoadError, retryLoadOlder, loadingOlder, latestRefreshing, latestError, retryLatest,
+    isAtBottom, scrollToBottom,
     sseError, errorReason, elapsedMs, stopping, stopWaiting,
   } = useConversation(activeTripId, bodyRef);
 
@@ -688,7 +713,13 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{terminalAnnouncement}</div>
-        {loadError && activeTripId && (
+        {activeTripId && (loadingOlder || (loadError && !initialLoadError)) && (
+          <div className="tp-chat-history-status" data-testid="chat-history-status">
+            {loadingOlder ? <span role="status" aria-label="載入較早訊息…"><span className="tp-chat-spinner" aria-hidden="true" />載入較早訊息…</span>
+              : <button type="button" onClick={retryLoadOlder} aria-label="無法載入較早訊息，重試">無法載入較早訊息・重試</button>}
+          </div>
+        )}
+        {loadError && initialLoadError && activeTripId && (
           <div className="tp-chat-load-error" role="alert" data-testid="chat-load-error">
             <span className="tp-chat-load-error-text">載入訊息失敗</span>
             <button
@@ -882,14 +913,23 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       >
         {/* 捲到底箭頭跟隨 composer 定位；只在 user 捲離底部時出現。
             aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
-        {activeTripId && !isAtBottom && (
+        {activeTripId && latestRefreshing && (
+          <div className="tp-chat-jump-latest" role="status" aria-live="polite" aria-label="正在更新最新訊息" data-testid="chat-latest-refreshing">
+            <span className="tp-chat-spinner" aria-hidden="true" /><span className="sr-only">正在更新最新訊息</span>
+          </div>
+        )}
+        {activeTripId && !latestRefreshing && latestError && (
+          <button type="button" className="tp-chat-jump-latest" onClick={retryLatest}
+            aria-label="更新最新訊息失敗，重試" data-testid="chat-latest-retry">↻</button>
+        )}
+        {activeTripId && !latestRefreshing && !latestError && !isAtBottom && (
           <button
             type="button"
             className="tp-chat-jump-latest"
             data-testid="chat-jump-to-latest"
             onClick={scrollToBottom}
-            aria-label="跳到最新訊息"
-            title="跳到最新訊息"
+            aria-label="回到最新訊息"
+            title="回到最新訊息"
           >
             <span aria-hidden="true">↓</span>
           </button>
