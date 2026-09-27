@@ -55,7 +55,7 @@ const _cache = globalThis as unknown as GlobalCache;
  */
 async function hasMigratedSchema(db: D1Database): Promise<boolean> {
   try {
-    // 0094_drop_trip_docs.sql —— 目前最後一個 schema 變更。
+    // 0096_trips_archive.sql —— 目前最後一個 schema 變更。
     //
     // ⚠️ DROP 型判定**不能只驗「表不見了」** —— 空 DB 上那也成立，會判成「已遷移」
     // 而讓 migration 整個不跑（實測：整批 integration test 掛在 no such table: users）。
@@ -64,6 +64,8 @@ async function hasMigratedSchema(db: D1Database): Promise<boolean> {
     const info = await db.prepare('PRAGMA table_info(trip_requests)').all<{ name: string }>();
     const hasTerminalReason = (info.results ?? []).some((col) => col.name === 'terminal_reason');
     if (!hasTerminalReason) return false;
+    const tripColumns = await db.prepare('PRAGMA table_info(trips)').all<{ name: string }>();
+    if (!(tripColumns.results ?? []).some((col) => col.name === 'archived_at')) return false;
     const dropped = await db
       .prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='trip_docs'")
       .first<{ n: number }>();

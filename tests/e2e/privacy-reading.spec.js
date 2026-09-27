@@ -34,6 +34,29 @@ test('signup opens policy for reading and returns to the same unfinished form', 
   await expect(page).toHaveURL(/\/signup$/);
 });
 
+test('login opens policy and returns to the same unfinished form', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/login');
+  const signup = page.getByTestId('login-signup-link');
+  const privacy = page.getByRole('link', { name: '隱私權政策' });
+  const signupBox = await signup.boundingBox();
+  const privacyBox = await privacy.boundingBox();
+  expect(signupBox && privacyBox && privacyBox.y > signupBox.y + signupBox.height).toBeTruthy();
+  await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await expect(privacy).toBeVisible();
+  await page.getByRole('textbox', { name: '電子郵件' }).fill('reader@example.test');
+  const [policy] = await Promise.all([
+    page.waitForEvent('popup'),
+    privacy.click(),
+  ]);
+  await expect(policy.getByTestId('privacy-page')).toBeVisible();
+  await expect(policy).toHaveURL(/\/privacy\?from=login$/);
+  await policy.getByRole('button', { name: '返回' }).click();
+  await expect.poll(() => policy.isClosed()).toBe(true);
+  await expect(page.getByRole('textbox', { name: '電子郵件' })).toHaveValue('reader@example.test');
+});
+
 test('anonymous privacy deep link returns to the public home page', async ({ page }) => {
   await page.goto('/privacy#delete-account');
   await expect(page.locator('#delete-account')).toBeVisible();

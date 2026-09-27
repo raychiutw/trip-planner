@@ -125,6 +125,7 @@ test('#1302：舊 /trip/:id 連結仍保留明確目標', async ({ page }) => {
 });
 
 test('#1302：沒有 active 偏好時桌機恢復上次檢視行程，手機仍留在清單', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/chat');
   await page.evaluate((tripId) => {
     localStorage.removeItem('tp-trip-pref');
@@ -227,6 +228,7 @@ test('#1303：沒有行程時 root 地圖保留建立引導，清單失敗則顯
 });
 
 test('#1303：私人行程在地圖選單保留名稱，選取後行程頁延續同一目標', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   const privateName = '私人釜山行程';
   await page.route('**/api/my-trips', (route) => route.fulfill({
     json: [MOCK_TRIPS_LIST[0], { ...MOCK_TRIPS_LIST[1], title: privateName, name: privateName, published: 0 }],

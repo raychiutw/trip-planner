@@ -270,6 +270,8 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **你=柔褐**（`.tp-chat-avatar` base = `--color-accent`，右側、實心）、**AI 助理=sage**（`.is-ai` = `--color-accent-2-bg`）、**共編旅伴=pink**（`.is-other-user` = `--color-accent-3-bg`）。修掉原本 AI 與旅伴 avatar 撞色（都 secondary/foreground）分不出真人/AI 的問題。
 - avatar 用 `--t-bg` 底 + `--color-foreground` 字（~7–12:1，light/dark 皆過）—— **不用 vivid `--color-accent-2/-3` 實心**（dark mode 對 foreground 字僅 1.78:1 fail）。canonical mockup：`design-sessions/2026-06-08-chat-tricolor-by-role.html`。
 
+**AI 聊天捲動（#1209，owner 核准 A）**：離底部 >80px 時，在 composer 上方 12px、聊天欄置中顯示 44×44px 中性描邊向下箭頭；≤80px 隱藏。按箭頭使用原生平滑捲動，減少動態效果時立即捲動。回到底部的邊界只刷新最新五筆一次；刷新 spinner／失敗重試佔用箭頭位置。距頂 ≤80px 載入較早訊息時，頂部中央以不改變訊息高度的 sticky 狀態顯示載入／失敗重試。獨立與嵌入聊天共用規則。五態原型：[Cloudflare preview](https://59a64497.trip-planner-dby.pages.dev/prototype-1209-chat-scroll.html)。
+
 **帳號 — 依設定分區三色（v2.54.10，`AccountPage`）**：設定 hub 每個分區一色，由 `group.tone` 驅動 row icon chip（mockup V1「輕觸」，只 icon chip 上色）：
 - **應用程式=accent 柔褐**（外觀/通知，你的偏好）、**共編 & 整合=sage**（連結 app/開發者）、**帳號=pink**（裝置/登出）。語意延伸（user 拍板，sage↔pink 與初版 mockup 對調）。**登出=destructive 紅**（`.is-danger` 覆寫、不混三色）。
 - icon chip = `.tp-account-rows[data-tone]` 帶 `--t-bg` 底 + `--color-foreground` glyph（~11–12:1）；tone 規則用 `:not(.is-danger)` 排除登出，讓紅 icon 不被蓋。canonical mockup：`design-sessions/2026-06-08-account-tricolor-by-group.html`。

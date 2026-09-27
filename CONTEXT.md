@@ -171,6 +171,7 @@ _Avoid_: 深度、L2/L3（口語可用，寫文件時用「第一層／更深層
 - **trip switcher（選擇行程下拉）**：titlebar「行程名稱 + ⌄」的 `TripTitleSwitcher`，切換 **active trip**（單一真相＝`ActiveTripContext`，persist `LS_KEY_TRIP_PREF`；聊天／地圖／行程三 tab 都應以它為準）。
   聊天、行程清單、行程明細、root 地圖、行程地圖與側欄的可存取清單由 `useTripSelection` 共用 `/my-trips`、載入／失敗／刷新及較新讀取優先的生命週期；只有成功讀取能使失效偏好退回第一個可存取行程或空狀態。明確目標（連結、`?selected=` 或行程 sheet）不因清單缺項而被替換；偏好仍由 `ActiveTripContext` 持久化與跨分頁同步。root 地圖只選擇、導向行程地圖，或在清單為空時引導建立。桌機可恢復上次檢視行程與日期，手機進行程 tab 仍先呈現清單；上次檢視不等同 active trip。
 - **trips 篩選 tab**：`.tp-trips-tab`（全部／我的／共編／已歸檔），只在行程清單頁。
+- **行程歸檔**：行程擁有者變更 `trips.archived_at`；所有有權限的旅伴清單同步移入／移出「已歸檔」。歸檔只改清單分類，不撤銷行程權限、不改內容，也不關閉已選詳情或重設閱讀位置。
 _Avoid_: 「**POI tab**」—— 歧義（曾同時被拿來指 Day tab 與收藏頁篩選），一律改叫 **Day tab**；收藏頁的類型／地區是「收藏篩選」（`role=group` pill 列），不是 tab。
 
 > **單獨寫「sheet」是有歧義的** —— 它可能指行程 sheet、bottom sheet，或版面裡裝這些東西的槽位。文件與 issue 裡要指名是哪一個。版面本身（幾欄、怎麼排）屬 `DESIGN.md`，不在本詞彙表。

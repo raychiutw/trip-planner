@@ -41,6 +41,8 @@ const SCOPED_STYLES = `
 .tp-card-menu-dropdown {
   position: fixed;
   min-width: 160px;
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -81,14 +83,18 @@ export interface TripCardMenuProps {
   onShare?: (tripId: string) => void;
   /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。 */
   onDelete: (tripId: string) => void;
+  /** Owner-only trip-wide archive or restore. Omit for collaborators. */
+  onArchive?: (tripId: string) => void;
+  archived?: boolean;
   /** 預設關掉 menu 後 host 不需要做事。 */
   onClose?: () => void;
 }
 
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
+const BOTTOM_SAFE_AREA = 96;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onArchive, archived, onClose }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -101,20 +107,27 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
 
   useLayoutEffect(() => {
     if (!open) return;
+    let rafId: number | null = null;
     function recompute() {
       const btn = triggerRef.current;
       if (!btn) return;
       const r = btn.getBoundingClientRect();
       const vw = window.innerWidth;
+      const vh = window.innerHeight;
       let left = r.right - MENU_WIDTH;
       if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
       if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
-      setPos({ top: r.bottom + 6, left });
+      const menuH = menuRef.current?.offsetHeight || 335;
+      const top = Math.max(VIEWPORT_MARGIN, Math.min(r.bottom + 6, vh - BOTTOM_SAFE_AREA - menuH));
+      setPos({ top, left });
     }
     recompute();
+    // The portal mounts after the first position update; then use its measured height.
+    rafId = requestAnimationFrame(recompute);
     window.addEventListener('resize', recompute, { passive: true });
     window.addEventListener('scroll', recompute, { capture: true, passive: true });
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('resize', recompute);
       window.removeEventListener('scroll', recompute, { capture: true });
     };
@@ -192,6 +205,14 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
     close();
   }
 
+  function handleArchive(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onArchive?.(tripId);
+    close();
+    triggerRef.current?.focus();
+  }
+
   const dropdown = open && pos ? createPortal((
     <div
       ref={menuRef}
@@ -252,6 +273,13 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
         >
           <Icon name="copy" />
           <span>分享連結</span>
+        </button>
+      )}
+      {onArchive && (
+        <button type="button" role="menuitem" className="tp-card-menu-item" onClick={handleArchive}
+          data-testid={`trip-card-menu-archive-${tripId}`}>
+          <Icon name="folder" />
+          <span>{archived ? '取消歸檔' : '歸檔行程'}</span>
         </button>
       )}
       <button

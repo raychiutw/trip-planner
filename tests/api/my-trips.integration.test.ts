@@ -32,6 +32,7 @@ describe('GET /api/my-trips', () => {
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBe(2);
     expect(data.every(t => t.tripId === 'trip-my-1' || t.tripId === 'trip-my-2')).toBe(true);
+    expect(data.every(t => t.archivedAt === null)).toBe(true);
   });
 
   it('預設先列出最近更新的行程', async () => {

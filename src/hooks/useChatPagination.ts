@@ -23,8 +23,8 @@ export const CHAT_PAGE_SIZE = 5;
 export const LOAD_OLDER_THRESHOLD_PX = 80;
 /** 距底多少 px 內算「還在底部」。超過就視為 user 主動捲上去看歷史：
  *  新訊息不再硬拉回底（讓位），並顯示「跳回最新」箭頭讓他回得去。
- *  取 120px 而非 0 —— 行動裝置 momentum scroll 與 rubber-band 會讓精確 0 幾乎踩不到。 */
-export const AT_BOTTOM_THRESHOLD_PX = 120;
+ *  取 80px 而非 0 —— 行動裝置 momentum scroll 與 rubber-band 會讓精確 0 幾乎踩不到。 */
+export const AT_BOTTOM_THRESHOLD_PX = 80;
 /** 連續失敗最少間隔。401 / network error 時擋 storm fetch。 */
 const ERROR_BACKOFF_MS = 2000;
 
@@ -42,6 +42,7 @@ export interface UseChatPaginationArgs<TRow extends PaginatedRow, TMsg extends {
   setMessages: React.Dispatch<React.SetStateAction<TMsg[]>>;
   rowToMessages: (row: TRow) => TMsg[];
   mergeMessages?: (previous: TMsg[], incoming: TMsg[]) => TMsg[];
+  mergeLatestMessages: (previous: TMsg[], incoming: TMsg[]) => TMsg[];
   /** 從 raw row 抽出 inflight 狀態 (open / processing) 用以恢復 SSE。 */
   isInflightStatus?: (row: TRow) => boolean;
   /** 初次載入完成後若有 inflight row, 通知 caller resume SSE。 */
@@ -58,6 +59,11 @@ export interface UseChatPaginationResult {
   loadOlder: () => Promise<void>;
   /** Last error from initial fetch or loadOlder。Null = no error。 */
   loadError: Error | null;
+  initialLoadError: boolean;
+  loadingOlder: boolean;
+  latestRefreshing: boolean;
+  latestError: Error | null;
+  retryLatest: () => void;
   /** Caller 在 retry button 點按時呼叫,清 error + 重試 loadOlder。 */
   retryLoadOlder: () => void;
   /** 目前捲動位置是否還在底部附近（AT_BOTTOM_THRESHOLD_PX 內）。
@@ -98,6 +104,11 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
    *  進來時讀 state 會拿到上一輪的值。 */
   const atBottomRef = useRef(true);
   const [loadError, setLoadError] = useState<Error | null>(null);
+  const [initialLoadError, setInitialLoadError] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [latestRefreshing, setLatestRefreshing] = useState(false);
+  const [latestError, setLatestError] = useState<Error | null>(null);
+  const latestRefreshingRef = useRef(false);
   const [initialAttempt, setInitialAttempt] = useState(0);
   const loadedTripRef = useRef<string | null>(null);
 
@@ -107,12 +118,14 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
   const setMessagesRef = useRef(setMessages);
   const rowToMessagesRef = useRef(rowToMessages);
   const mergeMessagesRef = useRef(args.mergeMessages);
+  const mergeLatestMessagesRef = useRef(args.mergeLatestMessages);
   const isInflightStatusRef = useRef(isInflightStatus);
   const onInitialResumeRef = useRef(onInitialResume);
   const setHistoryLoadingRef = useRef(setHistoryLoading);
   useEffect(() => { setMessagesRef.current = setMessages; }, [setMessages]);
   useEffect(() => { rowToMessagesRef.current = rowToMessages; }, [rowToMessages]);
   useEffect(() => { mergeMessagesRef.current = args.mergeMessages; }, [args.mergeMessages]);
+  useEffect(() => { mergeLatestMessagesRef.current = args.mergeLatestMessages; }, [args.mergeLatestMessages]);
   useEffect(() => { isInflightStatusRef.current = isInflightStatus; }, [isInflightStatus]);
   useEffect(() => { onInitialResumeRef.current = onInitialResume; }, [onInitialResume]);
   useEffect(() => { setHistoryLoadingRef.current = setHistoryLoading; }, [setHistoryLoading]);
@@ -138,6 +151,10 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
   useEffect(() => {
     const generation = ++generationRef.current;
     loadingOlderRef.current = false;
+    latestRefreshingRef.current = false;
+    setLoadingOlder(false);
+    setLatestRefreshing(false);
+    setLatestError(null);
     lastErrorAtRef.current = 0;
     atBottomRef.current = true;
     setIsAtBottom(true);
@@ -148,6 +165,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       setOldestCursor(null);
       setHasMoreOlder(false);
       setLoadError(null);
+      setInitialLoadError(false);
       prependScrollRef.current = null;
       return;
     }
@@ -160,6 +178,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     setOldestCursor(null);
     setHasMoreOlder(false);
     setLoadError(null);
+    setInitialLoadError(false);
     prependScrollRef.current = null;
     (async () => {
       try {
@@ -184,6 +203,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
         if (resumeId != null) onInitialResumeRef.current?.(resumeId);
       } catch (err) {
         if (!cancelled) {
+          setInitialLoadError(true);
           setLoadError(err instanceof Error ? err : new Error(String(err)));
         }
       } finally {
@@ -209,6 +229,7 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     const generation = generationRef.current;
     // 同步寫 ref 擋住同 tick 多次 onScroll 觸發 (iOS momentum scroll)
     loadingOlderRef.current = true;
+    setLoadingOlder(true);
     try {
       const params = new URLSearchParams({
         tripId: fetchTripId,
@@ -247,7 +268,10 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
       lastErrorAtRef.current = Date.now();
       setLoadError(err instanceof Error ? err : new Error(String(err)));
     } finally {
-      if (generationRef.current === generation) loadingOlderRef.current = false;
+      if (generationRef.current === generation) {
+        loadingOlderRef.current = false;
+        setLoadingOlder(false);
+      }
     }
   }, [activeTripId, oldestCursor, hasMoreOlder, loadError, bodyRef]);
 
@@ -257,6 +281,34 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     if (!oldestCursor) setInitialAttempt((attempt) => attempt + 1);
     else void loadOlder();
   }, [loadOlder, oldestCursor]);
+
+  const refreshLatest = useCallback(async () => {
+    if (!activeTripId || latestRefreshingRef.current) return;
+    const fetchTripId = activeTripId;
+    const generation = generationRef.current;
+    latestRefreshingRef.current = true;
+    setLatestRefreshing(true);
+    setLatestError(null);
+    try {
+      const res = await apiFetch<PageResponse<TRow>>(
+        `/requests?tripId=${encodeURIComponent(fetchTripId)}&limit=${CHAT_PAGE_SIZE}&sort=desc`,
+      );
+      if (activeTripIdRef.current !== fetchTripId || generationRef.current !== generation) return;
+      const { rows } = parseRequestPage(res);
+      const latest = rows.flatMap((row) => rowToMessagesRef.current(row));
+      setMessagesRef.current((previous) => mergeLatestMessagesRef.current(previous, latest));
+    } catch (err) {
+      if (activeTripIdRef.current === fetchTripId && generationRef.current === generation) {
+        setLatestError(err instanceof Error ? err : new Error(String(err)));
+      }
+    } finally {
+      if (generationRef.current === generation) {
+        latestRefreshingRef.current = false;
+        setLatestRefreshing(false);
+      }
+    }
+  }, [activeTripId]);
+  const retryLatest = useCallback(() => { void refreshLatest(); }, [refreshLatest]);
 
   // Scroll trigger（一個 listener 兩件事）：
   //   1. 距頂 LOAD_OLDER_THRESHOLD_PX 內 + 還有更舊 + 沒在載 → 載更舊
@@ -270,19 +322,26 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
         void loadOlder();
       }
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= AT_BOTTOM_THRESHOLD_PX;
+      const wasAtBottom = atBottomRef.current;
       atBottomRef.current = atBottom;
       setIsAtBottom(atBottom);
+      if (!wasAtBottom && atBottom) void refreshLatest();
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [hasMoreOlder, loadOlder, bodyRef]);
+  }, [hasMoreOlder, loadOlder, bodyRef, refreshLatest]);
 
   const scrollToBottom = useCallback(() => {
     const el = bodyRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    atBottomRef.current = true;
-    setIsAtBottom(true);
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (typeof el.scrollTo === 'function') {
+      el.scrollTo({ top: el.scrollHeight, behavior: reducedMotion ? 'instant' : 'smooth' });
+    } else {
+      el.scrollTop = el.scrollHeight;
+    }
+    // Browser scroll events trigger the latest-edge refresh when the destination is reached.
+    // jsdom's scrollTop assignment does not emit an event.
   }, [bodyRef]);
 
   // Auto-scroll behavior — 用 first/last message id diff 判斷變動類型,避免 SSE
@@ -321,5 +380,6 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     // 兩者皆同 → SSE bubble 取代,user 已捲到他要的位置,不動
   }, [messages, bodyRef]);
 
-  return { hasMoreOlder, loadOlder, loadError, retryLoadOlder, isAtBottom, scrollToBottom };
+  return { hasMoreOlder, loadOlder, loadError, initialLoadError, retryLoadOlder, loadingOlder,
+    latestRefreshing, latestError, retryLatest, isAtBottom, scrollToBottom };
 }

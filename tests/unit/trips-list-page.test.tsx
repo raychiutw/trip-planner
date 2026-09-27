@@ -358,6 +358,68 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
   });
 });
 
+describe('TripsListPage — owner-wide archive', () => {
+  it('confirms archive and restore through HTTP while keeping the trip accessible', async () => {
+    let archivedAt: string | null = null;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify([
+        { ...SAMPLE[0], owner: 'u@x.com', ownerUserId: 'u1', archivedAt },
+      ]), { status: 200 });
+      if (path === '/api/trips/okinawa/archive' && init?.method === 'PUT') {
+        archivedAt = '2026-09-27 00:00:00';
+        return new Response(JSON.stringify({ archivedAt }), { status: 200 });
+      }
+      if (path === '/api/trips/okinawa/archive' && init?.method === 'DELETE') {
+        archivedAt = null;
+        return new Response(JSON.stringify({ archivedAt }), { status: 200 });
+      }
+      return new Response('null', { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    expect(screen.getByText(/所有旅伴/)).toBeInTheDocument();
+    expect(fetcher.mock.calls.some(([path, init]) => String(path) === '/api/trips/okinawa/archive' && init?.method === 'PUT')).toBe(false);
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
+    expect(screen.getByTestId('sidebar-trip-okinawa')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('trips-list-tab-archived'));
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '取消歸檔' }));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('trips-list-tab-all'));
+    await screen.findByTestId('trips-list-card-okinawa');
+  });
+
+  it('does not expose archive to a collaborator, and failed mutation keeps the card', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify([
+        { ...SAMPLE[0], owner: 'u@x.com', ownerUserId: 'u1', archivedAt: null },
+        { ...SAMPLE[1], owner: 'friend@x.com', ownerUserId: 'friend', archivedAt: null },
+      ]), { status: 200 });
+      if (path === '/api/trips/okinawa/archive' && init?.method === 'PUT') return new Response('failed', { status: 500 });
+      return new Response('null', { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    render(<MemoryRouter initialEntries={['/trips']}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>);
+    await screen.findByTestId('trips-list-card-seoul');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-seoul'));
+    expect(screen.queryByRole('menuitem', { name: '歸檔行程' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(fetcher.mock.calls.some(([path, init]) => String(path) === '/api/trips/okinawa/archive' && init?.method === 'PUT')).toBe(true));
+    expect(screen.getByTestId('trips-list-card-okinawa')).toBeInTheDocument();
+    expect(screen.getByTestId('trips-list-tab-archived')).toHaveTextContent('0');
+  });
+});
+
 describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
