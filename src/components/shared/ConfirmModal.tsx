@@ -99,6 +99,14 @@ const SCOPED_STYLES = `
 .tp-confirm-btn-danger:hover { filter: brightness(0.92); }
 .tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-confirm-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.tp-confirm-btn-primary {
+  background: var(--color-accent-fill);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent-fill);
+}
+.tp-confirm-btn-primary:hover { filter: brightness(0.92); }
+.tp-confirm-btn-primary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+.tp-confirm-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 export interface ConfirmModalProps {
@@ -112,6 +120,8 @@ export interface ConfirmModalProps {
   warning?: string;
   /** 確認按鈕 label,預設「確認」 */
   confirmLabel?: string;
+  /** Reversible actions can use the regular accent; destructive remains the default. */
+  confirmTone?: 'destructive' | 'primary';
   /** 取消按鈕 label,預設「取消」 */
   cancelLabel?: string;
   /** 確認 button 是否 disabled(loading state) */
@@ -136,6 +146,7 @@ export default function ConfirmModal({
   message,
   warning,
   confirmLabel = '確認',
+  confirmTone = 'destructive',
   cancelLabel = '取消',
   busy = false,
   confirmDisabled = false,
@@ -201,7 +212,7 @@ export default function ConfirmModal({
             <button
               ref={confirmRef}
               type="button"
-              className="tp-confirm-btn tp-confirm-btn-danger"
+              className={`tp-confirm-btn ${confirmTone === 'primary' ? 'tp-confirm-btn-primary' : 'tp-confirm-btn-danger'}`}
               onClick={onConfirm}
               disabled={busy || confirmDisabled}
               data-testid="confirm-modal-confirm"

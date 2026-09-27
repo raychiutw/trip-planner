@@ -23,6 +23,7 @@
  *     - endDate          （MAX(trip_days.date) — 行程迄日）
  *     - updatedAt        （t.updated_at — 排序 / 同步用；trips 表確有此欄位 migration 0047）
  *     - memberCount      （COUNT(DISTINCT trip_permissions.user_id) — 協作人數）
+ *     - archivedAt       （trips.archived_at — owner-controlled, trip-wide list classification）
  */
 
 import { requireAuth } from './_auth';
@@ -43,6 +44,7 @@ const SELECT_BASE = `
     p.role AS role,
     t.countries AS countries,
     t.updated_at AS updatedAt,
+    t.archived_at AS archivedAt,
     COALESCE((SELECT COUNT(*) FROM trip_days td WHERE td.trip_id = t.id), 0) AS totalDays,
     (SELECT MIN(date) FROM trip_days td WHERE td.trip_id = t.id AND date IS NOT NULL) AS startDate,
     (SELECT MAX(date) FROM trip_days td WHERE td.trip_id = t.id AND date IS NOT NULL) AS endDate,
