@@ -262,6 +262,8 @@ describe('versioned AI data consent', () => {
       }), env, auth: worker, params: { id: String(ids.get(current)) },
     }));
     expect(finishOwnWork.status).toBe(200);
+    expect(await db.prepare('SELECT status, reply FROM trip_requests WHERE id = ?').bind(ids.get(current)).first())
+      .toMatchObject({ status: 'completed', reply: 'done' });
   });
 
   it('accepts only the canonical first-party mobile Bearer actor', async () => {
