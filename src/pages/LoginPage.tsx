@@ -224,8 +224,9 @@ const SCOPED_STYLES = `
 .tp-login-footer a:hover { text-decoration: underline; }
 .tp-login-privacy {
   border-top: 1px solid var(--color-border);
-  margin-top: 18px;
+  margin-top: 16px;
   padding-top: 18px;
+  font-size: var(--font-size-caption);
 }
 `;
 
