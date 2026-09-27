@@ -4,6 +4,17 @@ const { setupApiMocks } = require('./api-mocks');
 
 test.beforeEach(async ({ page }) => {
   await setupApiMocks(page);
+  // WebKit cannot grant clipboard permissions; keep the page interaction real.
+  await page.addInitScript(() => {
+    let copied = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => { copied = value; },
+        readText: async () => copied,
+      },
+    });
+  });
 });
 
 test('500 內容錯誤狀態可用鍵盤重試，成功後焦點回到 TitleBar action', async ({ page }) => {
@@ -72,10 +83,9 @@ test('空 registry 的建立入口可用鍵盤前往表單', async ({ page }) =>
   await expect(page).toHaveURL(/\/developer\/apps\/new$/);
 });
 
-test('C 卡片清單在窄寬螢幕完整顯示並可用鍵盤複製每筆 URI', async ({ page, context }) => {
+test('C 卡片清單在窄寬螢幕完整顯示並可用鍵盤複製每筆 URI', async ({ page }) => {
   const firstUri = 'https://example.com/a/very/long/path/to/the/oauth/callback/endpoint/for/tripline';
   const secondUri = 'https://accounts.example.com/integrations/tripline/another/long/callback/path';
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.route('**/api/dev/apps', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -101,8 +111,7 @@ test('C 卡片清單在窄寬螢幕完整顯示並可用鍵盤複製每筆 URI',
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(secondUri);
 });
 
-test('200 回應混合有效與異常舊 URI 資料時，其他應用仍可讀可複製', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+test('200 回應混合有效與異常舊 URI 資料時，其他應用仍可讀可複製', async ({ page }) => {
   const validUri = 'https://example.com/oauth/callback';
   const common = { client_type: 'public', allowed_scopes: ['openid'], status: 'active', created_at: '2026-09-26T00:00:00Z', updated_at: '2026-09-26T00:00:00Z' };
   await page.route('**/api/dev/apps', (route) => route.fulfill({
