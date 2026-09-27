@@ -5,6 +5,14 @@
   Cache-Control: public, max-age=86400
   X-Content-Type-Options: nosniff
 
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=300
+
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: public, max-age=300
+
 /*
   # v2.33.60 round 14: CSP tighten — narrow connect-src to exact Google subdomains,
   # img-src 從 `https:` wildcard 縮為 known Google + self + data: 來源，加

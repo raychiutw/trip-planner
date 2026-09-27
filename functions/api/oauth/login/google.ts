@@ -24,6 +24,9 @@
  */
 import { D1Adapter } from '../../../../src/server/oauth-d1-adapter';
 import { generateOpaqueToken } from '../../_utils';
+import { requireSessionUser } from '../../_session';
+import { mobileOAuthContract } from '../../_mobileOAuth';
+import { deleteReauthSessionId, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from '../../account/_deleteReauth';
 import type { Env } from '../../_types';
 
 const STATE_TTL_SEC = 5 * 60; // 5 minutes — user 通常 OAuth flow < 30s
@@ -49,13 +52,36 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   const state = generateOpaqueToken();
-  const redirectAfterLogin = sanitizeRedirect(url.searchParams.get('redirect_after_login'));
+  const deleteReauth = url.searchParams.get('purpose') === 'account-delete';
+  let reauth: { uid: string; sessionId?: string; challengeId?: string; grantId?: string; clientId?: string } | undefined;
+  let redirectAfterLogin = sanitizeRedirect(url.searchParams.get('redirect_after_login'));
+  if (deleteReauth) {
+    const challengeId = url.searchParams.get('challenge');
+    if (challengeId) {
+      const challenge = await readMobileDeleteChallenge(context.env.DB, challengeId);
+      const contract = mobileOAuthContract(context.env, context.request);
+      if (!challenge || !contract || challenge.expired || challenge.status !== 'pending' || challenge.clientId !== contract.clientId ||
+          !(await transitionMobileDeleteChallenge(context.env.DB, challengeId, challenge.uid, challenge.grantId, 'pending', 'started'))) {
+        return new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' } }), { status: 403, headers: { 'content-type': 'application/json' } });
+      }
+      reauth = { uid: challenge.uid, challengeId, grantId: challenge.grantId, clientId: challenge.clientId };
+      redirectAfterLogin = mobileCallbackUrl(context.env).toString();
+    } else {
+      const session = await requireSessionUser(context.request, context.env);
+      const sessionId = await deleteReauthSessionId(context.request);
+      const identity = await context.env.DB.prepare("SELECT 1 FROM auth_identities WHERE user_id = ? AND provider = 'google'")
+        .bind(session.uid).first();
+      if (!sessionId || !identity) return new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_UNAVAILABLE' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+      reauth = { uid: session.uid, sessionId };
+      redirectAfterLogin = '/account?deleteReauth=done';
+    }
+  }
 
   // Store state in D1 (CSRF protection + replay guard via consume on callback)
   const adapter = new D1Adapter(context.env.DB, 'OAuthState');
   await adapter.upsert(
     state,
-    { provider: 'google', redirectAfterLogin, createdAt: Date.now() },
+    { provider: 'google', redirectAfterLogin, createdAt: Date.now(), ...(reauth ? { reauth } : {}) },
     STATE_TTL_SEC,
   );
 
@@ -68,8 +94,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     scope: 'openid profile email',
     state,
     access_type: 'offline', // 取 refresh_token (V2-P5 用)
-    prompt: 'consent',      // 強制 consent screen 確保拿 refresh_token
+    prompt: deleteReauth ? 'select_account' : 'consent',
   });
+  if (deleteReauth) {
+    params.set('max_age', '0');
+    params.set('claims', JSON.stringify({ id_token: { auth_time: { essential: true } } }));
+  }
   const authorizeUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
   return Response.redirect(authorizeUrl, 302);

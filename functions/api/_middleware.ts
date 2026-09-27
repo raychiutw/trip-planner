@@ -512,6 +512,7 @@ async function handleAuth(
             isServiceToken,
             scopes: safeScopes,
             clientId: safeClientId,
+            grantId: typeof tokenRow.grantId === 'string' ? tokenRow.grantId : undefined,
             // 第一方 client 豁免 scope gate —— 只有這裡拿得到 env 做判斷。
             // 見 src/types/api.ts AuthData.isFirstPartyClient 的說明。
             isFirstPartyClient: isFirstPartyClientId(
