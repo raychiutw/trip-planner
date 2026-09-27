@@ -222,6 +222,11 @@ const SCOPED_STYLES = `
   font-weight: 600; text-decoration: none;
 }
 .tp-login-footer a:hover { text-decoration: underline; }
+.tp-login-privacy {
+  border-top: 1px solid var(--color-border);
+  margin-top: 18px;
+  padding-top: 18px;
+}
 `;
 
 interface ApiError {
@@ -555,6 +560,7 @@ export default function LoginPage() {
 
         <div className="tp-login-footer">
           沒有帳號？<a href={invitationToken ? `/signup?invitation=${encodeURIComponent(invitationToken)}` : '/signup'} data-testid="login-signup-link">建立帳號</a>
+          <div className="tp-login-privacy"><a href="/privacy?from=login" target="_blank" rel="noreferrer">隱私權政策</a></div>
         </div>
         </div>
       </div>
