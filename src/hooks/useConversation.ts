@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { apiFetch } from '../lib/apiClient';
-import { mergeConversation, rowToMessages, type ChatMessage, type RawRequestRow } from '../lib/conversation';
+import { mergeConversation, mergeLatestConversation, rowToMessages, type ChatMessage, type RawRequestRow } from '../lib/conversation';
 import { useChatPagination } from './useChatPagination';
 import { useRequestSSE } from './useRequestSSE';
 
@@ -28,6 +28,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   }, [scope]);
   const pagination = useChatPagination<RawRequestRow, ChatMessage>({
     activeTripId, bodyRef, messages, setMessages, rowToMessages, mergeMessages: mergeConversation,
+    mergeLatestMessages: mergeLatestConversation,
     setHistoryLoading,
   });
   const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
