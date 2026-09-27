@@ -13,13 +13,28 @@
  *   - 密碼錯 → 401，且**不得**動到任何資料
  *   - 成功後 → 使用者資料消失、session cookie 被清除
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { onRequestDelete, onRequestGet } from '../../functions/api/account/index';
+import { onRequestGet as startGoogle } from '../../functions/api/oauth/login/google';
+import { onRequestGet as completeGoogle } from '../../functions/api/oauth/callback/google';
+import { onRequestPost as startMobileChallenge, onRequestGet as mobileChallengeStatus,
+  onRequestDelete as cancelMobileChallenge } from '../../functions/api/account/delete-reauth';
 import { issueSession } from '../../functions/api/_session';
+import { onRequest as middleware } from '../../functions/api/_middleware';
 import { hashPassword } from '../../src/server/password';
 import { createTestDb, disposeMiniflare } from './setup';
+import { mockAuth, mockContext, mockEnv } from './helpers';
+import { MOBILE_PROD_REDIRECT } from '../../functions/api/_mobileOAuth';
+import { grantDeleteReauth } from '../../functions/api/account/_deleteReauth';
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
+vi.mock('../../src/server/oauth-client/google-id-token', () => ({
+  verifyGoogleIdToken: vi.fn(async (idToken: string) => JSON.parse(atob(idToken.split('.')[1]!))),
+}));
+
+function googleToken(claims: object): string {
+  return `header.${btoa(JSON.stringify(claims))}.signature`;
+}
 
 describe('DELETE /api/account', () => {
   let db: D1Database;
@@ -44,7 +59,7 @@ describe('DELETE /api/account', () => {
   }
 
   function env() {
-    return { SESSION_SECRET, DB: db } as unknown as never;
+    return { SESSION_SECRET, DB: db, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com' } as unknown as never;
   }
 
   async function authedRequest(userId: string, body: unknown): Promise<Request> {
@@ -110,9 +125,14 @@ describe('DELETE /api/account', () => {
 
   it('成功時清除 session cookie（不能讓已刪帳號的 cookie 還能用）', async () => {
     const u = await seedUser('correct-horse-battery');
+    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', ?, ?, ?)")
+      .bind('access-before-delete', JSON.stringify({ user_id: u.id, client_id: 'tripline-mobile', scopes: ['openid'] }), Date.now() + 60000).run();
     const res = await onRequestDelete(ctx(await authedRequest(u.id, { password: 'correct-horse-battery' })));
     const setCookie = res.headers.get('Set-Cookie') ?? '';
     expect(setCookie, '必須回 Set-Cookie 清除 session').toMatch(/Max-Age=0|Expires=/i);
+    const token = await db.prepare("SELECT id FROM oauth_models WHERE name = 'AccessToken' AND id = ?")
+      .bind('access-before-delete').first();
+    expect(token, '帳號刪除後舊 access token 不可再代表使用者').toBeNull();
   });
 
   it('回傳刪除摘要（使用者要看得到動了什麼）', async () => {
@@ -159,7 +179,7 @@ describe('DELETE /api/account', () => {
 
       const oauthOnly = await seedUser();
       const r2 = await onRequestGet(getCtx(await authedGet(oauthOnly.id)));
-      expect((await r2.json() as { hasPassword: boolean }).hasPassword).toBe(false);
+      expect(await r2.json()).toMatchObject({ hasPassword: false, reauthProvider: null, reauthenticated: false });
     });
 
     it('回報會被刪掉的行程數，以及受影響的共編人數', async () => {
@@ -183,7 +203,7 @@ describe('DELETE /api/account', () => {
     });
   });
 
-  it('純 OAuth 帳號（無密碼身分）不需密碼，但需顯式確認字串', async () => {
+  it('純 OAuth 帳號只輸入確認字串仍不能刪除', async () => {
     // Google 登入的使用者沒有 password_hash，不能要求他打密碼。
     // 改要求顯式確認字串，避免誤觸這個不可逆操作。
     const u = await seedUser(); // 無密碼
@@ -191,10 +211,168 @@ describe('DELETE /api/account', () => {
     await expect(onRequestDelete(ctx(await authedRequest(u.id, {}))), '無密碼帳號仍需確認')
       .rejects.toMatchObject({ code: 'ACCOUNT_DELETE_CONFIRM_REQUIRED' });
 
-    const ok = await onRequestDelete(ctx(await authedRequest(u.id, { confirm: 'DELETE' })));
-    expect(ok.status).toBe(200);
+    await expect(onRequestDelete(ctx(await authedRequest(u.id, { confirm: 'DELETE' }))))
+      .rejects.toMatchObject({ code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' });
 
     const left = await db.prepare('SELECT count(*) AS n FROM users WHERE id = ?').bind(u.id).first<{ n: number }>();
-    expect(left!.n).toBe(0);
+    expect(left!.n).toBe(1);
+  });
+
+  it('抹除批次失敗後可用同一個未過期的 Google 證明重試', async () => {
+    const u = await seedUser();
+    const request = await authedRequest(u.id, { confirm: 'DELETE' });
+    expect(await grantDeleteReauth(db, request, u.id)).toBe(true);
+    await db.prepare(`CREATE TRIGGER account_delete_retry_fail BEFORE DELETE ON users
+      WHEN OLD.id = '${u.id}' BEGIN SELECT RAISE(ABORT, 'simulated erasure failure'); END`).run();
+    try {
+      await expect(onRequestDelete(ctx(request.clone()))).rejects.toThrow();
+      expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).not.toBeNull();
+    } finally {
+      await db.prepare('DROP TRIGGER account_delete_retry_fail').run();
+    }
+    const res = await onRequestDelete(ctx(request.clone()));
+    expect(res.status).toBe(200);
+    expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).toBeNull();
+  });
+
+  it('mobile Bearer 可讀刪除預覽，不能只憑 token 刪除', async () => {
+    const u = await seedUser();
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, `mobile-google-${u.id}`).run();
+    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', ?, ?, ?)")
+      .bind(`mobile-token-${u.id}`, JSON.stringify({ user_id: u.id, client_id: 'tripline-mobile', scopes: ['openid', 'profile'], grantId: `grant-${u.id}` }), Date.now() + 60000).run();
+    const authEnv = mockEnv(db, { SESSION_SECRET, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com' });
+    async function call(method: 'GET' | 'DELETE') {
+      const request = new Request('https://x.com/api/account', {
+        method, headers: { Authorization: `Bearer mobile-token-${u.id}` },
+        ...(method === 'DELETE' ? { body: JSON.stringify({ confirm: 'DELETE' }) } : {}),
+      });
+      const data = {};
+      const context = { request, env: authEnv, data, params: {}, waitUntil: () => {}, passThroughOnException: () => {},
+        next: () => (method === 'GET' ? onRequestGet : onRequestDelete)({ request, env: authEnv, data } as never) };
+      return middleware(context as never);
+    }
+    expect((await call('GET')).status).toBe(200);
+    expect((await call('DELETE')).status).toBe(403);
+  });
+
+  it('mobile challenge 綁定 grant，可查狀態並取消；別的 grant 無法讀取', async () => {
+    const u = await seedUser();
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, `mobile-google-${u.id}`).run();
+    const auth = mockAuth({ userId: u.id, clientId: 'tripline-mobile', grantId: `grant-${u.id}` });
+    const mobileEnv = mockEnv(db, { SESSION_SECRET, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com', MOBILE_OAUTH_CALLBACK_URL: MOBILE_PROD_REDIRECT });
+    const req = (method: string, challengeId?: string) => new Request(
+      `https://x.com/api/account/delete-reauth${challengeId ? `?challenge_id=${challengeId}` : ''}`, { method },
+    );
+    const started = await startMobileChallenge(mockContext({ request: req('POST'), env: mobileEnv, auth }) as never);
+    expect(started.status).toBe(200);
+    const body = await started.json() as { challengeId: string; authorizeUrl: string; expiresIn: number };
+    expect(body.expiresIn).toBe(300);
+    expect(body.authorizeUrl).toContain(`challenge=${body.challengeId}`);
+    const otherGrant = mockAuth({ ...auth, grantId: 'another-grant' });
+    await expect(mobileChallengeStatus(mockContext({ request: req('GET', body.challengeId), env: mobileEnv, auth: otherGrant }) as never))
+      .rejects.toMatchObject({ code: 'DATA_NOT_FOUND' });
+    expect(await (await mobileChallengeStatus(mockContext({ request: req('GET', body.challengeId), env: mobileEnv, auth }) as never)).json())
+      .toMatchObject({ status: 'pending' });
+    expect((await cancelMobileChallenge(mockContext({ request: req('DELETE', body.challengeId), env: mobileEnv, auth }) as never)).status).toBe(200);
+    expect(await (await mobileChallengeStatus(mockContext({ request: req('GET', body.challengeId), env: mobileEnv, auth }) as never)).json())
+      .toMatchObject({ status: 'cancelled' });
+  });
+
+  it('mobile Bearer 的 Google challenge 完成後只准同 grant 刪除一次', async () => {
+    const u = await seedUser();
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, `mobile-google-${u.id}`).run();
+    const auth = mockAuth({ userId: u.id, clientId: 'tripline-mobile', grantId: `grant-${u.id}` });
+    const mobileEnv = mockEnv(db, { SESSION_SECRET, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com', GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'secret',
+      MOBILE_OAUTH_CALLBACK_URL: MOBILE_PROD_REDIRECT });
+    const started = await startMobileChallenge(mockContext({ request: new Request('https://x.com/api/account/delete-reauth', { method: 'POST' }), env: mobileEnv, auth }) as never);
+    const { challengeId, authorizeUrl } = await started.json() as { challengeId: string; authorizeUrl: string };
+    const google = await startGoogle(mockContext({ request: new Request(authorizeUrl), env: mobileEnv }) as never);
+    const state = new URL(google.headers.get('Location')!).searchParams.get('state')!;
+    const idToken = googleToken({ sub: `mobile-google-${u.id}`, email: u.email, email_verified: true, auth_time: Math.floor(Date.now() / 1000) });
+    const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
+    try {
+      const done = await completeGoogle(mockContext({ request: new Request(`https://x.com/api/oauth/callback/google?code=c&state=${state}`), env: mobileEnv }) as never);
+      expect(done.status).toBe(302);
+      expect(done.headers.get('Location')).toBe(`${MOBILE_PROD_REDIRECT}?challenge_id=${challengeId}&status=verified`);
+      const check = await mobileChallengeStatus(mockContext({ request: new Request(`https://x.com/api/account/delete-reauth?challenge_id=${challengeId}`), env: mobileEnv, auth }) as never);
+      expect(await check.json()).toMatchObject({ status: 'verified' });
+      const deleteRequest = new Request('https://x.com/api/account', { method: 'DELETE', headers: { Authorization: 'Bearer mobile-token' },
+        body: JSON.stringify({ confirm: 'DELETE', challengeId }) });
+      const otherGrant = mockAuth({ ...auth, grantId: 'other-grant' });
+      await expect(onRequestDelete(mockContext({ request: deleteRequest.clone(), env: mobileEnv, auth: otherGrant }) as never))
+        .rejects.toMatchObject({ code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' });
+      expect((await onRequestDelete(mockContext({ request: deleteRequest, env: mobileEnv, auth }) as never)).status).toBe(200);
+      expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).toBeNull();
+    } finally { provider.mockRestore(); }
+  });
+
+  it('mobile 使用者拒絕 Google 驗證會得到可重試的失敗狀態，帳號不動', async () => {
+    const u = await seedUser();
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, `mobile-google-${u.id}`).run();
+    const auth = mockAuth({ userId: u.id, clientId: 'tripline-mobile', grantId: `grant-${u.id}` });
+    const mobileEnv = mockEnv(db, { SESSION_SECRET, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com', GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'secret',
+      MOBILE_OAUTH_CALLBACK_URL: MOBILE_PROD_REDIRECT });
+    const started = await startMobileChallenge(mockContext({ request: new Request('https://x.com/api/account/delete-reauth', { method: 'POST' }), env: mobileEnv, auth }) as never);
+    const { challengeId, authorizeUrl } = await started.json() as { challengeId: string; authorizeUrl: string };
+    const google = await startGoogle(mockContext({ request: new Request(authorizeUrl), env: mobileEnv }) as never);
+    const state = new URL(google.headers.get('Location')!).searchParams.get('state')!;
+    const denied = await completeGoogle(mockContext({ request: new Request(`https://x.com/api/oauth/callback/google?error=access_denied&state=${state}`), env: mobileEnv }) as never);
+    expect(denied.headers.get('Location')).toBe(`${MOBILE_PROD_REDIRECT}?challenge_id=${challengeId}&status=failed`);
+    const check = await mobileChallengeStatus(mockContext({ request: new Request(`https://x.com/api/account/delete-reauth?challenge_id=${challengeId}`), env: mobileEnv, auth }) as never);
+    expect(await check.json()).toMatchObject({ status: 'failed' });
+    expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).not.toBeNull();
+  });
+
+  it('同帳號完成 Google 近期驗證後可一次性刪除', async () => {
+    const u = await seedUser();
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, 'google-sub').run();
+    const cookie = (await authedRequest(u.id, {})).headers.get('Cookie')!;
+    const oauthCtx = (request: Request) => ({ ...ctx(request), env: { ...env(), GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'secret' } });
+    const start = await startGoogle(oauthCtx(new Request('https://x.com/api/oauth/login/google?purpose=account-delete', { headers: { Cookie: cookie } })));
+    const location = new URL(start.headers.get('Location')!);
+    expect(location.searchParams.get('prompt')).toBe('select_account');
+    expect(location.searchParams.get('max_age')).toBe('0');
+    expect(JSON.parse(location.searchParams.get('claims')!)).toEqual({ id_token: { auth_time: { essential: true } } });
+    const state = location.searchParams.get('state')!;
+    const idToken = googleToken({ sub: 'google-sub', email: u.email, email_verified: true, auth_time: Math.floor(Date.now() / 1000) });
+    const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
+    try {
+      const done = await completeGoogle(oauthCtx(new Request(`https://x.com/api/oauth/callback/google?code=c&state=${state}`, { headers: { Cookie: cookie } })));
+      expect(new URL(done.headers.get('Location')!).pathname + new URL(done.headers.get('Location')!).search).toBe('/account?deleteReauth=done');
+      expect(done.headers.get('Set-Cookie')).toBeNull();
+      const deleteRequest = new Request('https://x.com/api/account', { method: 'DELETE', headers: { Cookie: cookie }, body: JSON.stringify({ confirm: 'DELETE' }) });
+      expect((await onRequestDelete(ctx(deleteRequest))).status).toBe(200);
+    } finally { provider.mockRestore(); }
+  });
+
+  it.each([
+    ['另一個 Google 帳號', 'different-sub', Math.floor(Date.now() / 1000)],
+    ['不是近期驗證', 'google-sub', Math.floor(Date.now() / 1000) - 600],
+    ['未來的驗證時間', 'google-sub', Math.floor(Date.now() / 1000) + 600],
+  ])('%s 不得取得刪除授權', async (_case, sub, authTime) => {
+    const u = await seedUser();
+    const ownSub = `google-sub-${u.id}`;
+    await db.prepare("INSERT INTO auth_identities (user_id, provider, provider_user_id) VALUES (?, 'google', ?)")
+      .bind(u.id, ownSub).run();
+    const cookie = (await authedRequest(u.id, {})).headers.get('Cookie')!;
+    const oauthCtx = (request: Request) => ({ ...ctx(request), env: { ...env(), GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'secret' } });
+    const start = await startGoogle(oauthCtx(new Request('https://x.com/api/oauth/login/google?purpose=account-delete', { headers: { Cookie: cookie } })));
+    const state = new URL(start.headers.get('Location')!).searchParams.get('state')!;
+    const idToken = googleToken({ sub: sub === 'google-sub' ? ownSub : sub, email: u.email, email_verified: true, auth_time: authTime });
+    const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
+    try {
+      const done = await completeGoogle(oauthCtx(new Request(`https://x.com/api/oauth/callback/google?code=c&state=${state}`, { headers: { Cookie: cookie } })));
+      expect(done.status).toBe(302);
+      expect(done.headers.get('Location')).toBe('https://x.com/account?deleteReauth=failed');
+      await expect(onRequestDelete(ctx(new Request('https://x.com/api/account', {
+        method: 'DELETE', headers: { Cookie: cookie }, body: JSON.stringify({ confirm: 'DELETE' }),
+      })))).rejects.toMatchObject({ code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' });
+      expect(await db.prepare('SELECT id FROM users WHERE id = ?').bind(u.id).first()).not.toBeNull();
+    } finally { provider.mockRestore(); }
   });
 });

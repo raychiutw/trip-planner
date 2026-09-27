@@ -29,6 +29,7 @@ import { oauthErrorResponse } from '../_errors';
 import { validateAuthorizeRequest, type ClientAppRow } from '../../../src/server/oauth-server/validate-authorize-request';
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Env } from '../_types';
+import { isMobileClientId, mobileOAuthContract } from '../_mobileOAuth';
 
 const CONSENT_TTL_SEC = 365 * 24 * 60 * 60; // 1 year — user manually revokes via 帳號設定
 
@@ -114,6 +115,13 @@ async function safeRedirect(
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const session = await getSessionUser(context.request, context.env, context.waitUntil.bind(context));
   const body = await parseBody(context.request);
+
+  if (isMobileClientId(body.client_id ?? '')) {
+    const contract = mobileOAuthContract(context.env, context.request);
+    if (!contract || body.client_id !== contract.clientId || body.redirect_uri !== contract.redirectUri) {
+      return oauthErrorResponse('unauthorized_client', 'Mobile client or callback is not allowed in this environment', 400);
+    }
+  }
 
   if (!session) {
     // 302 to login，preserve full original authorize URL via redirect_after
