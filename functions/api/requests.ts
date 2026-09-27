@@ -18,7 +18,7 @@ import { hasPermission, hasWritePermission, requireAuth, hasOpsScope } from './_
 import { AppError } from './_errors';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
-import { requireAiDataConsentForTrip } from './_aiDataConsent';
+import { requireAiDataConsentForQueuedRequest, requireAiDataConsentForTrip } from './_aiDataConsent';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -61,6 +61,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     conditions.push('r.status = ?');
     params.push(status);
   }
+  if (auth.restrictRequestId !== undefined) {
+    conditions.push('r.id = ?');
+    params.push(auth.restrictRequestId);
+  }
   if (before) {
     if (beforeId) {
       conditions.push('(r.created_at < ? OR (r.created_at = ? AND r.id < ?))');
@@ -93,15 +97,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   sql += isPaginated ? ` LIMIT ${limit + 1}` : ' LIMIT 50';
 
   const { results } = await env.DB.prepare(sql).bind(...params).all();
+  // Trip-restricted tokens without a request binding can still list requests.
+  // Check each row before exposing its submitter and text; mint-bound tokens
+  // have already been narrowed to their one request in SQL above.
+  const visible = auth.restrictTrip === undefined ? (results ?? []) :
+    (await Promise.all((results ?? []).map(async row => {
+      try {
+        await requireAiDataConsentForQueuedRequest(env.DB, auth.userId!, row.submitted_by as string | null);
+        return row;
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'AI_DATA_CONSENT_REQUIRED') return null;
+        throw error;
+      }
+    }))).filter((row): row is NonNullable<typeof row> => row !== null);
 
   if (isPaginated) {
-    const hasMore = (results ?? []).length > limit;
-    const items = hasMore ? (results ?? []).slice(0, limit) : (results ?? []);
+    const hasMore = visible.length > limit;
+    const items = hasMore ? visible.slice(0, limit) : visible;
     return json({ items, hasMore });
   }
 
   // 向下相容：不帶分頁參數時回傳陣列
-  return json(results);
+  return json(visible);
 };
 
 // POST /api/requests

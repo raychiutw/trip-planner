@@ -154,6 +154,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       scopes: [],
       grantId: crypto.randomUUID(),
       restrict_trip: tripId,
+      restrict_request_id: requestId,
     },
     MINT_TTL_SEC,
   );

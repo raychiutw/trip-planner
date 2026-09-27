@@ -6,6 +6,7 @@
 import { hasOpsScope, hasPermission, hasWritePermission, requireAuth } from '../../_auth';
 import { AppError } from '../../_errors';
 import { reapIfStale, updateRequest, type RequestPatch } from '../../_requestTermination';
+import { requireAiDataConsentForQueuedRequest } from '../../_aiDataConsent';
 import { json, parseJsonBody } from '../../_utils';
 import type { Env } from '../../_types';
 
@@ -25,6 +26,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const tripId = (row as Record<string, unknown>).trip_id as string;
   if (!await hasPermission(env.DB, auth, tripId)) {
     throw new AppError('PERM_DENIED');
+  }
+  if (auth.restrictRequestId !== undefined && auth.restrictRequestId !== id) {
+    throw new AppError('PERM_DENIED');
+  }
+  if (auth.restrictTrip !== undefined &&
+      (auth.restrictRequestId === undefined || (row as Record<string, unknown>).status === 'open')) {
+    await requireAiDataConsentForQueuedRequest(env.DB, auth.userId!, (row as Record<string, unknown>).submitted_by as string | null);
   }
 
   // ADR-0007 第二層：牆鐘兜底。權限通過後才收 —— 收屍是寫入，不給沒權限的人觸發。
@@ -55,6 +63,17 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   // 回覆 / health-check / notes hook。
   if (!hasOpsScope(auth, 'companion') && !(await hasWritePermission(env.DB, auth, requestTripId))) {
     throw new AppError('PERM_DENIED');
+  }
+
+  if (auth.restrictRequestId !== undefined && auth.restrictRequestId !== id) {
+    throw new AppError('PERM_DENIED');
+  }
+
+  // Recheck open work before exposing its message and email. Processing work
+  // was already issued; its request ID is pinned above, so it may finish after
+  // a later revocation without reaching another request in the same trip.
+  if (auth.restrictTrip !== undefined && (auth.restrictRequestId === undefined || oldRow.status === 'open')) {
+    await requireAiDataConsentForQueuedRequest(env.DB, auth.userId!, oldRow.submitted_by as string | null);
   }
 
   const body = await parseJsonBody<RequestPatch>(context.request);

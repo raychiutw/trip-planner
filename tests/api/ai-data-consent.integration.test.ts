@@ -4,10 +4,12 @@ import { createTestDb, disposeMiniflare } from './setup';
 import { callHandler, mockAuth, mockContext, mockEnv } from './helpers';
 import { issueSession } from '../../functions/api/_session';
 import { onRequestGet, onRequestPost, onRequestDelete } from '../../functions/api/account/ai-data-consent';
-import { onRequestPost as sendRequest } from '../../functions/api/requests';
+import { onRequestGet as listRequests, onRequestPost as sendRequest } from '../../functions/api/requests';
+import { onRequestGet as getQueuedRequest, onRequestPatch as updateQueuedRequest } from '../../functions/api/requests/[id]/index';
 import { onRequestPost as mintRestricted } from '../../functions/api/oauth/mint-restricted';
 import { requireAiDataConsentForTrip, requireAiDataConsentForQueuedRequest } from '../../functions/api/_aiDataConsent';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
+import { onRequest as middleware } from '../../functions/api/_middleware';
 
 const SECRET = 'ai-data-consent-test-secret-long-enough';
 const disclosure = { title: 'Test-only disclosure', processor: 'Test processor', dataCategories: ['test trip data'], purpose: 'test only', revocation: 'test route' };
@@ -126,6 +128,99 @@ describe('versioned AI data consent', () => {
     expect(mint.status).toBe(403);
     expect(await db.prepare('SELECT status, terminal_reason FROM trip_requests WHERE id = ?').bind(requestId)
       .first()).toMatchObject({ status: 'failed', terminal_reason: 'needs_consent' });
+  });
+
+  it('does not show another submitter’s revoked or legacy request to a restricted AI worker', async () => {
+    const owner = 'ai-list-owner'; const current = 'ai-list-current';
+    const revoked = 'ai-list-revoked'; const legacy = 'ai-list-legacy';
+    const tripId = 'ai-list-trip';
+    for (const uid of [owner, current, revoked, legacy]) await seed(uid);
+    await db.prepare('INSERT INTO trips (id, name, owner_user_id, published) VALUES (?, ?, ?, 1)')
+      .bind(tripId, 'AI list test', owner).run();
+    await db.prepare("INSERT INTO trip_permissions (trip_id, user_id, role) VALUES (?, ?, 'owner')")
+      .bind(tripId, owner).run();
+    await activate('test-list-v1');
+    for (const uid of [owner, current, revoked]) {
+      expect((await decide(uid, 'test-list-v1', 'accept')).status).toBe(200);
+    }
+    expect((await decide(revoked, 'test-list-v1', 'revoke')).status).toBe(200);
+    const ids = new Map<string, number>();
+    for (const uid of [current, revoked, legacy]) {
+      const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+        .bind(tripId, `message from ${uid}`, `${uid}@example.com`).first<{ id: number }>();
+      ids.set(uid, row!.id);
+    }
+
+    await new D1Adapter(db, 'Consent').upsert(`${owner}:tripline-tp-request`,
+      { user_id: owner, client_id: 'tripline-tp-request', scopes: [] }, 3600);
+    const minted = await callHandler(mintRestricted, mockContext({
+      request: new Request('https://x.com/api/oauth/mint-restricted', { method: 'POST',
+        headers: { Authorization: 'Bearer ai-test-secret', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: ids.get(current) }) }),
+      env: mockEnv(db, { TRIPLINE_API_SECRET: 'ai-test-secret' }),
+    }));
+    expect(minted.status).toBe(200);
+    const mintedToken = (await minted.json() as { access_token: string }).access_token;
+    const tokenRow = await new D1Adapter(db, 'AccessToken').find(mintedToken);
+    expect(tokenRow?.restrict_request_id).toBe(String(ids.get(current)));
+
+    const bearerRequest = new Request(`https://x.com/api/requests?tripId=${tripId}&status=open`, {
+      headers: { Authorization: `Bearer ${mintedToken}` },
+    });
+    const data: Record<string, unknown> = {};
+    const base = { request: bearerRequest, env, data, params: {}, waitUntil: () => undefined,
+      passThroughOnException: () => undefined, functionPath: '' };
+    const throughMiddleware = await middleware({ ...base,
+      next: () => listRequests(base as Parameters<typeof listRequests>[0]),
+    } as Parameters<typeof middleware>[0]);
+    expect((await throughMiddleware.json() as Array<{ message: string }>).map(row => row.message))
+      .toEqual([`message from ${current}`]);
+
+    const request = () => new Request(`https://x.com/api/requests?tripId=${tripId}&status=open`);
+    const read = (auth: ReturnType<typeof mockAuth>) => callHandler(listRequests, mockContext({ request: request(), env, auth }));
+    const worker = mockAuth({ userId: owner, email: `${owner}@example.com`, restrictTrip: tripId,
+      restrictRequestId: String(ids.get(current)), scopes: [] });
+    const visible = await read(worker);
+    expect(visible.status).toBe(200);
+    expect((await visible.json() as Array<{ message: string }>).map(row => row.message))
+      .toEqual([`message from ${current}`]);
+
+    // A normal trip member still sees the full conversation history.
+    const ordinary = await read(mockAuth({ userId: owner, email: `${owner}@example.com` }));
+    expect((await ordinary.json() as Array<{ message: string }>)).toHaveLength(3);
+
+    const patch = (uid: string) => callHandler(updateQueuedRequest, mockContext({
+      request: new Request(`https://x.com/api/requests/${ids.get(uid)}`, {
+        method: 'PATCH', body: JSON.stringify({ status: 'processing' }),
+      }), env, auth: worker, params: { id: String(ids.get(uid)) },
+    }));
+    expect((await patch(current)).status).toBe(200);
+    expect((await patch(revoked)).status).toBe(403);
+    expect((await patch(legacy)).status).toBe(403);
+
+    // Already-issued work may finish after consent changes, but another
+    // request's processing row must remain inaccessible to this token.
+    for (const uid of [revoked, legacy]) {
+      await db.prepare("UPDATE trip_requests SET status = 'processing' WHERE id = ?").bind(ids.get(uid)).run();
+      const get = await callHandler(getQueuedRequest, mockContext({
+        request: new Request(`https://x.com/api/requests/${ids.get(uid)}`),
+        env, auth: worker, params: { id: String(ids.get(uid)) },
+      }));
+      expect(get.status).toBe(403);
+      expect((await patch(uid)).status).toBe(403);
+    }
+    const processing = await callHandler(listRequests, mockContext({
+      request: new Request(`https://x.com/api/requests?tripId=${tripId}&status=processing`), env, auth: worker,
+    }));
+    expect((await processing.json() as Array<{ message: string }>).map(row => row.message))
+      .toEqual([`message from ${current}`]);
+    expect((await decide(current, 'test-list-v1', 'revoke')).status).toBe(200);
+    const finishOwnWork = await callHandler(updateQueuedRequest, mockContext({
+      request: new Request(`https://x.com/api/requests/${ids.get(current)}`, {
+        method: 'PATCH', body: JSON.stringify({ status: 'completed', reply: 'done' }),
+      }), env, auth: worker, params: { id: String(ids.get(current)) },
+    }));
+    expect(finishOwnWork.status).toBe(200);
   });
 
   it('accepts only the canonical first-party mobile Bearer actor', async () => {

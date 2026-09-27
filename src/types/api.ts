@@ -182,6 +182,8 @@ export interface AuthData {
    * its current request belongs to. Undefined for normal (unrestricted) tokens.
    */
   restrictTrip?: string;
+  /** Request selected when the contained AI session was minted. */
+  restrictRequestId?: string;
   /**
    * 這個 Bearer token 是否來自**第一方** client（自家 tp-request AI pipeline）。
    * 由 middleware 依 `clientId === env.TP_REQUEST_CLIENT_ID` 判定 —— 判斷放在
