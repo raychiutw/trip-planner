@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.raychiu.tripline",
+      "sha256_cert_fingerprints": [
+        "28:06:F8:E5:6F:D8:D5:1A:30:50:F5:40:0D:83:36:A5:11:78:FF:41:9A:9C:B2:1C:27:88:DC:21:E5:4B:39:B5"
+      ]
+    }
+  }
+]
