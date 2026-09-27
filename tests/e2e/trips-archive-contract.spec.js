@@ -1,6 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
-const { setupApiMocks, MOCK_TRIPS_LIST } = require('./api-mocks');
+const { setupApiMocks, MOCK_TRIPS_LIST, MOCK_USER } = require('./api-mocks');
 
 const tripId = 'okinawa-trip-2026-Ray';
 
@@ -16,8 +16,8 @@ async function installArchiveHttp(page, options = {}) {
     status: 200, contentType: 'application/json',
     body: JSON.stringify(MOCK_TRIPS_LIST.map((trip) => ({
       ...trip,
-      owner: trip.tripId === tripId ? 'lean.lean@gmail.com' : 'friend@example.test',
-      ownerUserId: trip.tripId === tripId ? 'user-ray' : 'other-user',
+      owner: trip.tripId === tripId ? MOCK_USER.email : 'friend@example.test',
+      ownerUserId: trip.tripId === tripId ? MOCK_USER.id : 'other-user',
       archivedAt: trip.tripId === tripId ? archivedAt : null,
     }))),
   }));
