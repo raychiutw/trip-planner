@@ -340,15 +340,19 @@ export default function MapPage() {
   const [selectedGooglePoi, setSelectedGooglePoi] = useState<GooglePoiClick | null>(null);
   const clearSelectedGooglePoi = useCallback(() => setSelectedGooglePoi(null), []);
 
-  // When tab changes (or first load), default active entry to URL entry or first card.
-  // Overview mode without explicit entryId: leave unfocused so TpMap falls back to
-  // fitBounds (shows whole trip) instead of flyTo on first pin.
+  // Keep a pin selected from overview when entering its day; otherwise use the
+  // first card. Overview without an explicit entry stays unfocused for fitBounds.
   useEffect(() => {
     if (urlEntryId != null && cardEntryPins.some((p) => p.id === urlEntryId)) {
       setActiveEntryId(urlEntryId);
       return;
     }
-    setActiveEntryId(isOverview ? null : (cardEntryPins[0]?.id ?? null));
+    setActiveEntryId((current) => {
+      if (isOverview) return null;
+      return current != null && cardEntryPins.some((p) => p.id === current)
+        ? current
+        : (cardEntryPins[0]?.id ?? null);
+    });
   }, [activeTab, urlEntryId, cardEntryPins, isOverview]);
 
   /* --- Switch tab --- */
