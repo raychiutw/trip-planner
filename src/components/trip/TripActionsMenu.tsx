@@ -71,9 +71,11 @@ export interface TripActionsMenuProps {
   onNotes?: () => void;
   onPrint?: () => void;
   onShare?: () => void;
+  onArchive?: () => void;
+  archived?: boolean;
 }
 
-export default function TripActionsMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint, onShare }: TripActionsMenuProps) {
+export default function TripActionsMenu({ tripId, tripPageRef, onEdit, onCollab, onHealthCheck, onNotes, onPrint, onShare, onArchive, archived }: TripActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -213,6 +215,13 @@ export default function TripActionsMenu({ tripId, tripPageRef, onEdit, onCollab,
         >
           <Icon name="copy" />
           <span>分享連結</span>
+        </button>
+      )}
+      {onArchive && (
+        <button type="button" role="menuitem" className="tp-embedded-menu-item"
+          onClick={runAndClose(onArchive)} data-testid={`trip-embedded-menu-archive-${tripId}`}>
+          <Icon name="folder" />
+          <span>{archived ? '取消歸檔' : '歸檔行程'}</span>
         </button>
       )}
       <div className="tp-embedded-menu-divider" />

@@ -712,6 +712,39 @@ export default function TripsListPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ tripId: string; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ tripId: string; label: string; archived: boolean } | null>(null);
+  const [archiving, setArchiving] = useState(false);
+
+  const handleMenuArchive = useCallback((tripId: string) => {
+    const trip = myTrips.find((candidate) => candidate.tripId === tripId);
+    if (!trip || trip.ownerUserId !== user?.id) return;
+    setArchiveTarget({ tripId, label: trip.title || trip.name || tripId, archived: trip.archivedAt != null });
+  }, [myTrips, user?.id]);
+
+  const handleConfirmArchive = useCallback(async () => {
+    if (!archiveTarget || archiving) return;
+    const { tripId, archived, label } = archiveTarget;
+    setArchiving(true);
+    try {
+      const response = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/archive`, {
+        method: archived ? 'DELETE' : 'PUT',
+      });
+      if (!response.ok) throw new Error(response.status === 403 ? '只有行程擁有者能變更歸檔狀態。' : '更新歸檔狀態失敗，請再試一次。');
+      setArchiveTarget(null);
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(`已${archived ? '取消歸檔' : '歸檔'}「${label}」`, 'success');
+      requestAnimationFrame(() => {
+        const target = document.querySelector<HTMLElement>(
+          selectedFromUrl ? '[data-testid="trips-embedded-menu-trigger"]' : '[data-testid="trips-list-tab-archived"]',
+        );
+        target?.focus();
+      });
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setArchiving(false);
+    }
+  }, [archiveTarget, archiving, selectedFromUrl]);
 
   const handleMenuDelete = useCallback(
     (tripId: string) => {
@@ -761,7 +794,6 @@ export default function TripsListPage() {
 
   const cardGridMain = (
     <>
-      <ToastContainer />
       <ConfirmModal
         open={deleteTarget !== null}
         title="確定刪除行程？"
@@ -969,6 +1001,8 @@ export default function TripsListPage() {
                     </button>
                     <TripCardMenu
                       tripId={t.tripId}
+                      onArchive={t.ownerUserId === user?.id ? handleMenuArchive : undefined}
+                      archived={t.archivedAt != null}
                       onCollab={handleMenuCollab}
                       onEdit={handleMenuEdit}
                       onHealthCheck={handleMenuHealthCheck}
@@ -1059,6 +1093,8 @@ export default function TripsListPage() {
             </button>
             <TripActionsMenu
               tripId={effectiveSelectedId}
+              onArchive={embeddedTrip?.ownerUserId === user?.id ? () => handleMenuArchive(effectiveSelectedId) : undefined}
+              archived={embeddedTrip?.archivedAt != null}
               tripPageRef={tripPageRef}
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
@@ -1086,6 +1122,19 @@ export default function TripsListPage() {
 
   return (
     <>
+      <ToastContainer />
+      <ConfirmModal
+        open={archiveTarget !== null}
+        title={archiveTarget?.archived ? '取消歸檔行程？' : '歸檔行程？'}
+        message={archiveTarget?.archived
+          ? `「${archiveTarget.label}」會回到所有旅伴的「全部」清單。`
+          : `「${archiveTarget?.label ?? ''}」會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。`}
+        confirmLabel={archiveTarget?.archived ? '取消歸檔' : '歸檔'}
+        confirmTone="primary"
+        busy={archiving}
+        onConfirm={handleConfirmArchive}
+        onCancel={() => setArchiveTarget(null)}
+      />
       {/* SCOPED_STYLES 必須 hoist 到頂層 — embedded mode 不渲染 cardGridMain，
         * 注入在 cardGridMain 內就失效。 */}
       <style>{SCOPED_STYLES}</style>

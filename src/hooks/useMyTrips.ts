@@ -29,6 +29,7 @@ export interface MyTrip {
   dayCount?: number;
   countries?: string | null;
   owner?: string;
+  ownerUserId?: string | null;
   ownerDisplayName?: string | null;
   memberCount?: number;
   archivedAt?: string | null;
