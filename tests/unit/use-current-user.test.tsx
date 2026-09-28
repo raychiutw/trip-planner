@@ -144,6 +144,15 @@ describe('useCurrentUser', () => {
     expect(readAuthHint()).toBe(false);
   });
 
+  it('a failed fetch (network error) clears a stale auth hint', async () => {
+    // catch 分支的 writeAuthHint(false)：fetch 直接 reject 時，先前留下的 true 旗標必須被校正。
+    writeAuthHint(true);
+    vi.spyOn(global, 'fetch').mockRejectedValue(new Error('network down'));
+    const { result } = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(result.current.user).toBeNull());
+    expect(readAuthHint()).toBe(false);
+  });
+
   it('fetch uses credentials: include for cookie-based auth', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
