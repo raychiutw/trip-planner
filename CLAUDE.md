@@ -36,7 +36,7 @@ On-ramps（匯入主線）：
 
 **我可自主呼叫的 9 個**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `resolving-merge-conflicts` · `grilling`
 
-它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**（2026-07-25 實測誤判過）。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
+它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
 
 ## Hard Rules
 

@@ -1,6 +1,6 @@
 # Tripline
 
-Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
+Cloudflare Pages + D1 + React SPA + V2 OAuth. No global admin — owner/permissions + service-token ops scope.
 
 ## Development workflow (Matt Pocock official chain)
 
@@ -73,9 +73,9 @@ Matt Pocock skills do not cover the task or the user explicitly requests it.
 - Agent tool only for worktree isolation.
 - Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
 
-## Naming history (sync from CLAUDE.md)
+## Naming history
 
-完整 30+ 歷史 bug + 對應修法見 [CLAUDE.md](CLAUDE.md) "Naming history"。重點:
+重點:
 
 - **v2.23.0+**: Google Maps Platform — OSM / Nominatim / Overpass / ORS / Haversine 全 ripped out，no fallback
 - **v2.27.0+ (migration 0057+0058)**: `trip_entry_pois` junction table (1 entry × N POI: master sort_order=1 + alternates)
