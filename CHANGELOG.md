@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.96] - 2026-09-30
+
+### Fixed
+- 寄送驗證信、重設密碼信、邀請信的郵件元件 nodemailer 從 9.1.1 升到 10.0.12，修掉 2 個 moderate 等級弱點：不同寄信連線之間會共用 TLS 主機名稱快取（GHSA-6vj9-mwq6-2f5v），以及巢狀收件人陣列可繞過深度限制造成當機（GHSA-8vvx-rff5-p5rq）。9.x 沒有修補版，只能升到 10.x；寄信用法不變，升級後已對 Gmail SMTP 實際驗證登入成功。每日健康報告的 production 相依弱點回到 0。
+
+### Changed
+- 移除不再需要的 `@types/nodemailer`：nodemailer 10 自帶型別宣告。
+
+### For contributors
+- 新增一個直接用真實 nodemailer 組信的契約測試。原本的郵件測試全部 mock 掉寄信元件，dependabot 自動合併的 nodemailer patch/minor 若改壞寄信參數或信件內容，CI 抓不到；這個測試不連 SMTP，所以 SMTP 連線、STARTTLS、登入仍不在測試範圍內。
+- merge 後 mac mini 的 api-server 要先 `npm ci` 再 `launchctl kickstart -k gui/$(id -u)/com.tripline.api-server`，執行中的程序才會載入 10.0.12；不重啟就還在用有弱點的 9.1.1。
+
 ## [2.57.95] - 2026-09-29
 
 ### Fixed
