@@ -11,6 +11,7 @@
  * 是多一次 client 端轉址。
  *
  * 存 false 時直接移除 key，避免留下一個要小心解讀的 "false" 字串。
+ * 寫入帶序號：比已套用的寫入還舊的會被靜默丟棄（見下方 issuedSeq / appliedSeq）。
  * 所有存取都吞掉例外 —— Safari 無痕模式 / 使用者停用儲存空間時 localStorage 會 throw，
  * 那種情況退回「當作未登入」即可，不該讓整頁掛掉。
  */
@@ -24,7 +25,21 @@ export function readAuthHint(): boolean {
   }
 }
 
-export function writeAuthHint(authed: boolean): void {
+// 序號越大代表資訊越新。useCurrentUser 在發 request 時先取號、落地時帶號寫入；
+// 直接呼叫（例如登出）自動拿最新號。這樣登出前發出、登出後才落地的 userinfo
+// 回應不會把登出寫的 false 蓋回 true。每個序號只用於一次寫入。
+// ponytail: 序號只在同一個分頁內有序；別的分頁的寫入這裡不知道，跨分頁仍可能互蓋
+// （後果同樣只是多一次轉址，與改版前相同）。要跨分頁一致得改用 storage event。
+let issuedSeq = 0;
+let appliedSeq = 0;
+
+export function nextAuthHintSeq(): number {
+  return ++issuedSeq;
+}
+
+export function writeAuthHint(authed: boolean, seq = nextAuthHintSeq()): void {
+  if (seq < appliedSeq) return;
+  appliedSeq = seq;
   try {
     if (authed) localStorage.setItem(AUTH_HINT_KEY, '1');
     else localStorage.removeItem(AUTH_HINT_KEY);

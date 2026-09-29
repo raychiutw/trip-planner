@@ -39,7 +39,10 @@ beforeEach(() => {
     requests.push({ path, method: init?.method ?? 'GET', body: typeof init?.body === 'string' ? init.body : null });
     if (path === '/api/oauth/userinfo') {
       userinfoReads += 1;
-      return userinfoReads > 2 && reloadUserReply ? reloadUserReply : json(user);
+      // AccountPage 同時掛 useRequireAuth() + useCurrentUser()，mount 時兩個 hook
+      // instance 在同一輪 effect flush 共享一次 fetch（N+1 dedup fix，見
+      // useCurrentUser.ts），所以 mount 只算 1 次 immediate call，reload() 後是第 2 次。
+      return userinfoReads > 1 && reloadUserReply ? reloadUserReply : json(user);
     }
     if (path === '/api/account/stats') return statsResponse;
     if (path === '/api/account/profile' && init?.method === 'PATCH') return profileResponse;
