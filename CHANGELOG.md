@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.97] - 2026-10-01
+
+### Fixed
+- 匯出、列印行程 PDF 會用到的 HTML 清理元件 dompurify 從 3.4.15 升到 3.4.16，修掉 1 個 low 等級弱點（GHSA-p98j-92pf-mc4p）：`IN_PLACE` 模式搭配會移除元素的 afterSanitize hook 時，被移除那一塊裡的事件處理器仍然有效。Tripline 沒有直接呼叫 dompurify，也沒用到這個模式，實際可觸及面很小；升級後每日健康報告的 production 相依弱點回到 0。用同一支探針分別打 3.4.15 與 3.4.16 驗證過：舊版會重現，新版已被中和。
+
+### Changed
+- `package.json` 的 `overrides` 把 dompurify 下限從 `^3.4.10` 升到 `^3.4.16`，沿用 #962 的做法把下限釘在修補版。之後若有人把舊的 lockfile 條目合併回來，`npm ci` 會直接報錯（`lock file's dompurify@3.4.15 does not satisfy dompurify@3.4.16`），不會靜默裝回有弱點的版本。
+
 ## [2.57.96] - 2026-09-30
 
 ### Fixed
