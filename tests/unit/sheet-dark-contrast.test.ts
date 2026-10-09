@@ -12,7 +12,6 @@ import { contrastRatio } from './__helpers__/wcag';
 
 const css = readFileSync(join(__dirname, '../../css/tokens.css'), 'utf8');
 
-const ratio = contrastRatio;
 function must(re: RegExp, what: string): RegExpMatchArray {
   const m = css.match(re);
   if (!m) throw new Error(`tokens.css 找不到 ${what} — 選擇器或寫法改了？守衛不可靜默失效`);
@@ -30,13 +29,13 @@ const contrastDestructive = must(/@media \(prefers-contrast: more\)\s*\{\s*body\
 describe('深色 sheet 局部色值（對 tertiary 表面）', () => {
   it('找得到深色 tertiary', () => { expect(TERTIARY, '深色 --color-tertiary').toMatch(/^#[0-9A-Fa-f]{6}$/); });
   it('muted 對 tertiary ≥ 4.5（全站 muted #A1A1A6 只有 4.41）', () => {
-    expect(ratio(sheet[1], TERTIARY)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(sheet[1], TERTIARY)).toBeGreaterThanOrEqual(4.5);
   });
   it('destructive 對 tertiary ≥ 4.5（全站 #FF6B52 只有 4.04）', () => {
-    expect(ratio(sheet[2], TERTIARY)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(sheet[2], TERTIARY)).toBeGreaterThanOrEqual(4.5);
   });
   it('提高對比時 destructive 比一般更高、且仍 ≥ 4.5（不可被局部覆寫蓋回一般值）', () => {
-    expect(ratio(contrastDestructive[1], TERTIARY)).toBeGreaterThanOrEqual(4.5);
-    expect(ratio(contrastDestructive[1], TERTIARY)).toBeGreaterThan(ratio(sheet[2], TERTIARY));
+    expect(contrastRatio(contrastDestructive[1], TERTIARY)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(contrastDestructive[1], TERTIARY)).toBeGreaterThan(contrastRatio(sheet[2], TERTIARY));
   });
 });

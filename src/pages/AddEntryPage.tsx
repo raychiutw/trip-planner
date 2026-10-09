@@ -142,10 +142,11 @@ const SCOPED_STYLES = `
 .tp-add-entry-section {
   margin-bottom: 24px;
   padding: 16px 18px;
-  background: var(--color-secondary);
-  border-radius: var(--radius-md);
   /* #1423：不用 opacity 做「未啟用」外觀 —— 它把 muted 文字的對比一併稀釋到 2.5–2.9。
-   * 這些是 aria-hidden 的預覽區塊，次要感由 --color-muted 文字色承擔。 */
+   * 背景改成與頁面底色的**不透明**混合（60% secondary），視覺上等同原本 opacity .6 對底色的淡化，
+   * 文字維持完整的 muted 對比（muted 對 background／secondary 都已 ≥ 4.5，混色必然落在兩者之間）。 */
+  background: color-mix(in srgb, var(--color-secondary) 60%, var(--color-background));
+  border-radius: var(--radius-md);
 }
 .tp-add-entry-section h3 {
   margin: 0 0 8px;

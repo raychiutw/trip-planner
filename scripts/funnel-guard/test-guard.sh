@@ -319,7 +319,8 @@ for _st in NeedsLogin NeedsMachineAuth; do
   if grep -q '^needs_login|' "$_fake/alerts"; then ok "$_st 發出獨立的 needs_login 告警"; else bad "$_st 沒有 needs_login 告警"; fi
   if grep -q 'tailscale up --accept-routes --hostname=test-host' "$_fake/alerts"; then ok "$_st 告警附完整 tailscale up 指令（保留既有旗標）"; else bad "$_st 告警沒附可複製的 tailscale up 指令"; fi
   if grep -q '指令執行失敗' "$_fake/alerts"; then bad "$_st 告警仍是誤導的「指令執行失敗」"; else ok "$_st 告警不再誤導成指令失敗"; fi
-  [ "$_rc" != 0 ] && ok "$_st 退出碼非 0" || bad "$_st 退出碼為 0"
+  # 必須是 0：plist 是 KeepAlive SuccessfulExit=false + ThrottleInterval=10，非 0 會每 10 秒 respawn（2026-10-09 的迴圈）。
+  [ "$_rc" = 0 ] && ok "$_st 退出碼為 0（非 0 會被 launchd 每 10 秒重啟）" || bad "$_st 退出碼為 $_rc — launchd 會每 10 秒 respawn"
 done
 # 對照：Running 但 funnel 掉了 → 仍走既有 heal（防止短路寫得過寬）
 _rc=$(_run_main Running)

@@ -95,7 +95,7 @@ rm /Users/ray/Projects/trip-planner/scripts/funnel-guard/.disabled
 
 ## Tailscale 登出（NeedsLogin）：人工處理
 
-`tailscale status` 回 `Logged out.`（`BackendState` 為 `NeedsLogin` 或 `NeedsMachineAuth`）時，heal 一定失敗，**guard 不會 heal**，改發獨立的 `needs_login` Telegram 告警（之後每小時一次提醒），退出碼非 0。2026-10-09 的事故是把它當一般 drift，每 10 秒空轉 heal 13 小時、共 4608 次。
+`tailscale status` 回 `Logged out.`（`BackendState` 為 `NeedsLogin` 或 `NeedsMachineAuth`）時，heal 一定失敗，**guard 不會 heal**，改發獨立的 `needs_login` Telegram 告警（之後每小時一次提醒），**退出碼 0**（告警已送出，plist 的 `StartInterval` 120 秒照常再輪詢）。不能用非 0：plist 是 `KeepAlive SuccessfulExit=false` + `ThrottleInterval=10`，非 0 結束會每 10 秒被重啟。2026-10-09 的事故是把它當一般 drift，每 10 秒空轉 heal 13 小時、共 4608 次。
 
 處理：照告警裡的指令在這台機器執行（保留既有的 `--accept-routes` 與 `--hostname`，漏掉旗標會被拒絕或改掉原設定），並在瀏覽器完成授權：
 

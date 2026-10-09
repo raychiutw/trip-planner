@@ -56,13 +56,14 @@ async function glassElements(page) {
     for (const e of document.querySelectorAll('*')) {
       const cs = getComputedStyle(e);
       const bf = cs.backdropFilter || cs.webkitBackdropFilter;
-      if (!bf || bf === 'none' || bf === 'blur(0px)') continue;
+      // blur(0px) 也算：它代表「模糊關了但這仍是玻璃面」，若底還是半透明就是沒降級乾淨。
+      if (!bf || bf === 'none') continue;
       const r = e.getBoundingClientRect();
       if (r.width <= 0 || r.height <= 0 || cs.visibility === 'hidden' || cs.display === 'none') continue;
       const m = cs.backgroundColor.match(/[\d.]+/g) || [];
       const alpha = m.length > 3 ? Number(m[3]) : (cs.backgroundColor === 'transparent' ? 0 : 1);
       const cls = typeof e.className === 'string' ? e.className.trim().split(/\s+/).slice(0, 2).join('.') : '';
-      out.push({ el: e.tagName.toLowerCase() + (cls ? '.' + cls : ''), bf: bf.slice(0, 32), alpha });
+      out.push({ el: e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (cls ? '.' + cls : ''), bf: bf.slice(0, 32), alpha });
     }
     return out;
   });
@@ -88,7 +89,8 @@ async function open(page, path, anon = false) {
   await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(600);
   // 匿名頁必須真的停在該路由（沒被「上次已登入」提示或其他轉址帶走），否則玻璃面從沒被驗到。
-  if (anon) expect(new URL(page.url()).pathname, `${path} 被轉址走了`).toBe(path.split('?')[0]);
+  // 每一頁都要真的停在該路由——被轉走（或落到別的玻璃頁）會讓對照與降級掃描都空洞通過。
+  expect(new URL(page.url()).pathname, `${path} 被轉址走了`).toBe(path.split('?')[0]);
   // 頁面真的載入了（不是 error boundary／空白頁）才算數。
   await expect(page.locator('body')).not.toContainText('Unexpected Application Error');
   expect((await page.locator('body').innerText()).length, `${path} 空白頁`).toBeGreaterThan(15);
@@ -103,7 +105,7 @@ test('自我檢查：掃描函式抓得到植入的玻璃元素', async ({ page 
     document.body.appendChild(d);
   });
   const found = (await glassElements(page)).filter((g) => g.alpha < 1);
-  expect(found.map((g) => g.el)).toContain('div');
+  expect(found.map((g) => g.el), '掃描函式抓不到植入的 #glass-canary').toContain('div#glass-canary');
 });
 
 for (const scheme of ['light', 'dark']) {

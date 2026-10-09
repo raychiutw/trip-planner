@@ -12,9 +12,6 @@ import { join } from 'node:path';
 import { cssRule, stripCssComments } from './__helpers__/wcag';
 
 const read = (p: string) => readFileSync(join(__dirname, '../../', p), 'utf8');
-const rule = cssRule;
-const stripComments = stripCssComments;
-
 // 第四欄 minOpacity：undefined = 不得出現 opacity；有值 = 允許但不得低於該值（hero 頁尾已實測 ≥ 4.9）。
 const FOOTNOTE_MIN_OPACITY = 0.8;
 const CASES: Array<[string, string, string, number?]> = [
@@ -32,7 +29,7 @@ const OPACITY_DECL = /(?:^|[;\s{])opacity\s*:\s*([^;}]+)/;
 describe('次要文字不用 opacity 稀釋對比', () => {
   for (const [file, sel, label, minOpacity] of CASES) {
     it(`${label}（${sel}）${minOpacity === undefined ? '不得有 opacity' : `opacity 不得低於 ${minOpacity}`}`, () => {
-      const decl = stripComments(rule(read(file), sel));
+      const decl = stripCssComments(cssRule(read(file), sel));
       const m = decl.match(OPACITY_DECL);
       if (minOpacity === undefined) {
         expect(m, `${sel} 又加了 opacity — 會把對比稀釋掉；改用 --color-muted 之類的文字色`).toBeNull();

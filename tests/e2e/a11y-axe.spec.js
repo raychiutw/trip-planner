@@ -431,6 +431,9 @@ const ALL_PAGES_ANON = [
 const EXCEPTIONS = [
   // 目前沒有例外。新增時每筆都要有 reason，並由 owner 核准。
 ];
+for (const e of EXCEPTIONS) {
+  if (!e.rule || !e.target || !String(e.reason || '').trim()) throw new Error(`EXCEPTIONS 每筆都要有 rule、target 與 reason（owner 核准的理由）：${JSON.stringify(e)}`);
+}
 const isExcepted = (rule, target) => EXCEPTIONS.some((e) => e.rule === rule && target.includes(e.target));
 
 async function runAxeContrastAndTarget(page) {
@@ -450,11 +453,14 @@ async function runAxeContrastAndTarget(page) {
   });
 }
 
+test.describe('a11y 全頁面（淺/深 × 手機/桌機）', () => {
+  // 四組彼此獨立；每組走 37 頁約 2–3 分鐘，單 worker 會串起來，CI 兩個 worker 可分攤。
+  test.describe.configure({ mode: 'parallel' });
 for (const scheme of ['light', 'dark']) {
   for (const [w, h] of [[390, 844], [1440, 900]]) {
     test(`a11y 全頁面：color-contrast 與 target-size 零違規 — ${scheme} ${w}px`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑（固定 viewport 自行量；master 矩陣不製造噪音）');
-      test.setTimeout(240000);
+      test.setTimeout(480000); // 37 頁 × (networkidle ≤4s + 0.8s + 擷圖 + 2 次 axe)；慢 runner 也要有餘裕
       await setupApiMocks(page);
       await page.route(/maps\.googleapis\.com/, (r) => r.abort());
       await page.route('**/api/route**', (r) => r.fulfill({
@@ -528,6 +534,7 @@ for (const scheme of ['light', 'dark']) {
     });
   }
 }
+});
 
 // 深色第三欄 sheet 的局部提亮（#1423）不得蓋掉「提高對比」的加強階（code review 抓到的回歸）：
 // sheet 元素上的局部宣告離子孫更近，會把 body.dark 的 --color-destructive: #FFB9AB 蓋回 #FF806A。

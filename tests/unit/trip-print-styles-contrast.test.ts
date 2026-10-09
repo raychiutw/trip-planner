@@ -13,37 +13,40 @@ import { PRINT_CSS, SHARE_CHROME_CSS } from '../../src/lib/tripPrintStyles';
 import { contrastRatio, cssRule } from './__helpers__/wcag';
 
 const AA = 4.5;
-const ratio = contrastRatio;
-const rule = cssRule;
+const isWhite = (h: string) => /^#f{3}$|^#f{6}$/i.test(h);
+const textIsWhite = (decl: string) => /(?:^|[;\s])color:\s*(#fff|#ffffff)\b/i.test(decl);
 const hexes = (decl: string): string[] => [...decl.matchAll(/#[0-9a-fA-F]{3,6}\b/g)].map((m) => m[0]);
 
 describe('分享／列印頁寫死色的對比（WCAG 1.4.3 AA 4.5:1）', () => {
   it('分享 hero：白字疊漸層的兩端都 ≥ 4.5（13px 小字會落在漸層中任一位置）', () => {
-    const decl = rule(SHARE_CHROME_CSS, '.tp-share-hero');
-    const stops = hexes(decl).filter((h) => h.toLowerCase() !== '#fff');
+    const decl = cssRule(SHARE_CHROME_CSS, '.tp-share-hero');
+    expect(textIsWhite(decl), '.tp-share-hero 的文字不是白色 — 下面的「白字 / 漸層」計算前提不成立').toBe(true);
+    const stops = hexes(decl).filter((h) => !isWhite(h));
     expect(stops.length, '漸層應有兩個色標').toBeGreaterThanOrEqual(2);
-    for (const s of stops) expect(ratio('#ffffff', s), `白字 / ${s}`).toBeGreaterThanOrEqual(AA);
+    for (const s of stops) expect(contrastRatio('#ffffff', s), `白字 / ${s}`).toBeGreaterThanOrEqual(AA);
   });
 
   it('分享 hero 的 eyebrow 與 meta 不再用 opacity 稀釋對比', () => {
-    expect(rule(SHARE_CHROME_CSS, '.tp-share-eyebrow')).not.toMatch(/opacity/);
-    expect(rule(SHARE_CHROME_CSS, '.tp-share-meta')).not.toMatch(/opacity/);
+    expect(cssRule(SHARE_CHROME_CSS, '.tp-share-eyebrow')).not.toMatch(/opacity/);
+    expect(cssRule(SHARE_CHROME_CSS, '.tp-share-meta')).not.toMatch(/opacity/);
   });
 
   it('分享頁「複製到我的行程」按鈕：白字 / 背景（含 hover）≥ 4.5', () => {
-    const base = rule(SHARE_CHROME_CSS, '.tp-share-copy');
-    expect(ratio('#ffffff', hexes(base).find((h) => h.toLowerCase() !== '#fff')!)).toBeGreaterThanOrEqual(AA);
-    const hover = rule(SHARE_CHROME_CSS, '.tp-share-copy:hover');
-    expect(ratio('#ffffff', hexes(hover)[0])).toBeGreaterThanOrEqual(AA);
+    const base = cssRule(SHARE_CHROME_CSS, '.tp-share-copy');
+    expect(textIsWhite(base), '.tp-share-copy 的文字不是白色').toBe(true);
+    expect(contrastRatio('#ffffff', hexes(base).find((h) => !isWhite(h))!)).toBeGreaterThanOrEqual(AA);
+    const hover = cssRule(SHARE_CHROME_CSS, '.tp-share-copy:hover');
+    expect(contrastRatio('#ffffff', hexes(hover)[0])).toBeGreaterThanOrEqual(AA);
   });
 
   it('列印頁主按鈕：白字 / 背景 ≥ 4.5', () => {
-    const bg = hexes(rule(PRINT_CSS, '.tp-print-btn-primary')).find((h) => h.toLowerCase() !== '#fff')!;
-    expect(ratio('#ffffff', bg)).toBeGreaterThanOrEqual(AA);
+    expect(textIsWhite(cssRule(PRINT_CSS, '.tp-print-btn-primary')), '.tp-print-btn-primary 的文字不是白色').toBe(true);
+    const bg = hexes(cssRule(PRINT_CSS, '.tp-print-btn-primary')).find((h) => !isWhite(h))!;
+    expect(contrastRatio('#ffffff', bg)).toBeGreaterThanOrEqual(AA);
   });
 
   it('列印頁星等金色疊白紙 ≥ 4.5', () => {
-    const gold = hexes(rule(PRINT_CSS, '.tp-print-star'))[0];
-    expect(ratio(gold, '#ffffff')).toBeGreaterThanOrEqual(AA);
+    const gold = hexes(cssRule(PRINT_CSS, '.tp-print-star'))[0];
+    expect(contrastRatio(gold, '#ffffff')).toBeGreaterThanOrEqual(AA);
   });
 });

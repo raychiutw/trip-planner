@@ -309,7 +309,11 @@ main() {
     throttled_alert "funnel-guard" "needs_login" \
       "🚨 Tripline funnel-guard：Tailscale 已登出（NeedsLogin），自動 heal 無法處理。請在這台機器執行 \`$(tailscale_up_hint)\` 並完成瀏覽器授權（若 tailscale 說還要列出其他旗標，照它的提示補上）；恢復後 guard 會自行重設 funnel" \
       2>&1 | sed "s/^/$LOG_PREFIX  /" || true
-    exit 1
+    # exit 0：告警已送出，plist 的 StartInterval(120s) 本來就會再輪詢。**不能 exit 1** —— plist 是
+    # KeepAlive SuccessfulExit=false + ThrottleInterval=10，非 0 結束會每 10 秒被 respawn；
+    # 2026-10-09 事故的 13 小時／4608 次（≈ 13×360）就是這個節奏。這個分支很便宜（不 heal、不探測），
+    # 但 exit 1 會讓它在登出期間每 10 秒跑一次、每次寫 3 行 log，直到有人處理。
+    exit 0
   fi
 
   if is_funnel_healthy; then
