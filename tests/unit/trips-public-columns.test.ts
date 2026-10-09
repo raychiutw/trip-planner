@@ -17,6 +17,8 @@ import { createTestDb, disposeMiniflare } from '../api/setup';
 const PUBLIC_COLUMNS: Record<string, string[]> = {
   trips: ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'lang', 'created_at', 'updated_at', 'archived_at'],
   trip_days: ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'updated_at', 'hotel_poi_id', 'version'],
+  // days／[num] 對匿名讀者另會 SELECT * FROM pois（hotel／parking POI；pois 是跨行程共用的店家主檔，CONTEXT：行程私有文字不進 pois）
+  pois: ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'lat', 'lng', 'country', 'source', 'created_at', 'updated_at', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at', 'price'],
   trip_entries: ['id', 'day_id', 'sort_order', 'description', 'source', 'updated_at', 'order_in_day', 'start_time', 'end_time', 'entry_pois_version', 'version'],
 };
 

@@ -68,7 +68,7 @@ export async function requirePoiWrite(
 ): Promise<void> {
   if (hasOpsScope(auth, 'ops:poi')) return;
   if (!tripId) throw new AppError('DATA_VALIDATION', '非維運 token 必須提供 tripId');
-  if (!(await hasWritePermission(db, auth, tripId))) throw new AppError('PERM_DENIED');
+  await requireTripWrite(db, auth, tripId);
   if (!(await verifyPoiBelongsToTrip(db, poiId, tripId))) {
     throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
   }

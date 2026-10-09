@@ -24,7 +24,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
   // Intentional: listing/managing share links is a WRITE-tier capability — a viewer
   // collaborator (read-only) cannot see or manage links. Do NOT relax to hasPermission.
-  await requireTripWrite(context.env.DB, requireAuth(context), id);
+  await requireTripWrite(db, requireAuth(context), id);
 
   // Includes revoked-but-not-deleted rows so retained view_count analytics stay reachable.
   const { results } = await db
@@ -41,7 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
   const auth = requireAuth(context);
-  await requireTripWrite(context.env.DB, auth, id);
+  await requireTripWrite(db, auth, id);
 
   const body = (await context.request.json().catch(() => ({}))) as Record<string, unknown>;
   const visible = sanitizeVisibleSections(

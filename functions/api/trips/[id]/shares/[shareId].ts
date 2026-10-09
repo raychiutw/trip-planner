@@ -20,7 +20,7 @@ import type { Env } from '../../../_types';
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { id, shareId } = context.params as { id: string; shareId: string };
   const db = context.env.DB;
-  await requireTripWrite(context.env.DB, requireAuth(context), id);
+  await requireTripWrite(db, requireAuth(context), id);
   const body = (await context.request.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (body.action === 'revoke') {
@@ -93,7 +93,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { id, shareId } = context.params as { id: string; shareId: string };
   const db = context.env.DB;
-  await requireTripWrite(context.env.DB, requireAuth(context), id);
+  await requireTripWrite(db, requireAuth(context), id);
 
   const res = await db
     .prepare('DELETE FROM trip_shares WHERE id = ? AND trip_id = ?')
