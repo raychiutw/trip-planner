@@ -213,7 +213,7 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 120ms, color 120ms, transform 120ms;
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--glass-reduce-filter, blur(8px));
   /* v2.54.11: cover 改三色後，已收藏的粉底愛心會疊在 food（粉）cover 上同色相溶、
      邊界消失。加 neutral 陰影讓圓鈕在任何同色系 cover 上都浮起、邊界恆可辨（不靠淺 tone 當前景）。*/
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
@@ -242,7 +242,7 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 120ms, transform 120ms;
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--glass-reduce-filter, blur(8px));
   /* v2.54.11: 同上 — 柔褐底加入鈕疊在 attraction（柔褐）cover 上同色相溶，加陰影浮起。*/
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }

@@ -2101,12 +2101,22 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * color-mix 半透明底也顯式蓋成全不透明（模糊沒了、3-6% 透出仍會干擾）。 */
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
+    /* 降級 token（#1422）：硬寫 backdrop-filter／半透明底的玻璃面都用
+     * `var(--glass-reduce-*, <原值>)`。一般模式這兩個 token 未定義 → 取 fallback，
+     * computed 值與降級前完全相同；降級時只在這裡設一次，全部玻璃面一起關掉。 */
+    --glass-reduce-filter: none;
+    --glass-reduce-bg: var(--color-background);
+  }
+  /* 必須放在 **body**（與定義同層）。--tabbar-* 與 --color-glass-* 定義在 body {}，
+   * 子元素繼承的是離它最近的 body 的值；只覆寫 :root 會被 body 自己的宣告蓋住 —— 這個降級
+   * 因此從 W5 起一直是死碼。 */
+  body {
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
-  body.dark { --tabbar-tint: var(--color-secondary); }
+  body.dark { --tabbar-tint: var(--color-secondary); --glass-reduce-bg: var(--color-secondary); }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
@@ -2123,8 +2133,12 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-success-deep: #04503D;   /* on #E1F1E7 → 8.08（一般階 4.60） */
     --color-warning-deep: #6B3B00;   /* on #FEEED8 → 8.19（一般階 4.59） */
     --color-destructive: #87240E;    /* on #FDECEC → 8.03（一般階 4.85） */
-    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
+    --glass-reduce-filter: none;     /* 見上方 reduced-transparency 區塊的說明（#1422） */
+    --glass-reduce-bg: var(--color-background);
+  }
+  body {                             /* 同上：必須與定義同層（body），:root 會被 body 遮蔽 */
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
@@ -2134,6 +2148,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-warning-deep: #FFD9A6;   /* on #443526 → 8.82（一般階 6.08） */
     --color-destructive: #FFB9AB;    /* on #402926 → 8.18（一般階 4.78） */
     --tabbar-tint: var(--color-secondary);
+    --glass-reduce-bg: var(--color-secondary);
   }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
@@ -2141,6 +2156,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
 /* 不支援 backdrop-filter 的瀏覽器：低 alpha tint 沒有模糊撐著會糊成一片。 */
 @supports not (backdrop-filter: blur(1px)) {
-  :root { --tabbar-tint: var(--color-background); }
+  body { --tabbar-tint: var(--color-background); }
   body.dark { --tabbar-tint: var(--color-secondary); }
 }

@@ -23,9 +23,9 @@ const SCOPED_STYLES = `
   /* §10.3 vibrancy（owner 2026-07-19）：暖奶油半透明毛玻璃 — color-mix 主背景 + backdrop
    * blur。走主 app token（--color-background/foreground/muted/hover/border）→ 自動
    * light/dark adapt，取代舊固定深棕 --color-sidebar-* token（那組已無其他 consumer）。 */
-  background: color-mix(in srgb, var(--color-background) 72%, transparent);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 72%, transparent));
+  backdrop-filter: var(--glass-reduce-filter, blur(30px) saturate(180%));
+  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(30px) saturate(180%));
   border-right: 1px solid var(--color-border);
   padding: 16px 12px 12px;
   display: flex; flex-direction: column;

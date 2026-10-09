@@ -29,9 +29,9 @@ body.dark .tp-lp{--d1:#D9968F;--d2:#8FB8D9;--d3:#9FCF9A;--d4:#D9B98F}
 .tp-lp-nav{
   position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
   padding:12px 18px;
-  background:color-mix(in srgb,var(--color-background) 88%,transparent);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  background:var(--glass-reduce-bg,color-mix(in srgb,var(--color-background) 88%,transparent));
+  backdrop-filter:var(--glass-reduce-filter,blur(20px) saturate(180%));
+  -webkit-backdrop-filter:var(--glass-reduce-filter,blur(20px) saturate(180%));
   border-bottom:1px solid var(--color-border);
 }
 .tp-lp-brand{font-size:18px;font-weight:800;letter-spacing:-.02em}
