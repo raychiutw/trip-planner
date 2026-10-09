@@ -277,5 +277,53 @@ else
   fi
 fi
 
+echo "[10] Tailscale 登出（2026-10-09 incident：NeedsLogin 時空轉 13 小時 4608 次 heal）"
+# 假 tailscale：記錄每次呼叫；status --json 的 BackendState 由 FAKE_STATE 決定。
+# 在 subshell 跑真的 main()（它會 exit），斷言「呼叫了什麼、發了什麼告警、退出碼」——
+# 只驗外部行為，不綁 needs_login 內部怎麼拆函式。
+_fake=$(mktemp -d)
+cat > "$_fake/tailscale" <<'FAKE'
+#!/bin/zsh
+echo "$*" >> "$FAKE_CALLS"
+case "$1 $2" in
+  "status --json") printf '{"BackendState":"%s"}' "$FAKE_STATE" ;;
+  "debug prefs")   printf '{"Hostname":"test-host","RouteAll":true}' ;;
+esac
+exit 0
+FAKE
+chmod +x "$_fake/tailscale"
+_run_main() { # $1=BackendState → 印出 main 的退出碼；呼叫記錄在 $_fake/calls、告警在 $_fake/alerts
+  : > "$_fake/calls"; : > "$_fake/alerts"
+  (
+    TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/no-such-kill-switch"
+    export FAKE_CALLS="$_fake/calls" FAKE_STATE="$1"
+    throttled_alert() { echo "$2|$3" >> "$_fake/alerts"; }
+    sleep() { :; }
+    is_funnel_healthy() { return 1; }
+    main >/dev/null 2>&1
+  )
+  echo $?
+}
+for _st in NeedsLogin NeedsMachineAuth; do
+  _rc=$(_run_main "$_st")
+  if grep -q -E '^(serve reset|funnel)' "$_fake/calls"; then
+    bad "$_st 仍呼叫 serve reset / funnel（空轉 heal）"
+  else
+    ok "$_st 不呼叫 serve reset / funnel"
+  fi
+  if grep -q '^needs_login|' "$_fake/alerts"; then ok "$_st 發出獨立的 needs_login 告警"; else bad "$_st 沒有 needs_login 告警"; fi
+  if grep -q 'tailscale up --accept-routes --hostname=test-host' "$_fake/alerts"; then ok "$_st 告警附完整 tailscale up 指令（保留既有旗標）"; else bad "$_st 告警沒附可複製的 tailscale up 指令"; fi
+  if grep -q '指令執行失敗' "$_fake/alerts"; then bad "$_st 告警仍是誤導的「指令執行失敗」"; else ok "$_st 告警不再誤導成指令失敗"; fi
+  [ "$_rc" != 0 ] && ok "$_st 退出碼非 0" || bad "$_st 退出碼為 0"
+done
+# 對照：Running 但 funnel 掉了 → 仍走既有 heal（防止短路寫得過寬）
+_rc=$(_run_main Running)
+if grep -q '^serve reset' "$_fake/calls" && grep -q '^funnel ' "$_fake/calls"; then ok "Running + drift 仍自動 heal（既有保護沒被削弱）"; else bad "Running + drift 沒有 heal — 短路過寬"; fi
+if grep -q '^needs_login|' "$_fake/alerts"; then bad "Running 被誤報成 needs_login"; else ok "Running 不發 needs_login"; fi
+# 暫態：Starting 不是需要人工的狀態
+_rc=$(_run_main Starting)
+if grep -q '^needs_login|' "$_fake/alerts"; then bad "Starting（暫態）被誤報成 needs_login"; else ok "Starting 不誤報 needs_login"; fi
+rm -rf "$_fake"
+
 echo
 [ $fail -eq 0 ] && { echo "PASS"; exit 0; } || { echo "FAIL"; exit 1; }

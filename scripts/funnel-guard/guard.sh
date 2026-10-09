@@ -277,11 +277,39 @@ heal_funnel() {
   "$TAILSCALE" funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
 }
 
+# Tailscale 登出（NeedsLogin／NeedsMachineAuth）：heal 必敗，只能人工 `tailscale up` 授權。
+# 2026-10-09 incident：把它當一般 drift，每 10 秒空轉 heal 13 小時 4608 次，告警還說成
+# 「funnel 指令失敗」。其他狀態（Starting／Stopped…）不在此列，維持原路徑，避免暫態誤報。
+tailscale_needs_login() {
+  local state
+  state=$("$TAILSCALE" status --json 2>/dev/null | jq -r '.BackendState // empty' 2>/dev/null) || return 1
+  case "$state" in NeedsLogin|NeedsMachineAuth) return 0 ;; *) return 1 ;; esac
+}
+
+# 組出這台機器實際該跑的 `tailscale up`：保留既有 --accept-routes / --hostname，
+# 漏掉旗標會被 tailscale 拒絕或改掉原設定。prefs 登出後仍讀得到；讀不到就給裸指令。
+tailscale_up_hint() {
+  local prefs flags="" host
+  prefs=$("$TAILSCALE" debug prefs 2>/dev/null)
+  [ "$(printf '%s' "$prefs" | jq -r '.RouteAll // false' 2>/dev/null)" = "true" ] && flags=" --accept-routes"
+  host=$(printf '%s' "$prefs" | jq -r '.Hostname // empty' 2>/dev/null)
+  [ -n "$host" ] && flags="$flags --hostname=$host"
+  printf 'tailscale up%s' "$flags"
+}
+
 main() {
   # M1 kill-switch：incident response 時 `touch .disabled` 暫停 auto-heal
   if [ -f "$KILL_SWITCH" ]; then
     log "kill-switch (.disabled) present — 跳過 heal"
     exit 0
+  fi
+
+  if tailscale_needs_login; then
+    log "Tailscale 需要人工登入 — 跳過 heal（heal 必敗）"
+    throttled_alert "funnel-guard" "needs_login" \
+      "🚨 Tripline funnel-guard：Tailscale 已登出（NeedsLogin），自動 heal 無法處理。請在這台機器執行 \`$(tailscale_up_hint)\` 並完成瀏覽器授權；恢復後 guard 會自行重設 funnel" \
+      2>&1 | sed "s/^/$LOG_PREFIX  /" || true
+    exit 1
   fi
 
   if is_funnel_healthy; then

@@ -93,6 +93,20 @@ rm /Users/ray/Projects/trip-planner/scripts/funnel-guard/.disabled
 
 > `.disabled` 在 `.gitignore`，不會被誤 commit。
 
+## Tailscale 登出（NeedsLogin）：人工處理
+
+`tailscale status` 回 `Logged out.`（`BackendState` 為 `NeedsLogin` 或 `NeedsMachineAuth`）時，heal 一定失敗，**guard 不會 heal**，改發獨立的 `needs_login` Telegram 告警（之後每小時一次提醒），退出碼非 0。2026-10-09 的事故是把它當一般 drift，每 10 秒空轉 heal 13 小時、共 4608 次。
+
+處理：照告警裡的指令在這台機器執行（保留既有的 `--accept-routes` 與 `--hostname`，漏掉旗標會被拒絕或改掉原設定），並在瀏覽器完成授權：
+
+```bash
+tailscale up --accept-routes --hostname=<告警內的 hostname>
+```
+
+授權後不需要手動重啟 guard 或補 funnel 指令：下一輪偵測到 funnel 設定遺失，會走原本的 heal，並送出 healed／healthy 告警。
+
+預防：到 Tailscale admin console 的 Machines 頁，看這台機器是否顯示 "Key expired"；是的話對它關閉 key expiry，否則會再發生。
+
 ## Alert 頻率設計
 
 state-transition + 1hr throttle：
