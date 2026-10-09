@@ -29,8 +29,8 @@ const AUTH_FILE = ALL.find((p) => p.endsWith('functions/api/_auth.ts'))!;
 const FILES = ALL.filter((p) => p !== AUTH_FILE);
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-// if (!(await hasWritePermission(...))) { throw new AppError('PERM_DENIED'); }   （無自訂訊息）
-const INLINE = /if\s*\(\s*!\s*\(?\s*await\s+hasWritePermission\([^)]*\)\s*\)?\s*\)\s*(\{\s*)?throw new AppError\('PERM_DENIED'\)\s*;?\s*(\})?/g;
+// if (!(await hasWritePermission(...))) { throw new AppError('PERM_DENIED'); }   （無自訂訊息；參數可含一層括號，如 requireAuth(context)）
+const INLINE = /if\s*\(\s*!\s*\(?\s*await\s+hasWritePermission\((?:[^()]|\([^()]*\))*\)\s*\)?\s*\)\s*(\{\s*)?throw new AppError\('PERM_DENIED'\)\s*;?\s*(\})?/g;
 
 describe('寫入 gate 只有 requireTripWrite 一份', () => {
   it('handler 不再內嵌 hasWritePermission → PERM_DENIED', () => {
@@ -44,6 +44,28 @@ describe('寫入 gate 只有 requireTripWrite 一份', () => {
   it('_auth.ts 內也只有 requireTripWrite 的定義這一份（requirePoiWrite 等走它）', () => {
     const n = (strip(readFileSync(AUTH_FILE, 'utf8')).match(INLINE) ?? []).length;
     expect(n).toBe(1);
+  });
+
+  it('直接呼叫 hasWritePermission 的檔案只限已知清單（Promise.all 平行檢查／自訂訊息）', () => {
+    // 新增或移除都要回來改這份清單 —— 逼你當下決定「為什麼不能用 requireTripWrite」。
+    const KNOWN = [
+      'functions/api/oauth/downscope.ts',
+      'functions/api/poi-favorites/[id]/add-to-trip.ts',
+      'functions/api/requests/[id]/index.ts',
+      'functions/api/trips/[id].ts',
+      'functions/api/trips/[id]/entries/[eid].ts',
+      'functions/api/trips/[id]/entries/[eid]/alternates.ts',
+      'functions/api/trips/[id]/entries/[eid]/alternates/[poiId].ts',
+      'functions/api/trips/[id]/entries/[eid]/alternates/reorder.ts',
+      'functions/api/trips/[id]/entries/[eid]/copy.ts',
+      'functions/api/trips/[id]/entries/[eid]/master.ts',
+      'functions/api/trips/[id]/entries/[eid]/poi-id.ts',
+      'functions/api/trips/[id]/entries/[eid]/pois/[poiId].ts',
+      'functions/api/trips/[id]/entries/[eid]/trip-pois.ts',
+    ];
+    const callers = FILES.filter((p) => /hasWritePermission\(/.test(strip(readFileSync(p, 'utf8'))))
+      .map((p) => p.slice(ROOT.length + 1)).sort();
+    expect(callers).toEqual(KNOWN);
   });
 
   it('沒有私有的 requireTripWrite 複本', () => {
