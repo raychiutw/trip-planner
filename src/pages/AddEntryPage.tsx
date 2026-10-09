@@ -125,7 +125,7 @@ const SCOPED_STYLES = `
   border: 1.5px solid var(--color-accent);
   border-radius: var(--radius-full);
   background: var(--color-background);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font: inherit;
   font-size: var(--font-size-callout);
   font-weight: 700;
@@ -144,7 +144,8 @@ const SCOPED_STYLES = `
   padding: 16px 18px;
   background: var(--color-secondary);
   border-radius: var(--radius-md);
-  opacity: 0.6;
+  /* #1423：不用 opacity 做「未啟用」外觀 —— 它把 muted 文字的對比一併稀釋到 2.5–2.9。
+   * 這些是 aria-hidden 的預覽區塊，次要感由 --color-muted 文字色承擔。 */
 }
 .tp-add-entry-section h3 {
   margin: 0 0 8px;

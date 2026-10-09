@@ -83,8 +83,10 @@ const SCOPED_STYLES = `
   font-size: 13px;
   padding-block: 12px;
 }
-.explore-load-more.is-end { color: var(--color-muted); opacity: 0.75; }
-.explore-load-more:not(:disabled) { cursor: pointer; color: var(--color-accent); }
+/* #1423：.is-end 原本被下一條 :not(:disabled) 蓋成 accent 色再疊 opacity .75（2.41／深色 3.95）。
+ * 結尾提示是 muted 文字、不是可點的 CTA：排除 .is-end，且不用 opacity 稀釋。 */
+.explore-load-more.is-end { color: var(--color-muted); }
+.explore-load-more:not(:disabled):not(.is-end) { cursor: pointer; color: var(--color-accent-text); }
 
 .explore-shell {
   background: var(--color-secondary);
@@ -350,7 +352,7 @@ const SCOPED_STYLES = `
 /* v2.55.73 動態細類 chip — 數量 badge + 三色 tone（吃=粉／看買=柔褐／住移動=sage）。 */
 .explore-subtab-count {
   margin-left: 5px; font-size: var(--font-size-caption2); font-weight: 700;
-  opacity: 0.7; font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums; /* #1423：不用 opacity（會把對比稀釋到 2.75） */
 }
 .explore-subtab[data-tone] { --tone-subtle: var(--color-accent-subtle); --tone-deep: var(--color-accent-deep); --tone-bg: var(--color-accent-bg); }
 .explore-subtab[data-tone="sage"] { --tone-subtle: var(--color-accent-2-subtle); --tone-deep: var(--color-accent-2-deep); --tone-bg: var(--color-accent-2-bg); }

@@ -149,7 +149,7 @@ const SCOPED_STYLES = `
 }
 .favorites-chip-count {
   font-variant-numeric: tabular-nums;
-  font-weight: 600; color: var(--color-muted); opacity: 0.85;
+  font-weight: 600; color: var(--color-muted); /* #1423：不用 opacity 稀釋 */
 }
 
 .favorites-toolbar {
@@ -192,7 +192,7 @@ const SCOPED_STYLES = `
 }
 .favorites-card .poi-name { font-size: var(--font-size-callout); font-weight: 700; color: var(--color-foreground); }
 .favorites-card .poi-address { font-size: var(--font-size-footnote); color: var(--color-muted); }
-.favorites-card .poi-rating { color: var(--color-accent); font-weight: 600; }
+.favorites-card .poi-rating { color: var(--color-accent-text-on-tonal); font-weight: 600; } /* #1423：卡片是 accent tint 底 → -on-tonal；--color-accent 當文字只有 3.2 */
 .favorites-card .poi-meta-sep { color: var(--color-muted); }
 .favorites-card .poi-usage-badge {
   font-size: var(--font-size-footnote); color: var(--color-muted);

@@ -18,7 +18,7 @@ export const PRINT_CSS = `
 .tp-print-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;
   font-family:inherit;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;min-height:40px;}
 .tp-print-btn svg{width:16px;height:16px;}
-.tp-print-btn-primary{background:#A97A4A;color:#fff;}
+.tp-print-btn-primary{background:#8A6038;color:#fff;}
 .tp-print-btn-ghost{background:#fff;color:#1d1813;border-color:#eadfcf;}
 .tp-print-state{padding:64px 24px;text-align:center;color:#6f5a47;font-size:15px;}
 
@@ -30,7 +30,7 @@ export const PRINT_CSS = `
 .tp-print-dh{border-bottom:2px solid #1d1813;padding-bottom:14px;margin-bottom:8px;}
 .tp-print-name{font-size:25px;font-weight:700;line-height:1.2;}
 .tp-print-meta{font-size:13px;color:#5c5248;margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;}
-.tp-print-star{color:#9a7b32;font-weight:600;white-space:nowrap;}
+.tp-print-star{color:#85691F;font-weight:600;white-space:nowrap;}
 .tp-print-empty{color:#5c5248;border:1px dashed #cfc7ba;border-radius:8px;padding:18px 16px;text-align:center;font-size:13px;margin-top:16px;}
 .tp-print-day{margin-top:18px;}
 .tp-print-day-hd{display:flex;align-items:baseline;gap:10px;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin-bottom:2px;break-after:avoid;}
@@ -100,19 +100,20 @@ export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:7
  */
 export const SHARE_CHROME_CSS = `
 .tp-share-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
-.tp-share-hero{background:linear-gradient(135deg,#A97A4A,#C49A6E);color:#fff;padding:26px 20px 20px;}
-.tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;opacity:.93;margin-bottom:8px;}
+/* #1423：原漸層 #A97A4A→#C49A6E 的白字只有 3.77／2.4（13px 小字會落在漸層任一位置）。壓深到 accent-fill 色階，兩端白字 ≥ 4.5。 */
+.tp-share-hero{background:linear-gradient(135deg,#8A6038,#9A6C41);color:#fff;padding:26px 20px 20px;}
+.tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:8px;}
 .tp-share-eyebrow svg{width:15px;height:15px;}
 .tp-share-title{font-size:26px;font-weight:700;line-height:1.18;margin:0;}
-.tp-share-meta{font-size:13px;opacity:.95;margin-top:8px;}
+.tp-share-meta{font-size:13px;margin-top:8px;}
 .tp-share-actionbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;
   background:#faf4ea;border-bottom:1px solid #eadfcf;padding:9px 14px;}
 .tp-share-ghost{flex:0 0 auto;min-height:38px;width:44px;border-radius:8px;border:1px solid #eadfcf;
   background:#fff;color:#1d1813;display:grid;place-items:center;cursor:pointer;font-family:inherit;}
 .tp-share-ghost svg{width:18px;height:18px;}
-.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#A97A4A;color:#fff;border:none;
+.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#8A6038;color:#fff;border:none;
   font-weight:600;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
-.tp-share-copy:hover{background:#8A6038;}
+.tp-share-copy:hover{background:#7A5430;}
 .tp-share-copy svg{width:16px;height:16px;}
 .tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
 .tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}

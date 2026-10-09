@@ -48,7 +48,7 @@ const SCOPED_STYLES = `
 }
 .tp-section-count {
   font-size: var(--font-size-caption2); font-weight: 600;
-  color: var(--color-muted);
+  color: var(--color-foreground); /* #1423：muted 疊 tertiary pill 深色只有 4.41 */
   padding: 2px 8px;
   background: var(--color-tertiary);
   border-radius: var(--radius-full);

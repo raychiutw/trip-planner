@@ -63,7 +63,11 @@ describe('AddEntryPage — EditEntryPage-shape layout', () => {
     expect(ADD_ENTRY_SRC).toContain('備選');
     expect(ADD_ENTRY_SRC).toContain('時間');
     expect(ADD_ENTRY_SRC).toContain('移動方式');
-    expect(ADD_ENTRY_SRC).toContain('opacity: 0.6');
+    // #1423：次要感由 --color-muted 文字色承擔，不再用 opacity 灰階——opacity 會把 muted 文字的對比
+    // 一併稀釋到 2.5–2.9（WCAG 1.4.3 要 4.5）。
+    expect(ADD_ENTRY_SRC).not.toContain('opacity: 0.6');
+    expect(ADD_ENTRY_SRC).toMatch(/\.tp-add-entry-section h3 \{[^}]*color: var\(--color-muted\)/);
+    expect(ADD_ENTRY_SRC).toMatch(/\.tp-add-entry-section-body \{[^}]*color: var\(--color-muted\)/);
   });
 });
 

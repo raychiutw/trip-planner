@@ -137,7 +137,7 @@ const SCOPED_STYLES = `
 }
 .tp-bs-footnote {
   font-size: var(--font-size-caption2);
-  opacity: 0.6;
+  opacity: 0.8; /* #1423：0.6 落在 hero 底上只有 3.7–3.9；0.8 ≥ 4.9，仍是頁面最淡的一行 */
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;

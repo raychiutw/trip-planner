@@ -89,16 +89,20 @@ const SCOPED_STYLES = `
 .tp-alert-panel-dismiss .svg-icon { width: 16px; height: 16px; }
 
 /* Error variant — 紅 destructive border + icon */
+/* 文字走中性色，顏色訊號由 border 與 icon 承擔（DESIGN.md §語意色的角色分離：不要同色系
+ * 淡底 + 同色系深字再調色救對比；#1423 實測紅字疊紅 tint 底只有 3.9–4.5、深色 2.9）。 */
 .tp-alert-panel.is-error {
   background: var(--color-priority-high-bg);
   border-color: var(--color-priority-high-dot);
-  color: var(--color-priority-high-dot);
+  color: var(--color-foreground);
 }
+.tp-alert-panel.is-error .tp-alert-panel-message { color: var(--color-foreground); }
+.tp-alert-panel.is-error .tp-alert-panel-action { border-color: var(--color-priority-high-dot); }
 .tp-alert-panel.is-error .tp-alert-panel-icon {
   background: var(--color-priority-high-dot);
   color: var(--color-accent-foreground);
 }
-.tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-priority-high-dot); }
+.tp-alert-panel.is-error .tp-alert-panel-title { color: var(--color-foreground); }
 
 /* Warning variant — amber border */
 /* 中性字 —— 顏色訊號由 border-color 與下面那顆 aria-hidden 的 .tp-alert-panel-icon 承擔

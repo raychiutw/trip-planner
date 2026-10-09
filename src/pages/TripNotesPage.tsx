@@ -264,14 +264,14 @@ const SCOPED_STYLES = `
 .tp-notes-ai-status.is-timedOut {
   border-color: var(--color-priority-high-dot);
   background: var(--color-priority-high-bg);
-  color: var(--color-destructive);
+  color: var(--color-foreground); /* 文字中性；紅色訊號由 border 承擔（#1423） */
 }
 .tp-notes-exclusions-btn {
   justify-self: start;
   min-height: var(--spacing-tap-min);
   padding: 6px 0;
   border: 0; background: transparent;
-  color: var(--color-accent-deep);
+  color: var(--color-accent-text-on-tonal); /* 坐在 accent tint 底上（DESIGN.md：同色系 tint 用 -on-tonal）；淺色 accent-text 只有 3.9–4.5 */
   font: inherit; font-size: var(--font-size-footnote); font-weight: 650;
   cursor: pointer;
 }

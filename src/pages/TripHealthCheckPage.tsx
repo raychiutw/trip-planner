@@ -120,7 +120,7 @@ const SCOPED_STYLES = `
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 .tp-ai-health-hero h1 {
   margin: 0;

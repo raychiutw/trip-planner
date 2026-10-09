@@ -385,3 +385,135 @@ test('a11y: 帳號 sheet 的焦點真的關在裡面（aria-modal 不是空頭�
     expect(stillInside, `第 ${i + 1} 次 Tab 後焦點跑出 sheet 外了`).toBe(true);
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 全頁面（淺色/深色 × 手機/桌機）對比與點擊目標 + 逐頁擷圖（#1423）
+ *
+ * 上面 PAGES 只有 4 頁、主要在淺色、只掃預設狀態；2026-10 的全頁擷圖驗證在其餘頁面找到
+ * 數十筆 WCAG 2.2 AA 違規（color-contrast 與 target-size）。這裡把範圍擴到全部頁面，
+ * 每一組（頁面 × 模式 × 版面）都擷圖附在報告上供人工逐頁檢視。
+ *
+ * 防假綠：
+ *  - 每頁先確認真的載入（非 error boundary／空白頁），並斷言 body.dark 與目標模式一致，
+ *    避免「以為測了深色、其實是淺色」。
+ *  - 每個測試先植入一個已知低對比的元素，確認 axe 抓得到（自我檢查）。
+ *  - 例外只准寫在 EXCEPTIONS：每筆要有頁面、規則、選擇器與理由，由 owner 核准；
+ *    清單之外的違規一律失敗，不靜默跳過。
+ *
+ * ⚠ axe 對「單字元元素」與「背景不確定（玻璃／漸層）」歸到 incomplete 而非 violations。
+ *   這裡把 incomplete 的數量與前 5 筆附在報告（不失敗）；單字元徽章靠
+ *   tests/unit/ 的 call-site 守衛補，不要以為這支全綠就代表沒有對比違規。
+ * ⚠ 本支在 mock 資料下跑；真實資料才會出現的狀態（例如收藏卡有評分）要在 api-mocks 補齊，
+ *   不可因為 mock 沒呈現就當作沒有違規。
+ * ⚠ 排除：分享頁 /s/:token（沒有 e2e mock，改由 tests/unit/trip-print-styles-contrast.test.ts 守）。
+ * ══════════════════════════════════════════════════════════════════════════ */
+const ALL_TRIP = 'okinawa-trip-2026-Ray';
+const ALL_ENTRY = 101;
+const ALL_PAGES_AUTHED = [
+  '/trips', '/trips/new', '/chat', '/explore', '/favorites', '/favorites/1/add-to-trip', '/add-to-trip',
+  '/account', '/account/appearance', '/account/notifications', '/account/sessions', '/account/connected-apps',
+  '/developer/apps', '/developer/apps/new', '/privacy', '/invite',
+  `/trip/${ALL_TRIP}/map?day=all`, `/trip/${ALL_TRIP}/print`, `/trip/${ALL_TRIP}/edit`,
+  `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/edit`, `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/copy`,
+  `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/move`, `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/change-poi`,
+  `/trip/${ALL_TRIP}/add-stop`, `/trip/${ALL_TRIP}/add-entry`, `/trip/${ALL_TRIP}/collab`,
+  `/trip/${ALL_TRIP}/health`, `/trip/${ALL_TRIP}/notes`,
+];
+// 匿名：把 userinfo 回 401（晚註冊的 route 優先），落地頁與登入／註冊／驗證等才不會被導走。
+const ALL_PAGES_ANON = [
+  '/', '/login', '/signup', '/signup/check-email', '/login/forgot', '/auth/password/reset?token=abc',
+  '/auth/verify-email', '/auth/verify-email?token=abc',
+  '/oauth/consent?client_id=demo&scope=openid&redirect_uri=https://example.com/cb&state=x&response_type=code',
+];
+/** 已知且經 owner 核准的例外。{ path 前綴, rule, target 片段, reason } */
+const EXCEPTIONS = [
+  // #1424：時間 chip 高約 20px < 24px（WCAG 2.5.8），#1424 修復後移除這一筆。
+  { rule: 'target-size', target: 'timeline-rail-time-chip', reason: '#1424 待修，修復後刪除此例外' },
+];
+const isExcepted = (rule, target) => EXCEPTIONS.some((e) => e.rule === rule && target.includes(e.target));
+
+async function runAxeContrastAndTarget(page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () => {
+    const EXCLUDE = [['.gm-style'], ['iframe']];
+    // eslint-disable-next-line no-undef
+    const r = await window.axe.run({ exclude: EXCLUDE }, {
+      runOnly: { type: 'rule', values: ['color-contrast', 'target-size'] },
+      resultTypes: ['violations', 'incomplete'],
+    });
+    const f = (arr) => arr.flatMap((v) => v.nodes.map((n) => ({
+      rule: v.id, target: n.target.join(' ').slice(0, 90),
+      msg: ((n.any && n.any[0]) || (n.all && n.all[0]) || {}).message || '',
+    })));
+    return { violations: f(r.violations), incomplete: f(r.incomplete) };
+  });
+}
+
+for (const scheme of ['light', 'dark']) {
+  for (const [w, h] of [[390, 844], [1440, 900]]) {
+    test(`a11y 全頁面：color-contrast 與 target-size 零違規 — ${scheme} ${w}px`, async ({ page }, testInfo) => {
+      test.setTimeout(240000);
+      await setupApiMocks(page);
+      await page.route(/maps\.googleapis\.com/, (r) => r.abort());
+      await page.route('**/api/route**', (r) => r.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ polyline: [], duration: null, distance: 0, approx: true }),
+      }));
+      await page.route(/\/api\/oauth\/client-info/, (r) => r.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ app_name: '示範應用程式', app_description: '測試用', app_logo_url: null, homepage_url: null }),
+      }));
+      await page.setViewportSize({ width: w, height: h });
+      await page.emulateMedia({ colorScheme: scheme });
+
+      const bad = [];
+      const incomplete = [];
+      let canaryChecked = false;
+      const jobs = [...ALL_PAGES_AUTHED.map((p) => ({ p, anon: false })), ...ALL_PAGES_ANON.map((p) => ({ p, anon: true }))];
+      for (const { p, anon } of jobs) {
+        if (anon) {
+          await page.route(/\/api\/oauth\/userinfo$/, (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
+        } else {
+          await page.unroute(/\/api\/oauth\/userinfo$/);
+          await setupApiMocks(page);
+        }
+        await page.goto(p);
+        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        // 頁面真的載入了（不是 error boundary／空白頁），而且 body.dark 與目標模式一致。
+        await expect(page.locator('body'), `${p} 進了 error boundary`).not.toContainText('Unexpected Application Error');
+        expect((await page.locator('body').innerText()).length, `${p} 空白頁`).toBeGreaterThan(15);
+        await expect(page.locator('body')).toHaveClass(scheme === 'dark' ? /dark/ : /^(?!.*dark)/);
+
+        if (!canaryChecked) {
+          // 自我檢查：植入 1.26:1 的低對比文字，axe 一定要抓得到，否則整支掃描不可信。
+          await page.evaluate(() => {
+            const d = document.createElement('p');
+            d.id = 'axe-canary'; d.textContent = 'canary 低對比文字';
+            d.style.cssText = 'color:#777;background:#888;padding:8px;position:fixed;top:120px;left:120px;z-index:99999';
+            document.body.appendChild(d);
+          });
+          const probe = await runAxeContrastAndTarget(page);
+          expect(probe.violations.some((v) => v.target.includes('#axe-canary')), 'axe 抓不到植入的低對比元素 — 掃描不可信').toBe(true);
+          await page.evaluate(() => document.getElementById('axe-canary')?.remove());
+          canaryChecked = true;
+        }
+
+        const shot = await page.screenshot({ type: 'jpeg', quality: 60 });
+        await testInfo.attach(`${scheme}-${w}-${p.replace(/[^a-z0-9]+/gi, '_').slice(0, 50)}`, { body: shot, contentType: 'image/jpeg' });
+
+        const res = await runAxeContrastAndTarget(page);
+        for (const v of res.violations) {
+          if (isExcepted(v.rule, v.target)) continue;
+          bad.push(`${p} | ${v.rule} | ${v.target} | ${v.msg.slice(0, 80)}`);
+        }
+        for (const i of res.incomplete) incomplete.push(`${p} | ${i.rule} | ${i.target}`);
+      }
+      await testInfo.attach('axe-incomplete.txt', {
+        body: `incomplete ${incomplete.length} 筆（axe 無法判定，僅記錄不失敗）\n` + incomplete.slice(0, 200).join('\n'),
+        contentType: 'text/plain',
+      });
+      expect([...new Set(bad)], `${scheme} ${w}px 有對比／點擊目標違規`).toEqual([]);
+    });
+  }
+}
