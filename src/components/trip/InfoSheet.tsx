@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useState, type CSSProperties } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
@@ -7,7 +7,8 @@ import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 const SCOPED_STYLES = `
 body.dark [data-info-sheet-panel] {
-  background: color-mix(in srgb, var(--color-secondary) 95%, var(--color-accent) 5%);
+  /* 背景由 .tp-glass 負責（--glass-base 取 secondary）。這裡原本有一條 background，但被 inline style 蓋掉、
+   * 從來沒生效過；改成 class 後它會突然生效而改變畫面，所以直接移除。 */
   box-shadow: 0 -1px 0 rgba(255,255,255,0.06), 0 -8px 30px rgba(0,0,0,0.5);
 }
 [data-info-sheet-panel] :focus:not(:focus-visible) { outline: none; box-shadow: none; }
@@ -207,7 +208,7 @@ export default function InfoSheet({
         onClick={handleClose}
       >
         <div
-          className={clsx(detent === 'full' && 'detent-full')}
+          className={clsx('tp-glass', detent === 'full' && 'detent-full')}
           data-info-sheet-panel
           id="infoSheet"
           ref={panelRef}
@@ -223,10 +224,10 @@ export default function InfoSheet({
             left: 0,
             right: 0,
             height: '75vh',
-            // #1422：降級時改不透明（--glass-reduce-bg）；一般模式 token 未定義、取原本的 94% secondary。
-            background: 'var(--glass-reduce-bg, color-mix(in srgb, var(--color-secondary) 94%, transparent))',
-            WebkitBackdropFilter: 'blur(var(--blur-glass, 14px))',
-            backdropFilter: 'blur(var(--blur-glass, 14px))',
+            // 毛玻璃面 recipe 在 tokens.css 的 .tp-glass（降級時自動不透明、無模糊）；這裡只給參數。
+            '--glass-base': 'var(--color-secondary)',
+            '--glass-alpha': '94%',
+            '--glass-filter': 'blur(var(--blur-glass, 14px))',
             borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
             zIndex: 'var(--z-info-sheet)',
             transform: open ? 'translateY(0)' : 'translateY(100%)',
@@ -237,7 +238,7 @@ export default function InfoSheet({
             flexDirection: 'column',
             padding: '12px var(--spacing-padding-h) max(24px, env(safe-area-inset-bottom))',
             overscrollBehavior: 'contain',
-          }}
+          } as CSSProperties}
         >
           {/* Drag handle (decorative only) */}
           <div
