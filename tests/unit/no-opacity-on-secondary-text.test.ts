@@ -5,6 +5,7 @@
  * e2e 全頁面掃描因此看不到單字元計數徽章；2026-10 這類徽章因 opacity .7／.85 稀釋掉對比
  * （2.75、4.06），axe 完全沒報，是靠像素取樣才量到。這裡直接守原始碼：這幾條規則的
  * 次要感必須由 --color-muted 之類的**文字色**承擔，不可再加 opacity。
+ * 例外：登入／註冊的 hero 頁尾（.tp-bs-footnote）允許 opacity，但不得低於 FOOTNOTE_MIN_OPACITY。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

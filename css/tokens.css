@@ -2106,7 +2106,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   :root {
     --blur-glass: 0px;
     /* 降級 token（#1422）：硬寫 backdrop-filter／半透明底的玻璃面都用
-     * `var(--glass-reduce-*, <原值>)`。一般模式這兩個 token 未定義 → 取 fallback，
+     * `var(--glass-reduce-*, <原值>)`。一般模式這些 token 都未定義 → 取 fallback（filter／bg 的 fallback 是各元件原本的值；scrim 系列同理，fallback 是各元件自己的 rgba），
      * computed 值與降級前完全相同；降級時只在這裡設一次，全部玻璃面一起關掉。 */
     --glass-reduce-filter: none;
     --glass-reduce-bg: var(--color-background);

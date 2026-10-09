@@ -286,11 +286,12 @@ cat > "$_fake/tailscale" <<'FAKE'
 #!/bin/zsh
 echo "$*" >> "$FAKE_CALLS"
 case "$1 $2" in
-  "status --json") [ -n "$FAKE_STATUS_FAIL" ] && exit 1; printf '{"BackendState":"%s"}' "$FAKE_STATE" ;;
+  "status --json") [ -n "$FAKE_STATUS_FAIL" ] && exit 1; printf '{"BackendState":"%s"}' "$FAKE_STATE"; [ -n "$FAKE_STATUS_EXIT" ] && exit "$FAKE_STATUS_EXIT" ;;
   "debug prefs")
     case "${FAKE_PREFS_MODE:-full}" in
       full)      printf '{"Hostname":"test-host","RouteAll":true}' ;;
       emptyjson) printf '{}' ;;
+      weirdhost) printf '{"Hostname":"a`b;c","RouteAll":true}' ;;
       fail)      exit 1 ;;
     esac ;;
 esac
@@ -316,8 +317,15 @@ for _st in NeedsLogin NeedsMachineAuth; do
   else
     ok "$_st 不呼叫 serve reset / funnel"
   fi
-  if grep -q '^needs_login|' "$_fake/alerts"; then ok "$_st 發出獨立的 needs_login 告警"; else bad "$_st 沒有 needs_login 告警"; fi
-  if grep -q 'tailscale up --accept-routes --hostname=test-host' "$_fake/alerts"; then ok "$_st 告警附完整 tailscale up 指令（保留既有旗標）"; else bad "$_st 告警沒附可複製的 tailscale up 指令"; fi
+  # 兩種狀態要有各自的告警 state（切換時才會重新通知）與各自正確的處理指示
+  if [ "$_st" = NeedsLogin ]; then
+    grep -q '^needs_login|' "$_fake/alerts" && ok "NeedsLogin 發出獨立的 needs_login 告警" || bad "NeedsLogin 沒有 needs_login 告警"
+    grep -q 'tailscale up --accept-routes --hostname=test-host' "$_fake/alerts" && ok "NeedsLogin 告警附完整 tailscale up 指令（保留既有旗標）" || bad "NeedsLogin 告警沒附可複製的 tailscale up 指令"
+  else
+    grep -q '^needs_machine_auth|' "$_fake/alerts" && ok "NeedsMachineAuth 發出獨立的 needs_machine_auth 告警" || bad "NeedsMachineAuth 沒有 needs_machine_auth 告警"
+    if grep -q 'tailscale up --accept-routes' "$_fake/alerts"; then bad "NeedsMachineAuth 被叫去跑 tailscale up（該狀態要到 admin console 核准）"; else ok "NeedsMachineAuth 不給 tailscale up、改指向 admin console 核准"; fi
+    grep -q 'admin console' "$_fake/alerts" && ok "NeedsMachineAuth 告警指向 admin console" || bad "NeedsMachineAuth 告警沒提 admin console"
+  fi
   if grep -q '指令執行失敗' "$_fake/alerts"; then bad "$_st 告警仍是誤導的「指令執行失敗」"; else ok "$_st 告警不再誤導成指令失敗"; fi
   # 必須是 0：plist 是 KeepAlive SuccessfulExit=false + ThrottleInterval=10，非 0 會每 10 秒 respawn（2026-10-09 的迴圈）。
   [ "$_rc" = 0 ] && ok "$_st 退出碼為 0（非 0 會被 launchd 每 10 秒重啟）" || bad "$_st 退出碼為 $_rc — launchd 會每 10 秒 respawn"
@@ -357,6 +365,24 @@ if [ "$_rc" = 0 ] && [ ! -s "$_fake/alerts" ] && ! grep -q -E '^(serve reset|fun
 else
   bad "kill-switch 沒有優先於 needs_login（rc=$_rc）"
 fi
+# 偵測不得依賴 tailscale 的結束碼：登出時 status --json 若印出 JSON 卻以非 0 結束，仍要認出登出
+# （否則整個分支是死碼、退回 13 小時空轉，而測試仍綠 — 對抗式審查抓到）
+: > "$_fake/calls"; : > "$_fake/alerts"
+( TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/no-such-kill-switch"; export FAKE_CALLS="$_fake/calls" FAKE_STATE="NeedsLogin" FAKE_STATUS_EXIT=3
+  throttled_alert() { echo "$2|$3" >> "$_fake/alerts"; }; sleep() { :; }; is_funnel_healthy() { return 1; }
+  main >/dev/null 2>&1 )
+if grep -q '^needs_login|' "$_fake/alerts" && ! grep -q '^serve reset' "$_fake/calls"; then ok "status --json 印出 NeedsLogin 但以非 0 結束 → 仍認得登出、不 heal"; else bad "依賴了 tailscale 的結束碼：非 0 結束時沒認出登出（分支成了死碼）"; fi
+# hostname 只收 [A-Za-z0-9-]：含反引號／分號等就不放進指令
+_h_weird=$(_hint_case weirdhost)
+if [ "$_h_weird" = "tailscale up --accept-routes" ]; then ok "up 提示：不安全的 hostname 不放進指令"; else bad "up 提示收了不安全的 hostname：'$_h_weird'"; fi
+# 告警送出失敗不能靜默：要留 log、仍 exit 0（狀態檔未更新 → 下一輪重試）
+: > "$_fake/calls"
+_alert_log=$(
+  TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/no-such-kill-switch"; export FAKE_CALLS="$_fake/calls" FAKE_STATE="NeedsLogin"
+  throttled_alert() { return 1; }; sleep() { :; }; is_funnel_healthy() { return 1; }
+  ( main 2>&1 ); echo "RC=$?"  # main 內部會 exit，必須再包一層子 shell，否則 echo RC 跟著一起結束
+)
+if printf '%s' "$_alert_log" | grep -q '告警送出失敗' && printf '%s' "$_alert_log" | grep -q 'RC=0'; then ok "告警送出失敗 → 留 log 並仍 exit 0（下一輪重試）"; else bad "告警送出失敗被靜默吞掉或退出碼不是 0：$_alert_log"; fi
 # 暫態：Starting 不是需要人工的狀態
 _rc=$(_run_main Starting)
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Starting（暫態）被誤報成 needs_login"; else ok "Starting 不誤報 needs_login"; fi
