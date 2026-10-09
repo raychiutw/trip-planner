@@ -201,7 +201,7 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-tab:hover { color: var(--color-foreground); }
 .tp-add-stop-tab.is-active {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   border-bottom-color: var(--color-accent);
 }
 

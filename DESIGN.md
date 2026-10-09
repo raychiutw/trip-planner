@@ -178,7 +178,7 @@
 > **執法者**：`tests/unit/semantic-color-contrast.test.ts` 守 token 層（含深色與 `prefers-contrast` 加強階，那兩者 axe 都掃不到）＋ call-site 層（掃全 `src/`，把「同族語意色當文字」判違規，含 `-deep` —— 那正是 #1176 第一版走錯的路）。15 條斷言、9 個 mutation 逐一驗過會轉紅。
 > ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
-> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層目前只有 `tests/unit/trips-list-accent-text.test.ts` 守行程一覽頁一個檔，**尚無全庫執法者**。
+> 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層由 `tests/e2e/a11y-axe.spec.js` 的「全頁面」掃描執法（淺/深色 × 手機/桌機，每頁擷圖；#1423），並由 `tests/unit/trips-list-accent-text.test.ts`（單字元徽章，axe 盲區）與 `tests/unit/trip-print-styles-contrast.test.ts`（分享／列印頁寫死色）補強。例外只准寫在該 spec 的 `EXCEPTIONS`，要有理由。
 
 ### Light Mode (柔褐三色 — Default)
 | Token | Hex | 用途 |
@@ -1104,7 +1104,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 ## Accessibility
 - **Touch target:** mobile 主操作以 44×44 CSS px 為本專案目標；Web AA 的 24×24 CSS px 與例外、Apple native 預設／最小 pt 值見「Web 設計驗收與來源」。
   - 既有 drag handle（如 `.ocean-rail-grip`）若 hit area 為 24×24 CSS px，須逐項驗 WCAG 2.5.8 與鍵盤焦點；它不是對 44px 專案目標的通用豁免。
-- **Color contrast:** Web 以 WCAG 2.2 1.4.3/1.4.11 為驗收；一般文字 4.5:1、符合 large-scale 定義的大字 3:1，必要的非文字 UI／圖形 3:1。**11px bold 不因粗體自動降到 3:1**。持續驗證 muted text（light `#6F5A47` / dark `#A1A1A6`）；`5.0` 是內部安全邊際，不是合規門檻。
+- **Color contrast:** Web 以 WCAG 2.2 1.4.3/1.4.11 為驗收；一般文字 4.5:1、符合 large-scale 定義的大字 3:1，必要的非文字 UI／圖形 3:1。**11px bold 不因粗體自動降到 3:1**。持續驗證 muted text（light `#6F5A47` / dark `#A1A1A6`）；`5.0` 是內部安全邊際，不是合規門檻。**深色第三欄 sheet（`.app-shell-sheet`，底 = tertiary）內局部提亮**：muted → `#ABABB0`（對 tertiary 4.95）、destructive → `#FF806A`（4.63）；提高對比時 destructive 取加強階 `#FFB9AB`。定義在 `css/tokens.css` 的 `body.dark .app-shell-sheet`（#1423）。分享／列印頁寫死淺色，hero 漸層 `#8A6038 → #7A5430`（白字 5.51／7.0）、星等金 `#85691F`（對白紙 5.2）。
 - **Focus:** 所有互動元素 SHALL 有可見的鍵盤焦點指示。**拿掉 `outline` 就一定要補等效的替代指示** —— 不能只拿掉卻不補（那會讓純鍵盤使用者無法定位）。例外：表單輸入（`input`/`textarea`/`select`）以文字游標 + `border-color` 變化當焦點指示。〔本條的「不得無指示」意圖遷自已歸檔的 `css-hig-discipline` spec；曾於 `8ead450b` 被整段移除只留 `outline: none`，判定為誤刪、已補回〕
   > ⚠️ **2026-07-26 更正**：本條原本把**機制**寫死成「SHALL 同時宣告 `box-shadow: var(--shadow-ring)`」。**意圖對、機制不該寫死** —— 那個寫法正是同檔 §Focus Indicator 判定為缺陷的「慣例 A」（疊 `--color-accent-fill` 實測淺色 1.46:1、深色 1.00:1）。Web 的作者自訂 outline 與 box-shadow 都不是 Apple 原生系統效果；按 WCAG 可見性、遮擋和適用對比驗證。**用哪個機制見 §Focus Indicator**，本條只管「不得無指示」。
 - **Increased contrast（HIG 對自訂色的明文要求）**：`@media (prefers-contrast: more)` SHALL 為自訂色提供更高對比的變體。HIG Color：「If you define a custom color, make sure to supply light and dark variants, **and an increased contrast option for each variant**」。

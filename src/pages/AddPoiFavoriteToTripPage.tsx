@@ -189,6 +189,25 @@ const SCOPED_STYLES = `
   text-decoration: none; font-weight: 600;
 }
 
+/* 載入失敗（缺參數等）。#1424：PageErrorState 依 root class 衍生 -title/-desc/-btn；
+ * 這塊渲染在 .tp-favorites-add-to-trip 容器外，原本的 root class tp-error 沒有對應樣式，
+ * 顯示成裸文字加瀏覽器預設按鈕。樣式與 .favorites-error 同一套（置中卡片、膠囊按鈕）。 */
+.tp-favorites-load-error {
+  padding: 32px 24px; background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.tp-favorites-load-error-title { margin: 0; font-weight: 700; color: var(--color-foreground); }
+.tp-favorites-load-error-desc { margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-favorites-load-error-btn {
+  font: inherit; font-weight: 600; padding: 8px 18px;
+  border-radius: var(--radius-full); border: 1px solid var(--color-border);
+  background: var(--color-secondary); color: var(--color-foreground);
+  min-height: var(--spacing-tap-min); cursor: pointer;
+}
+.tp-favorites-load-error-btn:hover { background: var(--color-hover); }
+
 /* Submit error */
 .tp-favorites-add-to-trip .tp-error {
   padding: 12px 16px; border-radius: var(--radius-md);
@@ -377,7 +396,7 @@ export default function AddPoiFavoriteToTripPage() {
         message={loadError}
         retryLabel="重試"
         onRetry={() => { setLoadError(null); setLoadRequest((value) => value + 1); }}
-        className="tp-error"
+        className="tp-favorites-load-error"
         testId="favorites-add-to-trip-load-error"
       />
     );

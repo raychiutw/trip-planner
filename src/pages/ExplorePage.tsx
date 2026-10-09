@@ -83,8 +83,10 @@ const SCOPED_STYLES = `
   font-size: 13px;
   padding-block: 12px;
 }
-.explore-load-more.is-end { color: var(--color-muted); opacity: 0.75; }
-.explore-load-more:not(:disabled) { cursor: pointer; color: var(--color-accent); }
+/* #1423：.is-end 原本被下一條 :not(:disabled) 蓋成 accent 色再疊 opacity .75（2.41／深色 3.95）。
+ * 結尾提示是 muted 文字、不是可點的 CTA：排除 .is-end，且不用 opacity 稀釋。 */
+.explore-load-more.is-end { color: var(--color-muted); }
+.explore-load-more:not(:disabled):not(.is-end) { cursor: pointer; color: var(--color-accent-text); }
 
 .explore-shell {
   background: var(--color-secondary);
@@ -208,17 +210,17 @@ const SCOPED_STYLES = `
   border: 0; border-radius: 50%;
   /* H6 exception: heart icon on permanent rgba(0,0,0) overlay — text must
      stay light in both light/dark mode for contrast against dark backdrop. */
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--glass-reduce-scrim, rgba(0, 0, 0, 0.45));
   color: #ffffff;
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 120ms, color 120ms, transform 120ms;
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--glass-reduce-filter, blur(8px));
   /* v2.54.11: cover 改三色後，已收藏的粉底愛心會疊在 food（粉）cover 上同色相溶、
      邊界消失。加 neutral 陰影讓圓鈕在任何同色系 cover 上都浮起、邊界恆可辨（不靠淺 tone 當前景）。*/
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
-.explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
+.explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: var(--glass-reduce-scrim-hover, rgba(0, 0, 0, 0.65)); transform: scale(1.05); }
 .explore-poi-card .explore-poi-heart.is-saved {
   /* 三色：已收藏愛心 = 第三色粉（收藏/愛心 = 粉）*/
   background: var(--color-accent-3); color: var(--color-accent-foreground);
@@ -242,7 +244,7 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   cursor: pointer;
   transition: background 120ms, transform 120ms;
-  backdrop-filter: blur(8px);
+  backdrop-filter: var(--glass-reduce-filter, blur(8px));
   /* v2.54.11: 同上 — 柔褐底加入鈕疊在 attraction（柔褐）cover 上同色相溶，加陰影浮起。*/
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
@@ -350,7 +352,7 @@ const SCOPED_STYLES = `
 /* v2.55.73 動態細類 chip — 數量 badge + 三色 tone（吃=粉／看買=柔褐／住移動=sage）。 */
 .explore-subtab-count {
   margin-left: 5px; font-size: var(--font-size-caption2); font-weight: 700;
-  opacity: 0.7; font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums; /* #1423：不用 opacity（會把對比稀釋到 2.75） */
 }
 .explore-subtab[data-tone] { --tone-subtle: var(--color-accent-subtle); --tone-deep: var(--color-accent-deep); --tone-bg: var(--color-accent-bg); }
 .explore-subtab[data-tone="sage"] { --tone-subtle: var(--color-accent-2-subtle); --tone-deep: var(--color-accent-2-deep); --tone-bg: var(--color-accent-2-bg); }

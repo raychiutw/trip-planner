@@ -239,6 +239,7 @@ export const STOP_POI_CARD_STYLES = `
 export const ENTRY_TIME_CHIP_STYLES = `
 .tp-rail-time-chip {
   display: inline-flex; align-items: center; gap: 4px;
+  min-height: 24px; /* WCAG 2.2 的 2.5.8（AA）目標尺寸；原本約 20px（#1424） */
   padding: 1px 8px;
   border: 1px solid transparent; border-radius: var(--radius-full);
   background: var(--color-accent-subtle); color: var(--color-accent-deep);

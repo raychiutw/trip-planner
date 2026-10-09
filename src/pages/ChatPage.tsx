@@ -410,9 +410,9 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--color-background) 92%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 92%, transparent));
+  backdrop-filter: var(--glass-reduce-filter, blur(14px));
+  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(14px));
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
   /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset

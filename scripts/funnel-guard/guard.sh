@@ -79,7 +79,7 @@ log() {
 # Local control-plane state
 is_funnel_local_healthy() {
   local status_json
-  status_json=$("$TAILSCALE" serve status --json 2>/dev/null) || return 1
+  status_json=$(ts_run serve status --json 2>/dev/null) || return 1
   [ -z "$status_json" ] && return 1
 
   echo "$status_json" | jq -e --arg proxy "$EXPECTED_PROXY" '
@@ -95,7 +95,7 @@ is_funnel_local_healthy() {
 
 # 從 tailscale serve status 取 funnel hostname (e.g. ray-chiudemac-mini.tail2750c0.ts.net)
 funnel_hostname() {
-  "$TAILSCALE" serve status --json 2>/dev/null \
+  ts_run serve status --json 2>/dev/null \
     | jq -r '(.AllowFunnel // {} | keys[]?) | select(endswith(":443"))' \
     | sed 's/:443$//' | head -1
 }
@@ -273,14 +273,69 @@ is_funnel_healthy() {
 # 重設 funnel：先 reset 既有 serve/funnel state（避免殘留 conflict）→ 重新註冊
 heal_funnel() {
   log "drift 偵測：執行 reset + funnel 重設"
-  "$TAILSCALE" serve reset 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
-  "$TAILSCALE" funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
+  ts_run serve reset 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
+  ts_run funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
+}
+
+# 帶逾時的 tailscale 呼叫（macOS 沒有 timeout，用 perl alarm）。tailscaled 卡住時不能讓 guard 永遠掛住：
+# launchd 同 label 不會併發啟動，掛住 = guard 靜默停擺，而這支呼叫在 kill-switch 與 heal 之前。
+# 所有 tailscale 呼叫（偵測、heal）都走這裡；TS_TIMEOUT 可由環境覆寫（測試用）。
+ts_run() { perl -e 'alarm shift; exec @ARGV' "${TS_TIMEOUT:-20}" "$TAILSCALE" "$@"; }
+
+# Tailscale 需要人工處理：heal 必敗。NeedsLogin = 已登出（`tailscale up` 重新授權）；
+# NeedsMachineAuth = 裝置要到 admin console 核准（`tailscale up` 沒有用）。
+# 2026-10-09 incident：把它當一般 drift，每 10 秒空轉 heal 13 小時 4608 次，告警還說成
+# 「funnel 指令失敗」。其他狀態（Starting／Stopped…）不在此列，維持原路徑，避免暫態誤報。
+# 成功時把狀態放進 NEEDS_STATE。
+#
+# **不依賴 tailscale 的結束碼**：登出時 `status --json` 是否回非 0 隨版本而異（本機無法安全地驗證——
+# 得把正在服務的機器登出）；若依賴結束碼，一旦非 0 這整個分支就是死碼、退回 13 小時空轉，測試卻仍綠
+# （對抗式審查抓到）。所以容忍非 0、只解析輸出。
+tailscale_needs_login() {
+  local state
+  state=$({ ts_run status --json 2>/dev/null || true; } | jq -r '.BackendState // empty' 2>/dev/null) || return 1
+  case "$state" in
+    NeedsLogin|NeedsMachineAuth) NEEDS_STATE=$state; return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 組出這台機器實際該跑的 `tailscale up`：保留既有 --accept-routes / --hostname，
+# 漏掉旗標會被 tailscale 拒絕或改掉原設定。prefs 登出後仍讀得到；讀不到就給裸指令。
+# hostname 只收 [A-Za-z0-9-]（它會被放進 Telegram 訊息與複製貼上的指令）。
+tailscale_up_hint() {
+  local prefs flags="" host
+  prefs=$(ts_run debug prefs 2>/dev/null) || true  # set -e 下失敗不得讓提示變空
+  [ "$(printf '%s' "$prefs" | jq -r '.RouteAll // false' 2>/dev/null)" = "true" ] && flags=" --accept-routes"
+  host=$(printf '%s' "$prefs" | jq -r '.Hostname // empty' 2>/dev/null)
+  case "$host" in ''|*[!A-Za-z0-9-]*) ;; *) flags="$flags --hostname=$host" ;; esac
+  printf 'tailscale up%s' "$flags"
 }
 
 main() {
   # M1 kill-switch：incident response 時 `touch .disabled` 暫停 auto-heal
   if [ -f "$KILL_SWITCH" ]; then
     log "kill-switch (.disabled) present — 跳過 heal"
+    exit 0
+  fi
+
+  if tailscale_needs_login; then
+    local alert_state msg out rc=0
+    if [ "$NEEDS_STATE" = NeedsMachineAuth ]; then
+      alert_state="needs_machine_auth"
+      msg="🚨 Tripline funnel-guard：這台裝置需要在 Tailscale admin console 核准（NeedsMachineAuth），自動 heal 無法處理。請到 Machines 頁核准這台裝置（這個狀態下 \`tailscale up\` 沒有用）；核准後 guard 會自行重設 funnel"
+    else
+      alert_state="needs_login"
+      msg="🚨 Tripline funnel-guard：Tailscale 已登出（NeedsLogin），自動 heal 無法處理。請在這台機器執行 \`$(tailscale_up_hint)\` 並完成瀏覽器授權（若 tailscale 說還要列出其他旗標，照它的提示補上）；恢復後 guard 會自行重設 funnel"
+    fi
+    log "Tailscale 需要人工處理（$NEEDS_STATE）— 跳過 heal（heal 必敗）"
+    out=$(throttled_alert "funnel-guard" "$alert_state" "$msg" 2>&1) || rc=$?
+    [ -n "$out" ] && printf '%s\n' "$out" | sed "s/^/$LOG_PREFIX  /"
+    # 送出失敗不能靜默：throttled_alert 只在成功時才更新狀態檔，所以下一輪（120s）會自動重試。
+    [ "$rc" -ne 0 ] && log "告警送出失敗（rc=$rc）— 狀態檔未更新，下一輪會重試"
+    # exit 0：plist 的 StartInterval(120s) 本來就會再輪詢。**不能 exit 1** —— plist 是
+    # KeepAlive SuccessfulExit=false + ThrottleInterval=10，非 0 結束會每 10 秒被 respawn；
+    # 2026-10-09 事故的 13 小時／4608 次（≈ 13×360）就是這個節奏。
     exit 0
   fi
 

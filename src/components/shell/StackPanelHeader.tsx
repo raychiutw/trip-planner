@@ -34,9 +34,9 @@ export const STACK_PANEL_HEADER_STYLES = `
    * z-index 10 給操作頁內 sticky 子元素（sub-header / dropdown）headroom，
    * 仍低於 app-level nav（--z-sticky-nav: 200）。 */
   position: sticky; top: 0; z-index: 10;
-  background: color-mix(in srgb, var(--color-background) 88%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 88%, transparent));
+  backdrop-filter: var(--glass-reduce-filter, blur(14px));
+  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(14px));
 }
 .tp-stack-head-btn {
   /* G-H6a：44pt HIG 最小觸控區（全 6 操作頁共用 ‹/✕），舊值低於 tap-min */

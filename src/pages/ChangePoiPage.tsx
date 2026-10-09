@@ -85,7 +85,7 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 .tp-change-poi-tab.is-active {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   border-bottom-color: var(--color-accent);
 }
 .tp-change-poi-body {

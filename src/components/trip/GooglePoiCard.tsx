@@ -99,9 +99,9 @@ export default function GooglePoiCard({ poi, onClose }: GooglePoiCardProps) {
 
 const SCOPED_STYLES = `
 .tp-google-poi-card {
-  background: color-mix(in srgb, var(--color-background) 88%, transparent);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 88%, transparent));
+  backdrop-filter: var(--glass-reduce-filter, blur(20px) saturate(1.5));
+  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(20px) saturate(1.5));
   border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   border-radius: var(--radius-lg, 14px);
   box-shadow: 0 8px 24px rgba(42, 31, 24, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);

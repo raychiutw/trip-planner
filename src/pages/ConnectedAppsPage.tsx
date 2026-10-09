@@ -53,6 +53,8 @@ const SCOPED_STYLES = `
   background: var(--color-tertiary);
   border-radius: var(--radius-full);
 }
+/* #1423：muted 疊 tertiary pill 只有深色不足（4.41）；淺色已過，維持 muted 的次要層級，只在深色提亮。 */
+body.dark .tp-section-count { color: var(--color-foreground); }
 
 .tp-app-row {
   display: flex; align-items: center; gap: 16px;

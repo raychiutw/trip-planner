@@ -19,7 +19,7 @@ to-tickets 產物（本地 markdown）。每票＝可獨立 demo/驗收的一個
 | W2 自適應 + keep-alive | 2.57.29 | #1131 | 跨 1024px 表單 keep-alive：`<Outlet/>` 單一 createPortal + stable fallback |
 | W3 Header 慣例 | 2.57.27 | #1129 | 桌機 titlebar 恢復 icon + 可見 label（推翻 v2.31.90） |
 | W4 色彩 → system + terracotta | 2.57.20 / .22 | #1122 / #1124 | 語意 token；W4r G8-G12 dark/hex→token 出清 |
-| W5 材質 & icon | 2.57.33 | #1135 | 保留玻璃膠囊（owner）；G15 reduced-transparency 全玻璃面降級 + G16 底部列 offset |
+| W5 材質 & icon | 2.57.33 | #1135 | 保留玻璃膠囊（owner）；G15 reduced-transparency 全玻璃面降級 + G16 底部列 offset。**更正（#1422）**：當時降級實際未生效（`--tabbar-*` 定義在 body、覆寫只放 :root 被遮蔽；另有硬寫的 backdrop-filter 不走 token），已修並由 `tests/e2e/glass-degrade.spec.js` 以瀏覽器 computed style 鎖住 |
 | W6 行程選擇器 | 2.57.24 | #1126 | menuitemradio + checkmark + 長清單搜尋 + 聊天草稿分行程 |
 | W7 搜尋 | 2.57.22 | #1124 | page-scoped-search-guard（地圖/聊天/帳號不顯 page-level 搜尋） |
 | W8 composer | 2.57.34 | #1136 | 保留 Enter 送出（owner）；`useKeyboardInset` visualViewport 軟鍵盤上移 |

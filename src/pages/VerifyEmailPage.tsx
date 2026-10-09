@@ -116,8 +116,8 @@ function VerifyEmailFlow({ token }: { token: string }) {
               style={{
                 padding: '12px 28px',
                 borderRadius: 'var(--radius-full)',
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-accent-fill)',
+                color: 'var(--color-accent-foreground)',
                 border: 'none',
                 fontWeight: 700,
                 fontSize: 15,
@@ -141,7 +141,7 @@ function VerifyEmailFlow({ token }: { token: string }) {
                data-testid="verify-email-status-success">
               ✓ Email 驗證成功！
             </p>
-            <Link to="/login?verified=1" style={{ display: 'inline-block', marginTop: 20, padding: '10px 18px', borderRadius: 'var(--radius-full)', background: 'var(--color-accent)', color: '#fff', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
+            <Link to="/login?verified=1" style={{ display: 'inline-block', marginTop: 20, padding: '10px 18px', borderRadius: 'var(--radius-full)', background: 'var(--color-accent-fill)', color: 'var(--color-accent-foreground)', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
               前往登入
             </Link>
           </>
@@ -163,8 +163,8 @@ function VerifyEmailFlow({ token }: { token: string }) {
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
                     fontWeight: 700,
                     textDecoration: 'none',
                     fontSize: 14,
@@ -180,8 +180,8 @@ function VerifyEmailFlow({ token }: { token: string }) {
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
                     fontWeight: 700,
                     textDecoration: 'none',
                     fontSize: 14,
@@ -198,8 +198,8 @@ function VerifyEmailFlow({ token }: { token: string }) {
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
                     border: 'none',
                     fontWeight: 700,
                     fontSize: 14,
