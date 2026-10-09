@@ -53,7 +53,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { usePoiSearch } from '../hooks/usePoiSearch';
-import { useTripMeta, useTripDays } from '../hooks/useTripRead';
+import { useTripDestinations, useTripDays } from '../hooks/useTripRead';
 import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSelection } from '../hooks/usePoiSelection';
 import { regionToApiParam } from '../lib/maps/region';
@@ -601,9 +601,6 @@ const SCOPED_STYLES = `
 }
 `;
 
-// 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。
-const NO_DESTINATIONS: TripDestApiLite[] = [];
-
 export default function AddStopPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
@@ -701,10 +698,7 @@ export default function AddStopPage() {
   // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
   // initialCenter，等切到 custom tab 才 fetch 就太晚。
   // 失敗退回 []（fallback chain 走 Tokyo 最後一道安全網）；載入中為 null。
-  const tripMetaRead = useTripMeta<{ destinations?: TripDestApiLite[] }>(tripId, !!auth.user);
-  const customDestinations: TripDestApiLite[] | null =
-    tripMetaRead.status === 'ready' ? (tripMetaRead.data?.destinations ?? NO_DESTINATIONS)
-      : tripMetaRead.status === 'error' ? NO_DESTINATIONS : null;
+  const customDestinations = useTripDestinations<TripDestApiLite>(tripId, !!auth.user);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 

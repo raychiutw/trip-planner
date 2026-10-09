@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { useTripMeta, useTripDays } from '../hooks/useTripRead';
+import { useTripMeta, useTripDays, NO_DESTINATIONS } from '../hooks/useTripRead';
 import { apiFetchRaw } from '../lib/apiClient';
 import { createEntry } from '../lib/entryMutations';
 import { formatDateLabel } from '../lib/mapDay';
@@ -317,9 +317,6 @@ const SCOPED_STYLES = `
     line-height: 1.4;
   }
 `;
-
-// 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。
-const NO_DESTINATIONS: TripDestApi[] = [];
 
 export default function AddCustomStopPage() {
   const auth = useRequireAuth();

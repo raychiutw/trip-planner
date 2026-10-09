@@ -12,7 +12,7 @@ import { join } from 'node:path';
 const apiFetch = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({ apiFetch: (...a: unknown[]) => apiFetch(...a) }));
 
-import { useTripMeta, useTripDays } from '../../src/hooks/useTripRead';
+import { useTripMeta, useTripDays, useTripDestinations, NO_DESTINATIONS } from '../../src/hooks/useTripRead';
 
 beforeEach(() => { apiFetch.mockReset(); });
 
@@ -86,6 +86,30 @@ describe('useTripDays', () => {
     const { result } = renderHook(() => useTripDays('t'));
     await waitFor(() => expect(result.current.status).toBe('error'));
     expect(result.current.data).toBeNull();
+  });
+});
+
+describe('useTripDestinations（地圖預設中心的 null／[]／清單三態）', () => {
+  it('載入中 null；成功回清單；回應沒有 destinations 回穩定的空陣列', async () => {
+    apiFetch.mockResolvedValue({ destinations: [{ name: 'Naha' }] });
+    const { result } = renderHook(() => useTripDestinations('t'));
+    expect(result.current).toBeNull();
+    await waitFor(() => expect(result.current).toEqual([{ name: 'Naha' }]));
+    apiFetch.mockResolvedValue({});
+    const { result: r2 } = renderHook(() => useTripDestinations('u'));
+    await waitFor(() => expect(r2.current).toBe(NO_DESTINATIONS));
+  });
+
+  it('讀取失敗 → 穩定的空陣列（不是 null：null 會讓 picker 永遠卡在載入中）', async () => {
+    apiFetch.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useTripDestinations('t'));
+    await waitFor(() => expect(result.current).toBe(NO_DESTINATIONS));
+  });
+
+  it('enabled=false → 一直是 null、不發請求', () => {
+    const { result } = renderHook(() => useTripDestinations('t', false));
+    expect(result.current).toBeNull();
+    expect(apiFetch).not.toHaveBeenCalled();
   });
 });
 

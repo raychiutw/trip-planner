@@ -17,7 +17,7 @@ import Icon from '../components/shared/Icon';
 import { showToast } from '../components/shared/Toast';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { usePoiSearch } from '../hooks/usePoiSearch';
-import { useTripMeta } from '../hooks/useTripRead';
+import { useTripDestinations } from '../hooks/useTripRead';
 import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSelection } from '../hooks/usePoiSelection';
 import { apiFetch } from '../lib/apiClient';
@@ -547,9 +547,6 @@ function reportTravelResult(recompute: Promise<boolean>) {
 // cast-only 無 type 檢查；現在用 shared 嚴格版（同 AddStop pre-extract 行為）。
 
 
-// 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。
-const NO_DESTINATIONS: TripDestApiLite[] = [];
-
 export default function ChangePoiPage() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
@@ -694,10 +691,7 @@ export default function ChangePoiPage() {
   // v2.32.1 fix: 從 tab-gated 改 mount-gated — user 可能直接 ?tab=custom 進來，
   // 等切到 custom 才 fetch 已晚 (LocationPickerMap 一 mount 就鎖 initialCenter)。
   // 失敗退回 []（customInitialCenter 的最後一道安全網是 Tokyo），避免 null 永遠卡 render。
-  const tripMetaRead = useTripMeta<{ destinations?: TripDestApiLite[] }>(tripId);
-  const customDestinations: TripDestApiLite[] | null =
-    tripMetaRead.status === 'ready' ? (tripMetaRead.data?.destinations ?? NO_DESTINATIONS)
-      : tripMetaRead.status === 'error' ? NO_DESTINATIONS : null;
+  const customDestinations = useTripDestinations<TripDestApiLite>(tripId);
 
   const customInitialCenter = useMemo<PickerCoord>(() => {
     return selectDefaultCenter({
