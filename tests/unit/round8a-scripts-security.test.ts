@@ -87,18 +87,7 @@ describe('v2.33.49 round 8a — get-tripline-token.js shared parser', () => {
   });
 });
 
-describe('v2.33.49 round 8a — _lib/cron-shared.ts quote-strip', () => {
-  it('支援 double + single quote strip', () => {
-    // 用 substring contain 更穩
-    expect(CRON_SHARED_SRC).toContain("val.startsWith('\"')");
-    expect(CRON_SHARED_SRC).toContain("val.startsWith(\"'\")");
-    expect(CRON_SHARED_SRC).toContain('val.slice(1, -1)');
-  });
-
-  it('key 過濾 shell-safe regex', () => {
-    expect(CRON_SHARED_SRC).toContain('[A-Za-z_][A-Za-z0-9_]*');
-  });
-});
+// cron-shared 的 .env 解析已改走 lib/load-env.js 的 parseEnv；去引號／驗 key 的行為見 env-local-parse.test.ts。
 
 describe('token 端點 null-safe parse（2026-07-13 prod null-body 事故）', () => {
   // 2026-07-12 prod /api/oauth/token 短暫回「非-2xx + 字面 `null` body」。舊

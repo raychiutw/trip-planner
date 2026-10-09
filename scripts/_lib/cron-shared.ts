@@ -11,6 +11,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import envLoader from '../lib/load-env.js';
 
 export interface CronEnv {
   apiUrl: string;
@@ -22,33 +23,15 @@ const DEFAULT_API = 'https://trip-planner-dby.pages.dev';
 const REFRESH_LEADTIME_SEC = 60;
 
 /** Load TRIPLINE_API_URL + TRIPLINE_API_CLIENT_ID/SECRET from env then .env.local fallback.
- * v2.33.49 round 8a: align quote-strip with `lib/load-env.js` (handle both
- * single and double quotes; previously only `"` → silent value-corruption if
- * any secret is wrapped in single quotes). 同時驗 key 不含 shell metacharacter
- * (defense in depth — .env.local 是 source of truth)。
+ * 解析交給 `lib/load-env.js` 的 parseEnv（去引號、驗 key、支援多行值）。
  */
 export function loadCronEnv(): CronEnv {
   const envPath = join(process.cwd(), '.env.local');
   const raw = (() => {
     try { return readFileSync(envPath, 'utf-8'); } catch { return ''; }
   })();
-  const map = new Map<string, string>();
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const idx = trimmed.indexOf('=');
-    if (idx < 0) continue;
-    const key = trimmed.slice(0, idx).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
-    let val = trimmed.slice(idx + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    map.set(key, val);
-  }
+  // 全 repo 唯一的 .env.local parser（scripts/lib/load-env.js）：支援跨多行值、去引號、驗 key。
+  const map = new Map<string, string>(Object.entries(envLoader.parseEnv(raw)));
   // TRIPLINE_API_BASE = CF Pages deployment (admin endpoints + new v2.23 endpoints).
   // TRIPLINE_API_URL = mac mini Tailscale funnel (legacy /api routes only) — DO NOT USE.
   const apiUrl = (
