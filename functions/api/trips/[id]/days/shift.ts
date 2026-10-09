@@ -12,7 +12,7 @@
  *
  * Returns: { ok: true, newStartDate, newEndDate, daysShifted }
  */
-import { hasWritePermission, requireAuth} from '../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../_auth';
 import { logAudit } from '../../../_audit';
 import { AppError } from '../../../_errors';
 import { json } from '../../../_utils';
@@ -28,9 +28,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!(await hasWritePermission(db, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, tripId);
 
   const trip = await db.prepare('SELECT id FROM trips WHERE id = ?').bind(tripId).first();
   if (!trip) throw new AppError('DATA_NOT_FOUND', '找不到該行程');

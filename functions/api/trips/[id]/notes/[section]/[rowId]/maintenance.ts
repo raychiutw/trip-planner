@@ -1,4 +1,4 @@
-import { hasWritePermission, requireAuth } from '../../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../../_auth';
 import { computeDiff, logAudit } from '../../../../../_audit';
 import { AppError } from '../../../../../_errors';
 import { json, parseIntParam, parseJsonBody } from '../../../../../_utils';
@@ -17,9 +17,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const rowId = parseIntParam(context.params.rowId as string);
   const table = TABLES[section];
   if (!table || !rowId) throw new AppError('DATA_VALIDATION');
-  if (!(await hasWritePermission(context.env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(context.env.DB, auth, tripId);
 
   const body = await parseJsonBody<{ managedBy?: string; expectedVersion?: number }>(context.request);
   if (body.managedBy !== 'ai' && body.managedBy !== 'human') {
