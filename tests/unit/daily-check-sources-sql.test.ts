@@ -22,7 +22,13 @@ beforeAll(async () => {
   db = await createTestDb();
   await db.prepare(`INSERT OR IGNORE INTO users (id, email, display_name, status) VALUES ('u-dc', 'dc@example.com', 'dc', 'active')`).run();
 });
-afterAll(async () => { await disposeMiniflare(); });
+afterAll(async () => {
+  // 共用 Miniflare DB：不留資料給同一個 worker 內的其他測試檔
+  await db.prepare('DELETE FROM audit_log').run();
+  await db.prepare(`DELETE FROM trips WHERE id = 't-hyg'`).run();
+  await db.prepare(`DELETE FROM users WHERE id = 'u-dc'`).run();
+  await disposeMiniflare();
+});
 
 describe('auditAnomaly（真實 schema）', () => {
   beforeEach(async () => { await db.prepare('DELETE FROM audit_log').run(); });
@@ -63,6 +69,19 @@ describe('auditAnomaly（真實 schema）', () => {
   it('trips／users 表的 delete 超過 10 → critical（優先於 warning）', async () => {
     await addAudit(11, { table: 'trips', action: 'delete', trip: 't-del' });
     expect((await sources().auditAnomaly.run()).status).toBe('critical');
+  });
+
+  it('users 表的 delete 超過 10 也是 critical；剛好 10 不算', async () => {
+    await addAudit(10, { table: 'users', action: 'delete', trip: 'system' });
+    expect((await sources().auditAnomaly.run()).status).toBe('ok');
+    await addAudit(1, { table: 'users', action: 'delete', trip: 'system' });
+    expect((await sources().auditAnomaly.run()).status).toBe('critical');
+  });
+
+  it('heavyTrips 最多回 10 筆（LIMIT 10，避免報告爆量）', async () => {
+    for (let i = 0; i < 12; i++) await addAudit(101, { trip: `t-lim-${i}`, userId: null });
+    const r = await sources().auditAnomaly.run();
+    expect(r.heavyTrips).toHaveLength(10);
   });
 
   it('其他表的 delete 不觸發 critical；超過 24 小時的紀錄不計入', async () => {
