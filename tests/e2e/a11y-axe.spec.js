@@ -427,7 +427,7 @@ const ALL_PAGES_ANON = [
   '/auth/verify-email', '/auth/verify-email?token=abc',
   '/oauth/consent?client_id=demo&scope=openid&redirect_uri=https://example.com/cb&state=x&response_type=code',
 ];
-/** 已知且經 owner 核准的例外。{ path 前綴, rule, target 片段, reason } */
+/** 已知且經 owner 核准的例外。{ rule, target 片段, reason }：以 rule 與 target 比對，reason 必填（給人看的理由）。 */
 const EXCEPTIONS = [
   // 目前沒有例外。新增時每筆都要有 reason，並由 owner 核准。
 ];
@@ -461,6 +461,14 @@ for (const scheme of ['light', 'dark']) {
         status: 200, contentType: 'application/json',
         body: JSON.stringify({ polyline: [], duration: null, distance: 0, approx: true }),
       }));
+      // mock 預設的收藏沒有評分，`.poi-rating`（曾是 --color-accent 當文字，3.2:1）就不會出現在畫面上；
+      // 真實資料才會。只在這支掃描內覆寫（共用 mock 不動，避免影響其他 e2e 的收藏數量斷言）。
+      await page.route(/\/api\/poi-favorites$/, (r) => (r.request().method() === 'GET'
+        ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { id: 901, poiId: 9001, poiName: '沖繩美麗海水族館', poiAddress: '沖繩縣國頭郡本部町石川424', poiType: 'attraction', poiRating: 4.5, poiLat: 26.69, poiLng: 127.88, note: null, favoritedAt: '2026-07-01 00:00:00', usages: [] },
+          { id: 902, poiId: 9002, poiName: '國際通拉麵', poiAddress: '沖繩縣那霸市牧志', poiType: 'restaurant', poiRating: 4.3, poiLat: 26.21, poiLng: 127.68, note: null, favoritedAt: '2026-07-02 00:00:00', usages: [] },
+        ]) })
+        : r.fallback()));
       await page.route(/\/api\/oauth\/client-info/, (r) => r.fulfill({
         status: 200, contentType: 'application/json',
         body: JSON.stringify({ app_name: '示範應用程式', app_description: '測試用', app_logo_url: null, homepage_url: null }),
@@ -473,11 +481,12 @@ for (const scheme of ['light', 'dark']) {
       let canaryChecked = false;
       const jobs = [...ALL_PAGES_AUTHED.map((p) => ({ p, anon: false })), ...ALL_PAGES_ANON.map((p) => ({ p, anon: true }))];
       for (const { p, anon } of jobs) {
+        // 順序是「登入後頁面在前、匿名頁面在後」，所以不需要在迴圈裡重新 setupApiMocks —— 重新註冊會排在
+        // 上面的覆寫（收藏資料）之後，而 Playwright 是後註冊的 route 優先，覆寫就被蓋掉、評分從沒出現
+        // （mutation 沒轉紅才發現）。匿名頁面則清掉「上次已登入」提示並讓 userinfo 回 401。
         if (anon) {
           await page.route(/\/api\/oauth\/userinfo$/, (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
-        } else {
-          await page.unroute(/\/api\/oauth\/userinfo$/);
-          await setupApiMocks(page);
+          await page.addInitScript(() => { try { localStorage.clear(); } catch { /* ignore */ } });
         }
         await page.goto(p);
         await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
@@ -519,3 +528,22 @@ for (const scheme of ['light', 'dark']) {
     });
   }
 }
+
+// 深色第三欄 sheet 的局部提亮（#1423）不得蓋掉「提高對比」的加強階（code review 抓到的回歸）：
+// sheet 元素上的局部宣告離子孫更近，會把 body.dark 的 --color-destructive: #FFB9AB 蓋回 #FF806A。
+test('a11y: 深色 sheet 內 destructive — 一般取局部提亮值、提高對比時取加強階', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', '用到 CDP，只在 chromium 專案跑');
+  await setupApiMocks(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const read = () => page.evaluate(() => {
+    const el = document.querySelector('.app-shell-sheet');
+    return el ? getComputedStyle(el).getPropertyValue('--color-destructive').trim().toLowerCase() : null;
+  });
+  await page.goto(`/trip/${ALL_TRIP}/edit`);
+  await expect(page.locator('.app-shell-sheet')).toBeVisible();
+  expect(await read(), '一般深色：sheet 內 destructive 應為局部提亮值').toBe('#ff806a');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-contrast', value: 'more' }] });
+  expect(await read(), '提高對比：應取加強階 #FFB9AB，不可被 sheet 的局部覆寫蓋回').toBe('#ffb9ab');
+});

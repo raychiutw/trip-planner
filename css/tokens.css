@@ -2157,6 +2157,18 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
 
+/* 第三欄 sheet（.app-shell-sheet，背景 = --color-tertiary，owner 刻意的「再高一階」表面）。
+ * #1423：深色下 --color-muted(#A1A1A6) 疊 tertiary 只有 4.41、--color-destructive(#FF6B52) 4.04，
+ * 差一點到 AA 4.5。只在**這個表面內**局部提亮，不動全站 token（muted 疊 background／secondary
+ * 已過，全站調亮只會改到不需要改的地方）。sheet 內所有 muted／destructive 文字自動繼承。 */
+body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806A; }
+/* 「提高對比」時 destructive 已有更高的加強階（#FFB9AB，上方 prefers-contrast 區塊）。上面那條
+ * 局部覆寫離子孫更近，會把它蓋回 #FF806A —— 使用者要求提高對比時反而降低對比（code review 抓到）。
+ * 必須排在上一條之後、同特異性，所以放在它正下方。 */
+@media (prefers-contrast: more) {
+  body.dark .app-shell-sheet { --color-destructive: #FFB9AB; }
+}
+
 /* 不支援 backdrop-filter 的瀏覽器：低 alpha tint 沒有模糊撐著會糊成一片。 */
 @supports not (backdrop-filter: blur(1px)) {
   body { --tabbar-tint: var(--color-background); }

@@ -14,8 +14,8 @@
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
 
-// 只在 chromium 專案跑：用到 CDP（Emulation.setEmulatedMedia）／以固定 viewport 自行量版面；
-// master CI 的 mobile-chrome／mobile-safari 矩陣不該為這些測試製造噪音（PR 只跑 chromium）。
+// 只在 chromium 專案跑：以固定 viewport 自行量版面；master CI 的 mobile-chrome／mobile-safari
+// 矩陣不該為這些測試製造噪音（PR 只跑 chromium）。
 test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑'); });
 
 const TRIP = 'okinawa-trip-2026-Ray';
@@ -59,6 +59,20 @@ test('手機地圖頁：長行程名稱以省略號截斷，下拉箭頭仍可�
   expect(m.overflow, '標題框內容溢出被硬切（沒有省略號）').toBeLessThanOrEqual(1);
   expect(m.chevronInside, '下拉箭頭被切到標題框外了 — 使用者看不出可以切換').toBe(true);
   expect(m.truncated, '超長標題應該被截斷').toBe(true);
+  expect(m.textOverflow).toBe('ellipsis');
+});
+
+test('手機行程頁：長行程名稱同樣以省略號截斷、下拉箭頭可見（標題框較窄，旁邊還有操作鈕）', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/trip/${TRIP}`);
+  const text = page.locator('.tp-titlebar-trip-title-text');
+  await expect(text, '切換器（≥2 筆行程）應出現').toBeVisible();
+  await text.evaluate((el, t) => { el.textContent = t; }, LONG);
+  const m = await measureTitle(page);
+  expect(m, '找不到標題框／切換器／箭頭').not.toBeNull();
+  expect(m.overflow, '標題框內容溢出被硬切（沒有省略號）').toBeLessThanOrEqual(1);
+  expect(m.chevronInside, '下拉箭頭被切到標題框外了').toBe(true);
+  expect(m.truncated).toBe(true);
   expect(m.textOverflow).toBe('ellipsis');
 });
 

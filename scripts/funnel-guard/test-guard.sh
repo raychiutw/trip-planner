@@ -320,6 +320,18 @@ done
 _rc=$(_run_main Running)
 if grep -q '^serve reset' "$_fake/calls" && grep -q '^funnel ' "$_fake/calls"; then ok "Running + drift 仍自動 heal（既有保護沒被削弱）"; else bad "Running + drift 沒有 heal — 短路過寬"; fi
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Running 被誤報成 needs_login"; else ok "Running 不發 needs_login"; fi
+# kill-switch 優先於一切判斷：incident response 時 touch .disabled 暫停 guard，登出時也不該發告警
+: > "$_fake/kill"
+_run_main_kill() { : > "$_fake/calls"; : > "$_fake/alerts"
+  ( TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/kill"; export FAKE_CALLS="$_fake/calls" FAKE_STATE="NeedsLogin"
+    throttled_alert() { echo "$2|$3" >> "$_fake/alerts"; }; sleep() { :; }; is_funnel_healthy() { return 1; }
+    main >/dev/null 2>&1 ); echo $?; }
+_rc=$(_run_main_kill)
+if [ "$_rc" = 0 ] && [ ! -s "$_fake/alerts" ] && ! grep -q -E '^(serve reset|funnel)' "$_fake/calls"; then
+  ok "kill-switch 存在時，NeedsLogin 也不 heal、不告警、exit 0"
+else
+  bad "kill-switch 沒有優先於 needs_login（rc=$_rc）"
+fi
 # 暫態：Starting 不是需要人工的狀態
 _rc=$(_run_main Starting)
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Starting（暫態）被誤報成 needs_login"; else ok "Starting 不誤報 needs_login"; fi

@@ -55,11 +55,8 @@ export const APP_SHELL_STYLES = `
 .app-shell-sheet {
   background: var(--color-tertiary);
 }
-/* #1423：深色下 --color-muted(#A1A1A6) 疊 tertiary 只有 4.41、--color-destructive(#FF6B52) 4.04，
- * 差一點到 AA 4.5。tertiary 是這個第三欄 sheet 刻意的「再高一階」表面（上方註解），所以在
- * **這個表面內**局部提亮，不動全站 token（muted 疊 background／secondary 已過，全站調亮
- * 只會改到不需要改的地方）。sheet 內所有 muted／destructive 文字自動繼承。 */
-body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806A; }
+/* 深色下 sheet（tertiary）內的 muted／destructive 文字局部提亮：定義在 css/tokens.css
+ * 的 body.dark .app-shell-sheet 規則（#1423；色值一律以 tokens.css 為準）。
 
 /* Pull-to-refresh visual indicator. iOS Safari 對 inner scroll container 沒 native
  * pull-to-refresh，自己 implement。indicator 在 main 頂端，translate by pullPx。 */

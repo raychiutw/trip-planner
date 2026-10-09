@@ -25,11 +25,22 @@ const { setupApiMocks } = require('./api-mocks');
 test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑'); });
 
 const TRIP = 'okinawa-trip-2026-Ray';
-// 每頁都有已知的玻璃面（桌機 sidebar／titlebar、手機底部 nav、stack 標頭、聊天輸入列…）。
+// 登入後的頁面：每頁都有已知的玻璃面（桌機 sidebar／titlebar、手機底部 nav、stack 標頭、聊天輸入列…）。
 const PAGES = [
-  '/trips', '/chat', '/explore', '/favorites', '/account', '/privacy',
-  `/trip/${TRIP}/map?day=all`, `/trip/${TRIP}/add-entry`, `/trip/${TRIP}/edit`, `/trip/${TRIP}/collab`,
+  '/trips', '/chat', '/explore', '/favorites', '/privacy',
+  '/account', '/account/appearance', '/account/notifications', '/account/sessions', '/account/connected-apps',
+  `/trip/${TRIP}/map?day=all`, `/trip/${TRIP}/add-entry`, `/trip/${TRIP}/add-stop`, `/trip/${TRIP}/edit`,
+  `/trip/${TRIP}/collab`, `/trip/${TRIP}/health`, `/trip/${TRIP}/notes`,
+  `/trip/${TRIP}/stop/101/edit`, `/trip/${TRIP}/stop/101/copy`, `/trip/${TRIP}/stop/101/move`, `/trip/${TRIP}/stop/101/change-poi`,
+].map((p) => ({ p, anon: false, expectGlass: true }));
+// 匿名頁面（userinfo 回 401）：落地頁的頂列是玻璃面（LandingPage），過去只有原始碼證據、沒有執行期驗證；
+// 登入／註冊沒有玻璃面，但仍要掃，確保日後新增時也被涵蓋。
+const ANON_PAGES = [
+  { p: '/', anon: true, expectGlass: true },
+  { p: '/login', anon: true, expectGlass: false },
+  { p: '/signup', anon: true, expectGlass: false },
 ];
+const ALL_PAGES = [...PAGES, ...ANON_PAGES];
 const VIEWPORTS = [[390, 844], [1440, 900]];
 const PREFS = [
   { name: 'reduced-transparency', features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] },
@@ -64,7 +75,13 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-async function open(page, path) {
+async function open(page, path, anon = false) {
+  if (anon) {
+    await page.route(/\/api\/oauth\/userinfo$/, (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
+    // LandingPage 用 localStorage 裡的「上次已登入」提示做樂觀轉址（先逛過登入後頁面就直接轉去 /trips、
+    // 根本不渲染落地頁）。匿名頁面要先清掉，否則 `/` 的玻璃頂列從沒被驗到——一般模式的對照案例就是抓到這個。
+    await page.addInitScript(() => { try { localStorage.clear(); } catch { /* ignore */ } });
+  }
   await page.goto(path);
   await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
   await page.waitForTimeout(600);
@@ -88,11 +105,13 @@ test('自我檢查：掃描函式抓得到植入的玻璃元素', async ({ page 
 for (const scheme of ['light', 'dark']) {
   for (const [w, h] of VIEWPORTS) {
     test(`一般模式有玻璃面（對照，防掃描恆綠）— ${scheme} ${w}px`, async ({ page }) => {
+      test.setTimeout(180000);
       await page.setViewportSize({ width: w, height: h });
       await page.emulateMedia({ colorScheme: scheme });
-      for (const path of PAGES) {
-        await open(page, path);
+      for (const { p: path, anon, expectGlass } of ALL_PAGES) {
+        await open(page, path, anon);
         await expect(page.locator('body')).toHaveClass(scheme === 'dark' ? /dark/ : /^(?!.*dark)/);
+        if (!expectGlass) continue;
         const glass = (await glassElements(page)).filter((g) => g.alpha < 1);
         expect(glass.length, `${path} 一般模式找不到任何玻璃面 — 掃描可能壞了`).toBeGreaterThan(0);
       }
@@ -100,14 +119,14 @@ for (const scheme of ['light', 'dark']) {
 
     for (const pref of PREFS) {
       test(`${pref.name}：沒有半透明的玻璃面 — ${scheme} ${w}px`, async ({ page }) => {
-        test.setTimeout(90000);
+        test.setTimeout(180000);
         await page.setViewportSize({ width: w, height: h });
         await page.emulateMedia({ colorScheme: scheme });
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Emulation.setEmulatedMedia', { features: pref.features });
         const offenders = [];
-        for (const path of PAGES) {
-          await open(page, path);
+        for (const { p: path, anon } of ALL_PAGES) {
+          await open(page, path, anon);
           for (const g of (await glassElements(page)).filter((x) => x.alpha < 1)) {
             offenders.push(`${path} | ${g.el} | ${g.bf} | alpha=${g.alpha}`);
           }

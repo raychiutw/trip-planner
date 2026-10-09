@@ -26,11 +26,12 @@ const CASES: Array<[string, string, string]> = [
   ['src/pages/PoiFavoritesPage.tsx', '.favorites-chip-count', '收藏分類計數（單字元）'],
   ['src/pages/AddEntryPage.tsx', '.tp-add-entry-section', '新增景點的預覽區塊'],
   ['src/pages/LoginPage.tsx', '.tp-bs-footnote', '登入 hero 頁尾（0.6 時只有 3.7）'],
+  ['src/components/auth/AuthBrandHero.tsx', '.tp-bs-footnote', '註冊／忘記密碼 hero 頁尾（與 LoginPage 同形的另一份）'],
 ];
 
 describe('次要文字不用 opacity 稀釋對比', () => {
   for (const [file, sel, label] of CASES) {
-    it(`${label}（${sel}）opacity 不得低於 0.8 且不得用在文字容器上稀釋 muted`, () => {
+    it(`${label}（${sel}）次要文字不得用 opacity 稀釋對比（hero 頁尾下限 0.8）`, () => {
       const decl = stripComments(rule(read(file), sel));
       const m = decl.match(/opacity:\s*([\d.]+)/);
       // 允許 .tp-bs-footnote 這種 hero 頁尾保留 0.8（已實測 ≥ 4.9）；其餘一律不准出現 opacity。
