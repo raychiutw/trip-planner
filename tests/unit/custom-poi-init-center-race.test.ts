@@ -31,7 +31,8 @@ const ADD_CUSTOM_STOP_SRC = readFileSync(
 
 describe('ChangePoiPage — destinations init null + render gate', () => {
   it('customDestinations 初值為 null（非 []）', () => {
-    expect(CHANGE_POI_SRC).toMatch(/useState<TripDestApiLite\[\]\s*\|\s*null>\(null\)/);
+    // 載入中由 useTripMeta 的 status 推得 null（讀取行為見 use-trip-read.test.tsx）；ready/error 才非 null。
+    expect(CHANGE_POI_SRC).toMatch(/customDestinations: TripDestApiLite\[\] \| null =[\s\S]{0,260}: null;/);
   });
 
   it('fetch effect 改 mount-gated（不再 tab !== custom return）', () => {
@@ -39,9 +40,7 @@ describe('ChangePoiPage — destinations init null + render gate', () => {
   });
 
   it('fetch catch fallback 標 [] 避免永遠卡 null', () => {
-    const idx = CHANGE_POI_SRC.indexOf('customDestinations');
-    const ctx = CHANGE_POI_SRC.slice(0, idx + 5000);
-    expect(ctx).toMatch(/setCustomDestinations\(\[\]\)/);
+    expect(CHANGE_POI_SRC).toMatch(/status === 'error' \? NO_DESTINATIONS : null/);
   });
 
   it('<CustomPoiForm> render 等 customDestinations !== null', () => {
@@ -55,7 +54,7 @@ describe('ChangePoiPage — destinations init null + render gate', () => {
 
 describe('AddStopPage — destinations init null + render gate', () => {
   it('customDestinations 初值為 null', () => {
-    expect(ADD_STOP_SRC).toMatch(/useState<TripDestApiLite\[\]\s*\|\s*null>\(null\)/);
+    expect(ADD_STOP_SRC).toMatch(/customDestinations: TripDestApiLite\[\] \| null =[\s\S]{0,260}status === 'error' \? NO_DESTINATIONS : null;/);
   });
 
   it('fetch effect 改 mount-gated', () => {
@@ -73,7 +72,7 @@ describe('AddStopPage — destinations init null + render gate', () => {
 
 describe('AddCustomStopPage — destinations init null + render gate', () => {
   it('destinations 初值為 null', () => {
-    expect(ADD_CUSTOM_STOP_SRC).toMatch(/useState<TripDestApi\[\]\s*\|\s*null>\(null\)/);
+    expect(ADD_CUSTOM_STOP_SRC).toMatch(/const destinations: TripDestApi\[\] \| null = bothReady[\s\S]{0,260}: null;/);
   });
 
   it('LocationPickerMap render 等 destinations !== null', () => {
