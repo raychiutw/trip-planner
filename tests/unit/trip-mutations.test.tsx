@@ -12,7 +12,7 @@ import { join } from 'node:path';
 const apiFetchRaw = vi.fn();
 vi.mock('../../src/lib/apiClient', () => ({ apiFetchRaw: (...a: unknown[]) => apiFetchRaw(...a) }));
 
-import { archiveTrip, deleteTrip, deleteDay } from '../../src/lib/tripMutations';
+import { archiveTrip, unarchiveTrip, deleteTrip, deleteDay } from '../../src/lib/tripMutations';
 import { EVENT } from '../../src/lib/events';
 
 let events: Array<{ tripId?: string }> = [];
@@ -30,24 +30,24 @@ const res = (status: number, body?: unknown) => ({
 describe('archiveTrip', () => {
   it('歸檔 = PUT，取消歸檔 = DELETE；成功 emit tripUpdated', async () => {
     apiFetchRaw.mockResolvedValue(res(200, {}));
-    expect(await archiveTrip('t 1', false)).toEqual({ ok: true, data: undefined });
+    expect(await archiveTrip('t 1')).toEqual({ ok: true, data: undefined });
     expect(apiFetchRaw).toHaveBeenLastCalledWith('/trips/t%201/archive', { method: 'PUT' });
-    await archiveTrip('t 1', true);
+    await unarchiveTrip('t 1');
     expect(apiFetchRaw).toHaveBeenLastCalledWith('/trips/t%201/archive', { method: 'DELETE' });
     expect(events).toEqual([{ tripId: 't 1' }, { tripId: 't 1' }]);
   });
 
   it('403 → 只有擁有者能變更；其他失敗 → 通用訊息；失敗不 emit', async () => {
     apiFetchRaw.mockResolvedValueOnce(res(403, {}));
-    expect(await archiveTrip('t', false)).toMatchObject({ ok: false, status: 403, message: '只有行程擁有者能變更歸檔狀態。' });
+    expect(await archiveTrip('t')).toMatchObject({ ok: false, status: 403, message: '只有行程擁有者能變更歸檔狀態。' });
     apiFetchRaw.mockResolvedValueOnce(res(500, {}));
-    expect(await archiveTrip('t', false)).toMatchObject({ ok: false, status: 500, message: '更新歸檔狀態失敗，請再試一次。' });
+    expect(await archiveTrip('t')).toMatchObject({ ok: false, status: 500, message: '更新歸檔狀態失敗，請再試一次。' });
     expect(events).toEqual([]);
   });
 
   it('網路例外 → ok:false status 0，不丟錯、不 emit', async () => {
     apiFetchRaw.mockRejectedValue(new Error('offline'));
-    expect(await archiveTrip('t', false)).toMatchObject({ ok: false, status: 0 });
+    expect(await archiveTrip('t')).toMatchObject({ ok: false, status: 0 });
     expect(events).toEqual([]);
   });
 });
@@ -104,10 +104,10 @@ describe('結構：行程層級的 endpoint 只有 tripMutations 會打', () => 
     }
     return out;
   }
-  it('src/ 內其他檔案不得直接呼叫 /archive 或刪除行程／天數的 endpoint', () => {
+  it('src/ 內其他檔案不得直接呼叫 /archive 或刪除行程／天數的 endpoint（含 DELETE /trips/:id）', () => {
     const offenders = walk(join(ROOT, 'src'))
       .filter((p) => !p.endsWith('src/lib/tripMutations.ts'))
-      .filter((p) => /\/trips\/\$\{[^}]*\}\/archive|\/trips\/\$\{[^}]*\}\/days\/\$\{[^}]*\}`,\s*\{\s*method: 'DELETE'/.test(readFileSync(p, 'utf8')))
+      .filter((p) => /\/trips\/\$\{[^}]*\}\/archive|\/trips\/\$\{[^}]*\}(?:\/days\/\$\{[^}]*\})?`,\s*\{\s*method: 'DELETE'/.test(readFileSync(p, 'utf8')))
       .map((p) => p.slice(ROOT.length + 1));
     expect(offenders).toEqual([]);
   });

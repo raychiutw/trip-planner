@@ -21,7 +21,7 @@ function emitTripUpdated(tripId: string): void {
   window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
 }
 
-/** 送出請求；非 2xx 用 messageFor(status, 解析後的 body) 組訊息；網路例外 → status 0。 */
+/** 送出請求；非 2xx 用 messageFor(status, 原始 body 文字) 組訊息；網路例外 → status 0。 */
 async function call<T>(
   tripId: string,
   path: string,
@@ -46,11 +46,16 @@ async function call<T>(
 
 const noData = async () => undefined;
 
-/** 歸檔（archived=false → PUT）或取消歸檔（archived=true → DELETE）。 */
-export function archiveTrip(tripId: string, currentlyArchived: boolean): Promise<TripResult> {
-  return call(tripId, `/trips/${enc(tripId)}/archive`, { method: currentlyArchived ? 'DELETE' : 'PUT' },
-    (status) => (status === 403 ? '只有行程擁有者能變更歸檔狀態。' : '更新歸檔狀態失敗，請再試一次。'),
-    noData);
+const archiveMessage = (status: number) => (status === 403 ? '只有行程擁有者能變更歸檔狀態。' : '更新歸檔狀態失敗，請再試一次。');
+
+/** 歸檔（PUT /trips/:id/archive）。 */
+export function archiveTrip(tripId: string): Promise<TripResult> {
+  return call(tripId, `/trips/${enc(tripId)}/archive`, { method: 'PUT' }, archiveMessage, noData);
+}
+
+/** 取消歸檔（DELETE /trips/:id/archive）。 */
+export function unarchiveTrip(tripId: string): Promise<TripResult> {
+  return call(tripId, `/trips/${enc(tripId)}/archive`, { method: 'DELETE' }, archiveMessage, noData);
 }
 
 /** 刪除整個行程。 */

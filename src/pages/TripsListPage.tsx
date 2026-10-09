@@ -28,7 +28,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { readTripView } from '../lib/tripViewState';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
-import { archiveTrip, deleteTrip } from '../lib/tripMutations';
+import { archiveTrip, unarchiveTrip, deleteTrip } from '../lib/tripMutations';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -725,7 +725,7 @@ export default function TripsListPage() {
     const { tripId, archived, label } = archiveTarget;
     setArchiving(true);
     try {
-      const result = await archiveTrip(tripId, archived);
+      const result = archived ? await unarchiveTrip(tripId) : await archiveTrip(tripId);
       if (!result.ok) { showToast(result.message, 'error'); return; }
       setArchiveTarget(null);
       showToast(`已${archived ? '取消歸檔' : '歸檔'}「${label}」`, 'success');
