@@ -23,6 +23,8 @@ const { setupApiMocks } = require('./api-mocks');
 // 只在 chromium 專案跑：用到 CDP（Emulation.setEmulatedMedia）／以固定 viewport 自行量版面；
 // master CI 的 mobile-chrome／mobile-safari 矩陣不該為這些測試製造噪音（PR 只跑 chromium）。
 test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑'); });
+// 各測試彼此獨立，允許 CI 的兩個 worker 分攤（每個測試走 24 頁，單 worker 約 8 分鐘）。
+test.describe.configure({ mode: 'parallel' });
 
 const TRIP = 'okinawa-trip-2026-Ray';
 // 登入後的頁面：每頁都有已知的玻璃面（桌機 sidebar／titlebar、手機底部 nav、stack 標頭、聊天輸入列…）。
@@ -83,8 +85,10 @@ async function open(page, path, anon = false) {
     await page.addInitScript(() => { try { localStorage.clear(); } catch { /* ignore */ } });
   }
   await page.goto(path);
-  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(600);
+  // 匿名頁必須真的停在該路由（沒被「上次已登入」提示或其他轉址帶走），否則玻璃面從沒被驗到。
+  if (anon) expect(new URL(page.url()).pathname, `${path} 被轉址走了`).toBe(path.split('?')[0]);
   // 頁面真的載入了（不是 error boundary／空白頁）才算數。
   await expect(page.locator('body')).not.toContainText('Unexpected Application Error');
   expect((await page.locator('body').innerText()).length, `${path} 空白頁`).toBeGreaterThan(15);
@@ -124,9 +128,20 @@ for (const scheme of ['light', 'dark']) {
         await page.emulateMedia({ colorScheme: scheme });
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Emulation.setEmulatedMedia', { features: pref.features });
+        // 模擬真的生效了——否則失敗訊息會指向玻璃面、而不是模擬沒套用。
+        const feat = pref.features[0];
+        expect(await page.evaluate((f) => matchMedia(`(${f.name}: ${f.value})`).matches, feat), `${feat.name} 模擬沒生效`).toBe(true);
         const offenders = [];
         for (const { p: path, anon } of ALL_PAGES) {
           await open(page, path, anon);
+          if (path === '/explore') {
+            // 探索頁的愛心／加入鈕是圖片上的 scrim：降級時只拿掉模糊不夠，底也要不透明（若畫面上有）。
+            const scrims = await page.evaluate(() => [...document.querySelectorAll('.explore-poi-heart')].map((e) => getComputedStyle(e).backgroundColor));
+            for (const bg of scrims) {
+              const m = bg.match(/[\d.]+/g) || [];
+              if (m.length > 3 && Number(m[3]) < 1) offenders.push(`${path} | .explore-poi-heart | scrim 仍半透明 ${bg}`);
+            }
+          }
           for (const g of (await glassElements(page)).filter((x) => x.alpha < 1)) {
             offenders.push(`${path} | ${g.el} | ${g.bf} | alpha=${g.alpha}`);
           }

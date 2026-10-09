@@ -54,6 +54,7 @@ test('手機地圖頁：長行程名稱以省略號截斷，下拉箭頭仍可�
   const text = page.locator('.tp-titlebar-trip-title-text');
   await expect(text, '切換器（≥2 筆行程）應出現').toBeVisible();
   await text.evaluate((el, t) => { el.textContent = t; }, LONG);
+  await expect(text, '長標題被 React 重繪蓋回去了，量到的不是長標題').toHaveText(LONG);
   const m = await measureTitle(page);
   expect(m, '找不到標題框／切換器／箭頭').not.toBeNull();
   expect(m.overflow, '標題框內容溢出被硬切（沒有省略號）').toBeLessThanOrEqual(1);
@@ -68,6 +69,7 @@ test('手機行程頁：長行程名稱同樣以省略號截斷、下拉箭頭�
   const text = page.locator('.tp-titlebar-trip-title-text');
   await expect(text, '切換器（≥2 筆行程）應出現').toBeVisible();
   await text.evaluate((el, t) => { el.textContent = t; }, LONG);
+  await expect(text, '長標題被 React 重繪蓋回去了，量到的不是長標題').toHaveText(LONG);
   const m = await measureTitle(page);
   expect(m, '找不到標題框／切換器／箭頭').not.toBeNull();
   expect(m.overflow, '標題框內容溢出被硬切（沒有省略號）').toBeLessThanOrEqual(1);

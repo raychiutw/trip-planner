@@ -286,8 +286,13 @@ cat > "$_fake/tailscale" <<'FAKE'
 #!/bin/zsh
 echo "$*" >> "$FAKE_CALLS"
 case "$1 $2" in
-  "status --json") printf '{"BackendState":"%s"}' "$FAKE_STATE" ;;
-  "debug prefs")   printf '{"Hostname":"test-host","RouteAll":true}' ;;
+  "status --json") [ -n "$FAKE_STATUS_FAIL" ] && exit 1; printf '{"BackendState":"%s"}' "$FAKE_STATE" ;;
+  "debug prefs")
+    case "${FAKE_PREFS_MODE:-full}" in
+      full)      printf '{"Hostname":"test-host","RouteAll":true}' ;;
+      emptyjson) printf '{}' ;;
+      fail)      exit 1 ;;
+    esac ;;
 esac
 exit 0
 FAKE
@@ -320,6 +325,25 @@ done
 _rc=$(_run_main Running)
 if grep -q '^serve reset' "$_fake/calls" && grep -q '^funnel ' "$_fake/calls"; then ok "Running + drift 仍自動 heal（既有保護沒被削弱）"; else bad "Running + drift 沒有 heal — 短路過寬"; fi
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Running 被誤報成 needs_login"; else ok "Running 不發 needs_login"; fi
+# tailscale_up_hint 的邊界：prefs 讀不到／沒有旗標時給裸指令，且在真實執行的 set -eo pipefail 下不能讓提示變空
+# （Red Team 抓到：debug prefs 非 0 離開會讓告警變成「請執行 `` 」）。
+# 注意：必須先把輸出存進變數再比對——放在 `[ "$(...)" = ... ] && ok || bad` 這種條件式裡，errexit 會被忽略，
+# 測試就量不到真實執行（set -eo pipefail）下的行為（第一版測試因此 mutation 不紅）。
+# 也必須像 guard.sh 一樣把提示放在**命令引數**裡呼叫：直接呼叫時 errexit 會讓函式整個死掉（輸出為空、
+# 另一種失敗形狀），放在引數裡則是悄悄變空字串並繼續執行——這才是告警文字變成「請執行 `` 」的情境。
+_hint_case() { # $1=FAKE_PREFS_MODE → 印出 errexit 開啟下、放在引數裡的提示
+  ( TAILSCALE="$_fake/tailscale"; export FAKE_CALLS="$_fake/calls" FAKE_PREFS_MODE="$1"; set -eo pipefail; printf '%s' "$(tailscale_up_hint)" ) 2>/dev/null
+}
+_h_full=$(_hint_case full); _h_json=$(_hint_case emptyjson); _h_fail=$(_hint_case fail)
+if [ "$_h_full" = "tailscale up --accept-routes --hostname=test-host" ]; then ok "up 提示：有 prefs 時含 --accept-routes 與 --hostname"; else bad "up 提示（full）不對：'$_h_full'"; fi
+if [ "$_h_json" = "tailscale up" ]; then ok "up 提示：prefs 是 {} 時為裸指令、沒有多餘旗標"; else bad "up 提示（{}）不對：'$_h_json'"; fi
+if [ "$_h_fail" = "tailscale up" ]; then ok "up 提示：debug prefs 失敗（errexit、放在引數裡）仍給裸指令、不是空的"; else bad "up 提示（prefs 失敗）變空或不對：'$_h_fail'"; fi
+# status --json 失敗（不是登出）：不能被誤判成 needs_login，要走既有 heal 路徑
+: > "$_fake/calls"; : > "$_fake/alerts"
+( TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/no-such-kill-switch"; export FAKE_CALLS="$_fake/calls" FAKE_STATE="NeedsLogin" FAKE_STATUS_FAIL=1
+  throttled_alert() { echo "$2|$3" >> "$_fake/alerts"; }; sleep() { :; }; is_funnel_healthy() { return 1; }
+  main >/dev/null 2>&1 )
+if grep -q '^needs_login|' "$_fake/alerts"; then bad "status --json 失敗被誤判成 needs_login"; elif grep -q '^serve reset' "$_fake/calls"; then ok "status --json 失敗 → 走既有 heal 路徑（不誤報登出）"; else bad "status --json 失敗後沒有走 heal 路徑"; fi
 # kill-switch 優先於一切判斷：incident response 時 touch .disabled 暫停 guard，登出時也不該發告警
 : > "$_fake/kill"
 _run_main_kill() { : > "$_fake/calls"; : > "$_fake/alerts"

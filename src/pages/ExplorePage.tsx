@@ -210,7 +210,7 @@ const SCOPED_STYLES = `
   border: 0; border-radius: 50%;
   /* H6 exception: heart icon on permanent rgba(0,0,0) overlay — text must
      stay light in both light/dark mode for contrast against dark backdrop. */
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--glass-reduce-scrim, rgba(0, 0, 0, 0.45));
   color: #ffffff;
   display: grid; place-items: center;
   cursor: pointer;
@@ -220,7 +220,7 @@ const SCOPED_STYLES = `
      邊界消失。加 neutral 陰影讓圓鈕在任何同色系 cover 上都浮起、邊界恆可辨（不靠淺 tone 當前景）。*/
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
-.explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
+.explore-poi-card .explore-poi-heart:hover:not(:disabled) { background: var(--glass-reduce-scrim-hover, rgba(0, 0, 0, 0.65)); transform: scale(1.05); }
 .explore-poi-card .explore-poi-heart.is-saved {
   /* 三色：已收藏愛心 = 第三色粉（收藏/愛心 = 粉）*/
   background: var(--color-accent-3); color: var(--color-accent-foreground);

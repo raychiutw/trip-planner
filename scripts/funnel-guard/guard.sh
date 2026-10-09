@@ -290,7 +290,7 @@ tailscale_needs_login() {
 # 漏掉旗標會被 tailscale 拒絕或改掉原設定。prefs 登出後仍讀得到；讀不到就給裸指令。
 tailscale_up_hint() {
   local prefs flags="" host
-  prefs=$("$TAILSCALE" debug prefs 2>/dev/null)
+  prefs=$("$TAILSCALE" debug prefs 2>/dev/null) || true  # set -e 下失敗不得讓提示變空
   [ "$(printf '%s' "$prefs" | jq -r '.RouteAll // false' 2>/dev/null)" = "true" ] && flags=" --accept-routes"
   host=$(printf '%s' "$prefs" | jq -r '.Hostname // empty' 2>/dev/null)
   [ -n "$host" ] && flags="$flags --hostname=$host"
@@ -307,7 +307,7 @@ main() {
   if tailscale_needs_login; then
     log "Tailscale 需要人工登入 — 跳過 heal（heal 必敗）"
     throttled_alert "funnel-guard" "needs_login" \
-      "🚨 Tripline funnel-guard：Tailscale 已登出（NeedsLogin），自動 heal 無法處理。請在這台機器執行 \`$(tailscale_up_hint)\` 並完成瀏覽器授權；恢復後 guard 會自行重設 funnel" \
+      "🚨 Tripline funnel-guard：Tailscale 已登出（NeedsLogin），自動 heal 無法處理。請在這台機器執行 \`$(tailscale_up_hint)\` 並完成瀏覽器授權（若 tailscale 說還要列出其他旗標，照它的提示補上）；恢復後 guard 會自行重設 funnel" \
       2>&1 | sed "s/^/$LOG_PREFIX  /" || true
     exit 1
   fi

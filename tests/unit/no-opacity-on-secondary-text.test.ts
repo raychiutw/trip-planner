@@ -9,36 +9,37 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cssRule, stripCssComments } from './__helpers__/wcag';
 
 const read = (p: string) => readFileSync(join(__dirname, '../../', p), 'utf8');
-/** 取某條 CSS 規則（單一選擇器）大括號內的宣告；找不到就丟錯，避免選擇器改名後守衛靜默失效。 */
-function rule(src: string, selector: string): string {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = src.match(new RegExp(`(?:^|\\n)\\s*${esc}\\s*\\{([^}]*)\\}`));
-  if (!m) throw new Error(`找不到規則 ${selector} — 選擇器改名了？守衛不可靜默失效`);
-  return m[1];
-}
-const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '');
+const rule = cssRule;
+const stripComments = stripCssComments;
 
-const CASES: Array<[string, string, string]> = [
+// 第四欄 minOpacity：undefined = 不得出現 opacity；有值 = 允許但不得低於該值（hero 頁尾已實測 ≥ 4.9）。
+const FOOTNOTE_MIN_OPACITY = 0.8;
+const CASES: Array<[string, string, string, number?]> = [
   ['src/pages/ExplorePage.tsx', '.explore-subtab-count', '探索子分頁計數（單字元）'],
   ['src/pages/ExplorePage.tsx', '.explore-load-more.is-end', '探索結尾提示'],
   ['src/pages/PoiFavoritesPage.tsx', '.favorites-chip-count', '收藏分類計數（單字元）'],
   ['src/pages/AddEntryPage.tsx', '.tp-add-entry-section', '新增景點的預覽區塊'],
-  ['src/pages/LoginPage.tsx', '.tp-bs-footnote', '登入 hero 頁尾（0.6 時只有 3.7）'],
-  ['src/components/auth/AuthBrandHero.tsx', '.tp-bs-footnote', '註冊／忘記密碼 hero 頁尾（與 LoginPage 同形的另一份）'],
+  ['src/pages/LoginPage.tsx', '.tp-bs-footnote', '登入 hero 頁尾（0.6 時只有 3.7）', FOOTNOTE_MIN_OPACITY],
+  ['src/components/auth/AuthBrandHero.tsx', '.tp-bs-footnote', '註冊／忘記密碼 hero 頁尾（與 LoginPage 同形的另一份）', FOOTNOTE_MIN_OPACITY],
 ];
 
+/** 只認真正的 opacity 屬性（不吃 fill-opacity／stop-opacity）；值可能是 var() 之類的非數字。 */
+const OPACITY_DECL = /(?:^|[;\s{])opacity\s*:\s*([^;}]+)/;
+
 describe('次要文字不用 opacity 稀釋對比', () => {
-  for (const [file, sel, label] of CASES) {
-    it(`${label}（${sel}）次要文字不得用 opacity 稀釋對比（hero 頁尾下限 0.8）`, () => {
+  for (const [file, sel, label, minOpacity] of CASES) {
+    it(`${label}（${sel}）${minOpacity === undefined ? '不得有 opacity' : `opacity 不得低於 ${minOpacity}`}`, () => {
       const decl = stripComments(rule(read(file), sel));
-      const m = decl.match(/opacity:\s*([\d.]+)/);
-      // 允許 .tp-bs-footnote 這種 hero 頁尾保留 0.8（已實測 ≥ 4.9）；其餘一律不准出現 opacity。
-      if (sel === '.tp-bs-footnote') {
-        expect(Number(m?.[1] ?? 1), `${sel} opacity`).toBeGreaterThanOrEqual(0.8);
-      } else {
+      const m = decl.match(OPACITY_DECL);
+      if (minOpacity === undefined) {
         expect(m, `${sel} 又加了 opacity — 會把對比稀釋掉；改用 --color-muted 之類的文字色`).toBeNull();
+      } else {
+        const v = m ? Number(m[1].trim()) : 1;
+        expect(Number.isFinite(v), `${sel} opacity 不是數字（${m?.[1]}）— 無法驗證下限`).toBe(true);
+        expect(v, `${sel} opacity`).toBeGreaterThanOrEqual(minOpacity);
       }
     });
   }

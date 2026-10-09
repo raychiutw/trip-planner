@@ -10,26 +10,11 @@
  */
 import { describe, it, expect } from 'vitest';
 import { PRINT_CSS, SHARE_CHROME_CSS } from '../../src/lib/tripPrintStyles';
+import { contrastRatio, cssRule } from './__helpers__/wcag';
 
 const AA = 4.5;
-function lum(hex: string): number {
-  const n = hex.replace('#', '');
-  const f = n.length === 3 ? n.split('').map((c) => c + c).join('') : n;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16) / 255)
-    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-function ratio(a: string, b: string): number {
-  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-}
-/** 取某條規則大括號內的宣告字串；找不到就丟錯，避免守衛因選擇器改名而靜默失效。 */
-function rule(css: string, selector: string): string {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = css.match(new RegExp(`(?:^|\\n|\\})\\s*${esc}\\s*\\{([^}]*)\\}`));
-  if (!m) throw new Error(`找不到規則 ${selector} — 選擇器改名了？守衛不可靜默失效`);
-  return m[1];
-}
+const ratio = contrastRatio;
+const rule = cssRule;
 const hexes = (decl: string): string[] => [...decl.matchAll(/#[0-9a-fA-F]{3,6}\b/g)].map((m) => m[0]);
 
 describe('分享／列印頁寫死色的對比（WCAG 1.4.3 AA 4.5:1）', () => {

@@ -56,7 +56,7 @@ export const APP_SHELL_STYLES = `
   background: var(--color-tertiary);
 }
 /* 深色下 sheet（tertiary）內的 muted／destructive 文字局部提亮：定義在 css/tokens.css
- * 的 body.dark .app-shell-sheet 規則（#1423；色值一律以 tokens.css 為準）。
+ * 的 body.dark .app-shell-sheet 規則（#1423；色值一律以 tokens.css 為準）。 */
 
 /* Pull-to-refresh visual indicator. iOS Safari 對 inner scroll container 沒 native
  * pull-to-refresh，自己 implement。indicator 在 main 頂端，translate by pullPx。 */

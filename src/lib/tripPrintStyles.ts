@@ -6,6 +6,14 @@
  * Pure string export (leaf lib, no imports) so both the page and the
  * component-layer PDF renderer can share one source of truth.
  */
+/**
+ * 分享／列印頁刻意固定淺色（像紙），所以色值寫在這裡、不走 token。與 css/tokens.css 的
+ * --color-accent-fill／--color-accent-text-on-tonal 同值（白字 5.51／7.0）；
+ * tests/unit/trip-print-styles-contrast.test.ts 從最終字串算對比，守住這幾個值。
+ */
+const PAPER_ACCENT_FILL = '#8A6038';
+const PAPER_ACCENT_DEEP = '#7A5430';
+
 export const PRINT_CSS = `
 /* The print preview is always LIGHT (the document is white paper) — use fixed
    colors, not dark-mode tokens, so the chrome doesn't flip in dark mode (which
@@ -18,7 +26,7 @@ export const PRINT_CSS = `
 .tp-print-btn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;
   font-family:inherit;border-radius:8px;padding:8px 14px;border:1px solid transparent;cursor:pointer;min-height:40px;}
 .tp-print-btn svg{width:16px;height:16px;}
-.tp-print-btn-primary{background:#8A6038;color:#fff;}
+.tp-print-btn-primary{background:${PAPER_ACCENT_FILL};color:#fff;}
 .tp-print-btn-ghost{background:#fff;color:#1d1813;border-color:#eadfcf;}
 .tp-print-state{padding:64px 24px;text-align:center;color:#6f5a47;font-size:15px;}
 
@@ -101,7 +109,7 @@ export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:7
 export const SHARE_CHROME_CSS = `
 .tp-share-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
 /* #1423：原漸層 #A97A4A→#C49A6E 的白字只有 3.77／2.4（13px 小字會落在漸層任一位置）。壓深到 accent-fill 色階，兩端白字 ≥ 4.5。 */
-.tp-share-hero{background:linear-gradient(135deg,#8A6038,#9A6C41);color:#fff;padding:26px 20px 20px;}
+.tp-share-hero{background:linear-gradient(135deg,${PAPER_ACCENT_FILL},${PAPER_ACCENT_DEEP});color:#fff;padding:26px 20px 20px;}
 .tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:8px;}
 .tp-share-eyebrow svg{width:15px;height:15px;}
 .tp-share-title{font-size:26px;font-weight:700;line-height:1.18;margin:0;}
@@ -111,9 +119,9 @@ export const SHARE_CHROME_CSS = `
 .tp-share-ghost{flex:0 0 auto;min-height:38px;width:44px;border-radius:8px;border:1px solid #eadfcf;
   background:#fff;color:#1d1813;display:grid;place-items:center;cursor:pointer;font-family:inherit;}
 .tp-share-ghost svg{width:18px;height:18px;}
-.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:#8A6038;color:#fff;border:none;
+.tp-share-copy{flex:1;min-height:38px;border-radius:8px;background:${PAPER_ACCENT_FILL};color:#fff;border:none;
   font-weight:600;font-size:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
-.tp-share-copy:hover{background:#7A5430;}
+.tp-share-copy:hover{background:${PAPER_ACCENT_DEEP};}
 .tp-share-copy svg{width:16px;height:16px;}
 .tp-share-state{padding:72px 24px;text-align:center;color:#6f5a47;font-size:15px;line-height:1.6;}
 .tp-share-state-title{font-size:18px;font-weight:700;color:#1d1813;margin-bottom:8px;}
