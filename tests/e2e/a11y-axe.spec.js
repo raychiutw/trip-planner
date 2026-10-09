@@ -418,6 +418,8 @@ const ALL_PAGES_AUTHED = [
   `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/move`, `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/change-poi`,
   `/trip/${ALL_TRIP}/add-stop`, `/trip/${ALL_TRIP}/add-entry`, `/trip/${ALL_TRIP}/collab`,
   `/trip/${ALL_TRIP}/health`, `/trip/${ALL_TRIP}/notes`,
+  // 行程頁本身（手機會轉到 /trips?selected=…，渲染時間軸；時間 chip 的 target-size 在這裡才量得到）。
+  `/trip/${ALL_TRIP}`,
 ];
 // 匿名：把 userinfo 回 401（晚註冊的 route 優先），落地頁與登入／註冊／驗證等才不會被導走。
 const ALL_PAGES_ANON = [
@@ -427,8 +429,7 @@ const ALL_PAGES_ANON = [
 ];
 /** 已知且經 owner 核准的例外。{ path 前綴, rule, target 片段, reason } */
 const EXCEPTIONS = [
-  // #1424：時間 chip 高約 20px < 24px（WCAG 2.5.8），#1424 修復後移除這一筆。
-  { rule: 'target-size', target: 'timeline-rail-time-chip', reason: '#1424 待修，修復後刪除此例外' },
+  // 目前沒有例外。新增時每筆都要有 reason，並由 owner 核准。
 ];
 const isExcepted = (rule, target) => EXCEPTIONS.some((e) => e.rule === rule && target.includes(e.target));
 
@@ -452,6 +453,7 @@ async function runAxeContrastAndTarget(page) {
 for (const scheme of ['light', 'dark']) {
   for (const [w, h] of [[390, 844], [1440, 900]]) {
     test(`a11y 全頁面：color-contrast 與 target-size 零違規 — ${scheme} ${w}px`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑（固定 viewport 自行量；master 矩陣不製造噪音）');
       test.setTimeout(240000);
       await setupApiMocks(page);
       await page.route(/maps\.googleapis\.com/, (r) => r.abort());
@@ -478,7 +480,7 @@ for (const scheme of ['light', 'dark']) {
           await setupApiMocks(page);
         }
         await page.goto(p);
-        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+        await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
         await page.waitForTimeout(800);
         // 頁面真的載入了（不是 error boundary／空白頁），而且 body.dark 與目標模式一致。
         await expect(page.locator('body'), `${p} 進了 error boundary`).not.toContainText('Unexpected Application Error');

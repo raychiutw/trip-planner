@@ -20,6 +20,10 @@
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
 
+// 只在 chromium 專案跑：用到 CDP（Emulation.setEmulatedMedia）／以固定 viewport 自行量版面；
+// master CI 的 mobile-chrome／mobile-safari 矩陣不該為這些測試製造噪音（PR 只跑 chromium）。
+test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑'); });
+
 const TRIP = 'okinawa-trip-2026-Ray';
 // 每頁都有已知的玻璃面（桌機 sidebar／titlebar、手機底部 nav、stack 標頭、聊天輸入列…）。
 const PAGES = [

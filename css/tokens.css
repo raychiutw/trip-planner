@@ -1966,7 +1966,10 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
 /* 標題即切換器（owner 2026-07-21：「點下行程名稱後切換，名稱後面接一個 V」）。
  * 取代原本 TitleBar 右側那顆分離的 `⇄ ▾` 圖示按鈕 —— 標題本來就是最自然的入口。 */
-.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; }
+/* #1424：必須 max-width:100%。inline-flex 容器 shrink-to-fit 寬度的下限是內容的 min-content，而
+ * white-space:nowrap 的文字 min-content 就是全文寬 —— overflow:hidden 只降低 flex 的「自動最小
+ * 尺寸」、不降低容器固有寬度。沒有它，長標題會撐出 <h1> 被硬切（沒有 …、下拉箭頭也被切掉）。 */
+.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
 .tp-titlebar-trip-title {
   display: inline-flex; align-items: center; gap: 4px;
   min-width: 0; min-height: 44px; /* HIG 最小觸控目標 */
