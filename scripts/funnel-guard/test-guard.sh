@@ -285,6 +285,7 @@ _fake=$(mktemp -d)
 cat > "$_fake/tailscale" <<'FAKE'
 #!/bin/zsh
 echo "$*" >> "$FAKE_CALLS"
+[ -n "$FAKE_HANG" ] && exec sleep 30
 case "$1 $2" in
   "status --json") [ -n "$FAKE_STATUS_FAIL" ] && exit 1; printf '{"BackendState":"%s"}' "$FAKE_STATE"; [ -n "$FAKE_STATUS_EXIT" ] && exit "$FAKE_STATUS_EXIT" ;;
   "debug prefs")
@@ -380,9 +381,14 @@ if [ "$_h_weird" = "tailscale up --accept-routes" ]; then ok "up 提示：不安
 _alert_log=$(
   TAILSCALE="$_fake/tailscale"; KILL_SWITCH="$_fake/no-such-kill-switch"; export FAKE_CALLS="$_fake/calls" FAKE_STATE="NeedsLogin"
   throttled_alert() { return 1; }; sleep() { :; }; is_funnel_healthy() { return 1; }
+  set -eo pipefail  # 與 production 相同：errexit 開著，少了 `|| rc=$?` 就會在此被殺
   ( main 2>&1 ); echo "RC=$?"  # main 內部會 exit，必須再包一層子 shell，否則 echo RC 跟著一起結束
 )
 if printf '%s' "$_alert_log" | grep -q '告警送出失敗' && printf '%s' "$_alert_log" | grep -q 'RC=0'; then ok "告警送出失敗 → 留 log 並仍 exit 0（下一輪重試）"; else bad "告警送出失敗被靜默吞掉或退出碼不是 0：$_alert_log"; fi
+# tailscaled 卡住：ts_run 要在 TS_TIMEOUT 內放棄（沒有它 guard 會永遠掛住、launchd 不會補起第二個）
+_t0=$SECONDS
+( TAILSCALE="$_fake/tailscale"; export FAKE_CALLS="$_fake/calls" FAKE_HANG=1 TS_TIMEOUT=1; ts_run status --json >/dev/null 2>&1 ) && _hang_rc=0 || _hang_rc=$?
+if [ "$_hang_rc" -ne 0 ] && [ $((SECONDS - _t0)) -lt 10 ]; then ok "tailscaled 卡住 → ts_run 在逾時內放棄（rc=$_hang_rc）"; else bad "ts_run 沒有逾時：rc=$_hang_rc、耗時 $((SECONDS - _t0))s"; fi
 # 暫態：Starting 不是需要人工的狀態
 _rc=$(_run_main Starting)
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Starting（暫態）被誤報成 needs_login"; else ok "Starting 不誤報 needs_login"; fi

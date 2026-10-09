@@ -93,9 +93,9 @@ rm /Users/ray/Projects/trip-planner/scripts/funnel-guard/.disabled
 
 > `.disabled` 在 `.gitignore`，不會被誤 commit。
 
-## Tailscale 登出（NeedsLogin）：人工處理
+## Tailscale 需要人工處理（NeedsLogin / NeedsMachineAuth）
 
-`tailscale status` 回 `Logged out.`（`BackendState` 為 `NeedsLogin` 或 `NeedsMachineAuth`）時，heal 一定失敗，**guard 不會 heal**，改發獨立的 `needs_login` Telegram 告警（之後每小時一次提醒），**退出碼 0**（告警已送出，plist 的 `StartInterval` 120 秒照常再輪詢）。不能用非 0：plist 是 `KeepAlive SuccessfulExit=false` + `ThrottleInterval=10`，非 0 結束會每 10 秒被重啟。2026-10-09 的事故是把它當一般 drift，每 10 秒空轉 heal 13 小時、共 4608 次。
+`BackendState` 為 `NeedsLogin`（`tailscale status` 回 `Logged out.`）或 `NeedsMachineAuth`（裝置待 admin 核准）時，heal 一定失敗，**guard 不會 heal**，改發獨立的 Telegram 告警（之後每小時一次提醒）：`NeedsLogin` 發 `needs_login`，照下方 `tailscale up` 處理；`NeedsMachineAuth` 發 `needs_machine_auth`，`tailscale up` 對它無效，要到 admin console 的 Machines 頁核准這台機器。兩者皆**退出碼 0**（告警已送出，plist 的 `StartInterval` 120 秒照常再輪詢）。不能用非 0：plist 是 `KeepAlive SuccessfulExit=false` + `ThrottleInterval=10`，非 0 結束會每 10 秒被重啟。2026-10-09 的事故是把它當一般 drift，每 10 秒空轉 heal 13 小時、共 4608 次。
 
 處理：照告警裡的指令在這台機器執行（保留既有的 `--accept-routes` 與 `--hostname`，漏掉旗標會被拒絕或改掉原設定），並在瀏覽器完成授權：
 
@@ -136,7 +136,8 @@ rm ~/Library/LaunchAgents/com.tripline.funnel-guard.plist
 | log 完全沒寫 | `scripts/logs/funnel-guard/` 目錄是否存在、權限是否 user 可寫 |
 | `is_funnel_healthy` false（L1）| `tailscale serve status --json` hostname `:443` key 結尾是否符合 `endswith(":443")`；jq 是否在 PATH |
 | `is_funnel_healthy` false（L2/L3）| `dig +short NS ts.net` 是否回 NS；`dig +short A <funnel-host> @ns1.dnsimple.com` 有無 record（無 → 真 drift，該 heal）；有 record 但仍 false → **全部** edge 都不通才會 false，逐一試 `curl -sS -o /dev/null -w '%{http_code}' --max-time 10 --resolve <host>:443:<每個 IP> https://<host>/` 找出是哪個壞（單一 edge 壞不會 false，只會出現「部分 edge 不可達」的 log）；全壞 = L3 reach 問題（DERP relay / ingress `:8080`）。**不要看 recursive resolver（1.1.1.1）—— 對 funnel hostname 天生 flaky，非判斷依據** |
-| `heal_funnel` exit 非 0 | tailscaled 是否 running（`tailscale status`）；user 是否 logged in |
+| `heal_funnel` exit 非 0 | tailscaled 是否 running（`tailscale status`）；登出／待核准已改走獨立告警，不會走到 heal |
+| 收到 `needs_login`／`needs_machine_auth` 告警 | 見上方「Tailscale 需要人工處理」章節 |
 | 重複 alert 太多 | 看 log heal 次數 — 若 1 小時 > 10 次表示有外部 process 一直改 serve；查 `~/Library/Logs/` 找元兇 |
 | log 過大 | `scripts/logs/funnel-guard/stdout.log` 不自動 rotate，~720 行/天 × ~50 bytes ≈ 13MB/年；過大可手動 `: > scripts/logs/funnel-guard/stdout.log` 截斷 |
 

@@ -79,7 +79,7 @@ log() {
 # Local control-plane state
 is_funnel_local_healthy() {
   local status_json
-  status_json=$("$TAILSCALE" serve status --json 2>/dev/null) || return 1
+  status_json=$(ts_run serve status --json 2>/dev/null) || return 1
   [ -z "$status_json" ] && return 1
 
   echo "$status_json" | jq -e --arg proxy "$EXPECTED_PROXY" '
@@ -95,7 +95,7 @@ is_funnel_local_healthy() {
 
 # 從 tailscale serve status 取 funnel hostname (e.g. ray-chiudemac-mini.tail2750c0.ts.net)
 funnel_hostname() {
-  "$TAILSCALE" serve status --json 2>/dev/null \
+  ts_run serve status --json 2>/dev/null \
     | jq -r '(.AllowFunnel // {} | keys[]?) | select(endswith(":443"))' \
     | sed 's/:443$//' | head -1
 }
@@ -273,13 +273,14 @@ is_funnel_healthy() {
 # 重設 funnel：先 reset 既有 serve/funnel state（避免殘留 conflict）→ 重新註冊
 heal_funnel() {
   log "drift 偵測：執行 reset + funnel 重設"
-  "$TAILSCALE" serve reset 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
-  "$TAILSCALE" funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
+  ts_run serve reset 2>&1 | sed "s/^/$LOG_PREFIX  /" || true
+  ts_run funnel --bg --https=443 "$EXPECTED_PROXY" 2>&1 | sed "s/^/$LOG_PREFIX  /"
 }
 
 # 帶逾時的 tailscale 呼叫（macOS 沒有 timeout，用 perl alarm）。tailscaled 卡住時不能讓 guard 永遠掛住：
 # launchd 同 label 不會併發啟動，掛住 = guard 靜默停擺，而這支呼叫在 kill-switch 與 heal 之前。
-ts_run() { perl -e 'alarm 20; exec @ARGV' "$TAILSCALE" "$@"; }
+# 所有 tailscale 呼叫（偵測、heal）都走這裡；TS_TIMEOUT 可由環境覆寫（測試用）。
+ts_run() { perl -e 'alarm shift; exec @ARGV' "${TS_TIMEOUT:-20}" "$TAILSCALE" "$@"; }
 
 # Tailscale 需要人工處理：heal 必敗。NeedsLogin = 已登出（`tailscale up` 重新授權）；
 # NeedsMachineAuth = 裝置要到 admin console 核准（`tailscale up` 沒有用）。
