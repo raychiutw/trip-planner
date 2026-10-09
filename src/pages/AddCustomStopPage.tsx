@@ -18,7 +18,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { useTripMeta, useTripDays } from '../hooks/useTripRead';
+import { apiFetchRaw } from '../lib/apiClient';
 import { createEntry } from '../lib/entryMutations';
 import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
@@ -317,6 +318,9 @@ const SCOPED_STYLES = `
   }
 `;
 
+// 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。
+const NO_DESTINATIONS: TripDestApi[] = [];
+
 export default function AddCustomStopPage() {
   const auth = useRequireAuth();
   const params = useParams<{ tripId: string }>();
@@ -334,38 +338,20 @@ export default function AddCustomStopPage() {
     setSearchParams(sp, { replace: true });
   }, [dayNum, searchParams, setSearchParams]);
 
-  const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
+  // `?all=1` 回 timeline，讓我們取得 prev entry coord 做 picker pre-fill；timeline 空（day 還沒 stop）
+  // 時 fallback 走 destinations。兩個讀取都成功才交出資料（與原本 Promise.all 同語意）。
+  // v2.32.1：destinations 載入中為 null、任何一個失敗退回 []（fallback chain 走 Tokyo 最後安全網），
+  // 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap 用 Tokyo initialCenter mount 後被鎖死。
+  const readEnabled = Number.isFinite(dayNum);
+  const daysRead = useTripDays<DayApiRow>(tripId, { all: true, enabled: readEnabled });
+  const metaRead = useTripMeta<{ destinations?: TripDestApi[] }>(tripId, readEnabled);
+  const bothReady = daysRead.status === 'ready' && metaRead.status === 'ready';
   // 2026-07-07 day picker：全 days 列表（chips 切天用）。null = 未載入不 render 列。
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-  // v2.32.1 fix: 初值 null 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap
-  // 用 Tokyo fallback initialCenter mount 後被鎖死。
-  const [destinations, setDestinations] = useState<TripDestApi[] | null>(null);
-
-  useEffect(() => {
-    if (!tripId || !Number.isFinite(dayNum)) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        // v2.33.107 #1: `?all=1` 回 timeline 讓我們取得 prev entry coord 做
-        // picker pre-fill；若 timeline 空（day 還沒 stop）fallback 走 destinations。
-        const [days, tripBody] = await Promise.all([
-          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days?all=1`),
-          apiFetch<{ destinations?: TripDestApi[] }>(`/trips/${encodeURIComponent(tripId)}`),
-        ]);
-        if (cancelled) return;
-        setCurrentDay(days.find((d) => d.dayNum === dayNum) ?? null);
-        setAllDays(days);
-        setDestinations(tripBody?.destinations ?? []);
-      } catch {
-        // v2.32.1: network fail → 標 [] 讓 fallback chain 走 Tokyo（最後安全網），
-        // 避免 null 永遠卡 render
-        if (!cancelled) setDestinations([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tripId, dayNum]);
+  const allDays: DayApiRow[] | null = bothReady ? daysRead.data : null;
+  const currentDay: DayApiRow | null = bothReady ? (daysRead.data?.find((d) => d.dayNum === dayNum) ?? null) : null;
+  const destinations: TripDestApi[] | null = bothReady
+    ? (metaRead.data?.destinations ?? NO_DESTINATIONS)
+    : daysRead.status === 'error' || metaRead.status === 'error' ? NO_DESTINATIONS : null;
 
   /**
    * v2.33.107 #1: prev-entry coord pre-fill — 取 currentDay.timeline 最後一個 entry

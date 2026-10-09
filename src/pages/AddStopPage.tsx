@@ -53,6 +53,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { useTripMeta, useTripDays } from '../hooks/useTripRead';
 import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSelection } from '../hooks/usePoiSelection';
 import { regionToApiParam } from '../lib/maps/region';
@@ -600,6 +601,9 @@ const SCOPED_STYLES = `
 }
 `;
 
+// 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。
+const NO_DESTINATIONS: TripDestApiLite[] = [];
+
 export default function AddStopPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
@@ -657,30 +661,14 @@ export default function AddStopPage() {
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
   // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
   const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
-  // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
-  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
   // 衍生（不另外 setState 避免兩條 state truth）。
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const days = await apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`);
-        if (cancelled) return;
-        setAllDays(days ?? []);
-      } catch {
-        // silent — label fallback to DAY NN
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
+  // 失敗時維持 null（label 退回 DAY NN）。
+  const allDays = useTripDays<DayApiRow>(tripId, { enabled: !!auth.user }).data;
 
   const currentDay = useMemo<DayApiRow | null>(() => {
     if (!allDays || !Number.isFinite(dayNum)) return null;
@@ -712,23 +700,11 @@ export default function AddStopPage() {
   // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
   // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
   // initialCenter，等切到 custom tab 才 fetch 就太晚。
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const tripBody = await apiFetch<{ destinations?: TripDestApiLite[] }>(
-          `/trips/${encodeURIComponent(tripId)}`,
-        );
-        if (cancelled) return;
-        setCustomDestinations(tripBody?.destinations ?? []);
-      } catch {
-        // network fail → 標 [] 讓 fallback chain 走 Tokyo（已是最後一道安全網）
-        if (!cancelled) setCustomDestinations([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
+  // 失敗退回 []（fallback chain 走 Tokyo 最後一道安全網）；載入中為 null。
+  const tripMetaRead = useTripMeta<{ destinations?: TripDestApiLite[] }>(tripId, !!auth.user);
+  const customDestinations: TripDestApiLite[] | null =
+    tripMetaRead.status === 'ready' ? (tripMetaRead.data?.destinations ?? NO_DESTINATIONS)
+      : tripMetaRead.status === 'error' ? NO_DESTINATIONS : null;
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
