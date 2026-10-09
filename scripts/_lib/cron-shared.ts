@@ -12,6 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import envLoader from '../lib/load-env.js';
+import telegram from '../lib/telegram.js';
 
 export interface CronEnv {
   apiUrl: string;
@@ -148,35 +149,17 @@ export function makeApiClient(env: CronEnv) {
   };
 }
 
-// v2.33.50 round 8b: warn once when env missing (silent no-op 是 daily-check
-// 本身要 surface 的故障模式)。模組級 flag 避免每次 alert spam stderr。
-let _telegramEnvWarned = false;
-let _telegramBadFormatWarned = false;
+// 送出規則（token／chat id 驗證、env 優先序、不丟例外）全在 scripts/lib/telegram.js。
+// 這裡只保留「設定缺失／格式錯誤各只警告一次」——靜默 no-op 正是 daily-check 要 surface 的故障模式，
+// 但每次 alert 都 spam stderr 沒有意義（模組級 flag）。
+const _telegramWarned = new Set<string>();
 /** Telegram alert (best-effort). */
 export async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '';
-  const chat = process.env.TELEGRAM_CHAT_ID || '';
-  if (!tok || !chat) {
-    if (!_telegramEnvWarned) {
-      _telegramEnvWarned = true;
-      console.warn('[alertTelegram] TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID missing — alerts disabled');
-    }
-    return;
+  const r = await telegram.sendTelegram(msg);
+  if (!r.ok && (r.reason === 'not-configured' || r.reason === 'bad-token' || r.reason === 'bad-chat') && !_telegramWarned.has(r.reason)) {
+    _telegramWarned.add(r.reason);
+    console.warn(`[alertTelegram] Telegram 設定不可用（${r.reason}）— alerts disabled`);
   }
-  // v2.33.50 round 8b LOW: validate token format defense in depth (同
-  // send-telegram.sh v2.33.49 fix)。
-  if (!/^[0-9]+:[A-Za-z0-9_-]+$/.test(tok)) {
-    if (!_telegramBadFormatWarned) {
-      _telegramBadFormatWarned = true;
-      console.warn('[alertTelegram] TELEGRAM_BOT_TOKEN 格式不合法，alerts disabled');
-    }
-    return;
-  }
-  await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chat, text: msg }),
-  }).catch(() => undefined);
 }
 
 export function sleep(ms: number): Promise<void> {

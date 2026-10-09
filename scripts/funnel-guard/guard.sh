@@ -27,6 +27,8 @@ KILL_SWITCH="$REPO_ROOT/scripts/funnel-guard/.disabled"
 
 # v2.33.124：state-transition / throttle 改用共用 helper scripts/lib/throttled-alert.sh
 # shellcheck disable=SC1091
+# throttled-alert.sh 的預設 send-telegram 路徑是寫死的絕對路徑；這裡用 REPO_ROOT 明確指定，搬資料夾／換機器也不會送錯。
+: "${THROTTLED_ALERT_SEND_TELEGRAM:=$REPO_ROOT/scripts/lib/send-telegram.sh}"
 source "$REPO_ROOT/scripts/lib/throttled-alert.sh"
 
 cd "$REPO_ROOT"

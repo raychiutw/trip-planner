@@ -31,6 +31,7 @@ var { queryD1 } = require('./lib/d1-client');
 // v2.33.50 round 8b: mint OAuth token for authenticated /api/trips fetch
 // (post v2.33.41 anonymous-read fix，unpublished trip GET 需 auth)。
 var { getToken: getTriplineToken } = require('./lib/get-tripline-token');
+var { sendTelegram } = require('./lib/telegram');
 
 // ── 數據來源 1: 行程修改統計 ────────────────────────────────────
 
@@ -397,23 +398,11 @@ async function cleanupOldLogs() {
 // ── Telegram 通知 ──────────────────────────────────────────────
 
 async function sendTelegramAlert(anomalies) {
-  var token = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_FETCI_TOKEN;
-  var chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) {
-    console.log('Telegram not configured, skipping alert');
-    return;
-  }
   var text = '⚠️ Tripline 資料異常\n\n' + anomalies.join('\n');
-  try {
-    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' }),
-    });
-    console.log('Telegram alert sent');
-  } catch (e) {
-    console.error('Telegram alert failed:', e.message);
-  }
+  var r = await sendTelegram(text, { parseMode: 'HTML' });
+  if (r.ok) console.log('Telegram alert sent');
+  else if (r.reason === 'not-configured') console.log('Telegram not configured, skipping alert');
+  else console.error('Telegram alert failed:', r.reason);
 }
 
 // ── 日期工具 ────────────────────────────────────────────────────
