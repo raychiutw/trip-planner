@@ -6,6 +6,7 @@
  * （functions/api/trips/[id].ts、days.ts、days/[num].ts）。`SELECT *` 的意思是：之後只要在這些表
  * 加一個欄位，它就**自動**對匿名讀者公開 —— 不管那個欄位是不是該公開。
  *
+ * 隱私模型見 docs/adr/0008-published-trips-are-fully-public.md（已發布行程本體對匿名讀者全公開）。
  * 2026-10-09 盤點：現有欄位全數可公開（owner_user_id／title／countries 等列表端本來就對匿名回；
  * 其餘是行程文字與時間戳；沒有 email、token）。這個測試把盤點結果鎖住：新增欄位會紅，
  * 迫使當下決定「這欄要不要給匿名讀者」，而不是靜默公開。
