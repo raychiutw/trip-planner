@@ -5,6 +5,13 @@ import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 /* ===== Scoped styles (dark mode + focus management) ===== */
 
+// 毛玻璃面參數（recipe 在 tokens.css 的 .tp-glass）。只對這三個自訂屬性斷言型別，不要整個 style 物件 cast。
+const GLASS_PARAMS = {
+  '--glass-base': 'var(--color-secondary)',
+  '--glass-alpha': '94%',
+  '--glass-filter': 'blur(var(--blur-glass, 14px))',
+} as CSSProperties;
+
 const SCOPED_STYLES = `
 body.dark [data-info-sheet-panel] {
   /* 背景由 .tp-glass 負責（--glass-base 取 secondary）。這裡原本有一條 background，但被 inline style 蓋掉、
@@ -225,9 +232,7 @@ export default function InfoSheet({
             right: 0,
             height: '75vh',
             // 毛玻璃面 recipe 在 tokens.css 的 .tp-glass（降級時自動不透明、無模糊）；這裡只給參數。
-            '--glass-base': 'var(--color-secondary)',
-            '--glass-alpha': '94%',
-            '--glass-filter': 'blur(var(--blur-glass, 14px))',
+            ...GLASS_PARAMS,
             borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
             zIndex: 'var(--z-info-sheet)',
             transform: open ? 'translateY(0)' : 'translateY(100%)',
@@ -238,7 +243,7 @@ export default function InfoSheet({
             flexDirection: 'column',
             padding: '12px var(--spacing-padding-h) max(24px, env(safe-area-inset-bottom))',
             overscrollBehavior: 'contain',
-          } as CSSProperties}
+          }}
         >
           {/* Drag handle (decorative only) */}
           <div

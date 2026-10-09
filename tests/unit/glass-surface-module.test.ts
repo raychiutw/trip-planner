@@ -6,7 +6,7 @@
  * call site 只宣告兩個參數（--glass-alpha、--glass-filter）並加上 class。
  *
  * 這裡守「結構」：recipe 只有一份、降級 token 只定義一次、沒有人再手寫裸的 backdrop-filter。
- * 「降級後瀏覽器裡真的不透明、無模糊」由 e2e/glass-degrade.spec.js 用 computed style 守，
+ * 「降級後瀏覽器裡真的不透明、無模糊」由 tests/e2e/glass-degrade.spec.js 用 computed style 守，
  * 兩者缺一不可（原始碼 grep 全綠、瀏覽器沒降級，正是 2026-10 發生過的事）。
  */
 import { describe, it, expect } from 'vitest';
@@ -25,6 +25,7 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 const SRC = walk(join(ROOT, 'src')).map((p) => ({ p: p.slice(ROOT.length + 1), s: readFileSync(p, 'utf8') }));
+const SRC_AND_TOKENS = [...SRC, { p: 'css/tokens.css', s: CSS }];
 
 /** 去掉區塊註解，避免註解裡提到 token 名字造成誤判。 */
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -54,11 +55,13 @@ describe('毛玻璃面 module', () => {
   });
 
   it('每個 backdrop-filter 宣告都走降級機制（不允許裸的 blur(...)）', () => {
-    // 允許：.tp-glass 的 --glass-reduce-filter、tab bar 的 --tabbar-filter、--blur-glass（降級時為 0px）。
+    // 允許：.tp-glass／探索頁 scrim 的 --glass-reduce-filter、tab bar 家族的 --tabbar-filter、
+    // --blur-glass（降級時為 0px；底部列另有明確的不透明覆寫）。掃 src 與 tokens.css 本身。
     const ok = /--glass-reduce-filter|--tabbar-filter|--blur-glass|var\(--glass-filter/;
     const bad: string[] = [];
-    for (const { p, s } of SRC) {
-      for (const m of strip(s).matchAll(/(?:-webkit-)?backdrop-?[fF]ilter\s*:\s*([^;\n]+)/g)) {
+    // (?<!\() 排除 `@supports (backdrop-filter: …)` 這類 feature query，它不是宣告。
+    for (const { p, s } of SRC_AND_TOKENS) {
+      for (const m of strip(s).matchAll(/(?<!\()(?:-webkit-)?backdrop-?[fF]ilter\s*:\s*([^;\n]+)/g)) {
         if (!ok.test(m[1])) bad.push(`${p}: ${m[0].trim()}`);
       }
     }
