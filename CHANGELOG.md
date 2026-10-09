@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.98] - 2026-10-09
+
+### Fixed
+- **Tailscale 登出時 funnel-guard 空轉 13 小時（#1421）**：Tailscale 登出（NeedsLogin）後 guard 把它當一般 drift，每 10 秒重試 heal、共 4608 次，告警還說成「funnel 指令失敗」。現在偵測到 `NeedsLogin` 會跳過 heal，改發獨立的 `needs_login` 告警（附可直接複製的 `tailscale up` 指令，保留原本的 `--accept-routes` 與 `--hostname`）；`NeedsMachineAuth` 另發 `needs_machine_auth`，指向 admin console 核准。退出碼為 0，避免 launchd 的 `KeepAlive` 每 10 秒重啟；偵測不依賴 tailscale 的結束碼；所有 tailscale 呼叫都加 20 秒逾時，tailscaled 卡住時 guard 不再永遠掛住。
+- **「降低透明度」「提高對比」沒有真的降級毛玻璃（#1422）**：`body` 宣告的 `--tabbar-*` 蓋掉了 `:root` 的覆寫，開啟系統設定後側欄、標題列、地圖卡、聊天輸入列、探索篩選、InfoSheet 仍然半透明加模糊。改成統一的 `--glass-reduce-*` token，降級時一律不透明、無模糊；一般模式的計算值逐項比對過，與修改前完全相同。
+- **多頁淺色／深色對比不足（#1423）**：AlertPanel 錯誤文字、行程備註失敗狀態、新增景點的按鈕與預覽區、探索頁的載入更多與到底提示、收藏頁評分與計數、驗證 email 頁按鈕、登入頁註腳、分享／列印頁的主按鈕與 hero 漸層、深色 sheet 內的次要文字與刪除色（高對比下取加強階）等，全部改用 DESIGN.md 規定的文字 token，移除用 opacity 壓淡的做法。
+- **手機標題列切換器被硬切、`/add-to-trip` 錯誤狀態沒樣式、時間 chip 小於 24px（#1424）**。
+
+### Added
+- e2e：`glass-degrade.spec.js`（24 頁以 CDP 模擬降低透明度／提高對比，檢查毛玻璃真的降級）、`a11y-axe.spec.js` 擴到全頁面淺色＋深色（例外清單必須附理由）、`titlebar-switcher-and-error-state.spec.js`。
+- unit：WCAG 對比 helper 與列印頁、深色 sheet 的對比守門；`no-opacity-on-secondary-text` 改為資料驅動。
+- funnel-guard 測試涵蓋 NeedsLogin／NeedsMachineAuth、告警送出失敗、逾時、errexit 下的行為，關鍵路徑都做過 mutation 驗證。
+
+### Changed
+- 以下是一般模式下肉眼可見的變化，供 owner 確認：驗證 email 與分享頁按鈕改用 accent 實心＋對應前景色（深色模式為近黑字）；AlertPanel 錯誤文字改為中性色、僅邊框與圖示保留紅色；分享頁 hero 漸層加深；新增景點預覽區底色改為不透明混色；已連結應用頁深色計數膠囊；探索頁載入更多與到底提示的色彩。
+
 ## [2.57.97] - 2026-10-01
 
 ### Fixed
