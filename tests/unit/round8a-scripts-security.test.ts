@@ -56,15 +56,9 @@ describe('v2.33.49 round 8a — api-server skillCommand allowlist', () => {
 });
 
 describe('v2.33.49 round 8a — tripline-job.sh env hardening', () => {
-  it('quote strip wrapper present (both double + single)', () => {
-    expect(JOB_SH_SRC).toContain('${value:1:${#value}-2}');
-    // Check both arms exist
-    expect(JOB_SH_SRC).toContain('^\\".*\\"$');
-    expect(JOB_SH_SRC).toContain("^\\'.*\\'$");
-  });
-
-  it('key validate against shell-safe regex', () => {
-    expect(JOB_SH_SRC).toContain('[A-Za-z_][A-Za-z0-9_]*');
+  it('.env.local 走共用 parser（去引號與 key 驗證由 load-env.js 的 parseEnv 負責，見 env-local-parse.test.ts）', () => {
+    expect(JOB_SH_SRC).toContain('scripts/lib/load-env.mjs');
+    expect(JOB_SH_SRC).not.toMatch(/while IFS= read -r line/);
   });
 
   it('API server unreachable → exit 1 (不 mask outage)', () => {

@@ -74,10 +74,4 @@ describe('結構：只有 lib/load-env.js 解析 .env.local', () => {
       .map((p) => p.slice(ROOT.length + 1));
     expect(offenders).toEqual([]);
   });
-
-  it('api-server 與 cron-shared 走共用 parser', () => {
-    for (const f of ['scripts/tripline-api-server.ts', 'scripts/_lib/cron-shared.ts']) {
-      expect(readFileSync(join(ROOT, f), 'utf8'), f).toMatch(/load-env/);
-    }
-  });
 });

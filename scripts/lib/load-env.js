@@ -2,9 +2,8 @@
 /**
  * Load `.env.local` into `process.env` (existing process.env wins).
  *
- * v2.33.29: 統一 5 個 script 的 loadEnvLocal — 之前各自寫的 regex
- * `/^(\w+)=(.+)/` 不處理 values with `=` in them（base64 / JWT / JSON），
- * 也不處理引號包裹的值。改用 indexOf 與 strip-quotes 後安全多。
+ * 歷史：v2.33.29 先把 5 個 script 的 regex 版統一成逐行 indexOf 版；之後發現逐行版仍不認得跨多行的
+ * 單引號值（GOOGLE_CLOUD_SA_KEY），改成全部走 dotenv.parse（parseEnv）。
  *
  * CommonJS-only wrapper（搭配 require()）；bash 用的匯出器見 `load-env.mjs`（同一個 parser）。
  */
