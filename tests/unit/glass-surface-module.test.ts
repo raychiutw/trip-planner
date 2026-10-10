@@ -105,8 +105,11 @@ describe('毛玻璃面 call site：class 與參數都在（拿掉 class 就沒�
   it.each(SITES)('$name', ({ classIn, paramsIn, alpha, filter }) => {
     expect(src(classIn)).toMatch(/\btp-glass\b/);
     const p = src(paramsIn);
-    expect(p).toContain(alpha);
-    expect(p).toContain(filter);
+    // 錨定在宣告上：整檔 toContain 會被別處的同字串（例如 sidebar 骨架的 width: 72%）誤放行。
+    const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const decl = (prop: string, v: string) => new RegExp(`${prop}['"]?\\s*:\\s*['"]?${esc(v)}`);
+    expect(p).toMatch(decl('--glass-alpha', alpha));
+    expect(p).toMatch(decl('--glass-filter', filter));
   });
 
   it('宣告 --glass-alpha／--glass-filter／--glass-base 的檔案，一定有人掛 tp-glass（反向：只給參數沒 class）', () => {
