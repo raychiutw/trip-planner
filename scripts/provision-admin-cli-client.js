@@ -34,21 +34,10 @@
  */
 'use strict';
 
-const path = require('path');
-const fs = require('fs');
 const { execSync } = require('child_process');
 
-// Load .env.local if present
-try {
-  const envPath = path.join(__dirname, '..', '.env.local');
-  const content = fs.readFileSync(envPath, 'utf8');
-  content.split('\n').forEach((line) => {
-    const m = line.match(/^(\w+)=(.+)/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
-  });
-} catch {
-  /* no .env.local */
-}
+// Load .env.local if present（全 repo 唯一的 parser：scripts/lib/load-env.js）
+require('./lib/load-env').loadEnvLocal();
 
 const CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CF_ACCOUNT = process.env.CF_ACCOUNT_ID;
