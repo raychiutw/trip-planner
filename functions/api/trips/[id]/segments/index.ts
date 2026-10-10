@@ -10,7 +10,7 @@
  * Auth: trip read permission.
  */
 
-import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
+import { requireAuth, requireTripReadAccess, requireTripWrite } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -91,9 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!await hasWritePermission(db, auth, tripId)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, tripId);
 
   const body = await parseJsonBody<CreateSegmentBody>(context.request);
 

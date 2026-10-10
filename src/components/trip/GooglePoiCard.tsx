@@ -65,7 +65,7 @@ export default function GooglePoiCard({ poi, onClose }: GooglePoiCardProps) {
   };
 
   return (
-    <div className="tp-google-poi-card" data-testid="google-poi-card">
+    <div className="tp-google-poi-card tp-glass" data-testid="google-poi-card">
       <style>{SCOPED_STYLES}</style>
       <div className="tp-google-poi-row">
         <span className="tp-google-poi-icon" aria-hidden="true"><Icon name="location-pin" /></span>
@@ -99,9 +99,7 @@ export default function GooglePoiCard({ poi, onClose }: GooglePoiCardProps) {
 
 const SCOPED_STYLES = `
 .tp-google-poi-card {
-  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 88%, transparent));
-  backdrop-filter: var(--glass-reduce-filter, blur(20px) saturate(1.5));
-  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(20px) saturate(1.5));
+  --glass-alpha: 88%; --glass-filter: blur(20px) saturate(1.5);   /* recipe：tokens.css 的 .tp-glass */
   border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   border-radius: var(--radius-lg, 14px);
   box-shadow: 0 8px 24px rgba(42, 31, 24, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);

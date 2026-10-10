@@ -410,9 +410,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 92%, transparent));
-  backdrop-filter: var(--glass-reduce-filter, blur(14px));
-  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(14px));
+  --glass-alpha: 92%; --glass-filter: blur(14px);   /* recipe：tokens.css 的 .tp-glass */
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
   /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
@@ -908,7 +906,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       </div>
 
       <form
-        className="tp-chat-composer"
+        className="tp-chat-composer tp-glass"
         onSubmit={(e) => { e.preventDefault(); void send(input); }}
       >
         {/* 捲到底箭頭跟隨 composer 定位；只在 user 捲離底部時出現。

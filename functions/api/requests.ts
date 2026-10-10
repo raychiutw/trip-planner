@@ -14,7 +14,7 @@
 
 import { logAudit, recordEmailEvent } from './_audit';
 import { alertAdminTelegram } from './_alert';
-import { hasPermission, hasWritePermission, requireAuth, hasOpsScope } from './_auth';
+import { hasPermission, requireAuth, hasOpsScope, requireTripWrite } from './_auth';
 import { AppError } from './_errors';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -122,9 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // mode is vestigial (migration 0048 phase 1 nullable; phase 2 will DROP COLUMN).
-  if (!await hasWritePermission(env.DB, auth, tripId)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入。
   // 只去重「仍在跑」的請求（open/processing）——終結狀態（failed/completed）不得遮蔽合法重送：

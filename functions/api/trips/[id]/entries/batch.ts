@@ -18,7 +18,7 @@
  *   - 全 atomic 透過 db.batch() — 一筆失敗整批 rollback
  */
 import { logAudit } from '../../../_audit';
-import { hasWritePermission, requireAuth } from '../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../_auth';
 import { TIME_RE } from '../../../_time';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, buildUpdateClause } from '../../../_utils';
@@ -36,9 +36,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { id: tripId } = context.params as { id: string };
   const db = context.env.DB;
 
-  if (!await hasWritePermission(db, auth, tripId)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, tripId);
 
   const body = await parseJsonBody<{ updates?: unknown }>(context.request);
   const rawUpdates = body.updates;

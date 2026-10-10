@@ -1,5 +1,5 @@
 import { logAudit } from '../../../_audit';
-import { hasWritePermission, requireAuth, requireTripReadAccess } from '../../../_auth';
+import { requireAuth, requireTripReadAccess, requireTripWrite } from '../../../_auth';
 import { replaceDayEntries, type BatchEntrySpec, type DayReplacementEntry } from '../../../_entryWrite';
 import { AppError } from '../../../_errors';
 import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
@@ -165,9 +165,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
   const db = context.env.DB;
 
-  if (!await hasWritePermission(db, auth, id)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, id);
 
   const day = await db
     .prepare('SELECT id, version FROM trip_days WHERE trip_id = ? AND day_num = ?')
@@ -541,9 +539,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   }
 
   const db = context.env.DB;
-  if (!(await hasWritePermission(db, auth, id))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, id);
 
   // 取目標 day + 計算 trip 共幾天（最後一天禁刪）
   const target = await db

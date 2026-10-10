@@ -17,6 +17,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Notes
 - `.env.local` 裡**未加引號且含 `#`** 的值會被當成行內註解截斷（dotenv 語意），這類值請加引號；目前的檔案沒有受影響的值。
 
+## [2.57.100] - 2026-10-10
+
+### Changed
+- **毛玻璃面收成單一 module（`.tp-glass`）**：側欄、堆疊面板標題列、Google 景點卡、地圖景點卡、InfoSheet、首頁導覽列、聊天輸入列這 8 處原本各自抄一份「半透明底 + 模糊 + 降級」的寫法，現在只有 `css/tokens.css` 的 `.tp-glass` 一份，每個地方只給兩個參數（`--glass-alpha`、`--glass-filter`）。一般模式下的計算值逐項比對過，與修改前完全相同；「降低透明度」「提高對比」兩個系統設定改由同一個 media query 降級，新增玻璃面時不會再因為漏寫降級而在這兩個設定下維持半透明（#1422 的根因）。
+- InfoSheet 深色模式那條 `background` 規則一直被 inline style 蓋掉，是死碼，已移除。
+
+### Added
+- 守門測試：`.tp-glass` 只定義一次且不成對寫 `-webkit-`（否則 lightningcss 去重後 Chromium 失效）；降級 token 只定義一處、media query 必須同時含降低透明度與提高對比；沒有人再手寫裸的 `backdrop-filter`；7 個玻璃面各自斷言 class 與 alpha／filter 參數（錨定在宣告上）；`.tp-glass` 排在 `.tp-map-entry-card` 之後。這些都做過 mutation 驗證。
+
+## [2.57.99] - 2026-10-10
+
+### Changed
+- **行程寫入權限只剩一個 gate（Trip access module）**：18 個 API handler 各自內嵌的「有沒有寫入權限」檢查，加上 `shares` 兩支的私有複本，全部改走 `requireTripWrite`。對外行為不變（同樣的 401／403／404 順序與狀態碼），之後要改寫入規則只改一處。
+- 已發布行程對匿名讀者全公開這個設計寫成 ADR-0008：行程本體（含每個景點的訂位與備註）公開，私人資料請放在筆記區塊（航班、住宿、訂位表、行前、緊急聯絡人，預設不公開，由分享連結逐項開放）。
+
+### Added
+- 守門測試：不准再長出內嵌的寫入檢查（含 `Promise.all` 形式的已知清單，新增或移除都要明確更新）；匿名可讀的表格（trips／trip_days／trip_entries／pois）新增欄位時，必須當下決定要不要公開；匿名讀取已發布行程的特徵測試（未發布則 403）。
+- API 測試：陌生人與 viewer 對 requests、entries、segments、notes maintenance／exclusions、shares 的寫入一律 403。
+
+### Fixed
+- AI 健檢「空行程 guard 必須在權限檢查之後」的順序測試改認 `requireTripWrite`。
+
 ## [2.57.98] - 2026-10-09
 
 ### Fixed
