@@ -2092,6 +2092,23 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   }
 }
 
+/* ───── 毛玻璃面 module（#1422 / architecture review #1）─────
+ * interface：元素加 class `tp-glass`，並在自己的規則裡宣告參數（都有預設值）：
+ *   --glass-alpha   一般模式底色的不透明度，預設 88%
+ *   --glass-filter  一般模式的 backdrop-filter，預設 blur(20px)
+ *   --glass-base    底色，預設 --color-background
+ * implementation：下面這一份 recipe，加上「降低透明度／提高對比」時的降級（見下方合併區塊）。
+ * 不要在元件裡再手寫 `backdrop-filter` 或半透明底 —— 守門測試 tests/unit/glass-surface-module.test.ts 會紅，
+ * 瀏覽器端由 tests/e2e/glass-degrade.spec.js 用 computed style 驗證降級真的生效。
+ * 一般模式 `--glass-reduce-*` 都未定義 → 取 fallback，computed 值與改版前逐項相同。
+ * ⚠ 位置要晚於 `.tp-map-entry-card` 等基礎樣式，同 specificity 時才蓋得過它們的底色。 */
+.tp-glass {
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--glass-base, var(--color-background)) var(--glass-alpha, 88%), transparent));
+  /* 只寫標準屬性、不成對寫 -webkit-：lightningcss 會把成對宣告去重、留下 Chromium 不認得的 -webkit- 版，
+   * 整面玻璃在 Chrome 失效（見上方 .tp-bottom-nav 附近的同類說明）。前綴交給建置工具補。 */
+  backdrop-filter: var(--glass-reduce-filter, var(--glass-filter, blur(20px)));
+}
+
 /* ── tab 膠囊材質的可及性降級 ───────────────────────────────────────
  * 放在檔案最後：Tailwind 4 會把所有 @layer 攤平，覆寫靠的是「特異性 + 來源順序」，
  * 不是 layer 順序。body.dark 的特異性是 (0,1,1)，這裡要蓋過它就必須排在它之後。
@@ -2105,13 +2122,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --blur-glass: 0px;
-    /* 降級 token（#1422）：硬寫 backdrop-filter／半透明底的玻璃面都用
-     * `var(--glass-reduce-*, <原值>)`。一般模式這些 token 都未定義 → 取 fallback（filter／bg 的 fallback 是各元件原本的值；scrim 系列同理，fallback 是各元件自己的 rgba），
-     * computed 值與降級前完全相同；降級時只在這裡設一次，全部玻璃面一起關掉。 */
-    --glass-reduce-filter: none;
-    --glass-reduce-bg: var(--color-background);
-    /* 圖片上的深色 scrim 圓鈕（探索頁愛心）：降級時改不透明深色，白色圖示對比不再取決於底下的圖。 */
-    --glass-reduce-scrim: #2C2C2E; --glass-reduce-scrim-hover: #1C1C1E;
   }
   /* 必須放在 **body**（與定義同層）。--tabbar-* 與 --color-glass-* 定義在 body {}，
    * 子元素繼承的是離它最近的 body 的值；只覆寫 :root 會被 body 自己的宣告蓋住 —— 這個降級
@@ -2121,7 +2131,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
-  body.dark { --tabbar-tint: var(--color-secondary); --glass-reduce-bg: var(--color-secondary); }
+  body.dark { --tabbar-tint: var(--color-secondary); }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
@@ -2139,9 +2149,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-warning-deep: #6B3B00;   /* on #FEEED8 → 8.19（一般階 4.59） */
     --color-destructive: #87240E;    /* on #FDECEC → 8.03（一般階 4.85） */
     --blur-glass: 0px;
-    --glass-reduce-filter: none;     /* 見上方 reduced-transparency 區塊的說明（#1422） */
-    --glass-reduce-bg: var(--color-background);
-    --glass-reduce-scrim: #2C2C2E; --glass-reduce-scrim-hover: #1C1C1E;
   }
   body {                             /* 同上：必須與定義同層（body），:root 會被 body 遮蔽 */
     --tabbar-tint: var(--color-background); --tabbar-filter: none;
@@ -2154,10 +2161,22 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-warning-deep: #FFD9A6;   /* on #443526 → 8.82（一般階 6.08） */
     --color-destructive: #FFB9AB;    /* on #402926 → 8.18（一般階 4.78） */
     --tabbar-tint: var(--color-secondary);
-    --glass-reduce-bg: var(--color-secondary);
   }
   .tp-bottom-nav, .tp-page-bottom-bar { background: var(--color-background); }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
+}
+
+/* 降級 token（毛玻璃面 module 的另一半）：降低透明度、提高對比任一成立就全部玻璃面一起降級。
+ * 只定義在這一處 —— 一般模式這些 token 未定義，`.tp-glass` 取自己的 fallback。
+ * 放在 :root／body.dark（不是 @theme）：動態名的 token 放 @theme 會被 tree-shake。 */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root {
+    --glass-reduce-filter: none;
+    --glass-reduce-bg: var(--color-background);
+    /* 圖片上的深色 scrim 圓鈕（探索頁愛心）：降級時改不透明深色，白色圖示對比不再取決於底下的圖。 */
+    --glass-reduce-scrim: #2C2C2E; --glass-reduce-scrim-hover: #1C1C1E;
+  }
+  body.dark { --glass-reduce-bg: var(--color-secondary); }
 }
 
 /* 第三欄 sheet（.app-shell-sheet，背景 = --color-tertiary，owner 刻意的「再高一階」表面）。

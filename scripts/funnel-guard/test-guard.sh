@@ -394,5 +394,16 @@ _rc=$(_run_main Starting)
 if grep -q '^needs_login|' "$_fake/alerts"; then bad "Starting（暫態）被誤報成 needs_login"; else ok "Starting 不誤報 needs_login"; fi
 rm -rf "$_fake"
 
+echo "[11] send-telegram.sh 路徑跟著 checkout 走（不依賴寫死的 /Users/ray/...）"
+# throttled-alert.sh 的預設值是寫死的絕對路徑；guard 是唯一 source 它的人，必須自己用 REPO_ROOT 指定。
+# 把 guard 與 helper 複製到別的目錄 source：路徑若仍指向原 checkout，換機器／搬資料夾就會送錯或根本送不出去。
+_moved=$(mktemp -d)
+mkdir -p "$_moved/scripts/funnel-guard" "$_moved/scripts/lib"
+cp "$TEST_ROOT/scripts/funnel-guard/guard.sh" "$_moved/scripts/funnel-guard/"
+cp "$TEST_ROOT/scripts/lib/throttled-alert.sh" "$TEST_ROOT/scripts/lib/send-telegram.sh" "$_moved/scripts/lib/" 2>/dev/null
+_got=$(env -u THROTTLED_ALERT_SEND_TELEGRAM -u REPO_ROOT zsh -c 'GUARD_SOURCE_ONLY=1 source "$1" 2>/dev/null; printf %s "$THROTTLED_ALERT_SEND_TELEGRAM"' _ "$_moved/scripts/funnel-guard/guard.sh")
+if [ "$_got" = "$_moved/scripts/lib/send-telegram.sh" ]; then ok "搬家後送出路徑指向新的 checkout"; else bad "送出路徑沒有跟著搬家：'$_got'（預期 $_moved/scripts/lib/send-telegram.sh）"; fi
+rm -rf "$_moved"
+
 echo
 [ $fail -eq 0 ] && { echo "PASS"; exit 0; } || { echo "FAIL"; exit 1; }

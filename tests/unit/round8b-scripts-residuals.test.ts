@@ -75,16 +75,7 @@ describe('v2.33.50 round 8b — daily-report.js auth on /api/trips', () => {
   });
 });
 
-describe('v2.33.50 round 8b — cron-shared.ts alertTelegram defense', () => {
-  it('missing env → console.warn once (not silent)', () => {
-    expect(CRON_SHARED_SRC).toContain('_telegramEnvWarned');
-    expect(CRON_SHARED_SRC).toContain('alerts disabled');
-  });
-
-  it('TOKEN format validate (同 send-telegram.sh)', () => {
-    expect(CRON_SHARED_SRC).toMatch(/\^\[0-9\]\+:\[A-Za-z0-9_-\]\+\$/);
-  });
-});
+// cron-shared.alertTelegram 的防禦（缺設定警告一次、token 格式驗證、env 優先序）改以行為測試：tests/unit/cron-alert-telegram.test.ts
 
 describe('v2.33.50 round 8b — d1-client.js 5xx retry + safer error', () => {
   it('1 retry on 5xx with 500ms backoff', () => {

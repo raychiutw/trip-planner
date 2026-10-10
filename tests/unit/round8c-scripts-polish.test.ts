@@ -50,17 +50,7 @@ describe('v2.33.51 round 8c — apply-patch.sh RCE fix', () => {
   });
 });
 
-describe('v2.33.51 round 8c — tripline-api-server.ts .env parser unified', () => {
-  it('quote strip + key validate (對齊 sister scripts)', () => {
-    expect(API_SERVER_SRC).toContain('val.slice(1, -1)');
-    expect(API_SERVER_SRC).toMatch(/\/\^\[A-Za-z_\]\[A-Za-z0-9_\]\*\$\//);
-  });
-
-  it('strip 雙 + 單 quote (對齊 lib/load-env.js)', () => {
-    expect(API_SERVER_SRC).toContain("val.startsWith('\"')");
-    expect(API_SERVER_SRC).toContain("val.startsWith(\"'\")");
-  });
-});
+// .env parser 統一：api-server 現在呼叫 lib/load-env.js；行為與結構守門見 env-local-parse.test.ts。
 
 describe('v2.33.51 round 8c — dump-d1.js backup permissions', () => {
   it('backup dir mode 0700 (owner only)', () => {
