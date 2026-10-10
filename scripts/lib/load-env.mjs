@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// load-env.mjs — 把 .env.local parse 完輸出 bash `export` 指令，給 scheduler-common.sh 用 `eval`
+// load-env.mjs — 把 .env.local parse 完輸出 bash `export` 指令，給 shell 腳本用 `eval`
+// （tripline-job.sh、tp-* skills；scheduler-common.sh 已不存在）。parser 與其他 JS 腳本共用
+// lib/load-env.js 的 parseEnv。
 //
 // 替代品：原本 scheduler-common.sh 用 `while IFS= read -r line` 讀 .env.local，
 // 遇到 multi-line single-quoted JSON（例：GOOGLE_CLOUD_SA_KEY 的 private_key）

@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.101] - 2026-10-10
+
+### Changed
+- **`.env.local` 只剩一份 parser**：原本 5 份各自實作（`lib/load-env.js`、api-server 內嵌、`_lib/cron-shared`、`provision-admin-cli-client`、`tripline-job.sh`），逐行解析對跨多行的單引號值（`GOOGLE_CLOUD_SA_KEY` 的 private_key）都是錯的，只讀到第一行。現在全部走 `lib/load-env.js` 的 `parseEnv`（`dotenv.parse`）。用你實際的 `.env.local` 比對過，新舊解析結果唯一的差異就是 `GOOGLE_CLOUD_SA_KEY`：舊的只讀到 164 字元，新的讀到完整 2321 字元。
+- **Telegram 只剩一條 JS 送出路徑**（`lib/telegram.js` 的 `sendTelegram`），`daily-report` 與 cron 告警共用；token 優先序統一為 `TELEGRAM_BOT_HOME_TOKEN > TELEGRAM_BOT_TOKEN > TELEGRAM_BOT_FETCI_TOKEN`，chat id 必須是數字。`daily-report` 以前的順序是 BOT 在 HOME 前面，且 HTTP 失敗也印「alert sent」，現在會如實回報失敗；你的 `.env.local` 沒有 `TELEGRAM_BOT_TOKEN`，實際使用的 bot 不變。
+- **腳本的 repo 根目錄由腳本位置推導**，不再寫死 `/Users/ray/...`：`tripline-job.sh`、`log-rotate.sh`、funnel-guard 的送出路徑，搬到別的 checkout 也能跑。`loadCronEnv` 原本依賴 `process.cwd()`，從別的目錄執行會靜默拿到空憑證，現在讀 `REPO_ROOT`。
+- `dotenv` 從 devDependencies 移到 dependencies（api-server 在 launchd 下啟動就需要它）。
+
+### Added
+- 測試：`.env.local` parser（含未加引號 `#` 的行內註解語意、`REPO_ROOT`）、`sendTelegram` 全部失敗原因、`alertTelegram` 的去重與靜默失敗、腳本根目錄隨 checkout 搬家（zsh 實際執行）、`load-env.mjs` 對含 `$(...)`／反引號／引號／反斜線／分號的值 eval 後原樣還原且不執行，funnel-guard 自我檢查新增 [11]。這些都做過 mutation 驗證。
+
+### Notes
+- `.env.local` 裡**未加引號且含 `#`** 的值會被當成行內註解截斷（dotenv 語意），這類值請加引號；目前的檔案沒有受影響的值。
+
 ## [2.57.98] - 2026-10-09
 
 ### Fixed
