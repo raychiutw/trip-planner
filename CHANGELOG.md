@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.100] - 2026-10-10
+
+### Changed
+- **毛玻璃面收成單一 module（`.tp-glass`）**：側欄、堆疊面板標題列、Google 景點卡、地圖景點卡、InfoSheet、首頁導覽列、聊天輸入列這 8 處原本各自抄一份「半透明底 + 模糊 + 降級」的寫法，現在只有 `css/tokens.css` 的 `.tp-glass` 一份，每個地方只給兩個參數（`--glass-alpha`、`--glass-filter`）。一般模式下的計算值逐項比對過，與修改前完全相同；「降低透明度」「提高對比」兩個系統設定改由同一個 media query 降級，新增玻璃面時不會再因為漏寫降級而在這兩個設定下維持半透明（#1422 的根因）。
+- InfoSheet 深色模式那條 `background` 規則一直被 inline style 蓋掉，是死碼，已移除。
+
+### Added
+- 守門測試：`.tp-glass` 只定義一次且不成對寫 `-webkit-`（否則 lightningcss 去重後 Chromium 失效）；降級 token 只定義一處、media query 必須同時含降低透明度與提高對比；沒有人再手寫裸的 `backdrop-filter`；7 個玻璃面各自斷言 class 與 alpha／filter 參數（錨定在宣告上）；`.tp-glass` 排在 `.tp-map-entry-card` 之後。這些都做過 mutation 驗證。
+
 ## [2.57.99] - 2026-10-10
 
 ### Changed

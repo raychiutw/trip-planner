@@ -34,9 +34,7 @@ export const STACK_PANEL_HEADER_STYLES = `
    * z-index 10 給操作頁內 sticky 子元素（sub-header / dropdown）headroom，
    * 仍低於 app-level nav（--z-sticky-nav: 200）。 */
   position: sticky; top: 0; z-index: 10;
-  background: var(--glass-reduce-bg, color-mix(in srgb, var(--color-background) 88%, transparent));
-  backdrop-filter: var(--glass-reduce-filter, blur(14px));
-  -webkit-backdrop-filter: var(--glass-reduce-filter, blur(14px));
+  --glass-alpha: 88%; --glass-filter: blur(14px);   /* 毛玻璃面 recipe 在 tokens.css 的 .tp-glass */
 }
 .tp-stack-head-btn {
   /* G-H6a：44pt HIG 最小觸控區（全 6 操作頁共用 ‹/✕），舊值低於 tap-min */
@@ -61,7 +59,7 @@ export default function StackPanelHeader({ title, onBack, onClose }: StackPanelH
   return (
     <>
       <style>{STACK_PANEL_HEADER_STYLES}</style>
-      <div className="tp-stack-head" data-testid="stack-panel-header">
+      <div className="tp-stack-head tp-glass" data-testid="stack-panel-header">
         {onBack ? (
           <button
             type="button"
