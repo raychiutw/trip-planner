@@ -67,7 +67,7 @@ describe('auditAnomaly（真實 schema）', () => {
     expect(r.heavyTrips.map((t: { tripId: string }) => t.tripId)).toEqual(['t-heavy']);
   });
 
-  it('trips／users 表的 delete 超過 10 → critical（優先於 warning）', async () => {
+  it('trips 表的 delete 超過 10 → critical', async () => {
     await addAudit(11, { table: 'trips', action: 'delete', trip: 't-del' });
     expect((await sources().auditAnomaly.run()).status).toBe('critical');
   });
@@ -83,7 +83,7 @@ describe('auditAnomaly（真實 schema）', () => {
     for (let i = 0; i < 12; i++) await addAudit(101, { trip: `t-lim-${i}`, userId: null });
     const r = await sources().auditAnomaly.run();
     expect(r.heavyTrips).toHaveLength(10);
-  });
+  }, 90_000);   // 約 1.2k 單筆 insert；config 註解提過負載下 Miniflare 可慢 10 倍
 
   it('trip 門檻是「大於 100」：剛好 100 筆不算，101 才 warning', async () => {
     await addAudit(100, { trip: 't-edge', userId: null });
@@ -126,6 +126,14 @@ describe('auditAnomaly（真實 schema）', () => {
     const r = await sources().auditAnomaly.run();
     expect(r.heavyUsers).toHaveLength(0);
     expect(r.status).toBe('ok');
+  }, 90_000);   // 約 2.4k 單筆 insert（12 位使用者 × 201）
+
+  it('delete 的 critical 偵測也只看 24 小時內：一天多以前的 trips 刪除不計入', async () => {
+    await addAudit(11, { table: 'trips', action: 'delete', trip: 'system', userId: null, ago: '-25 hours' });
+    expect((await sources().auditAnomaly.run()).status).toBe('ok');
+    await addAudit(1, { table: 'trips', action: 'delete', trip: 'system', userId: null, ago: '-23 hours' });
+    await addAudit(10, { table: 'trips', action: 'delete', trip: 'system', userId: null, ago: '-23 hours' });
+    expect((await sources().auditAnomaly.run()).status).toBe('critical');
   });
 
   it('其他表的 delete 不觸發 critical；超過 24 小時的紀錄不計入', async () => {
