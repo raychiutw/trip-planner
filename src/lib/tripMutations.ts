@@ -5,6 +5,9 @@
  * 成功後 emit `tripUpdated` 讓列表／行程頁 resync。不 toast、不導覽、不還原焦點 —— 那是 UI 的決定，
  * caller 拿 Result 自己做。使用者看到的錯誤文字（狀態碼 → 哪句話）屬於這裡的行為。
  *
+ * 時序：`tripUpdated` 在 HTTP 成功後立刻 emit（早於 caller 自己的 refetch）。deleteDay 以前是 refetchDays 之後才 emit；
+ * 現在兩者並行，因為 listener（useMyTrips）只是重新抓清單、與天數資料無關，不影響正確性。
+ *
  * 以前 TripsListPage（封存、刪除行程）與 EditTripPage（刪除某一天）各自走
  * 「fetch → 檢查 ok → 組錯誤訊息 → dispatchEvent」，儀式各抄一份。
  */

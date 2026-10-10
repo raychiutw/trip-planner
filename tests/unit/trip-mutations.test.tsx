@@ -47,7 +47,7 @@ describe('archiveTrip', () => {
 
   it('網路例外 → ok:false status 0，不丟錯、不 emit', async () => {
     apiFetchRaw.mockRejectedValue(new Error('offline'));
-    expect(await archiveTrip('t')).toMatchObject({ ok: false, status: 0 });
+    expect(await archiveTrip('t')).toMatchObject({ ok: false, status: 0, message: 'offline' });   // 訊息原樣傳給 UI toast
     expect(events).toEqual([]);
   });
 });
@@ -83,6 +83,20 @@ describe('deleteDay', () => {
   it('沒有 removedEntryCount 視為 0', async () => {
     apiFetchRaw.mockResolvedValue(res(200, {}));
     expect(await deleteDay('abc', 1)).toEqual({ ok: true, data: { removedEntryCount: 0 } });
+  });
+
+  it('2xx 但 body 不是合法 JSON → 視為成功（後端已刪除，不能誤報失敗；master 會 throw），數量 0、仍 emit', async () => {
+    apiFetchRaw.mockResolvedValue({ ok: true, status: 200, text: async () => '', json: async () => { throw new SyntaxError('Unexpected end of JSON input'); } });
+    expect(await deleteDay('abc', 1)).toEqual({ ok: true, data: { removedEntryCount: 0 } });
+    expect(events).toEqual([{ tripId: 'abc' }]);
+  });
+
+  it('403 也優先用後端訊息；網路例外保留 ApiError 的訊息', async () => {
+    apiFetchRaw.mockResolvedValueOnce(res(403, { error: { message: '沒有權限' } }));
+    expect(await deleteDay('abc', 1)).toMatchObject({ ok: false, status: 403, message: '沒有權限' });
+    apiFetchRaw.mockRejectedValueOnce(new Error('offline'));
+    expect(await deleteDay('abc', 1)).toMatchObject({ ok: false, status: 0, message: 'offline' });
+    expect(events).toEqual([]);
   });
 
   it('失敗時優先用後端 error.message；非 JSON 用預設訊息；失敗不 emit', async () => {
