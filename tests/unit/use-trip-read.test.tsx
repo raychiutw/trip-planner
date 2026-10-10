@@ -47,28 +47,40 @@ describe('useTripMeta', () => {
     expect(b.current.status).toBe('idle');
   });
 
-  it('換行程時舊行程晚到的回應不會蓋掉新行程，且換行程當下不殘留舊資料', async () => {
+  it('換行程時舊行程晚到的回應不會蓋掉新行程', async () => {
     const first = deferred<{ name: string }>();
     const second = deferred<{ name: string }>();
     apiFetch.mockImplementation((path: string) => (path === '/trips/A' ? first.promise : second.promise));
     const { result, rerender } = renderHook(({ id }) => useTripMeta(id), { initialProps: { id: 'A' } });
     rerender({ id: 'B' });
-    expect(result.current).toMatchObject({ status: 'loading', data: null });
     await act(async () => { second.resolve({ name: 'B-trip' }); });
     await waitFor(() => expect(result.current.data).toMatchObject({ name: 'B-trip' }));
     await act(async () => { first.resolve({ name: 'A-trip (stale)' }); });
     expect(result.current.data).toMatchObject({ name: 'B-trip' });
   });
 
-  it('卸載後回應才到，不再更新狀態（不報 act 警告）', async () => {
-    const d = deferred<{ name: string }>();
-    apiFetch.mockReturnValue(d.promise);
-    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { unmount } = renderHook(() => useTripMeta('t'));
-    unmount();
-    await act(async () => { d.resolve({ name: 'x' }); });
-    expect(err).not.toHaveBeenCalled();
-    err.mockRestore();
+  it('A 已載入完成後換成 B：B 還沒回來的當下是 loading／null，不顯示 A 的資料（結果綁定 path）', async () => {
+    const second = deferred<{ name: string }>();
+    apiFetch.mockImplementation((path: string) => (path === '/trips/A' ? Promise.resolve({ name: 'A-trip' }) : second.promise));
+    const { result, rerender } = renderHook(({ id }) => useTripMeta(id), { initialProps: { id: 'A' } });
+    await waitFor(() => expect(result.current.data).toMatchObject({ name: 'A-trip' }));
+    rerender({ id: 'B' });
+    expect(result.current).toMatchObject({ status: 'loading', data: null });
+    await act(async () => { second.resolve({ name: 'B-trip' }); });
+    await waitFor(() => expect(result.current.data).toMatchObject({ name: 'B-trip' }));
+  });
+
+  it('停用後再啟用同一個行程：先回 loading 而不是上一輪的資料（例如 auth.user 閃一下）', async () => {
+    const again = deferred<{ name: string }>();
+    apiFetch.mockResolvedValueOnce({ name: 'first-load' }).mockReturnValueOnce(again.promise);
+    const { result, rerender } = renderHook(({ on }) => useTripMeta('t', on), { initialProps: { on: true } });
+    await waitFor(() => expect(result.current.data).toMatchObject({ name: 'first-load' }));
+    rerender({ on: false });
+    await waitFor(() => expect(result.current.status).toBe('idle'));
+    rerender({ on: true });
+    expect(result.current).toMatchObject({ status: 'loading', data: null });
+    await act(async () => { again.resolve({ name: 'second-load' }); });
+    await waitFor(() => expect(result.current.data).toMatchObject({ name: 'second-load' }));
   });
 });
 
@@ -79,6 +91,22 @@ describe('useTripDays', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(result.current.data).toEqual([{ id: 1, dayNum: 1 }]);
     expect(apiFetch).toHaveBeenCalledWith('/trips/t/days?all=1');
+  });
+
+  it('enabled=false 不發請求；換行程時舊回應晚到不蓋掉新的；all 切換會換 path', async () => {
+    const { result: off } = renderHook(() => useTripDays('t', { enabled: false }));
+    expect(off.current.status).toBe('idle');
+    expect(apiFetch).not.toHaveBeenCalled();
+
+    const first = deferred<unknown[]>();
+    apiFetch.mockImplementation((path: string) => (path === '/trips/A/days' ? first.promise : Promise.resolve([{ id: 2, dayNum: 1 }])));
+    const { result, rerender } = renderHook(({ id, all }) => useTripDays(id, { all }), { initialProps: { id: 'A', all: false } });
+    rerender({ id: 'B', all: false });
+    await waitFor(() => expect(result.current.data).toEqual([{ id: 2, dayNum: 1 }]));
+    await act(async () => { first.resolve([{ id: 99, dayNum: 9 }]); });
+    expect(result.current.data).toEqual([{ id: 2, dayNum: 1 }]);
+    rerender({ id: 'B', all: true });
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/trips/B/days?all=1'));
   });
 
   it('回應不是陣列 → 視為 error（不把壞資料交給畫面）', async () => {
@@ -127,14 +155,19 @@ describe('結構：頁面不再自己裸讀 /trips/:id 與 /days', () => {
   //  - hooks/useAddToTripTarget.ts：自帶 retry／選天狀態
   //  - pages/EntryActionPage.tsx：與 entry 端點同一個 Promise.all 載入
   //  - pages/EditEntryPage.tsx：refreshEntryPois 的命令式重抓（非 mount 讀取）
-  const ALLOW = ['src/hooks/useAddToTripTarget.ts', 'src/pages/EntryActionPage.tsx', 'src/pages/EditEntryPage.tsx'];
-  const BARE = /apiFetch(<[^>]*>)?\(\s*`\/trips\/\$\{encodeURIComponent\([a-zA-Z]+\)\}(\/days(\?all=1)?)?`\s*[,)]/;
+  const ALLOW = ['src/hooks/useAddToTripTarget.ts', 'src/pages/EntryActionPage.tsx'];
+  // EditEntryPage 不整檔豁免，只允許那一處命令式重抓（再多一個 mount 讀取就會超過 1）。
+  const EXACT: Record<string, number> = { 'src/pages/EditEntryPage.tsx': 1 };
+  // `<.*?>` 才吃得到巢狀泛型（apiFetch<Array<{ ... }>>(...)）。
+  const BARE = /apiFetch(<.*?>)?\(\s*`\/trips\/\$\{encodeURIComponent\([a-zA-Z]+\)\}(\/days(\?all=1)?)?`\s*[,)]/g;
+  const count = (p: string) => (readFileSync(join(ROOT, p), 'utf8').match(BARE) ?? []).length;
 
   it('新增的讀取請走 useTripMeta／useTripDays（或明確加入允許清單並寫理由）', () => {
     const offenders = walk(join(ROOT, 'src'))
       .map((p) => p.slice(ROOT.length + 1))
       .filter((p) => p !== 'src/hooks/useTripRead.ts' && !ALLOW.includes(p))
-      .filter((p) => BARE.test(readFileSync(join(ROOT, p), 'utf8')));
+      .filter((p) => count(p) > (EXACT[p] ?? 0));
     expect(offenders).toEqual([]);
+    for (const [p, n] of Object.entries(EXACT)) expect(count(p), `${p} 應恰好 ${n} 處`).toBe(n);
   });
 });

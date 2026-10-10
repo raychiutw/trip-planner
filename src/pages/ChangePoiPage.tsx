@@ -616,9 +616,6 @@ export default function ChangePoiPage() {
     setCustomHintConfirmed(false);
     setCustomError(null);
   }, [mode]);
-  // v2.32.1 fix: 初值改 null（"未載入"），與「載入後是 0 個 destinations」區分。
-  // LocationPickerMap 只用 mount 時的 initialCenter，若 customDestinations 還是 null
-  // 就 render 會卡在 Tokyo Station fallback 改不掉 — 必須等 fetch 完才能 mount。
 
   const { state: searchState, retry: retrySearch } = usePoiSearch({
     enabled: tab === 'search',

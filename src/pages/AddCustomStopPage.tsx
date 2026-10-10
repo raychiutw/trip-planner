@@ -339,6 +339,8 @@ export default function AddCustomStopPage() {
   // 時 fallback 走 destinations。兩個讀取都成功才交出資料（與原本 Promise.all 同語意）。
   // v2.32.1：destinations 載入中為 null、任何一個失敗退回 []（fallback chain 走 Tokyo 最後安全網），
   // 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap 用 Tokyo initialCenter mount 後被鎖死。
+  // 行為差異：原本 effect 依賴 [tripId, dayNum]，切天 chip 會重抓；現在依 path（不含 dayNum）每個行程只抓一次，
+  // currentDay 由快取的 timeline 推導。這頁建立後就導走，頁面存活期間 timeline 不會被別處改動，所以可接受。
   const readEnabled = Number.isFinite(dayNum);
   const daysRead = useTripDays<DayApiRow>(tripId, { all: true, enabled: readEnabled });
   const metaRead = useTripMeta<{ destinations?: TripDestApi[] }>(tripId, readEnabled);

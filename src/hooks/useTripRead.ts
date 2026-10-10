@@ -27,7 +27,8 @@ function useTripResource<T>(path: string | null, expectArray: boolean): TripRead
   const [result, setResult] = useState<{ path: string; data: T | null; ok: boolean } | null>(null);
 
   useEffect(() => {
-    if (!path) return;
+    // 停用（enabled=false／沒有 tripId）時清掉舊結果：否則同一個 path 再啟用時會先吐出舊資料（換帳號時是上一位的）。
+    if (!path) { setResult(null); return; }
     let cancelled = false;
     apiFetch<unknown>(path)
       .then((data) => {
@@ -62,8 +63,8 @@ export function useTripDays<T = { id: number; dayNum: number }>(
   return useTripResource<T[]>(path, true);
 }
 
-/** 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。 */
-export const NO_DESTINATIONS: never[] = [];
+/** 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。凍結，避免某個 caller 就地 sort／push 後汙染所有頁面。 */
+export const NO_DESTINATIONS: never[] = Object.freeze([]) as unknown as never[];
 
 /**
  * 行程目的地，給「地圖預設中心」的 fallback chain 用。
