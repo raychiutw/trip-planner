@@ -9,7 +9,7 @@
  * 真實 D1（Miniflare）。每列用一個「不在 trip_permissions 的陌生人」或 viewer 呼叫，
  * 參數／body 都是合法的，所以 403 只可能來自寫入 gate（不是驗證失敗）。
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { createTestDb } from './setup';
 import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, callHandler, jsonRequest, userIdFor } from './helpers';
 import { onRequestPost as postRequest } from '../../functions/api/requests';
@@ -36,10 +36,6 @@ beforeAll(async () => {
   await db.prepare("INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, 'viewer')")
     .bind(userIdFor(viewer), TRIP).run();
 });
-
-// api 專案是 isolate:false（module 跨檔共用）。本檔會載入真的 google-client／_maps_lock（經 segments handler），
-// 後面 vi.mock 這兩個模組的測試（segments-patch／segments-post）就拿不到 mock；結束時清掉 module registry。
-afterAll(() => { vi.resetModules(); });
 
 type Row = { name: string; handler: unknown; method: string; params: Record<string, string>; body?: unknown };
 const rows: Row[] = [
