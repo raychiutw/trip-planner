@@ -1,7 +1,9 @@
 /**
- * Value: protects=非成員不能對別人的行程做寫入（requests／entries／segments／notes／shares 的 gate 真的會擋）;
- * fails_when=requireTripWrite 被移除、放寬成唯讀檢查，或某個 handler 忘了呼叫它;
- * why_new=既有測試對這幾個 handler 只覆蓋 401／404／cross-trip IDOR，沒有「非成員 → 403」;
+ * Value: protects=非成員不能對別人的行程做寫入（本檔列出的 7 個 handler 的 gate 真的會擋）;
+ * fails_when=這 7 個 handler 任一個的 requireTripWrite 被移除或放寬成唯讀檢查;
+ * why_new=既有測試對這 7 個 handler 只覆蓋 401／404／cross-trip IDOR，沒有「非成員 → 403」
+ *   （其餘被換成 requireTripWrite 的 handler：days／shift／batch／health-check／generate／recompute／segments POST／shares GET+POST
+ *   已有各自的 403 案例，不在此重複）;
  * seam=none
  *
  * 真實 D1（Miniflare）。每列用一個「不在 trip_permissions 的陌生人」或 viewer 呼叫，
