@@ -26,19 +26,20 @@ afterAll(async () => {
   // 共用 Miniflare DB：不留資料給同一個 worker 內的其他測試檔
   await db.prepare('DELETE FROM audit_log').run();
   await db.prepare(`DELETE FROM trips WHERE id = 't-hyg'`).run();
-  await db.prepare(`DELETE FROM users WHERE id = 'u-dc'`).run();
+  await db.prepare(`DELETE FROM pois WHERE name IN ('hyg-p1','hyg-p2')`).run();   // 斷言失敗時 test body 內的清理不會跑
+  await db.prepare(`DELETE FROM users WHERE id = 'u-dc' OR id LIKE 'u-lim-%'`).run();
   await disposeMiniflare();
 });
 
 describe('auditAnomaly（真實 schema）', () => {
   beforeEach(async () => { await db.prepare('DELETE FROM audit_log').run(); });
 
-  async function addAudit(n: number, o: { trip?: string; table?: string; action?: string; userId?: string | null; daysAgo?: number }) {
+  async function addAudit(n: number, o: { trip?: string; table?: string; action?: string; userId?: string | null; daysAgo?: number; ago?: string }) {
     const stmt = db.prepare(
       `INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, changed_by_user_id, created_at)
        VALUES (?, ?, 1, ?, 'x', ?, datetime('now', ?))`,
     );
-    const ago = `-${o.daysAgo ?? 0} day`;
+    const ago = o.ago ?? `-${o.daysAgo ?? 0} day`;
     const batch = Array.from({ length: n }, () => stmt.bind(o.trip ?? 't-1', o.table ?? 'trip_entries', o.action ?? 'update', o.userId === undefined ? 'u-dc' : o.userId, ago));
     await db.batch(batch);
   }
@@ -82,6 +83,49 @@ describe('auditAnomaly（真實 schema）', () => {
     for (let i = 0; i < 12; i++) await addAudit(101, { trip: `t-lim-${i}`, userId: null });
     const r = await sources().auditAnomaly.run();
     expect(r.heavyTrips).toHaveLength(10);
+  });
+
+  it('trip 門檻是「大於 100」：剛好 100 筆不算，101 才 warning', async () => {
+    await addAudit(100, { trip: 't-edge', userId: null });
+    expect((await sources().auditAnomaly.run()).status).toBe('ok');
+    await addAudit(1, { trip: 't-edge', userId: null });
+    expect((await sources().auditAnomaly.run()).status).toBe('warning');
+  });
+
+  it('critical 優先於 warning：同時有重度使用者與 trips delete 爆量 → critical，且 heavyUsers 仍帶出', async () => {
+    await addAudit(201, { trip: 'system' });
+    await addAudit(11, { table: 'trips', action: 'delete', trip: 'system' });
+    const r = await sources().auditAnomaly.run();
+    expect(r.status).toBe('critical');
+    expect(r.heavyUsers).toHaveLength(1);
+  });
+
+  it('只有 delete 才算 critical：trips／users 表的 insert／update 再多也不觸發', async () => {
+    await addAudit(11, { table: 'trips', action: 'update', trip: 'system', userId: null });
+    await addAudit(11, { table: 'users', action: 'insert', trip: 'system', userId: null });
+    expect((await sources().auditAnomaly.run()).status).toBe('ok');
+  });
+
+  it('24 小時窗口的兩側：23 小時前的算、25 小時前的不算', async () => {
+    await addAudit(101, { trip: 't-old', userId: null, ago: '-25 hours' });
+    expect((await sources().auditAnomaly.run()).status).toBe('ok');
+    await addAudit(101, { trip: 't-new', userId: null, ago: '-23 hours' });
+    const r = await sources().auditAnomaly.run();
+    expect(r.status).toBe('warning');
+    expect(r.heavyTrips.map((t: { tripId: string }) => t.tripId)).toEqual(['t-new']);
+  });
+
+  it('heavyUsers 最多回 10 筆；沒有 user id 的紀錄（service token）不算進使用者門檻', async () => {
+    for (let i = 0; i < 12; i++) {
+      await db.prepare(`INSERT OR IGNORE INTO users (id, email, display_name, status) VALUES (?, ?, 'x', 'active')`).bind(`u-lim-${i}`, `lim${i}@example.com`).run();
+      await addAudit(201, { trip: 'system', userId: `u-lim-${i}` });
+    }
+    expect((await sources().auditAnomaly.run()).heavyUsers).toHaveLength(10);
+    await db.prepare('DELETE FROM audit_log').run();
+    await addAudit(201, { trip: 'system', userId: null });
+    const r = await sources().auditAnomaly.run();
+    expect(r.heavyUsers).toHaveLength(0);
+    expect(r.status).toBe('ok');
   });
 
   it('其他表的 delete 不觸發 critical；超過 24 小時的紀錄不計入', async () => {
@@ -133,13 +177,14 @@ describe('dataHygiene（真實 schema：migration 0078 DROP trip_entries.note �
 });
 
 describe('npmAudit', () => {
-  it('呼叫 npm audit 的 timeout ≥ 180 秒（registry 單次實測約 50 秒，60 秒貼邊會週期性假 critical）', () => {
+  it('呼叫 npm audit 的 timeout ≥ 180 秒（registry 單次實測約 50 秒，60 秒貼邊會週期性假 critical）', async () => {
     const calls: Array<{ cmd: string; timeout?: number }> = [];
     const execSync = (cmd: string, opts: { timeout?: number }) => {
       calls.push({ cmd, timeout: opts.timeout });
       return JSON.stringify({ vulnerabilities: {} });
     };
-    createCheckSources({ execSync, env: {} }).npmAudit.run();
+    const r = await createCheckSources({ execSync, env: {} }).npmAudit.run();
+    expect(r.error).toBeUndefined();   // 解析成功才算真的走完這條路徑
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toMatch(/npm audit/);
     expect(calls[0].timeout).toBeGreaterThanOrEqual(180000);
