@@ -17,7 +17,7 @@
  * trip_health_reports.findings_json + status='completed'。
  */
 
-import { hasPermission, hasWritePermission, requireAuth} from '../../_auth';
+import { hasPermission, requireAuth, requireTripWrite } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json } from '../../_utils';
 import { recordEmailEvent } from '../../_audit';
@@ -210,9 +210,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
   // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable

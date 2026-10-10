@@ -1,4 +1,4 @@
-import { hasWritePermission, requireAuth} from '../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { createEntry } from '../../../../_entryWrite';
 import { resolveEntryTimes } from '../../../../_time';
@@ -21,9 +21,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
   const changedBy = auth.email;
 
-  if (!await hasWritePermission(db, auth, id)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, id);
 
   const day = await db
     .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')

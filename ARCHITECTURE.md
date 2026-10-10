@@ -401,6 +401,7 @@ tests/
 | [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
+| [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 

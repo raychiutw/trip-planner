@@ -18,7 +18,7 @@
  * Auth: trip write permission.
  */
 
-import { hasWritePermission, requireAuth} from '../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -46,9 +46,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   const db = context.env.DB;
-  if (!await hasWritePermission(db, auth, tripId)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, tripId);
 
   // 驗 segment 屬於該 trip（防 IDOR）+ 取 from/to entry + submode（PATCH 保留用）+ version for OCC
   const seg = await db
