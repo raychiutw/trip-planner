@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import TripPage from '../../src/pages/TripPage';
 import EntryActionPage from '../../src/pages/EntryActionPage';
@@ -8,6 +8,11 @@ import { SheetStackProvider } from '../../src/contexts/SheetStackContext';
 import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
 import { resetToasts } from '../../src/lib/toastBus';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
+
+// 這支測試走真實的拖曳＋多段讀寫協調；CI runner 吃緊時一個 waitFor／findBy 預設的 1 秒會不夠
+// （「切換行程後拖曳儲存完成…」在 runner 負載下約 1.6 秒才走到 writes，曾讓 master CI 偶發紅）。
+// 不是放寬斷言，只是把「等多久」放寬；等不到仍然會逾時失敗。
+configure({ asyncUtilTimeout: 5000 });
 
 function entry(id: number, name: string, dayId: number) {
   const master = { poiId: id + 1000, name, type: 'attraction', lat: 26 + id / 1000, lng: 127, note: null };
