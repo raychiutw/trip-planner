@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.102] - 2026-10-10
+
+### Changed
+- **daily-check 的 D1 來源改用行為測試守門**：原本三個測試（audit 異常、hygiene 欄位切換、npm audit 逾時）是 grep `scripts/daily-check.js` 的原始碼，換個寫法同義就紅、語意壞了字串還在卻綠。換成 `daily-check-sources-sql.test.ts`：用真實 migration schema 的 Miniflare D1，從既有的注入點（`createCheckSources({ queryD1, execSync })`）實際執行它送出的 SQL，並斷言輸出。
+  - 守的行為：使用者／trip 的 mutation 門檻（200／100，剛好等於門檻不算）、`trips`／`users` 的 delete 超過 10 次為 critical 且優先於 warning、只有 delete 算 critical、24 小時窗口兩側（23 小時前算、25 小時前不算，warning 與 critical 兩條查詢都綁）、`system` trip 與無 user id（service token）的排除、`LIMIT 10`、hygiene 查詢在現行 schema 上能執行（不會 no such column）、npm audit 的 timeout ≥ 180 秒。
+  - 所有斷言都對 `daily-check.js` 做過 mutation（改運算子、拿掉過濾條件、縮放窗口、對調分類順序、改 LIMIT、timeout 改 60 秒），各自轉紅；`daily-check.js` 本身沒有任何改動。
+
 ## [2.57.98] - 2026-10-09
 
 ### Fixed
