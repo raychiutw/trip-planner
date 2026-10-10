@@ -61,9 +61,11 @@ describe('DesktopSidebar rev2 §10.1 — vibrancy 材質 + 清單視覺 token', 
   it('.tp-sidebar 用 vibrancy：backdrop-filter blur + color-mix(主背景) 半透明（無 body.dark override）', () => {
     const { container } = renderSidebar({ user: null, trips: [] });
     const style = container.querySelector('style')?.textContent ?? '';
-    // #1422：值走降級 token（`var(--glass-reduce-*, <原值>)`），原值仍須是 blur 與 color-mix 半透明。
-    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*backdrop-filter:\s*var\(--glass-reduce-filter,\s*blur/);
-    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*var\(--glass-reduce-bg,\s*color-mix\([^}]*var\(--color-background\)/);
+    // 毛玻璃面 recipe 在 tokens.css 的 .tp-glass（降級由該 module 負責，守門見 glass-surface-module.test.ts）；
+    // 這裡只驗 sidebar 宣告了自己的參數（72% 半透明、blur 30px），且 DOM 上掛了 tp-glass。
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*--glass-alpha:\s*72%/);
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*--glass-filter:\s*blur\(30px\)/);
+    expect(container.querySelector('.tp-sidebar')?.classList.contains('tp-glass')).toBe(true);
     // vibrancy 走主 app token 自動 light/dark adapt → 不需 body.dark 專段
     expect(style).not.toMatch(/body\.dark\s+\.tp-sidebar/);
   });

@@ -73,7 +73,7 @@ export default function MapEntryCard({
        * 不改成 <div role="listitem"><button> 包一層：那會讓 wrapper 變成 flex child，
        * flex: 0 0 220px 與 scroll-snap 都要搬，改動面遠大於本票該有的。 */
       aria-current={isActive ? 'true' : undefined}
-      className={`tp-map-entry-card${isActive ? ' is-active' : ''}`}
+      className={`tp-map-entry-card tp-glass${isActive ? ' is-active' : ''}`}
       onClick={onClick}
       data-card-entry-id={dataEntryId}
     >

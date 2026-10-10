@@ -29,9 +29,7 @@ body.dark .tp-lp{--d1:#D9968F;--d2:#8FB8D9;--d3:#9FCF9A;--d4:#D9B98F}
 .tp-lp-nav{
   position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
   padding:12px 18px;
-  background:var(--glass-reduce-bg,color-mix(in srgb,var(--color-background) 88%,transparent));
-  backdrop-filter:var(--glass-reduce-filter,blur(20px) saturate(180%));
-  -webkit-backdrop-filter:var(--glass-reduce-filter,blur(20px) saturate(180%));
+  --glass-alpha:88%;--glass-filter:blur(20px) saturate(180%);   /* recipe：tokens.css 的 .tp-glass */
   border-bottom:1px solid var(--color-border);
 }
 .tp-lp-brand{font-size:18px;font-weight:800;letter-spacing:-.02em}
@@ -144,7 +142,7 @@ export default function LandingPage() {
     <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-lp" data-testid="landing-page">
-        <nav className="tp-lp-nav">
+        <nav className="tp-lp-nav tp-glass">
           <div className="tp-lp-brand">Trip<span>line</span></div>
           <div className="tp-lp-nav-spacer" />
           <a className="tp-lp-nav-login" href="/login">登入</a>
