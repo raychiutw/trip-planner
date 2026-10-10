@@ -13,7 +13,7 @@
  * 已在 ChangePoiPage 完整實作，重複會 drift。User feedback「相同的增加景點的方式」
  * 同樣指向 reuse ChangePoiPage。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
@@ -21,8 +21,8 @@ import Icon from '../components/shared/Icon';
 import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useTripMeta } from '../hooks/useTripRead';
 import { useAddToTripTarget } from '../hooks/useAddToTripTarget';
-import { apiFetch } from '../lib/apiClient';
 
 interface DayApiRow {
   id: number;
@@ -190,22 +190,8 @@ export default function AddEntryPage() {
     auth.user ? tripId ?? '' : '',
     Number.isInteger(dayNumRaw) ? dayNumRaw : undefined,
   );
-  const [tripMeta, setTripMeta] = useState<TripMetaApi | null>(null);
-
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const meta = await apiFetch<TripMetaApi>(`/trips/${encodeURIComponent(tripId)}`);
-        if (cancelled) return;
-        setTripMeta(meta ?? null);
-      } catch {
-        // silent — render with fallback labels
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
+  // 失敗就維持 null，畫面用 fallback 標籤。
+  const tripMeta = useTripMeta<TripMetaApi>(tripId, !!auth.user).data;
 
   // Keep the URL on a day confirmed to belong to this trip.
   useEffect(() => {

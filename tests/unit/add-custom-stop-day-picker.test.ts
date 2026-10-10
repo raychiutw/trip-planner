@@ -26,7 +26,8 @@ describe('AddCustomStopPage day picker chips', () => {
     expect(SRC).toContain('setSearchParams(sp, { replace: true })');
   });
 
-  it('days fetch 存 allDays 全列表（chips 資料源）', () => {
-    expect(SRC).toContain('setAllDays(days)');
+  it('days 讀取（?all=1）由 useTripDays 負責，allDays 是 chips 資料源（讀取行為見 use-trip-read.test.tsx）', () => {
+    expect(SRC).toMatch(/useTripDays<DayApiRow>\(tripId, \{ all: true/);
+    expect(SRC).toMatch(/const allDays: DayApiRow\[\] \| null =/);
   });
 });

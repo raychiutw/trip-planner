@@ -49,8 +49,8 @@ describe('AddStopPage — v2.31.99 day picker chip row', () => {
   });
 
   it('載入所有 days 進 allDays state（不再只 setCurrentDay）', () => {
-    expect(ADD_STOP_SRC).toMatch(/setAllDays\(/);
-    expect(ADD_STOP_SRC).toMatch(/const \[allDays, setAllDays\]/);
+    // 讀取（含競態、失敗維持 null）由 useTripDays 負責，行為見 use-trip-read.test.tsx。
+    expect(ADD_STOP_SRC).toMatch(/const allDays = useTripDays<DayApiRow>\(/);
   });
 
   it('currentDay 改 useMemo 從 allDays 衍生（單一 truth）', () => {

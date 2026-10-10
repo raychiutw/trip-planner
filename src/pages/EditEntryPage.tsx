@@ -37,6 +37,7 @@ import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
 import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
+import { useTripMeta, useTripDays } from '../hooks/useTripRead';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
@@ -1008,7 +1009,6 @@ function EditEntryPageContent() {
   const [entry, setEntry] = useState<EntryApi | null>(null);
   const [poiInfo, setPoiInfo] = useState<{ name: string; poiType: string | null } | null>(null);
   const [prevEntry, setPrevEntry] = useState<{ id: number; title: string } | null>(null);
-  const [tripName, setTripName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -1118,18 +1118,8 @@ function EditEntryPageContent() {
 
   // Load trip meta — 給 TitleBar 顯示 「編輯景點 · {tripName}」（v2.26.4 mockup V1）
   // 失敗時只省略 tripName，不擋 entry load。
-  useEffect(() => {
-    if (!tripId) return;
-    let cancelled = false;
-    apiFetch<TripMeta>(`/trips/${encodeURIComponent(tripId)}`)
-      .then((data) => {
-        if (cancelled) return;
-        const name = data?.title || data?.name;
-        if (name) setTripName(name);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [tripId]);
+  const tripMetaData = useTripMeta<TripMeta>(tripId).data;
+  const tripName: string | null = tripMetaData?.title || tripMetaData?.name || null;
 
   // 2026-07-06 車程重算：entry 所在 dayNum（下方 effect 解析後存入），刪除時
   // 做 day-scoped recompute；未解析到 → null → 全 trip recompute fallback。
@@ -1146,15 +1136,8 @@ function EditEntryPageContent() {
   // `extractSiblingCoords` 需要的鄰近停留點座標與前一個 entry 的標題 ——
   // 兩者都要整天的 timeline，entry 端點沒有。要再往下砍就得讓某支端點同時
   // 回 entry + 當天 context，那是另一個層級的 API 設計。
-  const [daysIndex, setDaysIndex] = useState<Array<{ id: number; dayNum: number }> | null>(null);
-  useEffect(() => {
-    if (!tripId) return;
-    let cancelled = false;
-    apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`)
-      .then((days) => { if (!cancelled) setDaysIndex(days); })
-      .catch(() => { /* graceful — 下方 effect 沒拿到就跳過 */ });
-    return () => { cancelled = true; };
-  }, [tripId]);
+  // 失敗 → 維持 null，下方 effect 沒拿到就跳過（graceful）。
+  const daysIndex = useTripDays(tripId).data;
 
   useEffect(() => {
     if (!entry || !tripId || !daysIndex) return;

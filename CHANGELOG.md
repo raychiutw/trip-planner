@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.104] - 2026-10-10
+
+### Changed
+- **行程讀取收成 Trip read module**（`src/hooks/useTripRead.ts`）：`ChangePoiPage`、`AddStopPage`、`AddCustomStopPage`、`AddEntryPage`、`EditEntryPage` 各自抄一份「`let cancelled` → `apiFetch` → `setState` → catch 退成空值」去讀 `/trips/:id`（5 份）與 `/trips/:id/days`（4 份），現在都走 `useTripMeta`／`useTripDays`／`useTripDestinations`。換行程時舊回應晚到不會蓋掉新的、載入中不殘留上一個行程的資料、卸載後不更新狀態，只寫在這一處。
+- 目的地維持三態：載入中 `null`（避免地圖選點器用東京預設位置 mount 後被鎖死）、讀取失敗 `[]`、有資料回清單；共用的空陣列已凍結，避免被就地修改後汙染所有頁面。
+- 停用後再啟用同一個讀取（例如登入狀態短暫變化）時，先回「載入中」，不再先吐出上一輪的資料。
+
+### Fixed
+- 隱含行為差異（請 owner 知悉）：`AddCustomStopPage` 切換天數 chip 不再重新抓一次 `/days?all=1` 與 `/trips/:id`（原本依賴 `dayNum`），改為每個行程只抓一次、由快取的 timeline 推導當天資料；這個頁面建立景點後就導走，頁面存活期間 timeline 不會被別處改動。
+
+### Added
+- 測試：hook 行為（成功／非陣列／失敗／網路錯誤、結果綁定 path、換行程競態、停用再啟用、`useTripDays` 的 enabled 與 `all`、目的地三態）與結構守門（頁面不得再自己裸讀這兩個 endpoint；`EditEntryPage` 只允許恰好 1 處命令式重抓）。拿掉 path 綁定、停用清除、`cancelled`，或在 `EditEntryPage` 多加一個裸讀取，各自轉紅。
+
 ## [2.57.103] - 2026-10-10
 
 ### Changed
