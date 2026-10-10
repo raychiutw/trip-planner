@@ -96,6 +96,8 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── tripMutations.ts     行程層變更：archiveTrip/unarchiveTrip/deleteTrip/deleteDay 回 Result，
+│   │                        成功 emit tripUpdated；不 toast、不導覽（同 entryMutations 慣例）
 │   ├── segmentMutations.ts  手動車程建立／更新，成功 emit segmentUpdated 觸發共用讀取
 │   ├── travelRecompute.ts   車程重算 single-flight、gap signature、403 停用與失敗狀態
 │   ├── mapRow.ts            DB row → UI object 統一轉換

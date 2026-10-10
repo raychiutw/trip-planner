@@ -18,6 +18,7 @@ import { EVENT } from '../../src/lib/events';
 import { writeTripView } from '../../src/lib/tripViewState';
 import { TRIP_MAIN_PORTAL_ID } from '../../src/lib/tripStackRoutes';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../../src/lib/localStorage';
+import { resetToasts } from '../../src/components/shared/Toast';
 
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({
@@ -451,3 +452,76 @@ describe('TripsListPage — 進 /trips 還原上次檢視（v2.55.x bug 1）', (
     expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 });
+
+describe('TripsListPage — 刪除與歸檔的失敗與副作用（Trip mutations module 的頁面接線）', () => {
+  // 前一個 describe 的「還原上次檢視」會把檢視狀態留在 sessionStorage，桌機會自動開回該行程、卡片格消失。
+  // toast 是模組層全域狀態：前面測試留下的「已刪除」提示會讓「不顯示成功」的斷言誤判。
+  beforeEach(() => { sessionStorage.clear(); resetToasts(); });
+  const OWN = { ...SAMPLE[0], owner: 'u@x.com', ownerUserId: 'u1', archivedAt: null };
+  const mount = (url = '/trips') => render(
+    <MemoryRouter initialEntries={[url]}><ActiveTripProvider><NewTripProvider><TripsListPage /></NewTripProvider></ActiveTripProvider></MemoryRouter>,
+  );
+  const openDelete = async () => {
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByTestId('trip-card-menu-delete-okinawa'));
+  };
+
+  it.each([
+    [403, '僅行程擁有者或管理者可刪除'],
+    [404, '行程不存在'],
+    [500, '刪除失敗，請稍後再試'],
+  ])('刪除回 %i → 顯示對應訊息、對話框保留可重試、卡片還在、不顯示成功', async (status, message) => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify([OWN]), { status: 200 });
+      if (path === '/api/trips/okinawa' && init?.method === 'DELETE') return new Response('{}', { status });
+      return new Response('null', { status: 200 });
+    }));
+    mount();
+    await openDelete();
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(/已刪除「/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('trips-list-card-okinawa')).toBeInTheDocument();
+    // finally 有把 busy 放掉：按鈕可再按（return 在 try 裡也一樣）
+    await waitFor(() => expect(screen.getByTestId('confirm-modal-confirm')).not.toBeDisabled());
+  });
+
+  it('刪除成功 → 顯示成功提示、卡片消失', async () => {
+    let available = [OWN, { ...SAMPLE[1], owner: 'u@x.com', ownerUserId: 'u1', archivedAt: null }];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify(available), { status: 200 });
+      if (path === '/api/trips/okinawa' && init?.method === 'DELETE') {
+        available = available.filter((t) => t.tripId !== 'okinawa');
+        return new Response('{}', { status: 200 });
+      }
+      return new Response('null', { status: 200 });
+    }));
+    mount();
+    await openDelete();
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    expect(await screen.findByText('已刪除「沖繩之旅」')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
+    expect(screen.getByTestId('trips-list-card-seoul')).toBeInTheDocument();
+  });
+
+  it('歸檔回 500 → 顯示失敗訊息、確認對話框保留、按鈕可再按', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path === '/api/my-trips') return new Response(JSON.stringify([OWN]), { status: 200 });
+      if (path === '/api/trips/okinawa/archive' && init?.method === 'PUT') return new Response('failed', { status: 500 });
+      return new Response('null', { status: 200 });
+    }));
+    mount();
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    expect(await screen.findByText('更新歸檔狀態失敗，請再試一次。')).toBeInTheDocument();
+    expect(screen.getByTestId('confirm-modal-confirm')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('confirm-modal-confirm')).not.toBeDisabled());
+  });
+});
+

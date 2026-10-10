@@ -36,6 +36,7 @@ import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
+import { deleteDay } from '../lib/tripMutations';
 import OperationShell from '../components/shell/OperationShell';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
@@ -929,31 +930,16 @@ export default function EditTripPage() {
     const dayNum = pendingDelete.dayNum;
     setDaysMutating(true);
     try {
-      const res = await apiFetchRaw(
-        `/trips/${encodeURIComponent(tripId)}/days/${dayNum}`,
-        { method: 'DELETE', credentials: 'same-origin' },
-      );
-      if (!res.ok) {
-        const text = await res.text();
-        let message = '刪除天數失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
-      }
-      const result = (await res.json()) as { removedEntryCount?: number };
-      const removed = result.removedEntryCount ?? 0;
+      const result = await deleteDay(tripId, dayNum);
+      if (!result.ok) { showToast(result.message, 'error'); return; }
+      const removed = result.data.removedEntryCount;
       const refreshed = await refetchDays();
-      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(
         refreshed ? (removed > 0 ? `Day ${dayNum} 已刪除（連同 ${removed} 個景點）` : `Day ${dayNum} 已刪除`)
           : '刪除已送出，但無法重新讀取日期；請重試讀取。',
         refreshed ? 'success' : 'info',
       );
       setPendingDelete(null);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : '刪除天數失敗', 'error');
     } finally {
       setDaysMutating(false);
     }

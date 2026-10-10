@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.103] - 2026-10-10
+
+### Changed
+- **行程層級的變更收成 Trip mutations module**（`src/lib/tripMutations.ts`）：封存／取消封存、刪除行程、刪除某一天原本在 `TripsListPage` 與 `EditTripPage` 各抄一份「fetch → 檢查 ok → 組錯誤訊息 → 發 `tripUpdated`」，現在都走 `archiveTrip`／`unarchiveTrip`／`deleteTrip`／`deleteDay`，回傳 `ok` 或 `message`，不丟錯。使用者看到的錯誤文字（403／404／其他各對應哪一句）與 HTTP 動詞、路徑編碼都與修改前相同。
+- 刪除某一天時，後端已刪除成功但回應內容不是合法 JSON，原本會誤報「刪除天數失敗」；現在算成功（受影響的 entry 數記 0）。
+- `tripUpdated` 在刪除某一天時改為 HTTP 成功後立刻發出（原本是重新讀取天數之後）；監聽它的只有行程清單重新同步，與天數資料無關，不影響畫面正確性。
+
+### Added
+- 測試：模組層（方法／路徑／錯誤訊息對照／網路例外／成功才發事件／壞 JSON）、頁面層（刪除 403／404／500 顯示對應訊息且對話框保留可重試、刪除成功提示與卡片消失、歸檔失敗顯示訊息）、結構守門（`src/` 內不得再直接打封存或刪除行程／天數的 endpoint）。頁面層用把 `TripsListPage` 改壞（失敗仍顯示成功、失敗時關對話框、歸檔失敗不提示）驗證，各自轉紅。
+
+### Notes
+- `EditTripPage` 的新增／插入／平移天數與行程 PUT 仍是各自 `apiFetchRaw` 加手動發事件，尚未收進這個 module，列為後續。
+
 ## [2.57.102] - 2026-10-10
 
 ### Changed
