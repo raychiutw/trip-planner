@@ -15,7 +15,11 @@ const SCRIPTS: Array<{ file: string; varName: string }> = [
   { file: 'scripts/tripline-job.sh', varName: 'PROJECT_DIR' },
 ];
 
-describe.each(SCRIPTS)('$file', ({ file, varName }) => {
+// 這些腳本是 zsh（launchd／macOS 專用）；GitHub 的 Ubuntu runner 沒有 zsh，spawn 會得到 status null。
+// 沒有 zsh 就明確跳過，而不是在 CI 假紅；本機（macOS）會真的執行。
+const HAS_ZSH = spawnSync('zsh', ['-c', 'true']).status === 0;
+
+describe.skipIf(!HAS_ZSH).each(SCRIPTS)('$file', ({ file, varName }) => {
   it(`${varName} 跟著腳本所在的 checkout 走`, () => {
     const src = readFileSync(join(__dirname, '../..', file), 'utf8');
     const line = src.split('\n').find((l) => new RegExp(`^${varName}=`).test(l));
