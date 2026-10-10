@@ -2092,11 +2092,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   }
 }
 
-/* ── tab 膠囊材質的可及性降級 ───────────────────────────────────────
- * 放在檔案最後：Tailwind 4 會把所有 @layer 攤平，覆寫靠的是「特異性 + 來源順序」，
- * 不是 layer 順序。body.dark 的特異性是 (0,1,1)，這裡要蓋過它就必須排在它之後。
- * （這條規則踩過一次，寫在這裡免得再踩。） */
-
 /* ───── 毛玻璃面 module（#1422 / architecture review #1）─────
  * interface：元素加 class `tp-glass`，並在自己的規則裡宣告參數（都有預設值）：
  *   --glass-alpha   一般模式底色的不透明度，預設 88%
@@ -2113,6 +2108,11 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
    * 整面玻璃在 Chrome 失效（見上方 .tp-bottom-nav 附近的同類說明）。前綴交給建置工具補。 */
   backdrop-filter: var(--glass-reduce-filter, var(--glass-filter, blur(20px)));
 }
+
+/* ── tab 膠囊材質的可及性降級 ───────────────────────────────────────
+ * 放在檔案最後：Tailwind 4 會把所有 @layer 攤平，覆寫靠的是「特異性 + 來源順序」，
+ * 不是 layer 順序。body.dark 的特異性是 (0,1,1)，這裡要蓋過它就必須排在它之後。
+ * （這條規則踩過一次，寫在這裡免得再踩。） */
 
 /* 使用者開啟「降低透明度」時拿不到 backdrop-filter 的效果。若只留 0.42 的 tint，
  * 膠囊會變成幾乎看不見的浮片 —— 改給不透明底。

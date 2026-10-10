@@ -61,10 +61,57 @@ describe('毛玻璃面 module', () => {
     const bad: string[] = [];
     // (?<!\() 排除 `@supports (backdrop-filter: …)` 這類 feature query，它不是宣告。
     for (const { p, s } of SRC_AND_TOKENS) {
-      for (const m of strip(s).matchAll(/(?<!\()(?:-webkit-)?backdrop-?[fF]ilter\s*:\s*([^;\n]+)/g)) {
+      for (const m of strip(s).matchAll(/(?<!\()(?:-?webkit-?)?backdrop-?filter\s*:\s*([^;\n]+)/gi)) {
         if (!ok.test(m[1])) bad.push(`${p}: ${m[0].trim()}`);
       }
     }
     expect(bad).toEqual([]);
+  });
+
+  it('降級區塊的 media query 同時含「降低透明度」與「提高對比」兩個條件', () => {
+    // 只數定義次數抓不到有人把 union 縮成單一條件 —— 那樣另一個系統設定下玻璃不降級，只有 CI 的 e2e 會紅。
+    const css = strip(CSS);
+    const at = css.indexOf('--glass-reduce-filter: none');
+    expect(at).toBeGreaterThan(0);
+    const header = css.lastIndexOf('@media', at);
+    const query = css.slice(header, css.indexOf('{', header));
+    expect(query).toMatch(/prefers-reduced-transparency:\s*reduce/);
+    expect(query).toMatch(/prefers-contrast:\s*more/);
+  });
+
+  it('.tp-glass 只有那一條規則，且排在 .tp-map-entry-card 基礎規則之後（同特異性時才蓋得過它的底色）', () => {
+    const css = strip(CSS);
+    expect(css.match(/\.tp-glass\b/g)?.length, '不准有複合或後代選擇器去覆寫 .tp-glass').toBe(1);
+    const glassAt = css.search(/(^|\n)\s*\.tp-glass\s*\{/);
+    const cardBase = css.search(/(^|\n)\s*\.tp-map-entry-card\s*\{/);
+    expect(cardBase).toBeGreaterThan(0);
+    expect(glassAt).toBeGreaterThan(cardBase);
+  });
+});
+
+/** 每個玻璃面：class 掛在哪個檔、參數宣告在哪個檔（可能不同檔，例如 MapPage 的覆寫 → MapEntryCard 的 class）。 */
+const SITES: Array<{ name: string; classIn: string; paramsIn: string; alpha: string; filter: string }> = [
+  { name: 'DesktopSidebar', classIn: 'src/components/shell/DesktopSidebar.tsx', paramsIn: 'src/components/shell/DesktopSidebar.tsx', alpha: '72%', filter: 'blur(30px) saturate(180%)' },
+  { name: 'StackPanelHeader', classIn: 'src/components/shell/StackPanelHeader.tsx', paramsIn: 'src/components/shell/StackPanelHeader.tsx', alpha: '88%', filter: 'blur(14px)' },
+  { name: 'GooglePoiCard', classIn: 'src/components/trip/GooglePoiCard.tsx', paramsIn: 'src/components/trip/GooglePoiCard.tsx', alpha: '88%', filter: 'blur(20px) saturate(1.5)' },
+  { name: 'MapEntryCard（參數在 MapPage）', classIn: 'src/components/trip/MapEntryCard.tsx', paramsIn: 'src/pages/MapPage.tsx', alpha: '88%', filter: 'blur(20px) saturate(1.5)' },
+  { name: 'LandingPage nav', classIn: 'src/pages/LandingPage.tsx', paramsIn: 'src/pages/LandingPage.tsx', alpha: '88%', filter: 'blur(20px) saturate(180%)' },
+  { name: 'ChatPage composer', classIn: 'src/pages/ChatPage.tsx', paramsIn: 'src/pages/ChatPage.tsx', alpha: '92%', filter: 'blur(14px)' },
+  { name: 'InfoSheet', classIn: 'src/components/trip/InfoSheet.tsx', paramsIn: 'src/components/trip/InfoSheet.tsx', alpha: '94%', filter: 'blur(var(--blur-glass, 14px))' },
+];
+const src = (path: string) => strip(SRC.find((f) => f.p === path)!.s);
+
+describe('毛玻璃面 call site：class 與參數都在（拿掉 class 就沒底色也沒模糊，e2e 降級掃描看不出來）', () => {
+  it.each(SITES)('$name', ({ classIn, paramsIn, alpha, filter }) => {
+    expect(src(classIn)).toMatch(/\btp-glass\b/);
+    const p = src(paramsIn);
+    expect(p).toContain(alpha);
+    expect(p).toContain(filter);
+  });
+
+  it('宣告 --glass-alpha／--glass-filter／--glass-base 的檔案，一定有人掛 tp-glass（反向：只給參數沒 class）', () => {
+    const declarers = SRC.filter(({ p, s }) => p.endsWith('.tsx') && /--glass-(alpha|filter|base)\s*['"]?\s*:/.test(strip(s))).map(({ p }) => p);
+    const declared = new Set(SITES.map((x) => x.paramsIn));
+    expect(declarers.sort()).toEqual([...declared].sort());
   });
 });
