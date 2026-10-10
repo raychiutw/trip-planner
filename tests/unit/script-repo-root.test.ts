@@ -32,3 +32,13 @@ describe.each(SCRIPTS)('$file', ({ file, varName }) => {
     }
   });
 });
+
+describe('scripts/_lib/cron-shared.ts loadCronEnv', () => {
+  it('讀 REPO_ROOT 的 .env.local，不依賴 process.cwd()（從別的目錄執行才不會靜默拿到空憑證）', () => {
+    const src = readFileSync(join(__dirname, '../../scripts/_lib/cron-shared.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const fn = src.slice(src.indexOf('export function loadCronEnv'));
+    expect(fn).toMatch(/envLoader\.REPO_ROOT/);
+    expect(fn.slice(0, fn.indexOf('\n}\n'))).not.toMatch(/process\.cwd\(\)/);
+  });
+});

@@ -27,7 +27,7 @@ const REFRESH_LEADTIME_SEC = 60;
  * 解析交給 `lib/load-env.js` 的 parseEnv（去引號、驗 key、支援多行值）。
  */
 export function loadCronEnv(): CronEnv {
-  const envPath = join(process.cwd(), '.env.local');
+  const envPath = join(envLoader.REPO_ROOT, '.env.local');
   const raw = (() => {
     try { return readFileSync(envPath, 'utf-8'); } catch { return ''; }
   })();

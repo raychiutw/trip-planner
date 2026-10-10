@@ -130,6 +130,18 @@ describe('load-env.mjs — scheduler env loader', () => {
     expect(env.PIPE).toBe('a|b&c');
   });
 
+  it('value 含 $(...)、反引號、引號、反斜線、分號：eval 後原樣還原且不執行（tripline-job.sh 會 eval 這份輸出）', () => {
+    const canary = path.join(os.tmpdir(), `load-env-canary-${process.pid}-${Date.now()}`);
+    const nasty = `a"b $(touch ${canary}) \`touch ${canary}\` \\ ; touch ${canary} #x`;
+    const result = runLoader(`NASTY='${nasty}'\nSQ="it's ok"\nSAFE=ok\n`);
+    expect(result.code).toBe(0);
+    const env = evalAndDump(result.stdout, ['NASTY', 'SQ', 'SAFE']);
+    expect(fs.existsSync(canary), 'eval 不可執行值裡的指令').toBe(false);
+    expect(env.NASTY).toBe(nasty);
+    expect(env.SQ).toBe("it's ok");
+    expect(env.SAFE).toBe('ok');
+  });
+
   it('multi-line single-quoted value 被完整 parse（regression: 2026-05-11 GOOGLE_CLOUD_SA_KEY 案）', () => {
     // 模擬 GOOGLE_CLOUD_SA_KEY 的 multi-line JSON 結構（單引號跨多行）
     const value = `{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAA+/SCB\nKcwggSjAgEAAoIBAQDb1234567890+/\n-----END PRIVATE KEY-----\n"}`;

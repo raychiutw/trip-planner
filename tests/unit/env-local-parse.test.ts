@@ -19,6 +19,13 @@ describe('parseEnv', () => {
     expect(mod.parseEnv(`A="x y"\nB='z'`)).toEqual({ A: 'x y', B: 'z' });
   });
 
+  it('未加引號的值遇到 # 就當行內註解截斷；加引號則保留（dotenv 語意，舊逐行 parser 會留整段）', () => {
+    // 實際影響：.env.local 裡含 # 的值（密碼、含 fragment 的 URL）必須加引號。review 時掃過真實檔案沒有此情形。
+    expect(mod.parseEnv('A=abc#def\nB=abc # note\nC="abc#def"\nD=\'abc # def\'')).toEqual({
+      A: 'abc', B: 'abc', C: 'abc#def', D: 'abc # def',
+    });
+  });
+
   it('值裡有 = 不被截斷（base64／JWT）', () => {
     expect(mod.parseEnv('TOKEN=abc==def=')).toEqual({ TOKEN: 'abc==def=' });
   });
@@ -73,5 +80,12 @@ describe('結構：只有 lib/load-env.js 解析 .env.local', () => {
       .filter((p) => HAND_ROLLED.test(readFileSync(p, 'utf8')))
       .map((p) => p.slice(ROOT.length + 1));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('REPO_ROOT', () => {
+  it('指向 repo 根目錄（所有非測試呼叫端的預設 .env.local 位置）', () => {
+    expect(readdirSync(mod.REPO_ROOT)).toContain('package.json');
+    expect(mod.REPO_ROOT).toBe(join(__dirname, '../..'));
   });
 });

@@ -53,4 +53,43 @@ describe('alertTelegram', () => {
     await alertTelegram('hello');
     expect((fetchMock.mock.calls[0] as unknown[])[0]).toBe('https://api.telegram.org/bot111:home/sendMessage');
   });
+
+  it('chat id 不合法 → 不送出、警告一次', async () => {
+    process.env.TELEGRAM_BOT_TOKEN = '111:abc';
+    process.env.TELEGRAM_CHAT_ID = '@channel';
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { alertTelegram } = await import('../../scripts/_lib/cron-shared');
+    await alertTelegram('a');
+    await alertTelegram('b');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('送出失敗（HTTP 非 2xx／網路錯誤）→ 不丟錯、不洗版警告（best-effort，與舊行為相同）', async () => {
+    process.env.TELEGRAM_BOT_TOKEN = '111:abc';
+    process.env.TELEGRAM_CHAT_ID = '5';
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { alertTelegram } = await import('../../scripts/_lib/cron-shared');
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 500 })));
+    await expect(alertTelegram('a')).resolves.toBeUndefined();
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))));
+    await expect(alertTelegram('b')).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('不同設定問題各警告一次（token 壞、chat 壞不共用同一個 dedupe 旗標）', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn());
+    const { alertTelegram } = await import('../../scripts/_lib/cron-shared');
+    await alertTelegram('x');                       // not-configured
+    process.env.TELEGRAM_BOT_TOKEN = 'bad/../token';
+    process.env.TELEGRAM_CHAT_ID = '5';
+    await alertTelegram('x');                       // bad-token
+    process.env.TELEGRAM_BOT_TOKEN = '111:abc';
+    process.env.TELEGRAM_CHAT_ID = '@channel';
+    await alertTelegram('x');                       // bad-chat
+    expect(warn).toHaveBeenCalledTimes(3);
+  });
 });
