@@ -16,6 +16,62 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - 測試：hook 行為（成功／非陣列／失敗／網路錯誤、結果綁定 path、換行程競態、停用再啟用、`useTripDays` 的 enabled 與 `all`、目的地三態）與結構守門（頁面不得再自己裸讀這兩個 endpoint；`EditEntryPage` 只允許恰好 1 處命令式重抓）。拿掉 path 綁定、停用清除、`cancelled`，或在 `EditEntryPage` 多加一個裸讀取，各自轉紅。
 
+## [2.57.103] - 2026-10-10
+
+### Changed
+- **行程層級的變更收成 Trip mutations module**（`src/lib/tripMutations.ts`）：封存／取消封存、刪除行程、刪除某一天原本在 `TripsListPage` 與 `EditTripPage` 各抄一份「fetch → 檢查 ok → 組錯誤訊息 → 發 `tripUpdated`」，現在都走 `archiveTrip`／`unarchiveTrip`／`deleteTrip`／`deleteDay`，回傳 `ok` 或 `message`，不丟錯。使用者看到的錯誤文字（403／404／其他各對應哪一句）與 HTTP 動詞、路徑編碼都與修改前相同。
+- 刪除某一天時，後端已刪除成功但回應內容不是合法 JSON，原本會誤報「刪除天數失敗」；現在算成功（受影響的 entry 數記 0）。
+- `tripUpdated` 在刪除某一天時改為 HTTP 成功後立刻發出（原本是重新讀取天數之後）；監聽它的只有行程清單重新同步，與天數資料無關，不影響畫面正確性。
+
+### Added
+- 測試：模組層（方法／路徑／錯誤訊息對照／網路例外／成功才發事件／壞 JSON）、頁面層（刪除 403／404／500 顯示對應訊息且對話框保留可重試、刪除成功提示與卡片消失、歸檔失敗顯示訊息）、結構守門（`src/` 內不得再直接打封存或刪除行程／天數的 endpoint）。頁面層用把 `TripsListPage` 改壞（失敗仍顯示成功、失敗時關對話框、歸檔失敗不提示）驗證，各自轉紅。
+
+### Notes
+- `EditTripPage` 的新增／插入／平移天數與行程 PUT 仍是各自 `apiFetchRaw` 加手動發事件，尚未收進這個 module，列為後續。
+
+## [2.57.102] - 2026-10-10
+
+### Changed
+- **daily-check 的 D1 來源改用行為測試守門**：原本三個測試（audit 異常、hygiene 欄位切換、npm audit 逾時）是 grep `scripts/daily-check.js` 的原始碼，換個寫法同義就紅、語意壞了字串還在卻綠。換成 `daily-check-sources-sql.test.ts`：用真實 migration schema 的 Miniflare D1，從既有的注入點（`createCheckSources({ queryD1, execSync })`）實際執行它送出的 SQL，並斷言輸出。
+  - 守的行為：使用者／trip 的 mutation 門檻（200／100，剛好等於門檻不算）、`trips`／`users` 的 delete 超過 10 次為 critical 且優先於 warning、只有 delete 算 critical、24 小時窗口兩側（23 小時前算、25 小時前不算，warning 與 critical 兩條查詢都綁）、`system` trip 與無 user id（service token）的排除、`LIMIT 10`、hygiene 查詢在現行 schema 上能執行（不會 no such column）、npm audit 的 timeout ≥ 180 秒。
+  - 所有斷言都對 `daily-check.js` 做過 mutation（改運算子、拿掉過濾條件、縮放窗口、對調分類順序、改 LIMIT、timeout 改 60 秒），各自轉紅；`daily-check.js` 本身沒有任何改動。
+
+## [2.57.101] - 2026-10-10
+
+### Changed
+- **`.env.local` 只剩一份 parser**：原本 5 份各自實作（`lib/load-env.js`、api-server 內嵌、`_lib/cron-shared`、`provision-admin-cli-client`、`tripline-job.sh`），逐行解析對跨多行的單引號值（`GOOGLE_CLOUD_SA_KEY` 的 private_key）都是錯的，只讀到第一行。現在全部走 `lib/load-env.js` 的 `parseEnv`（`dotenv.parse`）。用你實際的 `.env.local` 比對過，新舊解析結果唯一的差異就是 `GOOGLE_CLOUD_SA_KEY`：舊的只讀到 164 字元，新的讀到完整 2321 字元。
+- **Telegram 只剩一條 JS 送出路徑**（`lib/telegram.js` 的 `sendTelegram`），`daily-report` 與 cron 告警共用；token 優先序統一為 `TELEGRAM_BOT_HOME_TOKEN > TELEGRAM_BOT_TOKEN > TELEGRAM_BOT_FETCI_TOKEN`，chat id 必須是數字。`daily-report` 以前的順序是 BOT 在 HOME 前面，且 HTTP 失敗也印「alert sent」，現在會如實回報失敗；你的 `.env.local` 沒有 `TELEGRAM_BOT_TOKEN`，實際使用的 bot 不變。
+- **腳本的 repo 根目錄由腳本位置推導**，不再寫死 `/Users/ray/...`：`tripline-job.sh`、`log-rotate.sh`、funnel-guard 的送出路徑，搬到別的 checkout 也能跑。`loadCronEnv` 原本依賴 `process.cwd()`，從別的目錄執行會靜默拿到空憑證，現在讀 `REPO_ROOT`。
+- `dotenv` 從 devDependencies 移到 dependencies（api-server 在 launchd 下啟動就需要它）。
+
+### Added
+- 測試：`.env.local` parser（含未加引號 `#` 的行內註解語意、`REPO_ROOT`）、`sendTelegram` 全部失敗原因、`alertTelegram` 的去重與靜默失敗、腳本根目錄隨 checkout 搬家（zsh 實際執行）、`load-env.mjs` 對含 `$(...)`／反引號／引號／反斜線／分號的值 eval 後原樣還原且不執行，funnel-guard 自我檢查新增 [11]。這些都做過 mutation 驗證。
+
+### Notes
+- `.env.local` 裡**未加引號且含 `#`** 的值會被當成行內註解截斷（dotenv 語意），這類值請加引號；目前的檔案沒有受影響的值。
+
+## [2.57.100] - 2026-10-10
+
+### Changed
+- **毛玻璃面收成單一 module（`.tp-glass`）**：側欄、堆疊面板標題列、Google 景點卡、地圖景點卡、InfoSheet、首頁導覽列、聊天輸入列這 8 處原本各自抄一份「半透明底 + 模糊 + 降級」的寫法，現在只有 `css/tokens.css` 的 `.tp-glass` 一份，每個地方只給兩個參數（`--glass-alpha`、`--glass-filter`）。一般模式下的計算值逐項比對過，與修改前完全相同；「降低透明度」「提高對比」兩個系統設定改由同一個 media query 降級，新增玻璃面時不會再因為漏寫降級而在這兩個設定下維持半透明（#1422 的根因）。
+- InfoSheet 深色模式那條 `background` 規則一直被 inline style 蓋掉，是死碼，已移除。
+
+### Added
+- 守門測試：`.tp-glass` 只定義一次且不成對寫 `-webkit-`（否則 lightningcss 去重後 Chromium 失效）；降級 token 只定義一處、media query 必須同時含降低透明度與提高對比；沒有人再手寫裸的 `backdrop-filter`；7 個玻璃面各自斷言 class 與 alpha／filter 參數（錨定在宣告上）；`.tp-glass` 排在 `.tp-map-entry-card` 之後。這些都做過 mutation 驗證。
+
+## [2.57.99] - 2026-10-10
+
+### Changed
+- **行程寫入權限只剩一個 gate（Trip access module）**：18 個 API handler 各自內嵌的「有沒有寫入權限」檢查，加上 `shares` 兩支的私有複本，全部改走 `requireTripWrite`。對外行為不變（同樣的 401／403／404 順序與狀態碼），之後要改寫入規則只改一處。
+- 已發布行程對匿名讀者全公開這個設計寫成 ADR-0008：行程本體（含每個景點的訂位與備註）公開，私人資料請放在筆記區塊（航班、住宿、訂位表、行前、緊急聯絡人，預設不公開，由分享連結逐項開放）。
+
+### Added
+- 守門測試：不准再長出內嵌的寫入檢查（含 `Promise.all` 形式的已知清單，新增或移除都要明確更新）；匿名可讀的表格（trips／trip_days／trip_entries／pois）新增欄位時，必須當下決定要不要公開；匿名讀取已發布行程的特徵測試（未發布則 403）。
+- API 測試：陌生人與 viewer 對 requests、entries、segments、notes maintenance／exclusions、shares 的寫入一律 403。
+
+### Fixed
+- AI 健檢「空行程 guard 必須在權限檢查之後」的順序測試改認 `requireTripWrite`。
+
 ## [2.57.98] - 2026-10-09
 
 ### Fixed

@@ -59,7 +59,7 @@ migration 0093 已把 backup 43 + suggestions 24 = 67 筆搬進 `trip_pretrip_no
 v2.57.15 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
 
 **2026-07-29 實測：已經開始間歇性撞牆。** migration 加到 93 支後，本機全跑兩次有一次紅 —— 6 個 suite 掛在 `createTestDb()` 的 `beforeAll`，錯誤是 `Hook timed out in 30000ms`（config 寫 `hookTimeout: 60000`，但 vitest 對 `describe` 內的 `beforeAll` 實際套的是 `testTimeout: 30000`）。13 支 unit 測試各要建一次 Miniflare + 全套 migration，兩個 worker 各建一份。第二次全跑 489 檔全綠，所以是浮動不是迴歸 —— 但**每加一支 migration 就更靠近臨界**，下一次可能就變成 CI 間歇紅。根本解仍是共用已 migrate 的 D1 快照。
-### CSS — 8 個 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
+### CSS — 4 處 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
 
 **Priority**: P3（目前無害，但會在搬家時炸掉）
 
@@ -67,9 +67,11 @@ v2.57.14 修掉了 `css/tokens.css` 裡的 5 處：成對寫 `backdrop-filter` +
 `-webkit-backdrop-filter` 時，lightningcss 去重會**留下 `-webkit-` 那條**，Chrome
 computed 變成 `none` —— 整組手寫玻璃在 Chrome 上從來沒生效過。
 
-component 的 `SCOPED_STYLES` 是 runtime 注入的 `<style>`，不經建置器，所以這 8 個檔案
-（DesktopSidebar / GlobalBottomNav / StackPanelHeader / GooglePoiCard / _tripFormStyles /
-ChatPage / LandingPage / MapPage）目前是好的 —— 但它們是**意外正確**，不是寫得比較對。
+**v2.57.100：** 玻璃面已收成 `.tp-glass`（只寫標準屬性），StackPanelHeader / GooglePoiCard / ChatPage / LandingPage
+不再手寫。剩下 4 處：DesktopSidebar（`--tabbar-filter` 那條）/ GlobalBottomNav / `_tripFormStyles` sticky 操作列 /
+MapPage `.map-page-empty-card`；後兩者連降級 token 都還沒走 `.tp-glass`，一併遷移最划算。
+
+component 的 `SCOPED_STYLES` 是 runtime 注入的 `<style>`，不經建置器，所以這幾個檔案目前是好的 —— 但它們是**意外正確**，不是寫得比較對。
 任何一段被抽進 `tokens.css`（或未來 component styles 被納入建置）就會立刻複製這個 bug。
 
 專案 browserslist 是 `last 2 Chrome versions`，本來就不需要手寫前綴。清掉即可，

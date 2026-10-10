@@ -129,10 +129,6 @@ describe('audit fix source locks', () => {
     expect(src).toMatch(/delResult\.meta\.changes === 0/);
   });
 
-  it('cron alertTelegram falls back to TELEGRAM_BOT_HOME_TOKEN', () => {
-    expect(read('scripts/_lib/cron-shared.ts')).toMatch(/TELEGRAM_BOT_HOME_TOKEN \|\| process\.env\.TELEGRAM_BOT_TOKEN/);
-  });
-
   it('_poi find-or-create persists place_id (INSERT column + COALESCE backfill)', () => {
     const src = read('functions/api/_poi.ts');
     // migration 0051: place_id 之後接 lifecycle 三欄（status/status_reason/status_checked_at）。

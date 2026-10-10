@@ -28,8 +28,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { readTripView } from '../lib/tripViewState';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
-import { apiFetchRaw } from '../lib/apiClient';
-import { EVENT } from '../lib/events';
+import { archiveTrip, unarchiveTrip, deleteTrip } from '../lib/tripMutations';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -726,12 +725,9 @@ export default function TripsListPage() {
     const { tripId, archived, label } = archiveTarget;
     setArchiving(true);
     try {
-      const response = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/archive`, {
-        method: archived ? 'DELETE' : 'PUT',
-      });
-      if (!response.ok) throw new Error(response.status === 403 ? '只有行程擁有者能變更歸檔狀態。' : '更新歸檔狀態失敗，請再試一次。');
+      const result = archived ? await unarchiveTrip(tripId) : await archiveTrip(tripId);
+      if (!result.ok) { showToast(result.message, 'error'); return; }
       setArchiveTarget(null);
-      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(`已${archived ? '取消歸檔' : '歸檔'}「${label}」`, 'success');
       requestAnimationFrame(() => {
         const target = document.querySelector<HTMLElement>(
@@ -739,8 +735,6 @@ export default function TripsListPage() {
         );
         target?.focus();
       });
-    } catch (err) {
-      showToast((err as Error).message, 'error');
     } finally {
       setArchiving(false);
     }
@@ -761,11 +755,8 @@ export default function TripsListPage() {
       const { tripId, label } = deleteTarget;
       setDeleting(true);
       try {
-        const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
-        if (r.status === 403) throw new Error('僅行程擁有者或管理者可刪除');
-        if (r.status === 404) throw new Error('行程不存在');
-        if (!r.ok) throw new Error('刪除失敗，請稍後再試');
-        window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+        const result = await deleteTrip(tripId);
+        if (!result.ok) { showToast(result.message, 'error'); return; }
         showToast(`已刪除「${label}」`, 'success');
         // Clear ?selected= if user just deleted the open trip
         if (selectedFromUrl === tripId) {
@@ -774,8 +765,6 @@ export default function TripsListPage() {
           setSearchParams(next, { replace: true });
         }
         setDeleteTarget(null);
-      } catch (err) {
-        showToast((err as Error).message, 'error');
       } finally {
         setDeleting(false);
       }

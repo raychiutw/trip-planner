@@ -25,29 +25,11 @@ import {
 } from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
 import { createRequestWorker } from './lib/request-worker';
+import envLoader from './lib/load-env.js';
 
 // --- Load .env.local ---
-// v2.33.51 round 8c: 統一 parser — 之前 inline 邏輯不 strip 外 quote，跟
-// sister script (lib/load-env.js / _lib/cron-shared) 行為不一致。
-const envPath = join(import.meta.dir, '..', '.env.local');
-try {
-  for (const rawLine of readFileSync(envPath, 'utf-8').split('\n')) {
-    const trimmed = rawLine.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const idx = trimmed.indexOf('=');
-    if (idx < 0) continue;
-    const key = trimmed.slice(0, idx).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
-    let val = trimmed.slice(idx + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    if (!process.env[key]) process.env[key] = val;
-  }
-} catch {}
+// 全 repo 唯一的 parser：scripts/lib/load-env.js（已存在的 env 優先、不覆蓋）。
+envLoader.loadEnvLocal();
 
 // --- Config ---
 const PORT = parseInt(process.env.TRIPLINE_PORT || '6688', 10);

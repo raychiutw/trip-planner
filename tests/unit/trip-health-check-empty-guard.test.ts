@@ -27,7 +27,7 @@ const API_TYPES = readFileSync(path.join(ROOT, 'src/types/api.ts'), 'utf8');
 
 describe('v2.31.58 empty trip AI 健檢 guard', () => {
   describe('Backend POST handler', () => {
-    it('hasWritePermission 後 SELECT COUNT(*) FROM trip_entries JOIN trip_days 檢查', () => {
+    it('寫入權限檢查（requireTripWrite）後 SELECT COUNT(*) FROM trip_entries JOIN trip_days 檢查', () => {
       // trip_entries 沒 trip_id 欄位，JOIN trip_days 才能 WHERE d.trip_id = ?
       expect(BACKEND).toMatch(/SELECT COUNT\(\*\) as cnt FROM trip_entries e/);
       expect(BACKEND).toMatch(/JOIN trip_days d ON e\.day_id = d\.id/);
@@ -38,8 +38,8 @@ describe('v2.31.58 empty trip AI 健檢 guard', () => {
       expect(BACKEND).toMatch(/throw new AppError\(\s*['"]TRIP_EMPTY['"]\s*\)/);
     });
 
-    it('guard 放在 hasWritePermission 之後、UPSERT 之前（避免污染 DB）', () => {
-      const writePermIdx = BACKEND.indexOf('hasWritePermission(env.DB');
+    it('guard 放在 requireTripWrite 之後、UPSERT 之前（避免污染 DB）', () => {
+      const writePermIdx = BACKEND.indexOf('requireTripWrite(env.DB');
       const guardIdx = BACKEND.indexOf('TRIP_EMPTY');
       const upsertIdx = BACKEND.indexOf('INSERT INTO trip_health_reports');
       expect(writePermIdx).toBeGreaterThan(0);

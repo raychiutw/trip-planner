@@ -22,7 +22,7 @@
  * trip_emergency_contacts。
  */
 
-import { hasWritePermission, requireAuth } from '../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import {
   isNoteAiDocType,
@@ -103,9 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
   const docType = type;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   await expireNoteAiJobs(env.DB, tripId, docType);
 

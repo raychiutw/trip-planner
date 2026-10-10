@@ -96,6 +96,8 @@ src/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
 │   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── tripMutations.ts     行程層變更：archiveTrip/unarchiveTrip/deleteTrip/deleteDay 回 Result，
+│   │                        成功 emit tripUpdated；不 toast、不導覽（同 entryMutations 慣例）
 │   ├── segmentMutations.ts  手動車程建立／更新，成功 emit segmentUpdated 觸發共用讀取
 │   ├── travelRecompute.ts   車程重算 single-flight、gap signature、403 停用與失敗狀態
 │   ├── mapRow.ts            DB row → UI object 統一轉換
@@ -401,6 +403,7 @@ tests/
 | [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
+| [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 
