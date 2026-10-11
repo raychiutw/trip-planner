@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.105] - 2026-10-11
+
+### Fixed
+- 測試：`entry-visible-synchronization` 偶發在 CI 變紅（「切換行程後拖曳儲存完成，不在新行程顯示舊操作的提示」，`expected [] to have a length of 1`）。這支測試走真實的拖曳與多段讀寫協調，runner 吃緊時 `waitFor`／`findBy` 預設的 1 秒不夠；把這支測試的非同步等待上限放寬到 5 秒，只放寬「等多久」，斷言不變，等不到仍會失敗。這個修法未證明「為什麼這批變更之後才開始浮現」，只證明在 CPU 加壓下修前 4 次紅 2 次、修後 8 次全過。
+
 ## [2.57.104] - 2026-10-10
 
 ### Changed
