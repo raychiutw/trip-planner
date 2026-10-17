@@ -322,7 +322,7 @@ AI ownership：
 
 ### 共編邀請 token
 
-`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。每天由 `.github/workflows/invitation-cleanup.yml` 執行 `scripts/cleanup-invitations.sql`，刪除已接受超過 30 天、或未接受且過期超過 30 天的邀請列（含 `invited_email`）。被邀請者的 email 另外會出現在 `audit_log` 的多種紀錄裡（邀請、直接加權限、寄送邀請信等，`diff_json` 裡的 key 各不相同），不要用單一 key 去找，那份由 `scripts/auth-cleanup.js` 以 60 天規則清除；這支腳本由自架 api-server 的 cron 執行，cron 停掉時就不會清。`scripts/auth-cleanup.js` 另有一條「已接受 90 天」的規則，實際上會被每日的 30 天清除搶先，兩邊的數字要一起改。
+`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。每天由 `.github/workflows/invitation-cleanup.yml` 執行 `scripts/cleanup-invitations.sql`，刪除已接受超過 30 天、或未接受且過期超過 30 天的邀請列（含 `invited_email`）。被邀請者的 email 另外會出現在 `audit_log` 的多種紀錄裡（邀請、直接加權限、寄送邀請信等，`diff_json` 裡的 key 各不相同），不要用單一 key 去找；這些紀錄由 `scripts/auth-cleanup.js` 以 60 天規則清除；這支腳本由自架 api-server 的 cron 執行，cron 停掉時就不會清。`scripts/auth-cleanup.js` 另有一條「已接受 90 天」的規則，實際上會被每日的 30 天清除搶先，兩邊的數字要一起改。
 
 ### Session verify (in-isolate CryptoKey cache, v2.33.63)
 
