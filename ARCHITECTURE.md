@@ -78,6 +78,8 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 | `/account/*`, `/settings/*` | account hub + sessions / connected-apps / developer (alias) |
 | `/admin`, `/manage` | 已 2026-04-26 拆，redirect to `/trips` / `/chat` |
 
+PWA：`public/manifest.json` 提供一般與 maskable icon（192／512），`vite-plugin-pwa` 只對 `/api/trips/*` 做 NetworkFirst 快取；登入檢查（`/api/oauth/userinfo`）沒有快取，所以離線時會被導回登入頁，目前不支援離線瀏覽。
+
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
@@ -315,6 +317,10 @@ AI ownership：
 3. **Service Token** — Bearer token via OAuth client_credentials grant (RFC 6749 §4.4)，
    給 scheduler / admin tooling 用。`functions/api/oauth/token.ts` 走 atomic CAS consume
    防 parallel double-exchange (v2.33.58 round 12)
+
+### 共編邀請 token
+
+`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。`scripts/auth-cleanup.js` 定期清除：已接受超過 90 天、未接受且過期超過 30 天的邀請（同時清掉 `invited_email` 這類個資）。
 
 ### Session verify (in-isolate CryptoKey cache, v2.33.63)
 
