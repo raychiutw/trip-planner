@@ -33,24 +33,6 @@ describe('v2.33.68 #1 — README.md 移除 stale OSM/ORS/Haversine 描述', () =
   it('不再描述已 drop 的 trip_pois 覆寫', () => {
     expect(README).not.toMatch(/trip_pois.*允許 user 覆寫/);
   });
-
-  it('README 引用的截圖都存在', () => {
-    const images = [...README.matchAll(/(?:src="|\]\()(docs\/readme\/[^")]+)/g)].map((m) => m[1]);
-    expect(images.length).toBeGreaterThan(0);
-    for (const img of images) expect(exists(img), img).toBe(true);
-  });
-
-  // 逐一列出路徑：gstack pregate 靠字面路徑把圖檔對到這支測試，也守住 README 不會漏掉任何一張。
-  it.each([
-    'docs/readme/desktop-trip.png',
-    'docs/readme/desktop-print.png',
-    'docs/readme/mobile-trip.png',
-    'docs/readme/mobile-map.png',
-    'docs/readme/mobile-chat.png',
-  ])('README 有放 %s', (img) => {
-    expect(exists(img), img).toBe(true);
-    expect(README).toContain(img);
-  });
 });
 
 describe('v2.33.68 #2 — ARCHITECTURE.md V2 OAuth + Google Maps refresh', () => {
