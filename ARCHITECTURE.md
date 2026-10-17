@@ -78,7 +78,7 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 | `/account/*`, `/settings/*` | account hub + sessions / connected-apps / developer (alias) |
 | `/admin`, `/manage` | 已 2026-04-26 拆，redirect to `/trips` / `/chat` |
 
-PWA：`public/manifest.json` 提供一般與 maskable icon（192／512），`vite-plugin-pwa` 只對 `/api/trips/*` 做 NetworkFirst 快取；登入檢查（`/api/oauth/userinfo`）沒有快取，所以離線時會被導回登入頁，目前不支援離線瀏覽。已知問題：`cacheWillUpdate` 用 `Cookie` header 判斷是否為登入請求，但 Service Worker 讀不到 Cookie，這個判斷不會成立，登入後的行程與筆記回應仍會寫進 `api-cache`（最多 7 天，登出後也不會清）。
+PWA：`public/manifest.json` 提供一般與 maskable icon（192／512），`vite-plugin-pwa` 只對 `/api/trips/*` 做 NetworkFirst 快取；登入檢查（`/api/oauth/userinfo`）沒有快取，所以離線時會被導回登入頁，目前不支援離線瀏覽。已知問題：`cacheWillUpdate` 用 `Cookie` header 判斷是否為登入請求，但 Service Worker 讀不到 Cookie，這個判斷不會成立，登入後的行程與筆記回應仍會寫進 `api-cache`（最多 7 天，登出後也不會清，見 #1437）。
 
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
@@ -388,7 +388,7 @@ tests/
 │   ├── Pages Functions endpoint integration
 │   └── 跑 `npm run test:api`
 └── e2e/                   playwright
-    ├── trip-page.spec.js, offline.spec.ts
+    ├── e.g. trips-archive-contract.spec.js, sw-routing.spec.ts
     └── 跑 `npm run test:e2e`（需要本機 dev server）
 ```
 
