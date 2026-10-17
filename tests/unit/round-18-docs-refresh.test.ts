@@ -19,20 +19,25 @@ const GEMINI = read('GEMINI.md');
 const SPEC = read('SPEC.md');
 const CR_README = read('docs/code-review/README.md');
 
+// README 已改為產品介紹（不寫技術架構），技術名詞的正向檢查由下方 ARCHITECTURE.md 區塊守。
 describe('v2.33.68 #1 — README.md 移除 stale OSM/ORS/Haversine 描述', () => {
-  it('改為 Google Maps Platform', () => {
+  it('不再提 OSM / ORS / Haversine', () => {
     expect(README).not.toMatch(/Nominatim \+ Overpass \+ OpenTripMap \+ Wikidata/);
     expect(README).not.toMatch(/ORS 路徑.*Haversine fallback/);
-    expect(README).toMatch(/Google Places 自動補資料|Google Routes API/);
   });
 
   it('removed broken screenshot ref', () => {
     expect(README).not.toMatch(/daily-report-flow\.png/);
   });
 
-  it('mentions trip_entry_pois (v2.27.0+) not trip_pois 覆寫', () => {
-    expect(README).toMatch(/trip_entry_pois/);
+  it('不再描述已 drop 的 trip_pois 覆寫', () => {
     expect(README).not.toMatch(/trip_pois.*允許 user 覆寫/);
+  });
+
+  it('README 引用的截圖都存在', () => {
+    const images = [...README.matchAll(/(?:src="|\]\()(docs\/readme\/[^")]+)/g)].map((m) => m[1]);
+    expect(images.length).toBeGreaterThan(0);
+    for (const img of images) expect(exists(img), img).toBe(true);
   });
 });
 
