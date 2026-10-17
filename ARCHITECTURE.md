@@ -80,6 +80,8 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 
 PWA：`public/manifest.json` 提供一般與 maskable icon（192／512），`vite-plugin-pwa` 只對 `/api/trips/*` 做 NetworkFirst 快取；登入檢查（`/api/oauth/userinfo`）沒有快取，所以離線時會被導回登入頁，目前不支援離線瀏覽。已知問題：`cacheWillUpdate` 用 `Cookie` header 判斷是否為登入請求，但 Service Worker 讀不到 Cookie，這個判斷不會成立，登入後的行程與筆記回應仍會寫進 `api-cache`（過期 7 天後不再回傳，但要等下次存取快取才會真的刪掉；登出後也不會清，見 #1437）。
 
+行程頁的側邊面板可用 `?sheet=map|chat` 深層連結（例如 `/trip/:id?sheet=map`），解析與切換在 `src/lib/trip-url.ts`，切換時用 `replace` 不堆 history。
+
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
@@ -320,7 +322,7 @@ AI ownership：
 
 ### 共編邀請 token
 
-`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。每天由 `.github/workflows/invitation-cleanup.yml` 執行 `scripts/cleanup-invitations.sql`，刪除已接受超過 30 天、或未接受且過期超過 30 天的邀請列（含 `invited_email`）。被邀請者的 email 另外會寫進 `audit_log.diff_json`（送出、接受、撤銷邀請各一筆），那份由 `scripts/auth-cleanup.js` 以 60 天規則清除；這支腳本由自架 api-server 的 cron 執行，cron 停掉時就不會清。`scripts/auth-cleanup.js` 另有一條「已接受 90 天」的規則，實際上會被每日的 30 天清除搶先，兩邊的數字要一起改。
+`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。每天由 `.github/workflows/invitation-cleanup.yml` 執行 `scripts/cleanup-invitations.sql`，刪除已接受超過 30 天、或未接受且過期超過 30 天的邀請列（含 `invited_email`）。被邀請者的 email 另外會寫進 `audit_log.diff_json`（邀請流程各步驟都會寫；`trip_invitations` 相關紀錄的 key 是 `invited_email`，被邀請者已是註冊帳號而直接加權限時，寫在 `trip_permissions` 紀錄、key 是 `email`），那份由 `scripts/auth-cleanup.js` 以 60 天規則清除；這支腳本由自架 api-server 的 cron 執行，cron 停掉時就不會清。`scripts/auth-cleanup.js` 另有一條「已接受 90 天」的規則，實際上會被每日的 30 天清除搶先，兩邊的數字要一起改。
 
 ### Session verify (in-isolate CryptoKey cache, v2.33.63)
 
