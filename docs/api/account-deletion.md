@@ -113,7 +113,7 @@ Body **擇一**，依 `GET /api/account` 回的 `hasPassword` 決定：
    `audit_log` · `error_reports` · `permissions` · `requests` · `trip_requests` · `trip_permissions`
 2. **14 張表存了使用者身分卻無 users 外鍵** → 刪使用者完全不連動。
    最嚴重的是 `session_devices`（刪帳號後 session 還在）與
-   `audit_log.changed_by`（明文 email，且該表**不在** `auth-cleanup.js` 的保留期清單內 → 永久留存）
+   `audit_log.changed_by`（明文 email；v2.57.16 起 `auth-cleanup.js` 會刪除 60 天前的 `audit_log`，但這支腳本靠自架 api-server 的 cron 執行，cron 停掉時就不會清）
 3. 不依賴 D1 的 FK 強制設定，順序自己控、可測
 
 ### 執行順序
@@ -190,4 +190,4 @@ Google 要求**兩條**路徑：app 內 **與** 可公開存取的網頁。
 
 - [ ] Flutter app 端實作（上述）
 - [ ] 公開的「如何刪除帳號」說明網頁（Google Play 送審欄位要填）
-- [ ] `audit_log` 加入 `scripts/auth-cleanup.js` 的保留期清單（目前無保留期，匿名化後仍永久留存）
+- [x] `audit_log` 加入 `scripts/auth-cleanup.js` 的保留期清單（v2.57.16 起保留 60 天；依賴自架 api-server cron 持續執行）

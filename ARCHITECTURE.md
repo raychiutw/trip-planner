@@ -446,3 +446,4 @@ tests/
 - [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
 - [DESIGN.md](DESIGN.md) — 設計系統、視覺 tokens
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄
+- [SPEC.md](SPEC.md) — POI Unification 舊規格（已 superseded，僅保留作歷史紀錄；新需求與規格走 GitHub Issues）
