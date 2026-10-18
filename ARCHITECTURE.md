@@ -78,10 +78,6 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 | `/account/*`, `/settings/*` | account hub + sessions / connected-apps / developer (alias) |
 | `/admin`, `/manage` | 已 2026-04-26 拆，redirect to `/trips` / `/chat` |
 
-PWA：`public/manifest.json` 提供一般與 maskable icon（192／512），`vite-plugin-pwa` 只對 `/api/trips/*` 做 NetworkFirst 快取；登入檢查（`/api/oauth/userinfo`）沒有快取，所以離線時會被導回登入頁，目前不支援離線瀏覽。已知問題：`cacheWillUpdate` 用 `Cookie` header 判斷是否為登入請求，但 Service Worker 讀不到 Cookie，這個判斷不會成立，登入後的行程與筆記回應仍會寫進 `api-cache`（過期 7 天後不再回傳，但要等下次存取快取才會真的刪掉；登出後也不會清，見 #1437）。
-
-行程頁的側邊面板可用 `?sheet=map|chat` 深層連結（例如 `/trip/:id?sheet=map`），解析與切換在 `src/lib/trip-url.ts`，切換時用 `replace` 不堆 history。
-
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
@@ -320,10 +316,6 @@ AI ownership：
    給 scheduler / admin tooling 用。`functions/api/oauth/token.ts` 走 atomic CAS consume
    防 parallel double-exchange (v2.33.58 round 12)
 
-### 共編邀請 token
-
-`trip_invitations` 只存 token 的 HMAC（`token_hash`），不存明文。每天由 `.github/workflows/invitation-cleanup.yml` 執行 `scripts/cleanup-invitations.sql`，刪除已接受超過 30 天、或未接受且過期超過 30 天的邀請列（含 `invited_email`）。被邀請者的 email 另外會出現在 `audit_log` 的多種紀錄裡（邀請、直接加權限、寄送邀請信等，`diff_json` 裡的 key 各不相同），不要用單一 key 去找；這些紀錄由 `scripts/auth-cleanup.js` 以 60 天規則清除；這支腳本由自架 api-server 的 cron 執行，cron 停掉時就不會清。`scripts/auth-cleanup.js` 另有一條「已接受 90 天」的規則，實際上會被每日的 30 天清除搶先，兩邊的數字要一起改。
-
 ### Session verify (in-isolate CryptoKey cache, v2.33.63)
 
 `functions/api/_middleware.ts` 走 `verifySessionToken(token, env.SESSION_SECRET)` —
@@ -390,7 +382,7 @@ tests/
 │   ├── Pages Functions endpoint integration
 │   └── 跑 `npm run test:api`
 └── e2e/                   playwright
-    ├── e.g. trips-archive-contract.spec.js, sw-routing.spec.ts
+    ├── trip-page.spec.js, offline.spec.ts
     └── 跑 `npm run test:e2e`（需要本機 dev server）
 ```
 
@@ -446,4 +438,3 @@ tests/
 - [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
 - [DESIGN.md](DESIGN.md) — 設計系統、視覺 tokens
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄
-- [SPEC.md](SPEC.md) — POI Unification 舊規格（已 superseded，僅保留作歷史紀錄；新需求與規格走 GitHub Issues）

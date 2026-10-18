@@ -80,6 +80,3 @@
   </tr>
 </table>
 
-## 開發者
-
-想了解系統架構或參與開發，請看 [CONTRIBUTING.md](CONTRIBUTING.md)。
