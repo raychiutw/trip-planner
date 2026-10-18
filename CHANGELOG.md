@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.106] - 2026-10-18
+
+### Changed
+- **README 改成產品介紹**：GitHub 首頁現在說明 Tripline 能做什麼（三件出發前最常做的事、排行程、行前準備、和旅伴一起、隨時隨地），附 11 張以範例行程拍攝的桌機、手機與深色模式截圖；技術架構與版本細節不再寫在 README。
+- README 的每一項功能說法都對照現行程式寫成：拿掉舊 README 裡不存在的出發倒數、Naver 地圖與離線瀏覽，下載格式寫實為 PDF 與 JSON，景點評分與營業時間註明視景點資料而定；新增的大眾運輸估時、匯入 Tripline 匯出的 JSON、地圖與時間軸互動、AI 聊天改行程等說明都依實際行為撰寫。
+
+### For contributors
+- 新增 `tests/unit/readme-product.test.ts`：README 的本地連結與圖片都必須存在，`docs/readme/` 不能有未被引用的截圖。
+- `round-18-docs-refresh.test.ts` 退役 README 技術描述的斷言（README 已無技術段落）；ARCHITECTURE 的同類斷言保留。
+- 新增 `tests/unit/version-sync.test.ts`：`VERSION` 必須是 x.y.z，且等於 `package.json` 與 `package-lock.json`（兩處）的 version；手改或只改一半的發版會在 CI 變紅。
+
 ## [2.57.105] - 2026-10-11
 
 ### Fixed
