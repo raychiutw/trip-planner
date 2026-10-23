@@ -501,7 +501,7 @@ export default function TripNotesPage() {
                       <button
                         type="button"
                         className="tp-notes-ai-btn"
-                        aria-label="AI 生成一般行前須知"
+                        aria-label={isActiveAiJob(aiJobs.tips) ? 'AI 生成中…' : 'AI 生成一般行前須知'}
                         data-testid="trip-notes-ai-btn-pretrip"
                         onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
                         disabled={aiUnavailable || posting.includes('tips') || isActiveAiJob(aiJobs.tips)}
@@ -513,7 +513,7 @@ export default function TripNotesPage() {
                       <button
                         type="button"
                         className="tp-notes-ai-btn"
-                        aria-label="AI 生成住宿在地建議"
+                        aria-label={isActiveAiJob(aiJobs['lodging-tips']) ? 'AI 生成中…' : 'AI 生成住宿在地建議'}
                         data-testid="trip-notes-ai-btn-pretrip-lodging"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -540,7 +540,7 @@ export default function TripNotesPage() {
                     <button
                       type="button"
                       className="tp-notes-ai-btn"
-                      aria-label="AI 生成緊急聯絡"
+                      aria-label={isActiveAiJob(aiJobs.emergency) ? 'AI 生成中…' : 'AI 生成緊急聯絡'}
                       data-testid="trip-notes-ai-btn-emergency"
                       onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
                       disabled={aiUnavailable || posting.includes('emergency') || isActiveAiJob(aiJobs.emergency)}
