@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.107] - 2026-10-23
+
+### Security
+- **修補 `npm audit` 回報的 13 個套件漏洞，升級後為 0 個**：`dompurify`（critical，匯出 PDF 用）、`vite` 與 `wrangler`（只影響開發環境）、`undici`、`sharp`、`source-map-js`、`concurrently`。`serve` 沒有任何地方在用，連同它帶進來的 `compression` 漏洞一併移除。
+
+### Changed
+- 所有依賴升到各自最新穩定版：React 19.3.1、Vite 8.3.5、wrangler 4.152.0、Vitest 5、jsdom 30、marked 18、vite-plugin-pwa 2、dotenv 18、concurrently 10、jest-dom 7、TypeScript 6.0（只剩 TypeScript 7 暫緩，原因是 `typescript-eslint` 尚未支援）。
+- 新增 `.nvmrc` 與 `engines`，Node 需 22.12 以上（22、24 或 26；不支援 25）；`lighthouse.yml` 同步改用 Node 22。
+- AI 聊天等訊息改用 marked 18 轉成 HTML，跨行硬換行後的前導空白與少數邊界案例的輸出略有不同；輸出仍一律經過 sanitizer。
+
+### Fixed
+- Sentry 升到 11 後預設會忽略 `beforeSendTransaction`，會讓 HeadlessChrome / localhost 的 pageload 雜訊重新進 Sentry；改為明確設定 `traceLifecycle: 'static'` 保留原本的過濾。
+
+### For contributors
+- 移除沒有任何 import 的 `@vitest/runner`、`@vitest/snapshot`（Vitest 5 起不再發佈）；`tsconfig.json` 移除已棄用的 `baseUrl`，改為顯式 `types: ["google.maps"]`。
+- 新增 `tests/unit/sentry-trace-lifecycle.test.ts` 守衛 `traceLifecycle: 'static'`（已用 mutation 驗證會轉紅）。
+- 新增 `docs/research/` 兩份依賴研究筆記；Sentry 11 讓 crash-free rate 口徑改變（`crashed` 改記為 `unhandled`、session 改以頁面為單位），`docs/monitoring/sentry-alerts.md` Alert 4 已加註記，升版上線後需觀察數日再重訂門檻。
+
 ## [2.57.106] - 2026-10-18
 
 ### Changed
