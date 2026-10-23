@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.108] - 2026-10-24
+
+### Fixed
+- **funnel-guard 不再空轉 heal**：`guard.sh` 把 tailscale CLI 寫死成 `/opt/homebrew/bin/tailscale`，這台機器改用 Tailscale.app 之後該路徑不存在，L1 檢查永遠失敗，從 2026-10-22 23:07 起每 5 秒重複「drift 偵測 → heal」超過 23 小時（funnel 本身一直是通的，只是 guard 看不到）。現在依序尋找 brew 版、`/usr/local/bin` 的 wrapper、App 內執行檔；`install.sh` 的預檢與 README 同步。
+
 ## [2.57.107] - 2026-10-23
 
 ### Security

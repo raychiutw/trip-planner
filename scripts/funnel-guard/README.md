@@ -39,7 +39,7 @@ zsh scripts/funnel-guard/install.sh
 Idempotent — 重跑會先 bootout 再 bootstrap。
 
 前置：
-- `/opt/homebrew/bin/tailscale` 已裝
+- tailscale CLI 已裝（brew 版 `/opt/homebrew/bin/tailscale`、或 macOS App 版 `/usr/local/bin/tailscale`／`Tailscale.app` 內執行檔，guard 依序尋找）
 - `jq` 已裝（macOS 通常內建 `/usr/bin/jq`；缺則 `brew install jq`）
 - `.env.local` 含 `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`（對齊 `scripts/lib/send-telegram.sh`）
 
