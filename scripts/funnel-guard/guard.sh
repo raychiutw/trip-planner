@@ -20,7 +20,14 @@
 # checkout（2026-09-05 red team 實測）。仍可用環境變數覆寫；那是本機環境變數，能設它
 # 的人本來就能執行任意程式碼，不構成新的攻擊面。
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${(%):-%x}")/../.." && pwd)}"
+# tailscale CLI 位置：brew 版與 macOS App 版（/usr/local/bin 的 wrapper、App 內執行檔）都找。
+# 2026-10-22 起本機只剩 App 版，寫死 /opt/homebrew/bin 讓 L1 永遠失敗、每 5 秒空轉 heal。
+# 先到先贏；全找不到時仍留第一個，維持原本的「指令不存在」錯誤訊息。
 TAILSCALE="/opt/homebrew/bin/tailscale"
+for _ts in /opt/homebrew/bin/tailscale /usr/local/bin/tailscale /Applications/Tailscale.app/Contents/MacOS/Tailscale; do
+  [ -x "$_ts" ] && { TAILSCALE="$_ts"; break; }
+done
+unset _ts
 EXPECTED_PROXY="http://127.0.0.1:8080"
 LOG_PREFIX="[funnel-guard]"
 KILL_SWITCH="$REPO_ROOT/scripts/funnel-guard/.disabled"
