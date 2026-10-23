@@ -14,6 +14,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - AI 聊天等訊息改用 marked 18 轉成 HTML，跨行硬換行後的前導空白與少數邊界案例的輸出略有不同；輸出仍一律經過 sanitizer。
 
 ### Fixed
+- 升級 axe-core 4.14 後新啟用的 WCAG 2.5.3（可見文字須包含在無障礙名稱內）檢查抓到四處不符，一併修正：下拉選單（排序方式等）的無障礙名稱現在包含目前選到的值；桌機側欄的帳號卡改由可見名稱加「帳號設定」組成；「登出其他裝置」按鈕的名稱與畫面文字一致（完整說明仍在 tooltip）；匯入進行中時名稱與「匯入中…」一致。
 - Sentry 升到 11 後預設會忽略 `beforeSendTransaction`，會讓 HeadlessChrome / localhost 的 pageload 雜訊重新進 Sentry；改為明確設定 `traceLifecycle: 'static'` 保留原本的過濾。
 
 ### For contributors

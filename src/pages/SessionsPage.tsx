@@ -292,7 +292,6 @@ export default function SessionsPage() {
             className="tp-titlebar-action"
             onClick={() => setRevokeAllConfirmOpen(true)}
             disabled={revokingAll}
-            aria-label="登出其他全部裝置"
             title="登出其他全部裝置"
             data-testid="sessions-revoke-all"
           >
