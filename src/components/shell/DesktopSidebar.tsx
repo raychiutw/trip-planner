@@ -205,6 +205,9 @@ export interface DesktopSidebarProps {
 
 export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+  // v2.33.45 round 6b: Array.from CJK-safe slice。顯示字串同時是無障礙名稱的開頭（WCAG 2.5.3 Label in Name）。
+  const nameChars = user ? Array.from(user.name) : [];
+  const displayName = nameChars.length > 10 ? `${nameChars.slice(0, 10).join('')}…` : (user?.name ?? '');
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
@@ -303,18 +306,15 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
               id="account-sheet-open-desktop"
               className="tp-account-card"
               data-testid="sidebar-account-card"
-              aria-label={`帳號設定：${user.name}`}
               onClick={() => openSheet(location)}
             >
               <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
               <div className="tp-account-body">
                 <div className="tp-account-name">
-                  {/* v2.33.45 round 6b: Array.from CJK-safe slice */}
-                  {(() => {
-                    const chars = Array.from(user.name);
-                    return chars.length > 10 ? `${chars.slice(0, 10).join('')}…` : user.name;
-                  })()}
+                  {displayName}
                 </div>
+                {/* 無障礙名稱 = 顯示名稱 + 後綴；不用 aria-label，否則 axe（WCAG 2.5.3）會把 aria-hidden 頭像的首字也算進可見文字而判不符。 */}
+                <span className="sr-only"> 帳號設定</span>
               </div>
             </Link>
           ) : (
