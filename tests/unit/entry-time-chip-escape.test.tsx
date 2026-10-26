@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import * as sheetBehavior from '../../src/hooks/useSheetBehavior';
 
 const updateEntry = vi.fn();
 vi.mock('../../src/lib/entryMutations', () => ({
@@ -49,6 +50,39 @@ describe('EntryTimeChip：Esc 關閉', () => {
     expect(updateEntry).toHaveBeenCalledTimes(1);
     // 桌機右欄 panel（OperationShell）也在 document 上聽 Esc：這裡必須標成已處理，否則一次 Esc 連 panel 一起關掉。
     expect(notPrevented, 'Esc 事件應被標 defaultPrevented，讓 OperationShell 不再處理').toBe(false);
+  });
+
+  it('IME 組字中的 Esc（isComposing）不關閉也不存檔', async () => {
+    renderChip();
+    await openAndEdit();
+    (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
+    await act(async () => { fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', isComposing: true }); });
+    expect(screen.queryByRole('dialog', { name: '起訖時間' })).not.toBeNull();
+    expect(updateEntry).not.toHaveBeenCalled();
+  });
+
+  it('長按 Esc（repeat）只處理第一下，不會存檔兩次', async () => {
+    renderChip();
+    await openAndEdit();
+    (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      fireEvent.keyDown(document.body, { key: 'Escape', repeat: true });
+    });
+    expect(updateEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it('別的浮層（engine sheet）開著時 Esc 讓給它：不關 popover、不搶焦點、不標 defaultPrevented', async () => {
+    renderChip();
+    await openAndEdit();
+    const spy = vi.spyOn(sheetBehavior, 'isAnySheetOpen').mockReturnValue(true);
+    try {
+      let notPrevented = false;
+      await act(async () => { notPrevented = fireEvent.keyDown(document.body, { key: 'Escape' }); });
+      expect(screen.queryByRole('dialog', { name: '起訖時間' })).not.toBeNull();
+      expect(updateEntry).not.toHaveBeenCalled();
+      expect(notPrevented).toBe(true);
+    } finally { spy.mockRestore(); }
   });
 
   it('焦點在 popup 內時按 Esc → 關閉且只存檔一次（不被 document listener 重複觸發）', async () => {

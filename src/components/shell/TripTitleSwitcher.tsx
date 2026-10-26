@@ -72,7 +72,7 @@ export default function TripTitleSwitcher({
 
   // 依 trigger 的 rect 定位 portaled dropdown（fixed）；開啟時算一次，並跟 resize/scroll 更新。
   useLayoutEffect(() => {
-    if (!open) { setPos(null); return; }
+    if (!open) { setPos(null); setAdjust(0); corrections.current = 0; return; }
     const btn = triggerRef.current;
     if (!btn) return;
     const update = () => {
