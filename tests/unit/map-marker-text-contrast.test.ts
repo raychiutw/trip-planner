@@ -49,7 +49,8 @@ describe('marker 編號文字對比（idle，白底）', () => {
 
 describe('marker 字級（#1445 F16）', () => {
   it('編號字級用 rem（隨使用者字級放大），不是固定 px', () => {
-    expect(markerStyle(PIN, false, false).fontSize).toMatch(/rem$/);
-    expect(markerStyle(PIN, true, false).fontSize).toMatch(/rem$/);
+    // 以 CSS 變數引用，fallback 為 rem；變數本身在 tokens.css 定義（手機以 px/17 等值修正）。
+    expect(markerStyle(PIN, false, false).fontSize).toMatch(/^var\(--marker-font-size, [\d.]+rem\)$/);
+    expect(markerStyle(PIN, true, false).fontSize).toMatch(/^var\(--marker-font-size-focused, [\d.]+rem\)$/);
   });
 });

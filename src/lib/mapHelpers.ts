@@ -79,8 +79,8 @@ export function markerStyle(
     text,
     size: isFocused ? 36 : 28,
     borderWidth: isFocused ? 2 : 1.5,
-    // rem（#1445 F16）：固定 px 不隨使用者字級放大；圓形尺寸改 min-width/min-height 讓編號放大後撐成膠囊而不溢出。
-    fontSize: isFocused ? '0.8125rem' : '0.75rem',
+    // rem（#1445 F16）經 CSS 變數：固定 px 不隨使用者字級放大；手機 root 17px 的等值修正在 tokens.css 的 --marker-font-size；圓形尺寸改 min-width/min-height 讓編號放大後撐成膠囊而不溢出。
+    fontSize: isFocused ? 'var(--marker-font-size-focused, 0.8125rem)' : 'var(--marker-font-size, 0.75rem)',
     label: String(pin.index),
     zIndex: isFocused ? 1000 : undefined,
   };

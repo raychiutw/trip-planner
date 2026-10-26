@@ -2228,3 +2228,8 @@ body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806
   .tp-map-entry-card-time { font-size: 0.7059rem; } /* 12px */
   .tp-map-entry-card-title { font-size: 0.8235rem; } /* 14px */
 }
+/* marker 編號字級（mapHelpers.markerStyle 以 var() 引用）。桌機 root 16px：12／13px；手機 root 17px：除以 17。 */
+:root { --marker-font-size: 0.75rem; --marker-font-size-focused: 0.8125rem; }
+@media (max-width: 760px) {
+  :root { --marker-font-size: 0.7059rem; --marker-font-size-focused: 0.7647rem; }
+}
