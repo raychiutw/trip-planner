@@ -288,6 +288,8 @@ async function interactiveUnderTabBar(page) {
     });
     for (const sc of scrollers) sc.scrollTop = sc.scrollHeight;
     window.scrollTo(0, document.documentElement.scrollHeight);
+    // gstack-timing-ok: 捲到底後 tab bar 會依捲動方向滑出／回來（250ms transition），沒有可觀察的完成事件；
+    // 這裡的固定等待只是讓 nav 位置穩定再量，之後的斷言是幾何重疊，不是耗時門檻。
     await new Promise((r) => setTimeout(r, 400));
     if (!navEl) return [];
     const nr = navEl.getBoundingClientRect();
@@ -376,13 +378,18 @@ async function stripsWithoutScrollHint(page, selector) {
       const m = cs.maskImage || cs.getPropertyValue('-webkit-mask-image');
       return m && m !== 'none' ? m : '';
     };
-    const settle = () => new Promise((r) => setTimeout(r, 250));
+    // 以輪詢（最多 2 秒）等遮罩出現，而不是固定睡一段時間再斷言：scroll handler 與樣式重算的完成時間不固定。
+    const waitForMask = async () => {
+      const deadline = Date.now() + 2000;
+      while (!maskOf() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
+      return maskOf();
+    };
     /** @type {string[]} */
     const bad = [];
-    nav.scrollLeft = 0; nav.dispatchEvent(new Event('scroll')); await settle();
-    if (!maskOf()) bad.push(`${sel} 在最左位置（scrollLeft=0，scrollWidth ${nav.scrollWidth} > clientWidth ${nav.clientWidth}）右緣沒有捲動提示`);
-    nav.scrollLeft = nav.scrollWidth; nav.dispatchEvent(new Event('scroll')); await settle();
-    if (!maskOf()) bad.push(`${sel} 在最右位置左緣沒有捲動提示`);
+    nav.scrollLeft = 0; nav.dispatchEvent(new Event('scroll'));
+    if (!(await waitForMask())) bad.push(`${sel} 在最左位置（scrollLeft=0，scrollWidth ${nav.scrollWidth} > clientWidth ${nav.clientWidth}）右緣沒有捲動提示`);
+    nav.scrollLeft = nav.scrollWidth; nav.dispatchEvent(new Event('scroll'));
+    if (!(await waitForMask())) bad.push(`${sel} 在最右位置左緣沒有捲動提示`);
     return bad;
   }, selector);
 }
