@@ -23,7 +23,7 @@ describe('F003 — Mobile Type Scale 真正落地', () => {
 
     // 在 760px 媒體查詢段落中找到 tp-hero-title: 24px
     const has24pxHeroTitle = mobileMediaMatch?.some(
-      (block) => block.includes('.tp-hero-title') && block.includes('24px'),
+      (block) => block.includes('.tp-hero-title') && (block.includes('24px') || block.includes('1.4118rem')), // #1445：24px = 24/17 rem（手機 root 17px）
     );
     expect(has24pxHeroTitle).toBe(true);
   });
