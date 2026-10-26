@@ -1546,6 +1546,8 @@ body.dark .tp-toast { background: var(--color-secondary); }
   mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
 }
 .tp-map-day-tabs[data-fade-start="true"] { --day-fade-l: 28px; }
+/* 鍵盤聚焦其中一個 tab 時取消遮罩：邊緣 28px 的漸層會把焦點環吃掉（WCAG 2.4.11 focus not obscured）。 */
+.tp-map-day-tabs:has(.tp-map-day-tab:focus-visible) { -webkit-mask-image: none; mask-image: none; }
 .tp-map-day-tabs[data-fade-end="true"] { --day-fade-r: 28px; }
 /* #1445 F4：tab 視覺高 34px，點擊區用不可見 pseudo 擴成 44px（HIG／專案 tap-min）。 */
 .tp-map-day-tab::before { content: ''; position: absolute; inset: -5px 0; }

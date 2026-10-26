@@ -114,8 +114,6 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
   div.style.cssText = `
     min-width: ${style.size}px;
     min-height: ${style.size}px;
-    box-sizing: border-box;
-    padding: 0 0.25em;
     border-radius: 50%;
     background: ${style.fill};
     border: ${style.borderWidth}px solid ${style.stroke};

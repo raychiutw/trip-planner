@@ -43,9 +43,12 @@ describe('EntryTimeChip：Esc 關閉', () => {
     await openAndEdit();
     // 把焦點移出 popup，模擬「滑鼠點開後焦點仍在 chip」的情境。
     (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
-    await act(async () => { fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' }); });
+    let notPrevented = true;
+    await act(async () => { notPrevented = fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' }); });
     expect(screen.queryByRole('dialog', { name: '起訖時間' })).toBeNull();
     expect(updateEntry).toHaveBeenCalledTimes(1);
+    // 桌機右欄 panel（OperationShell）也在 document 上聽 Esc：這裡必須標成已處理，否則一次 Esc 連 panel 一起關掉。
+    expect(notPrevented, 'Esc 事件應被標 defaultPrevented，讓 OperationShell 不再處理').toBe(false);
   });
 
   it('焦點在 popup 內時按 Esc → 關閉且只存檔一次（不被 document listener 重複觸發）', async () => {

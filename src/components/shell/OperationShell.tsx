@@ -110,6 +110,8 @@ export default function OperationShell({
     if (!inStack) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.isComposing) return;
+      // 內層浮層（例如時間編輯 popover）已在 capture 階段處理並標 defaultPrevented → 不再關 panel。
+      if (e.defaultPrevented) return;
       const el = document.activeElement as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
       // 內層有 engine modal 開著（含從本 panel 開的 discard ConfirmModal）→ 讓它先吃 Escape。

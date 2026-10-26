@@ -100,11 +100,17 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if ((e.target as HTMLElement | null)?.closest?.('.tp-time-popover')) return;
+      // 焦點在 popup 內：popup 自己的 onKeyDown 會處理（並 stopPropagation）；capture 階段先到的這裡要讓開，否則存檔兩次。
+      if (popRef.current?.contains(e.target as Node)) return;
+      // 標成已處理：桌機右欄 panel（OperationShell）也在 document 上聽 Esc 並會整個關閉；
+      // 這個 popover 不是 Popover API、也不進 sheet registry，它的 nested guard 擋不到，
+      // 不標的話一次 Esc 會同時關 popover 與整個 panel（草稿一起丟）。capture 階段先於 bubble 階段的 panel handler。
+      e.preventDefault();
       closeAndSave();
       chipRef.current?.focus();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
   }, [open, closeAndSave]);
 
   const hasTime = !!(start || end);

@@ -83,10 +83,12 @@ export default function TripTitleSwitcher({
     };
     update();
     window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
+    // 下拉自己（max-height + overflow）捲動也會冒到 window 的 capture scroll：忽略，否則長清單每個捲動事件都重置夾限並重算。
+    const onScroll = (e: Event) => { if (dropdownRef.current?.contains(e.target as Node)) return; update(); };
+    window.addEventListener('scroll', onScroll, true);
     return () => {
       window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('scroll', onScroll, true);
     };
   }, [open]);
 
@@ -110,6 +112,8 @@ export default function TripTitleSwitcher({
     return () => ro.disconnect();
   }, [mounted]);
   const posRight = pos?.right;
+  // 寬度變了（搜尋過濾、字型延後載入）是一次新的夾限情境：修正次數重新計。
+  useLayoutEffect(() => { corrections.current = 0; }, [menuW]);
   useLayoutEffect(() => {
     if (!mounted) return;
     const d = dropdownRef.current;

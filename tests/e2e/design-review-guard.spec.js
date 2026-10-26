@@ -592,6 +592,22 @@ test.describe('設計審查守門（#1445）', () => {
           }
         }
 
+        // 鍵盤聚焦 Day tab 時，邊緣漸層遮罩要取消（不然邊緣 28px 的焦點環被吃掉，WCAG 2.4.11）。
+        if (theme === 'light' && (width === 360 || width === 390)) {
+          test('聚焦 Day tab 時取消邊緣遮罩（焦點環不被漸層吃掉）', async ({ page }) => {
+            await page.goto(`/trip/${TRIP_ID}/map?day=all`);
+            await page.waitForLoadState('networkidle');
+            await page.keyboard.press('Tab'); // 讓之後的 focus() 被判為鍵盤焦點（:focus-visible）
+            const last = page.locator('.tp-map-day-tab').last();
+            await last.focus();
+            const mask = await page.locator('.tp-map-day-tabs').evaluate((el) => {
+              const cs = getComputedStyle(el);
+              return cs.maskImage || cs.getPropertyValue('-webkit-mask-image') || 'none';
+            });
+            expect(mask, `聚焦最後一個 Day tab 時 mask-image 應為 none，實際：${mask}`).toBe('none');
+          });
+        }
+
         // 手機觸控目標只在淺色 360／390 跑。
         if (theme === 'light' && (width === 360 || width === 390)) {
           for (const c of TOUCH_TARGETS) {
