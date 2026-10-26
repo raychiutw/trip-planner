@@ -48,7 +48,7 @@ function renderPage() {
 }
 
 describe('DeveloperAppNewPage', () => {
-  it('render page shell + form fields + TitleBar action button', () => {
+  it('render page shell + form fields + 底部取消／送出（標題列不再重複送出）', () => {
     renderPage();
     expect(screen.getByTestId('dev-app-new-page')).toBeTruthy();
     expect(screen.getByTestId('dev-app-new-name')).toBeTruthy();
@@ -56,7 +56,7 @@ describe('DeveloperAppNewPage', () => {
     expect(screen.getByTestId('dev-app-new-type-public')).toBeTruthy();
     expect(screen.getByTestId('dev-app-new-type-confidential')).toBeTruthy();
     expect(screen.getByTestId('dev-app-new-scope-openid')).toBeTruthy();
-    expect(screen.getByTestId('dev-app-new-titlebar-submit')).toBeTruthy();
+    expect(screen.queryByTestId('dev-app-new-titlebar-submit')).toBeNull();
     expect(screen.getByTestId('dev-app-new-submit')).toBeTruthy();
     expect(screen.getByTestId('dev-app-new-cancel')).toBeTruthy();
   });

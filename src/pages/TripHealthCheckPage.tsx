@@ -122,7 +122,7 @@ const SCOPED_STYLES = `
   text-transform: uppercase;
   color: var(--color-accent-text);
 }
-.tp-ai-health-hero h1 {
+.tp-ai-health-hero h2 {
   margin: 0;
   font-size: var(--font-size-title2);
   line-height: 32px;
@@ -130,7 +130,7 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 @media (min-width: 1024px) {
-  .tp-ai-health-hero h1 { font-size: var(--font-size-title); line-height: 36px; }
+  .tp-ai-health-hero h2 { font-size: var(--font-size-title); line-height: 36px; }
 }
 .tp-ai-health-hero .meta {
   font-size: var(--font-size-footnote);
@@ -755,7 +755,8 @@ export default function TripHealthCheckPage() {
               </button>
             )}
           </div>
-          <h1 data-testid="ai-health-title">{tripTitle}</h1>
+          {/* #1445 F11：頁面 h1 交給 OperationShell 的面板標題（手機）／中欄行程詳情（桌機），hero 降為 h2 */}
+          <h2 data-testid="ai-health-title">{tripTitle}</h2>
           {initialLoading ? (
             <div className="meta">載入中…</div>
           ) : readStatus === 'error' ? (

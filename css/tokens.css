@@ -2,6 +2,12 @@
 
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
+/* #1445 F7：使用者在「外觀設定」手動選深色／淺色時，body 的 .dark 與系統設定可能不一致。
+ * 只有 html 的 `light dark` 時，UA 預設樣式（連結色、原生 checkbox／radio／捲軸）仍照系統走：
+ * 系統淺色 + 手動深色 → 深色底上出現白色原生方框與預設藍 #0000EE 連結（1.6:1）。
+ * 在 body 上明確宣告，讓 UA 控制項與頁面主題一致。 */
+body.dark { color-scheme: dark; }
+body:not(.dark) { color-scheme: light; }
 
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);

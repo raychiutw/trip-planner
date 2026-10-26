@@ -133,7 +133,7 @@ export default function OperationShell({
   const panel = (
     <div className={shellClassName} data-testid={testId} ref={panelRef} tabIndex={-1}>
       {scopedStyles && <style>{scopedStyles}</style>}
-      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={close ?? closeStack} />
+      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={close ?? closeStack} headingLevel={inStack ? 2 : 1} />
       {children}
     </div>
   );

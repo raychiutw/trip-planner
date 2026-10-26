@@ -142,6 +142,20 @@ const SCROLL_HINT_STRIPS = [
   { name: 'trip-detail', path: `/trips?selected=${TRIP_ID}`, selector: '.tp-map-day-tabs--sticky' },
 ];
 
+/** 每頁應恰好一個 <h1>（可為 sr-only）。F11：行程筆記頁手機版是 0 個（桌機 1 個）。 */
+const H1_PAGES = [
+  { name: 'trips', path: '/trips' },
+  { name: 'trip-detail', path: `/trips?selected=${TRIP_ID}` },
+  { name: 'notes', path: `/trip/${TRIP_ID}/notes` },
+  { name: 'collab', path: `/trip/${TRIP_ID}/collab` },
+  { name: 'health', path: `/trip/${TRIP_ID}/health` },
+  { name: 'chat', path: '/chat' },
+  { name: 'favorites', path: '/favorites' },
+  { name: 'account', path: '/account' },
+  { name: 'sessions', path: '/account/sessions' },
+  { name: 'map', path: `/trip/${TRIP_ID}/map?day=all` },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -445,6 +459,56 @@ test.describe('設計審查守門（#1445）', () => {
             expect(r.width, '找不到 .tp-global-bottom-nav').not.toBeNull();
             expect(r.left, `tab bar 左緣 ${r.left} 超出視窗`).toBeGreaterThanOrEqual(-0.5);
             expect(r.right, `tab bar 右緣 ${r.right} 超出視窗寬 ${r.vw}（寬 ${r.width}）`).toBeLessThanOrEqual(r.vw + 0.5);
+          });
+        }
+
+        // F11：每頁恰好一個 h1。
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          for (const c of H1_PAGES) {
+            test(`頁面恰好一個 h1：${c.name}`, async ({ page }) => {
+              await page.goto(c.path);
+              await page.waitForLoadState('networkidle');
+              // level-1 heading：<h1>，或 role=heading aria-level=1（StackPanelHeader 的標題是 span 掛 role）。
+              const n = await page.locator('h1, [role="heading"][aria-level="1"]').count();
+              expect(n, `${c.name} @ ${width}px 有 ${n} 個 h1，應為 1`).toBe(1);
+            });
+          }
+        }
+
+        // F7：原生 checkbox／radio 要有品牌 accent；手動選深色（系統淺色）時 color-scheme 也要跟著變深，
+        // 否則 UA 的連結色、原生控制項仍是淺色版（深色底上白色方框、預設藍連結）。
+        if (theme === 'light' && width === 390) {
+          for (const c of [{ name: 'favorites', path: '/favorites' }, { name: 'developer-app-new', path: '/developer/apps/new' }]) {
+            test(`原生控制項有品牌 accent-color：${c.name}`, async ({ page }) => {
+              await page.goto(c.path);
+              await page.waitForLoadState('networkidle');
+              const bad = await page.evaluate(() => [...document.querySelectorAll('input[type="checkbox"], input[type="radio"]')]
+                .filter((e) => e.getBoundingClientRect().width > 0)
+                .filter((e) => getComputedStyle(e).accentColor === 'auto')
+                .map((e) => `${(e.getAttribute('name') || e.getAttribute('aria-label') || e.id || e.type)}`));
+              expect(bad, `${c.name} 有 ${bad.length} 個原生控制項 accent-color 仍是 auto：${bad.join(', ')}`).toEqual([]);
+            });
+          }
+        }
+        if (theme === 'forced-dark' && width === 390) {
+          test('手動深色時 color-scheme 隨之變深（UA 控制項與連結）', async ({ page }) => {
+            await page.goto('/account');
+            await page.waitForLoadState('networkidle');
+            const cs = await page.evaluate(() => getComputedStyle(document.body).colorScheme);
+            expect(cs, `body.dark 的 color-scheme 是「${cs}」，應為 dark`).toBe('dark');
+          });
+        }
+
+        // 建立應用頁只能有一個「建立」送出動作（原本頂部 ✓ 與底部「建立應用」重複）。
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          test('建立應用頁只有一個送出動作', async ({ page }) => {
+            await page.goto('/developer/apps/new');
+            await page.waitForLoadState('networkidle');
+            const names = await page.evaluate(() => [...document.querySelectorAll('button, [role="button"]')]
+              .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })
+              .map((e) => (e.getAttribute('aria-label') || e.textContent || '').trim())
+              .filter((n) => /^建立/.test(n)));
+            expect(names, `可見的「建立…」按鈕：${names.join(' / ')}`).toHaveLength(1);
           });
         }
 
