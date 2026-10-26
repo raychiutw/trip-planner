@@ -12,12 +12,20 @@
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
+const axePath = require.resolve('axe-core');
 
 const TRIP_ID = 'okinawa-trip-2026-Ray';
 
 /** 195 = 手機 200% 縮放；360／390 = 常見手機；1440 = 桌機。 */
 const WIDTHS = [195, 360, 390, 1440];
-const THEMES = /** @type {const} */ (['light', 'dark']);
+/**
+ * light / dark：跟隨系統（prefers-color-scheme）。
+ * forced-dark：系統是淺色、但使用者在「外觀設定」選了「深色」（localStorage tp-color-mode）—— body 有 .dark 但
+ * 瀏覽器仍是淺色 color-scheme，UA 預設樣式（連結色、原生控制項）不會跟著變深。#1445 F1 的預設藍連結
+ * 在這個組合下深色背景 1.64:1；跟隨系統的深色時 UA 會自動換成淺藍所以看不到。只在 390／1440 跑以控制總量。
+ */
+const THEMES = /** @type {const} */ (['light', 'dark', 'forced-dark']);
+const FORCED_DARK_WIDTHS = [390, 1440];
 
 /**
  * @typedef {{ name: string, path: string, open?: (page: import('@playwright/test').Page) => Promise<void>, minWidth?: number }} PageCase
@@ -38,6 +46,27 @@ const NO_TAB_OVERLAP_PAGES = [
   { name: 'chat', path: '/chat' },
 ];
 
+/**
+ * 文字對比與連結辨識（axe color-contrast + link-in-text-block）要掃的頁面，淺深色都跑。
+ * F1：登入裝置頁「已連結的應用」連結是瀏覽器預設藍，深色 1.64:1。F12：行程筆記急難電話 110／119 深色 3.95:1。
+ * 既有 a11y-axe.spec.js 只掃預設（淺色）狀態，所以深色下的對比缺陷它看不到。
+ */
+const CONTRAST_PAGES = [
+  { name: 'sessions', path: '/account/sessions' },
+  { name: 'connected-apps', path: '/account/connected-apps' },
+  {
+    name: 'notes',
+    path: `/trip/${TRIP_ID}/notes`,
+    // 急難電話在「緊急聯絡」區塊內，預設收合，要展開才進 DOM／被量到。
+    prepare: async (page) => {
+      const head = page.getByTestId('trip-notes-section-head-emergency');
+      await head.waitFor();
+      if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+    },
+  },
+  { name: 'account', path: '/account' },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -53,8 +82,35 @@ const PAGES = [
   },
 ];
 
+/** 行程筆記頁需要的資料（形狀與 trip-notes.spec.js 的 fixture 相同；只放守門用得到的欄位）。 */
+const NOTES_MOCK = {
+  flights: [
+    { id: 1, sortOrder: 0, airline: '中華航空', flightNo: 'CI 120', cabinClass: '', departAirport: 'TPE', arriveAirport: 'OKA', departAt: '2026-07-26T09:35', arriveAt: '2026-07-26T12:00', note: '', version: 0 },
+  ],
+  lodgings: [],
+  reservations: [],
+  pretripNotes: [],
+  emergencyContacts: [
+    { id: 1, sortOrder: 0, name: '日本警察', relationship: '報案', phone: '110', email: '', kind: 'police', aiGenerated: 0, origin: 'human', managedBy: 'human', semanticKey: null, version: 0 },
+    { id: 2, sortOrder: 1, name: '日本消防・救護', relationship: '救護', phone: '119', email: '', kind: 'ambulance', aiGenerated: 0, origin: 'human', managedBy: 'human', semanticKey: null, version: 0 },
+  ],
+};
+
 async function setup(page) {
   await setupApiMocks(page);
+  // 後註冊的 route 優先於 setupApiMocks 的泛用 /api/trips 處理。
+  await page.route(new RegExp(`/api/trips/${TRIP_ID}/notes/ai-state$`), (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ jobs: [
+      { docType: 'tips', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
+      { docType: 'lodging-tips', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
+      { docType: 'emergency', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
+    ] }),
+  }));
+  await page.route(new RegExp(`/api/trips/${TRIP_ID}/notes$`), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(NOTES_MOCK),
+  }));
   // 與 a11y-axe 同條件：擋 Google Maps（本機 .env.local 有 key、localhost 非授權 referer），
   // 路線 API 回空，避免頁面狀態隨外部服務飄。
   await page.route(/maps\.googleapis\.com/, (r) => r.abort());
@@ -142,12 +198,29 @@ async function interactiveUnderTabBar(page) {
   });
 }
 
+/** 跑 axe 的 color-contrast 與 link-in-text-block，回傳精簡違規描述。 */
+async function contrastViolations(page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () => {
+    // @ts-ignore axe 由 addScriptTag 注入
+    const r = await window.axe.run(document, { runOnly: { type: 'rule', values: ['color-contrast', 'link-in-text-block'] } });
+    return r.violations.flatMap((/** @type {any} */ v) => v.nodes.map((/** @type {any} */ n) =>
+      `${v.id}: ${String(n.target)} — ${String(n.any?.[0]?.message ?? n.failureSummary ?? '').replace(/\s+/g, ' ').slice(0, 140)}`));
+  });
+}
+
 test.describe('設計審查守門（#1445）', () => {
   for (const theme of THEMES) {
     for (const width of WIDTHS) {
+      if (theme === 'forced-dark' && !FORCED_DARK_WIDTHS.includes(width)) continue;
       test.describe(`${theme} ${width}px`, () => {
         test.beforeEach(async ({ page }) => {
-          await page.emulateMedia({ colorScheme: theme });
+          await page.emulateMedia({ colorScheme: theme === 'dark' ? 'dark' : 'light' });
+          if (theme === 'forced-dark') {
+            await page.addInitScript(() => {
+              localStorage.setItem('tp-color-mode', JSON.stringify({ v: 'dark', exp: Date.now() + 180 * 86400000 }));
+            });
+          }
           await page.setViewportSize({ width, height: width >= 1024 ? 900 : 844 });
           await setup(page);
         });
@@ -161,6 +234,16 @@ test.describe('設計審查守門（#1445）', () => {
             await page.waitForLoadState('networkidle');
             const bad = await interactiveUnderTabBar(page);
             expect(bad, `${c.name} @ ${theme} ${width}px 有可互動元素被 tab bar 蓋住：\n${bad.join('\n')}`).toEqual([]);
+          });
+        }
+
+        for (const c of CONTRAST_PAGES) {
+          test(`文字對比與連結辨識：${c.name}`, async ({ page }) => {
+            await page.goto(c.path);
+            await page.waitForLoadState('networkidle');
+            if (c.prepare) await c.prepare(page);
+            const bad = await contrastViolations(page);
+            expect(bad, `${c.name} @ ${theme} ${width}px 有對比／連結違規：\n${bad.join('\n')}`).toEqual([]);
           });
         }
 

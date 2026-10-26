@@ -8,7 +8,7 @@
  * `lib/` 為 leaf layer — 不 import React / hooks / components。
  */
 
-import { dayPolylineStyle } from './dayPalette';
+import { dayPolylineStyle, DAY_PALETTE, DAY_TEXT_ON_WHITE } from './dayPalette';
 import type { MapPin, Coord } from './mapTypes';
 
 /* ===== Marker styling ===== */
@@ -66,7 +66,12 @@ export function markerStyle(
   const base = STATE_COLORS[state];
   // dayCol overrides idle stroke + text only — focused/past keep their tokens.
   const stroke = state === 'idle' && dayCol ? dayCol : base.stroke;
-  const text = state === 'idle' && dayCol ? dayCol : base.text;
+  // 編號文字不能用 day 飽和色（-500 疊白底 2.77–4.11:1，#1445 F2），改取同色系的白底深階；
+  // 描邊維持飽和色以和 polyline 對應。不在 DAY_PALETTE 內的顏色（例如呼叫端傳別的色）原樣使用。
+  const dayIdx = dayCol ? (DAY_PALETTE as readonly string[]).indexOf(dayCol) : -1;
+  const text = state === 'idle' && dayCol
+    ? (dayIdx >= 0 ? DAY_TEXT_ON_WHITE[dayIdx]! : dayCol)
+    : base.text;
 
   return {
     fill: base.fill,

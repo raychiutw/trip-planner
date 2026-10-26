@@ -26,6 +26,27 @@ export const DAY_PALETTE = [
 ] as const;
 
 /**
+ * 白底上用的「文字用」深階（#1445 F2）。與 tokens.css plain `:root` 的淺色 `--day-text-N` 同值
+ * （疊 #FFFFFF 皆 ≥5.0:1）。
+ *
+ * 為什麼不直接用 `dayTextColor()` 的 CSS 變數：地圖 marker 的 idle 底色恆為白、**不隨主題變**，
+ * 而 `--day-text-N` 在深色主題會換成給深底用的淺色，疊在白色 marker 上反而更看不清楚。
+ * marker 的 DOM 由 JS 組出來、也不在 CSS 變數的主題脈絡裡，所以這裡給固定 hex。
+ */
+export const DAY_TEXT_ON_WHITE = [
+  '#0A73A3', // sky     day 1
+  '#0D796E', // teal    day 2
+  '#956007', // amber   day 3
+  '#C8344D', // rose    day 4
+  '#7A51D8', // violet  day 5
+  '#4E780D', // lime    day 6
+  '#AE500F', // orange  day 7
+  '#04788C', // cyan    day 8
+  '#AB37BD', // fuchsia day 9
+  '#0B7C56', // emerald day 10
+] as const;
+
+/**
  * 取第 N 天（1-indexed）的路線色。
  * 超過 10 天輪回到 day 1（modulo loop）。
  * 無效輸入（dayNum < 1、NaN、Infinity）回傳 DAY_PALETTE[0]。
