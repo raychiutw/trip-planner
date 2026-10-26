@@ -697,19 +697,19 @@ body.dark {
     .tp-hero-chip:last-child::after { content: none; }
     .tp-hero-title {
         /* rev2 細 day label：date 17px，非大 hero title */
-        font-size: 17px; font-weight: 700; margin: 0;
+        font-size: 1.0625rem; font-weight: 700; margin: 0; /* 17px @16px root；#1445 改 rem 才會隨使用者字級放大 */
         letter-spacing: -0.01em; line-height: 1.3;
         color: var(--color-foreground);
     }
     .tp-hero-sub {
-        font-size: 12px;
+        font-size: 0.75rem; /* 12px @16px root；手機 root 17px 的等值修正見檔尾 #1445 區塊 */
         color: var(--color-muted);
         font-variant-numeric: tabular-nums;
         margin: 3px 0 0;
     }
     @media (min-width: 961px) {
         .tp-hero { padding: 8px 2px; }
-        .tp-hero-title { font-size: 18px; }
+        .tp-hero-title { font-size: 1.125rem; } /* 18px @16px root */
     }
 
     /* Flight card (mockup FlightInfo) */
@@ -937,7 +937,7 @@ body.dark {
         .tp-page { padding: 0 28px 40px; }
     }
     @media (max-width: 960px) {
-        .tp-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
+        .tp-hero-title { font-size: 1.5rem; } /* 24px @16px root；mockup .tp-detail-hero-title compact:1877 (was 28px) */
     }
     /* Mobile type scale override (760px and below).
      * Breakpoint intentionally set below iPad mini portrait (744px so mini gets mobile
@@ -947,7 +947,7 @@ body.dark {
     @media (max-width: 760px) {
         .tp-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .tp-hero { padding: 18px; border-radius: var(--radius-md); }
-        .tp-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
+        .tp-hero-title { font-size: 1.4118rem; } /* F003: DESIGN.md mobile hero title = 24px（手機 root 17px → 24/17 rem；#1445 改 rem 讓大字型生效） */
         /* rev2 Section 02：手機沿用 base grid（node | body，排序模式插 grip 欄），只縮 gap/padding。
          * （先前殘留 v2.30.12 的 5-col + 36px icon 欄讓 body 崩成 36px；改用 auto-placement 統一模板。） */
         .tp-rail-item {
@@ -1704,7 +1704,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   font-variant-numeric: tabular-nums;
 }
 .tp-map-entry-card-time {
-  font-size: 12px;
+  font-size: 0.75rem; /* 12px @16px root */
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1733,7 +1733,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 }
 .tp-map-entry-card.is-active .tp-map-entry-card-icon { color: var(--color-accent); }
 .tp-map-entry-card-title {
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px @16px root */
   font-weight: 700;
   line-height: 1.35;
   color: var(--color-foreground);
@@ -1808,7 +1808,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
-    font-size: 18px; /* mockup compact 18px (was 22px) */
+    font-size: 1.0588rem; /* mockup compact 18px (was 22px)；手機 root 17px → 18/17 rem（#1445 改 rem） */
     line-height: 24px;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -2197,4 +2197,14 @@ body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806
 @supports not (backdrop-filter: blur(1px)) {
   body { --tabbar-tint: var(--color-background); }
   body.dark { --tabbar-tint: var(--color-secondary); }
+}
+
+/* ===== #1445 F16：標題類文字改 rem 後，手機（root 17px）的等值修正 =====
+ * 這些字級原本是固定 px，使用者調大系統／瀏覽器字級時標題不動、內文變大，層級反轉。
+ * 改 rem 後桌機（root 16px）數值等同原 px；手機 root 是 106.25%（17px），所以在這裡用 px/17 的 rem
+ * 讓 100% 下兩種裝置的實際尺寸都與改動前一致。 */
+@media (max-width: 760px) {
+  .tp-hero-sub { font-size: 0.7059rem; }            /* 12px */
+  .tp-map-entry-card-time { font-size: 0.7059rem; } /* 12px */
+  .tp-map-entry-card-title { font-size: 0.8235rem; } /* 14px */
 }

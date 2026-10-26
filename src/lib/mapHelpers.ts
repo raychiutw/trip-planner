@@ -79,7 +79,8 @@ export function markerStyle(
     text,
     size: isFocused ? 36 : 28,
     borderWidth: isFocused ? 2 : 1.5,
-    fontSize: isFocused ? '13px' : '12px',
+    // rem（#1445 F16）：固定 px 不隨使用者字級放大；圓形尺寸改 min-width/min-height 讓編號放大後撐成膠囊而不溢出。
+    fontSize: isFocused ? '0.8125rem' : '0.75rem',
     label: String(pin.index),
     zIndex: isFocused ? 1000 : undefined,
   };
@@ -111,8 +112,10 @@ export function markerContent(style: MarkerStyle): HTMLDivElement {
     ? `0 0 0 1.5px ${style.fill}, 0 0 0 5px rgba(169, 122, 74, 0.35), 0 6px 16px rgba(42, 31, 24, 0.35)`
     : `0 0 0 1.5px ${style.fill}, 0 0 0 3px rgba(0, 0, 0, 0.18)`;
   div.style.cssText = `
-    width: ${style.size}px;
-    height: ${style.size}px;
+    min-width: ${style.size}px;
+    min-height: ${style.size}px;
+    box-sizing: border-box;
+    padding: 0 0.25em;
     border-radius: 50%;
     background: ${style.fill};
     border: ${style.borderWidth}px solid ${style.stroke};

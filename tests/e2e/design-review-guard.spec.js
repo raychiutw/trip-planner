@@ -100,6 +100,26 @@ const ESC_CASES = [
   },
 ];
 
+/**
+ * 大字型（F16）：把 root 字級放大 2×（等同 iOS／Android「更大字體」、瀏覽器預設字級調大），
+ * 標題類文字也要跟著放大；固定 px 的標題會讓層級反轉（標題小、內文巨大）。
+ * 只列「標題／主要資訊」類 selector；10px eyebrow 等小字口徑屬 owner 決策（F5），不在此列。
+ */
+const SCALING_SELECTORS = [
+  '.tp-titlebar-title',
+  '.tp-titlebar-trip-title-text',
+  '.tp-hero-title',
+  '.tp-hero-sub',
+  '.tp-map-entry-card-title',
+  '.tp-map-entry-card-time',
+];
+const SCALING_PAGES = [
+  { name: 'trip-detail', path: `/trips?selected=${TRIP_ID}` },
+  { name: 'map', path: `/trip/${TRIP_ID}/map?day=all` },
+  { name: 'chat', path: '/chat' },
+  { name: 'account', path: '/account' },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -239,6 +259,29 @@ async function interactiveUnderTabBar(page) {
   });
 }
 
+/**
+ * root 字級 ×2 前後量 SCALING_SELECTORS 的 computed font-size，回傳「沒有等比放大」的元素。
+ * 容忍：放大比例 < 1.8（理想 2.0；rem 以外的相對單位或 clamp 可能略低）視為沒縮放。
+ */
+async function nonScalingText(page, selectors) {
+  return page.evaluate((sels) => {
+    const root = document.documentElement;
+    const base = parseFloat(getComputedStyle(root).fontSize);
+    const els = sels.flatMap((/** @type {string} */ sel) => [...document.querySelectorAll(sel)].map((el) => ({ sel, el })))
+      .filter(({ el }) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+    const before = els.map(({ el }) => parseFloat(getComputedStyle(el).fontSize));
+    root.style.fontSize = `${base * 2}px`;
+    void document.body.offsetHeight;
+    const bad = els.flatMap(({ sel, el }, i) => {
+      const after = parseFloat(getComputedStyle(el).fontSize);
+      const ratio = after / before[i];
+      return ratio < 1.8 ? [`${sel}[${(el.textContent || '').trim().slice(0, 12)}] ${before[i]}px → ${after}px（×${ratio.toFixed(2)}）`] : [];
+    });
+    root.style.fontSize = '';
+    return [...new Set(bad)];
+  }, selectors);
+}
+
 /** 跑 axe 的 color-contrast 與 link-in-text-block，回傳精簡違規描述。 */
 async function contrastViolations(page) {
   await page.addScriptTag({ path: axePath });
@@ -294,6 +337,34 @@ test.describe('設計審查守門（#1445）', () => {
               // 焦點回到觸發按鈕（或其容器內）；不可掉到 body。
               const focusOk = await trigger.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
               expect(focusOk, `${c.name} 關閉後焦點應回到觸發按鈕`).toBe(true);
+            });
+          }
+        }
+
+        // F15：200% 縮放（195px）下浮動 tab bar 不可比視窗寬，否則聊天與收藏被切半。桌機沒有浮動 tab bar。
+        if (width < 1024) {
+          test('底部 tab bar 寬度不超過視窗', async ({ page }) => {
+            await page.goto('/trips');
+            await page.waitForLoadState('networkidle');
+            const r = await page.evaluate(() => {
+              const nav = document.querySelector('.tp-global-bottom-nav');
+              const b = nav ? nav.getBoundingClientRect() : null;
+              return { vw: document.documentElement.clientWidth, left: b ? b.left : null, right: b ? b.right : null, width: b ? b.width : null };
+            });
+            expect(r.width, '找不到 .tp-global-bottom-nav').not.toBeNull();
+            expect(r.left, `tab bar 左緣 ${r.left} 超出視窗`).toBeGreaterThanOrEqual(-0.5);
+            expect(r.right, `tab bar 右緣 ${r.right} 超出視窗寬 ${r.vw}（寬 ${r.width}）`).toBeLessThanOrEqual(r.vw + 0.5);
+          });
+        }
+
+        // 大字型只在淺色 390／1440 跑（與主題無關）。
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          for (const c of SCALING_PAGES) {
+            test(`root 字級 ×2 時標題文字等比放大：${c.name}`, async ({ page }) => {
+              await page.goto(c.path);
+              await page.waitForLoadState('networkidle');
+              const bad = await nonScalingText(page, SCALING_SELECTORS);
+              expect(bad, `${c.name} @ ${width}px 有標題文字不隨 root 字級放大：\n${bad.join('\n')}`).toEqual([]);
             });
           }
         }

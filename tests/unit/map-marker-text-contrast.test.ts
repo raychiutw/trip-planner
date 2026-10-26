@@ -46,3 +46,10 @@ describe('marker 編號文字對比（idle，白底）', () => {
     expect(s.text).toBe('#6A6A6A');
   });
 });
+
+describe('marker 字級（#1445 F16）', () => {
+  it('編號字級用 rem（隨使用者字級放大），不是固定 px', () => {
+    expect(markerStyle(PIN, false, false).fontSize).toMatch(/rem$/);
+    expect(markerStyle(PIN, true, false).fontSize).toMatch(/rem$/);
+  });
+});
