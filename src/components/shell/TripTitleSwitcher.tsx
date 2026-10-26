@@ -47,6 +47,10 @@ export default function TripTitleSwitcher({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  // #1445 F13：視窗夾限的水平修正量（加在 pos.right 上；正值 = 往左、負值 = 往右）。
+  const [adjust, setAdjust] = useState(0);
+  const [menuW, setMenuW] = useState(0);
+  const corrections = useRef(0);
 
   // 點外面關閉。dropdown 已 portal 出去（不在 rootRef 內），故要同時檢查 dropdownRef。
   useEffect(() => {
@@ -73,6 +77,8 @@ export default function TripTitleSwitcher({
     if (!btn) return;
     const update = () => {
       const r = btn.getBoundingClientRect();
+      setAdjust(0);
+      corrections.current = 0;
       setPos({ top: Math.round(r.bottom + 6), right: Math.round(window.innerWidth - r.right) });
     };
     update();
@@ -83,6 +89,44 @@ export default function TripTitleSwitcher({
       window.removeEventListener('scroll', update, true);
     };
   }, [open]);
+
+  // 視窗夾限（#1445 F13）。dropdown 以 trigger 右緣對齊（right），但窄螢幕上 trigger 靠左，
+  // 240px 寬的選單會往左伸出視窗（390px 寬 x=-50、360px 寬 x=-80）。
+  // 做法：量 dropdown 實際的 DOM 位置，超出邊距就算出位移量加到 right。用「相對位移」而非
+  // 重算絕對 right —— 第一版用 clientWidth 推算絕對值，結果與 fixed 定位的參考邊差了捲軸寬度，
+  // 左緣落在 -3px；相對位移不依賴參考邊是哪個。
+  // ResizeObserver：字型／內容延後載入會改變寬度，只量一次會算錯。
+  const mounted = open && pos !== null;
+  useLayoutEffect(() => {
+    if (!mounted) { setMenuW(0); return; }
+    const d = dropdownRef.current;
+    if (!d) return;
+    const measure = () => setMenuW(d.getBoundingClientRect().width);
+    measure();
+    // 舊瀏覽器／jsdom 沒有 ResizeObserver：只量一次，夾限仍會在掛載時生效。
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(d);
+    return () => ro.disconnect();
+  }, [mounted]);
+  const posRight = pos?.right;
+  useLayoutEffect(() => {
+    if (!mounted) return;
+    const d = dropdownRef.current;
+    if (!d) return;
+    const margin = 8;
+    const vw = document.documentElement.clientWidth;
+    const r = d.getBoundingClientRect();
+    // 還沒排版（寬 0，jsdom 一律如此）不修正；並限制修正次數，避免位置不隨 right 改變時無限迴圈。
+    if (r.width === 0 || corrections.current >= 3) return;
+    let delta = 0;
+    if (r.left < margin) delta = -(margin - r.left);
+    else if (r.right > vw - margin) delta = r.right - (vw - margin);
+    if (Math.abs(delta) >= 1) {
+      corrections.current += 1;
+      setAdjust((a) => a + Math.round(delta));
+    }
+  }, [mounted, posRight, menuW, adjust]);
 
   // 只有一個行程就沒有「切換」可言 —— 顯示純文字，不給可點的假象。
   const switchable = trips.length > 1;
@@ -120,7 +164,7 @@ export default function TripTitleSwitcher({
           ref={dropdownRef}
           className="tp-titlebar-trip-dropdown"
           role="menu"
-          style={{ position: 'fixed', top: pos.top, right: pos.right }}
+          style={{ position: 'fixed', top: pos.top, right: pos.right + adjust }}
         >
           {showSearch && (
             // W6 長清單搜尋。此搜尋是行程選擇器內的 scoped 搜尋（spec §6），非頁面內容搜尋，
