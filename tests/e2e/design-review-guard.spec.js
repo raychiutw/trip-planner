@@ -24,6 +24,20 @@ const THEMES = /** @type {const} */ (['light', 'dark']);
  * 每筆：name 顯示在失敗訊息；path 為路由；open 為進頁後要開啟的浮層（沒有就只載入頁面）。
  */
 
+/**
+ * 「載入頁面後，底部浮動 tab bar 不能蓋住可互動元素」要掃的頁面（F14）。
+ * 只列手機版會顯示 tab bar 的頁；桌機沒有浮動底部 tab bar（bottomNavRect 為 null，斷言自動略過）。
+ */
+const NO_TAB_OVERLAP_PAGES = [
+  { name: 'collab', path: `/trip/${TRIP_ID}/collab` },
+  { name: 'health', path: `/trip/${TRIP_ID}/health` },
+  { name: 'notes', path: `/trip/${TRIP_ID}/notes` },
+  { name: 'trips', path: '/trips' },
+  { name: 'favorites', path: '/favorites' },
+  { name: 'account', path: '/account' },
+  { name: 'chat', path: '/chat' },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -90,6 +104,44 @@ async function overlaysOutsideViewport(page) {
   }, OVERLAY_SELECTOR);
 }
 
+/**
+ * 回傳與底部浮動 tab bar 邊界重疊的可互動元素（空陣列 = 沒有）。
+ * 頁面可捲動時先捲到底再量 —— 使用者最後會看到的就是那個狀態；tab bar 不在畫面上（桌機、
+ * 已隨捲動滑出）時不算重疊。
+ */
+async function interactiveUnderTabBar(page) {
+  return page.evaluate(async () => {
+    const navEl = document.querySelector('.app-shell-bottom-nav');
+    const scrollers = [...document.querySelectorAll('*')].filter((e) => {
+      const cs = getComputedStyle(e);
+      return /(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 4 && e.getBoundingClientRect().width > 100;
+    });
+    for (const sc of scrollers) sc.scrollTop = sc.scrollHeight;
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((r) => setTimeout(r, 400));
+    if (!navEl) return [];
+    const nr = navEl.getBoundingClientRect();
+    const vh = window.innerHeight;
+    if (nr.width === 0 || nr.height === 0 || nr.top >= vh - 1 || getComputedStyle(navEl).display === 'none') return [];
+    /** @type {string[]} */
+    const bad = [];
+    const sel = 'a[href], button, input, select, textarea, [role="button"], [role="tab"], [role="radio"], [role="checkbox"], [tabindex]:not([tabindex="-1"])';
+    for (const el of document.querySelectorAll(sel)) {
+      if (navEl.contains(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || cs.pointerEvents === 'none') continue;
+      if (r.bottom <= nr.top || r.top >= nr.bottom || r.right <= nr.left || r.left >= nr.right) continue;
+      const overlapH = Math.min(r.bottom, nr.bottom) - Math.max(r.top, nr.top);
+      if (overlapH < 2) continue;
+      const label = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('name') || el.tagName).trim().slice(0, 24);
+      bad.push(`${el.tagName.toLowerCase()}[${label}] y=${Math.round(r.top)}–${Math.round(r.bottom)} 與 tab bar y=${Math.round(nr.top)}–${Math.round(nr.bottom)} 重疊 ${Math.round(overlapH)}px`);
+    }
+    return bad;
+  });
+}
+
 test.describe('設計審查守門（#1445）', () => {
   for (const theme of THEMES) {
     for (const width of WIDTHS) {
@@ -99,6 +151,18 @@ test.describe('設計審查守門（#1445）', () => {
           await page.setViewportSize({ width, height: width >= 1024 ? 900 : 844 });
           await setup(page);
         });
+
+        // 加一個矮視窗（600px）：內容量隨資料而變（production 共編頁 3 位成員時「角色」列剛好落在
+        // tab bar 下方，mock 只有 1 位成員就躲過），矮視窗讓同樣的版面缺陷與資料量無關地現形。
+        for (const c of NO_TAB_OVERLAP_PAGES.flatMap((p) => (width < 1024 ? [{ ...p, h: 844 }, { ...p, h: 600 }] : [{ ...p, h: 900 }]))) {
+          test(`內容不被底部 tab bar 蓋住：${c.name} (h=${c.h})`, async ({ page }) => {
+            await page.setViewportSize({ width, height: c.h });
+            await page.goto(c.path);
+            await page.waitForLoadState('networkidle');
+            const bad = await interactiveUnderTabBar(page);
+            expect(bad, `${c.name} @ ${theme} ${width}px 有可互動元素被 tab bar 蓋住：\n${bad.join('\n')}`).toEqual([]);
+          });
+        }
 
         for (const c of PAGES) {
           if (c.minWidth && width < c.minWidth) continue;

@@ -822,6 +822,24 @@ async function setupApiMocks(page) {
   // /api/trip-ideas route removed — endpoint retired in V2 cutover (migration 0046)。
   // 任何 e2e 仍 hit 此 path 應該得到 default 404 (Worker handler not found)。
 
+  // 共編成員與待回覆邀請（#1445 設計審查守門要看到「新增成員」表單，成員清單載入失敗時表單不渲染）。
+  // 資料量比照 production 共編頁的真實樣態（擁有者 + 2 位成員），版面高度才與真實使用者看到的一致。
+  await page.route(/\/api\/permissions(?:\?.*)?$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 1, email: 'owner@example.com', displayName: 'Owner', tripId: 'okinawa-trip-2026-Ray', role: 'owner' },
+        { id: 2, email: 'member-a@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+        { id: 3, email: 'member-b@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+      ]),
+    });
+  });
+  await page.route(/\/api\/invitations(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }),
+  }));
+
   await page.route(/\/api\/trips/, (route) => {
     const url = route.request().url();
     const path = new URL(url).pathname;
