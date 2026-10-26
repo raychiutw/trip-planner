@@ -67,6 +67,39 @@ const CONTRAST_PAGES = [
   { name: 'account', path: '/account' },
 ];
 
+/**
+ * 「按 Esc 關閉並把焦點還給觸發按鈕」的浮層清單（F17）。trigger／overlay 回傳 Locator。
+ * 只在淺色 390／1440 跑（鍵盤行為與主題、寬度無關，不必乘滿矩陣）。
+ * 行程下拉（W6 前就有 Esc）一起列入，防止之後有人改壞；時間編輯 popover 是 production 唯一缺 Esc 的。
+ */
+const ESC_CASES = [
+  {
+    name: 'trip-title-switcher',
+    trigger: (/** @type {import('@playwright/test').Page} */ page) => page.locator('[data-testid$="-trip-title"]').first(),
+    overlay: (page) => page.getByRole('menu'),
+  },
+  {
+    name: 'trip-actions-menu',
+    trigger: (page) => page.getByTestId('trips-embedded-menu-trigger'),
+    overlay: (page) => page.getByTestId(`trip-embedded-menu-${TRIP_ID}`),
+  },
+  {
+    name: 'entry-more-menu',
+    trigger: (page) => page.getByRole('button', { name: /更多動作/ }).first(),
+    overlay: (page) => page.getByRole('menu'),
+  },
+  {
+    name: 'travel-mode-dialog',
+    trigger: (page) => page.getByRole('button', { name: /交通方式/ }).first(),
+    overlay: (page) => page.getByRole('dialog', { name: /交通方式/ }),
+  },
+  {
+    name: 'entry-time-popover',
+    trigger: (page) => page.getByRole('button', { name: '編輯起訖時間' }).first(),
+    overlay: (page) => page.getByRole('dialog', { name: '起訖時間' }),
+  },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -107,6 +140,14 @@ async function setup(page) {
       { docType: 'lodging-tips', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
       { docType: 'emergency', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
     ] }),
+  }));
+  // 車程段（時間軸上的「13 min · 6.6 km」交通方式 pill 由它渲染；沒有它 pill 不存在，Esc 守門測不到）。
+  await page.route(new RegExp(`/api/trips/${TRIP_ID}/segments$`), (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 1, tripId: TRIP_ID, fromEntryId: 101, toEntryId: 102, mode: 'driving', submode: null, min: 13, distanceM: 6600, source: 'google', computedAt: 1, updatedAt: 1, noTravel: null },
+    ]),
   }));
   await page.route(new RegExp(`/api/trips/${TRIP_ID}/notes$`), (route) => route.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify(NOTES_MOCK),
@@ -235,6 +276,26 @@ test.describe('設計審查守門（#1445）', () => {
             const bad = await interactiveUnderTabBar(page);
             expect(bad, `${c.name} @ ${theme} ${width}px 有可互動元素被 tab bar 蓋住：\n${bad.join('\n')}`).toEqual([]);
           });
+        }
+
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          for (const c of ESC_CASES) {
+            test(`Esc 關閉並還焦：${c.name}`, async ({ page }) => {
+              await page.goto(`/trips?selected=${TRIP_ID}`);
+              await page.waitForLoadState('networkidle');
+              const trigger = c.trigger(page);
+              await trigger.scrollIntoViewIfNeeded();
+              // 用 DOM click 開啟（195 寬以外的寬度標題按鈕都點得到；與滑鼠點擊等價，焦點會留在觸發按鈕上）
+              await trigger.click();
+              const overlay = c.overlay(page);
+              await expect(overlay, `${c.name} 開啟後應可見`).toBeVisible();
+              await page.keyboard.press('Escape');
+              await expect(overlay, `${c.name} 按 Esc 後應關閉`).toBeHidden();
+              // 焦點回到觸發按鈕（或其容器內）；不可掉到 body。
+              const focusOk = await trigger.evaluate((el) => el === document.activeElement || el.contains(document.activeElement));
+              expect(focusOk, `${c.name} 關閉後焦點應回到觸發按鈕`).toBe(true);
+            });
+          }
         }
 
         for (const c of CONTRAST_PAGES) {

@@ -91,6 +91,22 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
     return () => document.removeEventListener('mousedown', onDown);
   }, [open, closeAndSave]);
 
+  // Esc 關閉（#1445 F17）。popup 自己的 onKeyDown 只有「焦點在 popup 內」才收得到 Esc；
+  // 用滑鼠點開 chip 時焦點留在 chip 按鈕上（popup 外），Esc 沒人接，鍵盤使用者只能按「完成」。
+  // 加 document 層 listener 補這條路。焦點在 popup 內時 popup 的 onKeyDown 會 stopPropagation，
+  // 這裡不會重複觸發（否則會送兩次存檔）；內層 TripTimePicker 的 popover 自己處理 Esc。
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if ((e.target as HTMLElement | null)?.closest?.('.tp-time-popover')) return;
+      closeAndSave();
+      chipRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, closeAndSave]);
+
   const hasTime = !!(start || end);
   const disabled = entryId == null || tripId == null;
 
