@@ -1504,7 +1504,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
   /* rev2 D-review #4：fit-content 膠囊在中欄/視窗水平置中（原 margin-left 12px 靠左，
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
-  padding: 4px;
+  padding: 5px 4px; /* 上下 5px：讓 tab 的不可見點擊區（見 .tp-map-day-tab::before）不被 overflow 裁掉，合計 ≥44px */
   /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
    * 同一玻璃材質族 —— 浮動玻璃膠囊（較強暖落影 + 亮 specular 上緣）。
    * （原本這裡還記著「secondary 底 88%，比 nav 62% 略實」的理由，已於 2026-07-21
@@ -1530,7 +1530,21 @@ body.dark .tp-toast { background: var(--color-secondary); }
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
+/* #1445 F9：strip 溢出時，還能捲的那一側做邊緣漸層（useDayStripNav 標 data-fade-start / data-fade-end）。
+ * mask 連容器的玻璃邊框一起淡出，這是刻意的：邊緣「消失」本身就是還有內容的暗示。 */
+.tp-map-day-tabs[data-fade-start="true"],
+.tp-map-day-tabs[data-fade-end="true"] {
+  --day-fade-l: 0px;
+  --day-fade-r: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+}
+.tp-map-day-tabs[data-fade-start="true"] { --day-fade-l: 28px; }
+.tp-map-day-tabs[data-fade-end="true"] { --day-fade-r: 28px; }
+/* #1445 F4：tab 視覺高 34px，點擊區用不可見 pseudo 擴成 44px（HIG／專案 tap-min）。 */
+.tp-map-day-tab::before { content: ''; position: absolute; inset: -5px 0; }
 .tp-map-day-tab {
+  position: relative;
   flex: 0 0 auto;
   padding: 5px 15px;
   border: none;

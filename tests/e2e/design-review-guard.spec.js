@@ -120,6 +120,28 @@ const SCALING_PAGES = [
   { name: 'account', path: '/account' },
 ];
 
+/**
+ * 手機觸控目標（F4）：「點擊區域」至少 44×44 CSS px。視覺尺寸可以小（用不可見 padding／pseudo-element 擴大），
+ * 所以不量 bounding box，而是對元素中心上下左右各 21px 的四個點做 elementFromPoint，
+ * 四點都命中該元素（或其子孫）才算有 44px 的實際可點範圍。
+ * 只列審查量到的缺陷元素；桌機指標不套（37–39px 的 sidebar 項目維持）。
+ */
+const TOUCH_TARGETS = [
+  { name: 'map-day-tab', path: `/trip/${TRIP_ID}/map?day=all`, selector: '.tp-map-day-tab' },
+  { name: 'chat-send', path: '/chat', selector: '.tp-chat-send' },
+  { name: 'favorites-chip', path: '/favorites', selector: '.favorites-chip' },
+  { name: 'account-name-edit', path: '/account', selector: '.tp-account-hero-name-edit' },
+];
+
+/**
+ * 可橫向捲動的 Day tab 條（F9）：內容比容器寬時，要有「還能捲」的視覺提示（邊緣漸層遮罩），
+ * 否則第 5 天被截掉、使用者不知道右邊還有東西。條沒有溢出（桌機、天數少）時不要求。
+ */
+const SCROLL_HINT_STRIPS = [
+  { name: 'map', path: `/trip/${TRIP_ID}/map?day=all`, selector: '.tp-map-day-tabs' },
+  { name: 'trip-detail', path: `/trips?selected=${TRIP_ID}`, selector: '.tp-map-day-tabs--sticky' },
+];
+
 /** @type {PageCase[]} */
 const PAGES = [
   {
@@ -161,6 +183,23 @@ async function setup(page) {
       { docType: 'emergency', status: 'idle', jobId: null, requestId: null, generation: 0, exclusionCount: 0 },
     ] }),
   }));
+  // 收藏（篩選 chip 只有在有收藏時才渲染；預設 mock 是空清單，觸控目標守門量不到）。
+  await page.route(/\/api\/poi-favorites$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const row = (id, name, address, poiType) => ({
+      id, userId: 'mock-user-id', poiId: id, favoritedAt: '2026-07-01T00:00:00.000Z', note: null,
+      poiName: name, poiAddress: address, poiLat: 26.2, poiLng: 127.7, poiType, poiRating: 4.3,
+    });
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        row(11, '沖繩美麗海水族館', '日本沖繩縣國頭郡本部町石川424', 'attraction'),
+        row(12, '一蘭拉麵 新宿', '日本東京都新宿區歌舞伎町1-1', 'restaurant'),
+        row(13, '京都車站飯店', '日本京都府京都市下京區烏丸通', 'hotel'),
+      ]),
+    });
+  });
   // 車程段（時間軸上的「13 min · 6.6 km」交通方式 pill 由它渲染；沒有它 pill 不存在，Esc 守門測不到）。
   await page.route(new RegExp(`/api/trips/${TRIP_ID}/segments$`), (route) => route.fulfill({
     status: 200,
@@ -282,6 +321,58 @@ async function nonScalingText(page, selectors) {
   }, selectors);
 }
 
+/** 回傳「實際可點範圍不足 44px」的元素描述。 */
+async function smallHitAreas(page, selector) {
+  return page.evaluate((sel) => {
+    const half = 21;
+    /** @type {string[]} */
+    const bad = [];
+    for (const el of document.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+      el.scrollIntoView({ block: 'center', inline: 'center' });
+      const b = el.getBoundingClientRect();
+      const cx = b.left + b.width / 2;
+      const cy = b.top + b.height / 2;
+      const pts = [[cx - half, cy], [cx + half, cy], [cx, cy - half], [cx, cy + half]];
+      const miss = pts.filter(([x, y]) => {
+        if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return false; // 視窗外的點不判定
+        const hit = document.elementFromPoint(x, y);
+        return !(hit && (hit === el || el.contains(hit)));
+      });
+      if (miss.length > 0) bad.push(`${sel}[${(el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 14)}] 外觀 ${Math.round(b.width)}×${Math.round(b.height)}，中心 ±21px 有 ${miss.length}/4 點不屬於它`);
+    }
+    return [...new Set(bad)];
+  }, selector);
+}
+
+/**
+ * 回傳 Day tab 條「溢出卻沒有捲動提示」的描述。分別在最左與最右捲動位置檢查：
+ * 最左要有右緣遮罩、最右要有左緣遮罩（中間兩邊都要）；以 computed mask-image 為準。
+ */
+async function stripsWithoutScrollHint(page, selector) {
+  return page.evaluate(async (sel) => {
+    const nav = /** @type {HTMLElement | null} */ (document.querySelector(sel));
+    if (!nav) return [`找不到 ${sel}`];
+    if (nav.scrollWidth <= nav.clientWidth + 2) return []; // 沒溢出，不要求
+    const maskOf = () => {
+      const cs = getComputedStyle(nav);
+      const m = cs.maskImage || cs.getPropertyValue('-webkit-mask-image');
+      return m && m !== 'none' ? m : '';
+    };
+    const settle = () => new Promise((r) => setTimeout(r, 250));
+    /** @type {string[]} */
+    const bad = [];
+    nav.scrollLeft = 0; nav.dispatchEvent(new Event('scroll')); await settle();
+    if (!maskOf()) bad.push(`${sel} 在最左位置（scrollLeft=0，scrollWidth ${nav.scrollWidth} > clientWidth ${nav.clientWidth}）右緣沒有捲動提示`);
+    nav.scrollLeft = nav.scrollWidth; nav.dispatchEvent(new Event('scroll')); await settle();
+    if (!maskOf()) bad.push(`${sel} 在最右位置左緣沒有捲動提示`);
+    return bad;
+  }, selector);
+}
+
 /** 跑 axe 的 color-contrast 與 link-in-text-block，回傳精簡違規描述。 */
 async function contrastViolations(page) {
   await page.addScriptTag({ path: axePath });
@@ -355,6 +446,91 @@ test.describe('設計審查守門（#1445）', () => {
             expect(r.left, `tab bar 左緣 ${r.left} 超出視窗`).toBeGreaterThanOrEqual(-0.5);
             expect(r.right, `tab bar 右緣 ${r.right} 超出視窗寬 ${r.vw}（寬 ${r.width}）`).toBeLessThanOrEqual(r.vw + 0.5);
           });
+        }
+
+        // F6：地圖頁玻璃（backdrop-filter）層數。production 有 42 層（每張底部景點卡一層），其他頁 2–6 層；
+        // HIG 玻璃宜少用，每層 blur 也是繪製成本。上限 6 = 其他頁最大量。
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          test('地圖頁玻璃層數 ≤ 6 且景點卡不各自模糊', async ({ page }) => {
+            await page.goto(`/trip/${TRIP_ID}/map?day=all`);
+            await page.waitForLoadState('networkidle');
+            const r = await page.evaluate(() => {
+              const filtered = [...document.querySelectorAll('*')].filter((e) => {
+                const cs = getComputedStyle(e);
+                const b = cs.backdropFilter || cs.getPropertyValue('-webkit-backdrop-filter');
+                const rect = e.getBoundingClientRect();
+                return b && b !== 'none' && rect.width > 0 && rect.height > 0;
+              });
+              return {
+                total: filtered.length,
+                cards: filtered.filter((e) => e.classList.contains('tp-map-entry-card')).length,
+                cardCount: document.querySelectorAll('.tp-map-entry-card').length,
+              };
+            });
+            expect(r.cardCount, '地圖頁應有景點卡（mock 資料）').toBeGreaterThan(0);
+            expect(r.cards, `${r.cards}/${r.cardCount} 張景點卡各自有 backdrop-filter`).toBe(0);
+            expect(r.total, `地圖頁 backdrop-filter 元素 ${r.total} 個，上限 6`).toBeLessThanOrEqual(6);
+          });
+        }
+
+        // F21：深色下地圖頁 Day tab 條疊在「恆為淺色」的 Google 底圖上（owner 決定地圖不隨主題），
+        // 低 tint 的玻璃會把標籤字（muted #A1A1A6）疊在亮色圖磚上讀不清。最壞情況是白底圖：
+        // 標籤要達 4.5:1，條的底色至少要 ~0.88 不透明。e2e 擋掉 Google Maps 量不到真實圖磚，
+        // 所以直接斷言條的不透明度下限（0.85，留一點餘裕給 tint 色差）。
+        if (theme === 'dark' && (width === 390 || width === 1440)) {
+          test('深色地圖頁 Day tab 條夠不透明（標籤不被亮底圖干擾）', async ({ page }) => {
+            await page.goto(`/trip/${TRIP_ID}/map?day=all`);
+            await page.waitForLoadState('networkidle');
+            const alpha = await page.evaluate(() => {
+              const el = document.querySelector('.tp-map-day-tabs');
+              if (!el) return -1;
+              const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+              const cx = /** @type {CanvasRenderingContext2D} */ (cv.getContext('2d', { willReadFrequently: true }));
+              cx.fillStyle = '#000'; cx.fillStyle = getComputedStyle(el).backgroundColor;
+              cx.clearRect(0, 0, 1, 1); cx.fillRect(0, 0, 1, 1);
+              return cx.getImageData(0, 0, 1, 1).data[3] / 255;
+            });
+            expect(alpha, '找不到 .tp-map-day-tabs').toBeGreaterThanOrEqual(0);
+            expect(alpha, `Day tab 條底色不透明度 ${alpha.toFixed(2)}，需 ≥ 0.85`).toBeGreaterThanOrEqual(0.85);
+          });
+        }
+
+        // F10：收藏頁「地區」與「類型」兩排樣式相同的 chip，要有可見的列標籤分辨層級。
+        if (theme === 'light' && (width === 390 || width === 1440)) {
+          test('收藏頁兩排篩選各有可見的列標籤', async ({ page }) => {
+            await page.goto('/favorites');
+            await page.waitForLoadState('networkidle');
+            for (const [testid, label] of [['favorites-region-row', '地區'], ['favorites-type-row', '類型']]) {
+              const row = page.getByTestId(testid);
+              await expect(row, `${testid} 應存在`).toBeVisible();
+              await expect(row.locator('.favorites-row-label'), `${testid} 應有可見列標籤「${label}」`).toBeVisible();
+              await expect(row.locator('.favorites-row-label')).toHaveText(label);
+            }
+          });
+        }
+
+        // 手機寬度下 Day tab 條會溢出；只在淺色跑。
+        if (theme === 'light' && width < 1024) {
+          for (const c of SCROLL_HINT_STRIPS) {
+            test(`Day tab 條溢出時有捲動提示：${c.name}`, async ({ page }) => {
+              await page.goto(c.path);
+              await page.waitForLoadState('networkidle');
+              const bad = await stripsWithoutScrollHint(page, c.selector);
+              expect(bad, `${c.name} @ ${width}px：\n${bad.join('\n')}`).toEqual([]);
+            });
+          }
+        }
+
+        // 手機觸控目標只在淺色 360／390 跑。
+        if (theme === 'light' && (width === 360 || width === 390)) {
+          for (const c of TOUCH_TARGETS) {
+            test(`點擊區域 ≥44px：${c.name}`, async ({ page }) => {
+              await page.goto(c.path);
+              await page.waitForLoadState('networkidle');
+              const bad = await smallHitAreas(page, c.selector);
+              expect(bad, `${c.name} @ ${width}px：\n${bad.join('\n')}`).toEqual([]);
+            });
+          }
         }
 
         // 大字型只在淺色 390／1440 跑（與主題無關）。

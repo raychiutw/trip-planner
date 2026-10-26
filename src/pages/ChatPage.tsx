@@ -444,6 +444,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .tp-chat-send {
+  position: relative;
   border: none; cursor: pointer;
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
@@ -454,6 +455,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   flex-shrink: 0;
   transition: background 150ms;
 }
+.tp-chat-send::before { content: ''; position: absolute; inset: -2px; } /* #1445 F4：視覺 40px，點擊區 44px */
 .tp-chat-send:hover:not(:disabled) {
   background: var(--color-accent-deep);
 }

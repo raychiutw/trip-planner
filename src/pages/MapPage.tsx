@@ -164,6 +164,15 @@ const SCOPED_STYLES = `
   z-index: 5;
   max-width: calc(100% - 24px);
 }
+/* #1445 F21：深色下底圖仍是淺色（owner 決定地圖不隨主題），低 tint 玻璃讓標籤字（muted）疊在亮圖磚上
+ * 讀不清，整條還偏青綠。最壞情況是白底圖：標籤 4.5:1 需底色 ≳0.88 不透明，這裡取 90%。
+ * 「降低透明度」時整條轉不透明（--tabbar-tint 在 body 上的降級值被這條更近的宣告蓋住，所以要自己再給一次）。 */
+body.dark .map-page-wrap > .tp-map-day-tabs {
+  --tabbar-tint: color-mix(in srgb, var(--color-background) 90%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  body.dark .map-page-wrap > .tp-map-day-tabs { --tabbar-tint: var(--color-secondary); }
+}
 .map-page-cards {
   position: relative;
   flex: none;
@@ -179,7 +188,9 @@ const SCOPED_STYLES = `
 }
 /* POI 卡改玻璃（浮在地圖上、非白底）：夠不透明 + blur + 邊界 + 陰影，對齊 day tab 玻璃質感。 */
 .map-page-cards .tp-map-entry-card {
-  --glass-alpha: 88%; --glass-filter: blur(20px) saturate(1.5);   /* recipe：tokens.css 的 .tp-glass（class 掛在 MapEntryCard） */
+  /* recipe：tokens.css 的 .tp-glass（class 掛在 MapEntryCard）。#1445 F6：卡片列一次 N 張（production 38 張），
+   * 每張各一層 backdrop-filter 與「玻璃宜少用」相悖，也是繪製成本；底色維持 88% tint，不再各自模糊（none）。 */
+  --glass-alpha: 88%; --glass-filter: none;
   border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   box-shadow: 0 8px 24px rgba(42, 31, 24, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
