@@ -273,16 +273,20 @@ export function createRequestWorker(deps: WorkerDeps) {
    */
   async function runPrintSession(sessionName: string, skillCommand: string, token: string, restrictTrip: string): Promise<boolean> {
     let last: PrintRunResult = { ok: true, timedOut: false };
-    let attempted: ReadonlySet<number> | undefined;
+    // 被嘗試過的請求 id：各輪開始時隊列的聯集，只增不減。查不到就維持原集合（起初為空 → 收屍什麼都不動，
+    // 交給 100 分鐘牆鐘兜底）：查不到時放寬成「全收」會把沒被任何人看過的新請求一起殺掉。
+    const attempted = new Set<number>();
     try {
       for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
         const before = await listPendingIds(restrictTrip);
-        attempted = before ? new Set(before) : undefined; // 查不到 → 收屍時不縮範圍（保守：維持原行為）
+        for (const id of before ?? []) attempted.add(id);
         last = await deps.runContainedPrint(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
         deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}）`);
         const after = await listPendingIds(restrictTrip);
         if (after && after.length === 0) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
-        if (!last.ok) break;
+        // 查不到、process 失敗、或剩下的全是這輪開始前就在隊列的請求（已被嘗試卻沒處理成功）→ 不再重跑：
+        // 重跑同一批只會把不可信輸入觸發的花費乘上輪數。只有「執行當中才到的新請求」才值得再跑一輪。
+        if (!after || !last.ok || !after.some((id) => !before || !before.includes(id))) break;
       }
       await reap(restrictTrip, last.timedOut ? 'timed_out' : 'error', attempted);
     } catch (error) {

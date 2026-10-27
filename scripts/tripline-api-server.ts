@@ -119,9 +119,12 @@ const tmuxDeps: TmuxDeps = {
 
 // --- tp-request containment helpers ---
 
+const RUN_AS_AGENT_TIMEOUT_MS = 30_000;
+
 /** Run a command AS the tp-agent user (non-interactive sudo; needs (0a) NOPASSWD). */
 function runAsAgent(args: string[], input?: string) {
-  return spawnSync('sudo', ['-n', '-u', TP_AGENT_USER, ...args], { encoding: 'utf-8', input });
+  // timeout：spawnSync 會凍住整個 event loop（連 /health 都不回，也卡住逾時計時器），sudo／磁碟卡住不能無限等。
+  return spawnSync('sudo', ['-n', '-u', TP_AGENT_USER, ...args], { encoding: 'utf-8', input, timeout: RUN_AS_AGENT_TIMEOUT_MS });
 }
 
 /** Is the containment infra ready to run a write-capable token safely?
@@ -226,7 +229,9 @@ function prepareContainedSessionDir(
 
 /** 殺掉命令列帶有該 run 目錄的 tp-agent process（claude／MCP 子程序）；對 sudo 包裝層的 EPERM 噪音可忽略，它會隨子程序結束。 */
 function killRunProcesses(sessionDir: string): void {
-  runAsAgent(['pkill', '-KILL', '-f', sessionDir]);
+  // pkill -f 的樣式是未錨定的 regex：路徑裡的 `.` 要跳脫，結尾要錨定，否則 `…-123-45` 會連帶命中 `…-123-456`。
+  const escaped = sessionDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  runAsAgent(['pkill', '-KILL', '-f', '--', `${escaped}(/|$| )`]);
 }
 
 /** 單輪 `claude -p` 的逾時（比 orphan cap 短很多：headless 正常 10 秒內完成）。 */
@@ -305,7 +310,11 @@ async function runContainedPrint(
     // 殘留的 claude／MCP 子程序（指令列帶有這一輪的 session 目錄）一併清掉，避免帶著 restrict token 繼續動行程。
     killRunProcesses(sessionDir);
     const rm = runAsAgent(['rm', '-rf', sessionDir]);
-    if (rm.status !== 0) logError(`contained print: 清 session 目錄失敗（token 檔可能殘留）${sessionDir}：${rm.stderr || rm.status}`);
+    if (rm.status !== 0) {
+      const msg = `contained print: 清 session 目錄失敗（token 檔可能殘留，下次 api-server 啟動會補清）${sessionDir}：${rm.stderr || rm.status}`;
+      logError(msg);
+      void throttledAlert('print-run-cleanup-failed', 'failed', msg);
+    }
   }
 }
 
@@ -383,7 +392,8 @@ const worker = createRequestWorker({
  */
 function sweepOnStartup(): void {
   try {
-    if (!containmentReady()) return;
+    // 清掃只需要 sudo 能力，不需要 OAuth token：OAuth 壞掉（containmentReady=false）正是最可能留下殘留的時候。
+    if (runAsAgent(['true']).status !== 0) return;
     sweepStalePrintRuns({
       listEntries: () => {
         const r = runAsAgent(['ls', '-1', CONTAINED_BASE_DIR]);
@@ -398,7 +408,6 @@ function sweepOnStartup(): void {
     logError(`啟動清掃失敗（不影響服務）：${err instanceof Error ? err.message : String(err)}`);
   }
 }
-sweepOnStartup();
 
 /** 舊名保留給 HTTP / cron 接線：true = 本輪有 spawn。 */
 async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {
@@ -517,6 +526,10 @@ Bun.serve({
     return Response.json({ error: 'not found' }, { status: 404 });
   },
 });
+
+// listen 成功之後才清掃：port 被別的實例佔著時（EADDRINUSE）自己會先失敗，不會去殺對方進行中的 run。
+// 這是同步呼叫，會在處理任何請求前跑完，所以不可能殺到這個實例剛起的 run。
+sweepOnStartup();
 
 log(`Tripline API Server listening on port ${PORT}`);
 

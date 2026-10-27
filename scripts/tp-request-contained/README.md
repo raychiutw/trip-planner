@@ -93,6 +93,12 @@ v2.30.7 曾因冷啟動可靠度放棄 `-p`，改用 tmux 互動式 REPL；但 R
 - 輸出收完整段後脫敏（restrict token、OAuth token 精確字串 + `Bearer`／`sk-ant-` 格式）寫進 `scripts/logs/tp-request/<run>.log`（0600，輸出上限 1MB）。
 - 回退：無旗標；要回舊行為就 revert 這個 PR。
 
+## 已知限制（不擋 merge，維運時要知道）
+
+- **全域序列鎖，最長約 31 分鐘**：`tick` 持有單一 `/tp-request` 鎖，3 輪 × 10 分鐘逾時。同一個旅伴連續灌請求會讓其他行程排隊；失敗會收屍所以不會無限，但沒有 per-trip 冷卻。鎖在記憶體，跨進程保護靠 api-server 單實例（launchd）與啟動清掃。
+- **脫敏是精確字串 + 兩條 regex**：若 claude 輸出把 token 做 JSON 轉義、URL-encode 或截斷後印出會漏。log 檔 0600，但內容含旅伴對話，`scripts/logs/` 不要被別的備份或 sync 流程帶走。
+- **同一批請求只跑一輪**：exit 0 卻沒處理完（agent 拒絕、被注入訊息誘導不更新狀態）不會重跑，直接收屍為 `error`；只有「執行當中才到的新請求」才會再跑一輪。
+
 ## 已知 follow-up
 
 - **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-request 的呼叫額度；`--max-turns 80` 與 10 分鐘逾時只是上限，被注入的 message 仍可能在這個範圍內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。

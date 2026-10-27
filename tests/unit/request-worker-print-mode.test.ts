@@ -6,7 +6,7 @@ import { createRequestWorker, PRINT_MAX_ROUNDS, type PrintRunResult, type Worker
  * 隊列用 id 清單模擬：每次 print 執行處理掉最前面一筆；`arrivals[n]` 在第 n 次執行「當中」補進新請求
  * （id 從 100 起）。PATCH 收屍會記錄 `reap:<reason>:<id>` 並把該 id 移出隊列。
  */
-function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; results?: PrintRunResult[]; processes?: boolean }) {
+function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; results?: PrintRunResult[]; processes?: boolean; processesPerRun?: boolean[] }) {
   let queue = Array.from({ length: opts.pending }, (_, i) => i + 1);
   let nextArrival = 100;
   let runs = 0;
@@ -40,7 +40,7 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
     pane: { capture: () => '', sendKeys: () => {} },
     runContainedPrint: async () => {
       runs++;
-      if (opts.processes !== false) queue = queue.slice(1); // processes:false = claude exit 0 卻什麼都沒處理
+      if ((opts.processesPerRun?.[runs - 1] ?? opts.processes) !== false) queue = queue.slice(1); // processes:false = claude exit 0 卻什麼都沒處理
       for (let i = 0; i < (opts.arrivals?.[runs] ?? 0); i++) queue.push(nextArrival++);
       return opts.results?.[runs - 1] ?? { ok: true, timedOut: false };
     },
@@ -92,11 +92,11 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(host.effects).toEqual(['reap:timed_out:2']);
   });
 
-  it('exit 0 卻沒處理完（claude 什麼都沒處理）：輪數用盡後收屍為 error，不誤標成逾時', async () => {
+  it('exit 0 卻沒處理完（claude 什麼都沒處理）：不重跑同一批（花費不乘輪數），收屍為 error，不誤標成逾時', async () => {
     const host = fakeHost({ pending: 2, processes: false });
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('failed');
-    expect(host.runs()).toBe(PRINT_MAX_ROUNDS);
+    expect(host.runs()).toBe(1);
     expect(host.effects).toEqual(['reap:error:1', 'reap:error:2']);
     expect(worker.status().runningSkills).toEqual([]);
   });
@@ -108,6 +108,27 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     await worker.tick('job');
     expect(host.queue()).toContain(102);
     expect(host.effects.some((e) => e.endsWith(':102'))).toBe(false);
+  });
+
+  it('某一輪開始時查不到隊列：被嘗試過的集合不縮也不放寬成「全收」，沒被看過的新請求不陪葬', async () => {
+    // 第 1 輪處理掉 id=1，執行當中進來 id=100 → 第 2 輪再跑；第 2 輪開始時隊列查不到、且該輪失敗
+    const host = fakeHost({ pending: 1, arrivals: { 1: 1 }, processesPerRun: [true, false], results: [{ ok: true, timedOut: false }, { ok: false, timedOut: false }] });
+    const original = host.deps.fetch;
+    let tripListCalls = 0;
+    host.deps.fetch = (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/requests' && init?.method !== 'PATCH' && url.searchParams.has('tripId')) {
+        tripListCalls++;
+        // 第 1 輪 before（#1 #2）、第 1 輪 after（#3 #4）正常；第 2 輪 before（#5 #6）讀不到
+        if (tripListCalls === 5 || tripListCalls === 6) return Promise.resolve(Response.json({ unavailable: true }));
+      }
+      return original(input, init);
+    };
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.runs()).toBe(2);
+    expect(host.queue()).toContain(100);
+    expect(host.effects.some((e) => e.endsWith(':100'))).toBe(false);
   });
 
   it('runContainedPrint 丟例外也釋放鎖並收屍為 error', async () => {
@@ -128,8 +149,8 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
       return original(input, init);
     };
     const worker = createRequestWorker(host.deps);
-    expect(await worker.tick('job')).toBe('failed'); // 無法確認清空 → 跑滿輪數後才放棄
-    expect(host.runs()).toBe(PRINT_MAX_ROUNDS);
+    expect(await worker.tick('job')).toBe('failed'); // 無法確認清空 → 不當成功，也不盲目重跑
+    expect(host.runs()).toBe(1);
     expect(host.effects).toEqual([]); // reap 的列表也讀不到 → 不動手（誤殺比殭屍更糟）
     expect(worker.status().runningSkills).toEqual([]);
   });
@@ -194,6 +215,15 @@ describe('tripline-api-server 接線', () => {
     expect(src).toMatch(/mode: 0o600/);
   });
 
+  it('pkill 樣式要跳脫並錨定結尾（否則 -r1 會連帶殺 -r10、路徑的 . 會變萬用字元）', () => {
+    expect(src).toMatch(/function killRunProcesses[\s\S]*?replace\(\/\[\.\*\+\?\^\$\{\}\(\)\|\[\\\]\\\\\]\/g[\s\S]*?\(\/\|\$\| \)/);
+  });
+
+  it('runAsAgent 有 timeout（spawnSync 會凍住整個 event loop）；清理失敗要 alert', () => {
+    expect(src).toMatch(/spawnSync\('sudo'[\s\S]*?timeout: RUN_AS_AGENT_TIMEOUT_MS/);
+    expect(src).toMatch(/throttledAlert\('print-run-cleanup-failed'/);
+  });
+
   it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併殺；rm 失敗要記 log', () => {
     expect(src).toMatch(/finally\s*\{[\s\S]*?killRunProcesses\(sessionDir\);[\s\S]*?runAsAgent\(\['rm', '-rf', sessionDir\]\);[\s\S]*?logError\(/);
     expect(src.indexOf('const prepared = prepareContainedSessionDir(runName')).toBeGreaterThan(src.indexOf('async function runContainedPrint('));
@@ -202,5 +232,9 @@ describe('tripline-api-server 接線', () => {
   it('啟動時清掃上一代殘留（api-server 重啟會留下孤兒 process 與 token 目錄）', () => {
     expect(src).toMatch(/sweepStalePrintRuns\(/);
     expect(src).toMatch(/\nsweepOnStartup\(\);/);
+    // listen 之後才清掃（port 被別的實例佔著時不能去殺對方進行中的 run）；只需要 sudo，不看 OAuth 是否就緒
+    expect(src.indexOf('\nsweepOnStartup();')).toBeGreaterThan(src.indexOf('Bun.serve('));
+    expect(src).toMatch(/function sweepOnStartup[\s\S]*?runAsAgent\(\['true'\]\)/);
+    expect(src.slice(src.indexOf('function sweepOnStartup'), src.indexOf('function sweepOnStartup') + 400)).not.toMatch(/containmentReady/);
   });
 });
