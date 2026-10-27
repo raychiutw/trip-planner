@@ -12,6 +12,9 @@
 /** The separate unix user the contained session runs as (layer A). */
 export const TP_AGENT_USER = 'tp-agent';
 
+/** 單輪 `claude -p` 的 tool-call 輪數上限；耗盡時 claude 以 exit 1 結束（實測），worker 視為失敗並收屍。 */
+export const PRINT_MAX_TURNS = 80;
+
 /** Minimal, secret-free PATH for the scrubbed (`env -i`) contained claude process. */
 export const CONTAINED_PATH = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin';
 
@@ -23,30 +26,32 @@ export function shSingleQuote(s: string): string {
 }
 
 /**
- * Build the inline shell command for a contained tmux session. INTERACTIVE REPL
- * (no `-p` — headless print mode was deliberately abandoned in v2.30.7 for cold-boot
- * reliability); the skill command is submitted via tmux send-keys once the REPL is
- * ready, exactly like the non-contained spawn.
+ * Build the inline shell command for a contained `claude -p "<skill>"` run (headless print
+ * mode; the process exits when the skill is done). v2.30.7 abandoned `-p` for cold-boot
+ * reliability, then the interactive REPL left finished sessions idle so a request arriving
+ * on the same trip afterwards was never picked up; 2026-10-27 live probe on CLI 2.1.311 under
+ * tp-agent + `env -i` + dontAsk: 22/22 runs exit 0 in ~6s, skill + MCP load fine → `-p` is the
+ * only contained path again.
  *
  * Security invariants (unit-tested):
  *   - runs as tp-agent via `sudo -n -u tp-agent` (layer A: FS isolation)
  *   - `env -i` scrubs the environment (no inherited CLIENT_SECRET / refresh token)
  *   - `--permission-mode dontAsk` + `--settings` + `--strict-mcp-config` = layer B lockdown
- *   - NO `-p`, NO `--dangerously-skip-permissions` / bypassPermissions
+ *   - NO `--dangerously-skip-permissions` / bypassPermissions
+ *   - `--max-turns` caps one run's tool-call budget (an injected message can't loop billed calls)
  *   - neither the restrict API token NOR CLAUDE_CODE_OAUTH_TOKEN is on the command line:
  *     the API token lives in the 0600 mcp-config file; the OAuth subscription token
  *     (from `claude setup-token`) is read from a 0600 file into the env by an sh wrapper
- *     (`$(cat "$1")`) — so neither ever lands in `ps` / the tmux session name.
+ *     (`$(cat "$1")`) — so neither ever lands in `ps` / any log.
  */
 export function buildContainedShellCommand(o: {
   claudeBin: string;
-  sessionName: string;
   sessionDir: string;
   settingsPath: string;
   mcpConfigPath: string;
   tokenFilePath: string;
-  /** 提供時改跑 `claude -p <skill>`（headless、跑完 process 即結束）；其餘隔離參數完全相同。 */
-  printSkill?: string;
+  /** `claude -p` 要跑的 skill 指令（呼叫端已過白名單；這裡仍會 single-quote）。 */
+  skillCommand: string;
 }): string {
   const q = shSingleQuote;
   const env = [
@@ -58,22 +63,19 @@ export function buildContainedShellCommand(o: {
   ].join(' ');
   // sh wrapper (runs as tp-agent):
   //   1. `cd` into the session dir FIRST — that dir is the workspace claude trusts.
-  //      tmux's own `-c` can't be the session dir (it's tp-agent-0700, and tmux runs as
-  //      the api-server user who can't chdir in), so we cd inside the wrapper where we
-  //      already are tp-agent. `|| exit 97` fails CLOSED (claude never runs un-cwd'd in
+  //      The api-server user can't chdir into it (tp-agent-0700), so we cd inside the
+  //      wrapper where we already are tp-agent. `|| exit 97` fails CLOSED (claude never runs un-cwd'd in
   //      the repo, which would trigger a workspace-trust dialog on the repo's allow list).
   //   2. read the OAuth token out of a 0600 file into CLAUDE_CODE_OAUTH_TOKEN.
-  //   3. exec claude INTERACTIVELY (no -p). Positional args ($1..$6) keep every value —
+  //   3. exec `claude -p <skill>`. Positional args ($1..$6) keep every value —
   //      incl. the token FILE path — off claude's own argv (no `ps` leak).
   const inner =
-    'cd "$1" || exit 97; CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2") exec "$3" ' +
-    (o.printSkill !== undefined ? '-p "$6" ' : '') +
-    '--permission-mode dontAsk --settings "$4" --mcp-config "$5" --strict-mcp-config' +
-    (o.printSkill !== undefined ? '' : ' --name "$6"');
+    'cd "$1" || exit 97; CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2") exec "$3" -p "$6" ' +
+    `--max-turns ${PRINT_MAX_TURNS} --permission-mode dontAsk --settings "$4" --mcp-config "$5" --strict-mcp-config`;
   return (
     `sudo -n -u ${TP_AGENT_USER} env -i ${env} /bin/sh -c '${inner}' tp-contained ` +
     `'${q(o.sessionDir)}' '${q(o.tokenFilePath)}' '${q(o.claudeBin)}' ` +
-    `'${q(o.settingsPath)}' '${q(o.mcpConfigPath)}' '${q(o.printSkill ?? o.sessionName)}'`
+    `'${q(o.settingsPath)}' '${q(o.mcpConfigPath)}' '${q(o.skillCommand)}'`
   );
 }
 

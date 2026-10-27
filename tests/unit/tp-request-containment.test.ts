@@ -12,11 +12,12 @@ import {
   shSingleQuote,
   TP_AGENT_USER,
   CONTAINED_PATH,
+  PRINT_MAX_TURNS,
 } from '../../scripts/lib/contained-spawn';
 
 const BASE = {
   claudeBin: '/Users/ray/.local/bin/claude',
-  sessionName: 'tripline-tp-request-123-456',
+  skillCommand: '/tp-request',
   sessionDir: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456',
   settingsPath: '/repo/scripts/tp-request-contained/settings.json',
   mcpConfigPath: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456/mcp-config.json',
@@ -60,11 +61,13 @@ describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
     expect(cmd).toContain(`'${BASE.sessionDir}'`); // session dir passed as $1
   });
 
-  it('is INTERACTIVE — no -p (headless print mode was abandoned in v2.30.7); skill goes via the REPL', () => {
+  it('headless claude -p <skill>：skill 是 $6、有輪數上限、沒有 --name（不再是互動式 REPL）', () => {
     const cmd = buildContainedShellCommand(BASE);
-    expect(cmd).not.toContain(' -p '); // not headless; skill submitted via send-keys later
     expect(cmd).toContain('/bin/sh -c'); // launched through the OAuth sh wrapper
-    expect(cmd).toContain('--name "$6"'); // interactive claude with a display name
+    expect(cmd).toContain('-p "$6"');
+    expect(cmd).toContain(`--max-turns ${PRINT_MAX_TURNS}`); // 被注入的訊息不能無上限燒計費的 tool call
+    expect(cmd).not.toContain('--name');
+    expect(cmd.trimEnd().endsWith(`'/tp-request'`)).toBe(true);
   });
 
   it('NEVER passes --dangerously-skip-permissions / bypassPermissions (would void the allowlist)', () => {
@@ -89,9 +92,9 @@ describe('buildContainedShellCommand — neither token on the command line', () 
 });
 
 describe('buildContainedShellCommand — shell-injection safety', () => {
-  it('single-quotes every interpolated value; a malicious session name cannot break out', () => {
+  it('single-quotes every interpolated value; a malicious skill command cannot break out', () => {
     const evil = "x'; rm -rf ~; echo '";
-    const cmd = buildContainedShellCommand({ ...BASE, sessionName: evil });
+    const cmd = buildContainedShellCommand({ ...BASE, skillCommand: evil });
     // escaping applied: each ' becomes '\'' so the value stays inside its single quotes
     expect(cmd).toContain(shSingleQuote(evil));
     // the raw breakout (bare quote immediately closing then `;`) is neutralised
@@ -155,31 +158,5 @@ describe('MCP server 路徑必須是 session 內的快照，不是共用工作�
     // 快照本身要被寫進去（跟 mcp-config / oauth-token 同一批 0600 寫入）
     expect(src).toContain('mcpServerSnapshotPath');
     expect(src).toMatch(/readFileSync\(MCP_SERVER_PATH/);
-  });
-});
-
-describe('buildContainedShellCommand — print mode（claude -p）', () => {
-  const printCmd = () => buildContainedShellCommand({ ...BASE, printSkill: '/tp-request' });
-
-  it('只多一個 -p <skill>，隔離參數（sudo/env -i/dontAsk/settings/strict-mcp）一個不少', () => {
-    const cmd = printCmd();
-    expect(cmd).toContain(`sudo -n -u ${TP_AGENT_USER} env -i `);
-    expect(cmd).toContain('-p "$6"');
-    expect(cmd).toContain('--permission-mode dontAsk');
-    expect(cmd).toContain('--settings "$4"');
-    expect(cmd).toContain('--mcp-config "$5"');
-    expect(cmd).toContain('--strict-mcp-config');
-    expect(cmd).not.toMatch(/dangerously-skip-permissions|bypassPermissions/);
-  });
-
-  it('$6 是 skill 指令（不是 session 名），且沒有 --name', () => {
-    const cmd = printCmd();
-    expect(cmd.trimEnd().endsWith(`'/tp-request'`)).toBe(true);
-    expect(cmd).not.toContain('--name');
-    expect(cmd).not.toContain(` '${BASE.sessionName}'`); // 沒有獨立的 session 名參數
-  });
-
-  it('預設（互動式）仍然沒有 -p', () => {
-    expect(buildContainedShellCommand(BASE)).not.toContain('-p "$6"');
   });
 });

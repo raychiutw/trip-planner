@@ -32,12 +32,17 @@ export interface FailPendingDeps {
  * 全程 best-effort：任何一步失敗都只記錄不拋，因為呼叫端全在 cleanup path 上，
  * 收不到就交給 GET /requests/:id 的 100 分鐘牆鐘兜底（見 _requestTermination.ts）。
  *
+ * `only`：呼叫端只想收「該輪開始時就在隊列、已被嘗試過」的請求；之後才到的新請求沒被任何人看過，
+ * 不能陪葬，留給下一個 tick。
+ *
  * @returns 實際標成功的筆數
  */
 export async function failPendingRequests(
   deps: FailPendingDeps,
   tripId: string,
   reason: ReapReason,
+  /** 只收這些 id（其餘留給下一輪）；省略 = 該 trip 底下全部。 */
+  only?: ReadonlySet<number>,
 ): Promise<number> {
   let token: string;
   try {
@@ -66,7 +71,7 @@ export async function failPendingRequests(
         return 0;
       }
       for (const item of data.items) {
-        if (typeof item?.id === 'number') ids.push(item.id);
+        if (typeof item?.id === 'number' && (!only || only.has(item.id))) ids.push(item.id);
       }
     } catch (err) {
       deps.logError(`收屍列表查詢爆錯（status=${status}）：${err instanceof Error ? err.message : String(err)}`);

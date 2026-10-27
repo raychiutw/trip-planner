@@ -25,6 +25,7 @@ import {
 } from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
 import { createRequestWorker, type PrintRunResult } from './lib/request-worker';
+import { sweepStalePrintRuns } from './lib/print-run-sweep';
 import envLoader from './lib/load-env.js';
 
 // --- Load .env.local ---
@@ -152,7 +153,7 @@ function containmentReady(): boolean {
     return false;
   }
 }
-/** 佈置 per-session 隔離目錄（tmux REPL 與 `claude -p` 兩條路徑共用）；失敗一律 fail-closed 回 null。 */
+/** 佈置 per-run 隔離目錄；失敗一律 fail-closed 回 null。 */
 function prepareContainedSessionDir(
   sessionName: string,
   token: string,
@@ -187,7 +188,7 @@ function prepareContainedSessionDir(
   const mcpServerSnapshotPath = `${sessionDir}/tp-request-mcp-server.js`;
   const mcpServerSource = readFileSync(MCP_SERVER_PATH, 'utf-8');
   const mcpConfig = buildMcpConfig({ nodeBin: NODE_BIN, mcpServerPath: mcpServerSnapshotPath, token, restrictTrip });
-  // Pre-seed claude config so the INTERACTIVE REPL launches straight to the prompt for an
+  // Pre-seed claude config so `claude -p` starts straight away for an
   // unattended service account: skip first-run onboarding (hasCompletedOnboarding) AND
   // pre-trust the (empty, allow-free) session dir (hasTrustDialogAccepted) so no
   // workspace-trust dialog blocks it. cwd is the session dir (see buildContainedShellCommand's
@@ -223,30 +224,9 @@ function prepareContainedSessionDir(
   return { sessionDir, mcpConfigPath, tokenFilePath };
 }
 
-async function createContainedSession(
-  sessionName: string,
-  _skillCommand: string,
-  token: string,
-  restrictTrip: string,
-): Promise<boolean> {
-  const prepared = prepareContainedSessionDir(sessionName, token, restrictTrip);
-  if (!prepared) return false;
-  const { sessionDir, mcpConfigPath, tokenFilePath } = prepared;
-
-  // 3. tmux starts the wrapper from PROJECT_DIR; the wrapper switches to the clean
-  //    sessionDir as tp-agent. Worker owns readiness, submission and cleanup.
-  const shellCmd = buildContainedShellCommand({
-    claudeBin: CLAUDE_BIN, sessionName, sessionDir,
-    settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath, tokenFilePath,
-  });
-  const create = spawnSync(TMUX_BIN, ['new-session', '-d', '-s', sessionName, '-c', PROJECT_DIR, shellCmd], {
-    encoding: 'utf-8',
-  });
-  if (create.status !== 0) {
-    logError(`contained: tmux new-session 失敗（fail-closed）：${create.stderr || create.status}`);
-    return false;
-  }
-  return true;
+/** 殺掉命令列帶有該 run 目錄的 tp-agent process（claude／MCP 子程序）；對 sudo 包裝層的 EPERM 噪音可忽略，它會隨子程序結束。 */
+function killRunProcesses(sessionDir: string): void {
+  runAsAgent(['pkill', '-KILL', '-f', sessionDir]);
 }
 
 /** 單輪 `claude -p` 的逾時（比 orphan cap 短很多：headless 正常 10 秒內完成）。 */
@@ -259,8 +239,7 @@ const PRINT_HARD_DEADLINE_MS = 5_000;
 const PRINT_LOG_MAX_BYTES = 1024 * 1024;
 
 /**
- * `claude -p` 路徑（TP_REQUEST_PRINT_MODE=1）：隔離參數與 tmux 路徑完全相同，只是 headless、
- * 跑完 process 就結束。輸出脫敏後寫進 scripts/logs/tp-request/<runName>.log；結束後清掉 session 目錄（含 token 檔）。
+ * contained `/tp-request` 的唯一執行路徑：`claude -p`（headless、跑完 process 就結束）。輸出脫敏後寫進 scripts/logs/tp-request/<runName>.log；結束後清掉 session 目錄（含 token 檔）。
  */
 async function runContainedPrint(
   runName: string,
@@ -274,9 +253,9 @@ async function runContainedPrint(
     const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
     if (!prepared) return { ok: false, timedOut: false };
     const cmd = buildContainedShellCommand({
-      claudeBin: CLAUDE_BIN, sessionName: runName, sessionDir: prepared.sessionDir,
+      claudeBin: CLAUDE_BIN, sessionDir: prepared.sessionDir,
       settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
-      tokenFilePath: prepared.tokenFilePath, printSkill: skillCommand,
+      tokenFilePath: prepared.tokenFilePath, skillCommand,
     });
     const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
     mkdirSync(logDir, { recursive: true });
@@ -324,7 +303,7 @@ async function runContainedPrint(
     });
   } finally {
     // 殘留的 claude／MCP 子程序（指令列帶有這一輪的 session 目錄）一併清掉，避免帶著 restrict token 繼續動行程。
-    runAsAgent(['pkill', '-KILL', '-f', sessionDir]);
+    killRunProcesses(sessionDir);
     const rm = runAsAgent(['rm', '-rf', sessionDir]);
     if (rm.status !== 0) logError(`contained print: 清 session 目錄失敗（token 檔可能殘留）${sessionDir}：${rm.stderr || rm.status}`);
   }
@@ -392,12 +371,34 @@ const worker = createRequestWorker({
   logError,
   alert: (key, state, message) => { void throttledAlert(key, state, message); },
   containmentReady,
-  createContainedSession,
   createPlainSession,
-  runContainedPrint: process.env.TP_REQUEST_PRINT_MODE === '1' ? runContainedPrint : undefined,
+  runContainedPrint,
   pane: tmuxDeps,
   attachLog: attachSessionLog,
 });
+
+/**
+ * 啟動清掃：上一代 api-server 留下的 contained run（process + token 檔目錄）。
+ * 新實例沒有任何自己的 run 在跑，所以 CONTAINED_BASE_DIR 底下符合 run 目錄格式的都是殘留。
+ */
+function sweepOnStartup(): void {
+  try {
+    if (!containmentReady()) return;
+    sweepStalePrintRuns({
+      listEntries: () => {
+        const r = runAsAgent(['ls', '-1', CONTAINED_BASE_DIR]);
+        return r.status === 0 ? String(r.stdout).split('\n').filter(Boolean) : [];
+      },
+      killRun: (name) => killRunProcesses(`${CONTAINED_BASE_DIR}/${name}`),
+      removeDir: (name) => runAsAgent(['rm', '-rf', `${CONTAINED_BASE_DIR}/${name}`]).status === 0,
+      log,
+      logError,
+    });
+  } catch (err) {
+    logError(`啟動清掃失敗（不影響服務）：${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+sweepOnStartup();
 
 /** 舊名保留給 HTTP / cron 接線：true = 本輪有 spawn。 */
 async function processLoop(source: 'api' | 'job', skillCommand: string = '/tp-request'): Promise<boolean> {

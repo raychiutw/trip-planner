@@ -1,10 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createRequestWorker, type PrintRunResult, type WorkerDeps } from '../../scripts/lib/request-worker';
+import { createRequestWorker, PRINT_MAX_ROUNDS, type PrintRunResult, type WorkerDeps } from '../../scripts/lib/request-worker';
 
-/** 每次 print 執行會讓 pending 減一（模擬 AI 處理掉一筆）；arrivals 在第 N 次執行當中補進新請求。 */
-function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; results?: PrintRunResult[] }) {
-  let pending = opts.pending;
+/**
+ * 隊列用 id 清單模擬：每次 print 執行處理掉最前面一筆；`arrivals[n]` 在第 n 次執行「當中」補進新請求
+ * （id 從 100 起）。PATCH 收屍會記錄 `reap:<reason>:<id>` 並把該 id 移出隊列。
+ */
+function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; results?: PrintRunResult[]; processes?: boolean }) {
+  let queue = Array.from({ length: opts.pending }, (_, i) => i + 1);
+  let nextArrival = 100;
   let runs = 0;
   const effects: string[] = [];
   const tmuxSessions: string[] = [];
@@ -17,28 +21,34 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
       const url = new URL(String(input));
       if (url.pathname.endsWith('mint-restricted')) return Response.json({ access_token: 'trip-token', restrict_trip: 't1' });
       if (url.pathname === '/api/requests' && init?.method !== 'PATCH') {
-        const status = url.searchParams.get('status');
-        const items = status === 'open' && pending > 0 ? Array.from({ length: pending }, (_, i) => ({ id: i + 1, tripId: 't1' })) : [];
+        // 只在 open 回整個隊列，避免 processing + open 被當成兩批
+        const items = url.searchParams.get('status') === 'open' ? queue.map((id) => ({ id, tripId: 't1' })) : [];
         return Response.json({ items });
       }
-      if (init?.method === 'PATCH') { effects.push(`reap:${JSON.parse(String(init.body)).terminalReason}`); pending = 0; return Response.json({}); }
+      const patch = url.pathname.match(/^\/api\/requests\/(\d+)$/);
+      if (patch && init?.method === 'PATCH') {
+        const id = Number(patch[1]);
+        effects.push(`reap:${JSON.parse(String(init.body)).terminalReason}:${id}`);
+        queue = queue.filter((q) => q !== id);
+        return Response.json({});
+      }
       return Response.json({}, { status: 404 });
     },
     tmux: { list: () => null, has: () => false, kill: () => {} },
-    createContainedSession: async (name) => { tmuxSessions.push(name); return true; },
     createPlainSession: async (name) => { tmuxSessions.push(name); return true; },
     attachLog: () => {},
     pane: { capture: () => '', sendKeys: () => {} },
     runContainedPrint: async () => {
       runs++;
-      pending = Math.max(0, pending - 1) + (opts.arrivals?.[runs] ?? 0);
+      if (opts.processes !== false) queue = queue.slice(1); // processes:false = claude exit 0 卻什麼都沒處理
+      for (let i = 0; i < (opts.arrivals?.[runs] ?? 0); i++) queue.push(nextArrival++);
       return opts.results?.[runs - 1] ?? { ok: true, timedOut: false };
     },
   };
-  return { deps, effects, tmuxSessions, runs: () => runs, pending: () => pending };
+  return { deps, effects, tmuxSessions, runs: () => runs, queue: () => queue };
 }
 
-describe('contained print mode（claude -p，不經 tmux）', () => {
+describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
   it('處理完就結束：只跑一次、不建任何 tmux session', async () => {
     const host = fakeHost({ pending: 1 });
     const worker = createRequestWorker(host.deps);
@@ -54,16 +64,17 @@ describe('contained print mode（claude -p，不經 tmux）', () => {
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('spawned');
     expect(host.runs()).toBe(2);
-    expect(host.pending()).toBe(0);
+    expect(host.queue()).toEqual([]);
     expect(host.effects).toEqual([]);
   });
 
-  it('process 非 0 結束且仍有待處理：不再重試，就地收屍為 error', async () => {
+  it('process 非 0 結束且仍有待處理：不再重試，就地收屍為 error（只收被嘗試過的）', async () => {
     const host = fakeHost({ pending: 2, results: [{ ok: false, timedOut: false }] });
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('failed');
     expect(host.runs()).toBe(1);
-    expect(host.effects).toEqual(['reap:error']);
+    // 該輪開始時隊列是 [1,2]；1 被處理掉了，剩下的 2 被嘗試過卻沒處理成功
+    expect(host.effects).toEqual(['reap:error:2']);
   });
 
   it('process 非 0 結束但待處理剛好清空：不收屍，但如實回報 failed（不計成成功）', async () => {
@@ -78,16 +89,25 @@ describe('contained print mode（claude -p，不經 tmux）', () => {
     const host = fakeHost({ pending: 2, results: [{ ok: false, timedOut: true }] });
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('failed');
-    expect(host.effects).toEqual(['reap:timed_out']);
+    expect(host.effects).toEqual(['reap:timed_out:2']);
   });
 
-  it('連續有新請求超過輪數上限：停止並收屍，不會無限迴圈', async () => {
-    const host = fakeHost({ pending: 1, arrivals: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 } });
+  it('exit 0 卻沒處理完（claude 什麼都沒處理）：輪數用盡後收屍為 error，不誤標成逾時', async () => {
+    const host = fakeHost({ pending: 2, processes: false });
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('failed');
-    expect(host.runs()).toBe(3);
-    expect(host.effects).toEqual(['reap:timed_out']);
+    expect(host.runs()).toBe(PRINT_MAX_ROUNDS);
+    expect(host.effects).toEqual(['reap:error:1', 'reap:error:2']);
     expect(worker.status().runningSkills).toEqual([]);
+  });
+
+  it('輪數用盡時，最後一輪開始後才到的新請求不陪葬（留給下一個 tick）', async () => {
+    // 第 3 輪執行當中又進來 id=102：它從沒被任何一輪看過
+    const host = fakeHost({ pending: 1, arrivals: { 1: 1, 2: 1, 3: 1 } });
+    const worker = createRequestWorker(host.deps);
+    await worker.tick('job');
+    expect(host.queue()).toContain(102);
+    expect(host.effects.some((e) => e.endsWith(':102'))).toBe(false);
   });
 
   it('runContainedPrint 丟例外也釋放鎖並收屍為 error', async () => {
@@ -95,31 +115,42 @@ describe('contained print mode（claude -p，不經 tmux）', () => {
     host.deps.runContainedPrint = async () => { throw new Error('spawn failed'); };
     const worker = createRequestWorker(host.deps);
     expect(await worker.tick('job')).toBe('failed');
-    expect(host.effects).toEqual(['reap:error']);
+    expect(host.effects).toEqual(['reap:error:1']);
     expect(worker.status().runningSkills).toEqual([]);
   });
 
-  it('沒提供 runContainedPrint 時維持舊的 tmux REPL 路徑（flag OFF 的回退）', async () => {
+  it('同 skill 併發 tick → 第二個 busy（per-skill 鎖），完成後釋放', async () => {
     const host = fakeHost({ pending: 1 });
-    delete host.deps.runContainedPrint;
-    host.deps.pane.capture = () => '';
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const run = host.deps.runContainedPrint;
+    host.deps.runContainedPrint = async (...args) => { await gate; return run(...args); };
     const worker = createRequestWorker(host.deps);
-    await worker.tick('job');
+    const first = worker.tick('api');
+    expect(await worker.tick('job')).toBe('busy');
+    release();
+    expect(await first).toBe('spawned');
+    expect(worker.status().runningSkills).toEqual([]);
+  });
+
+  it('containment 未就緒 → 不跑 claude，也不收屍', async () => {
+    const host = fakeHost({ pending: 1 });
+    host.deps.containmentReady = () => false;
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
     expect(host.runs()).toBe(0);
-    expect(host.tmuxSessions.length).toBe(1);
+    expect(host.effects).toEqual([]);
   });
 });
 
-describe('tripline-api-server 接線（print 模式預設 OFF）', () => {
+describe('tripline-api-server 接線', () => {
   // 守衛讀原始碼要先剝註解，否則註解裡的字面值會讓斷言假綠
   const src = readFileSync('scripts/tripline-api-server.ts', 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-  it('runContainedPrint 只在 TP_REQUEST_PRINT_MODE=1 時注入，否則 undefined', () => {
-    expect(src).toMatch(/runContainedPrint:\s*process\.env\.TP_REQUEST_PRINT_MODE === '1' \? runContainedPrint : undefined/);
-  });
-
-  it('print 路徑與 REPL 路徑共用同一個 session 目錄準備（隔離佈置不分叉）', () => {
-    expect(src.match(/prepareContainedSessionDir\(/g)?.length).toBe(3); // 定義 + 兩條路徑各呼叫一次
+  it('沒有旗標：runContainedPrint 無條件注入，舊的 contained REPL 路徑已移除', () => {
+    expect(src).toMatch(/\n {2}runContainedPrint,\n/);
+    expect(src).not.toMatch(/TP_REQUEST_PRINT_MODE/);
+    expect(src).not.toMatch(/createContainedSession|watchContainedSession/);
   });
 
   it('逾時先 SIGTERM（sudo 會轉發給 claude），寬限後才 SIGKILL；不可一上來就 SIGKILL（claude 會變孤兒）', () => {
@@ -140,8 +171,13 @@ describe('tripline-api-server 接線（print 模式預設 OFF）', () => {
     expect(src).toMatch(/mode: 0o600/);
   });
 
-  it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併 pkill；rm 失敗要記 log', () => {
-    expect(src).toMatch(/finally\s*\{[\s\S]*?runAsAgent\(\['pkill', '-KILL', '-f', sessionDir\]\);[\s\S]*?runAsAgent\(\['rm', '-rf', sessionDir\]\);[\s\S]*?logError\(/);
+  it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併殺；rm 失敗要記 log', () => {
+    expect(src).toMatch(/finally\s*\{[\s\S]*?killRunProcesses\(sessionDir\);[\s\S]*?runAsAgent\(\['rm', '-rf', sessionDir\]\);[\s\S]*?logError\(/);
     expect(src.indexOf('const prepared = prepareContainedSessionDir(runName')).toBeGreaterThan(src.indexOf('async function runContainedPrint('));
+  });
+
+  it('啟動時清掃上一代殘留（api-server 重啟會留下孤兒 process 與 token 目錄）', () => {
+    expect(src).toMatch(/sweepStalePrintRuns\(/);
+    expect(src).toMatch(/\nsweepOnStartup\(\);/);
   });
 });

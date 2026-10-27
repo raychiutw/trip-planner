@@ -11,7 +11,6 @@ import { failPendingRequests, type ReapReason } from './fail-pending-requests';
 import { waitForRepl, submitSkillCommand, type TmuxDeps } from './tmux-pane';
 
 export interface PendingRequest { requestId: string; tripId: string }
-export type WatchOutcome = 'drained' | 'died' | 'deadline';
 export interface AcquiredToken { token: string; restrictTrip?: string }
 export type TickResult = 'spawned' | 'busy' | 'idle' | 'failed';
 /** `claude -p` 一次執行的結果：ok = exit 0；timedOut = 被逾時砍掉。 */
@@ -39,15 +38,13 @@ export interface WorkerDeps {
   logError: (msg: string) => void;
   alert: (key: string, state: 'healthy' | 'failed', message: string) => void;
   containmentReady: () => boolean;
-  /** External file/process effects only; true means a session was created. */
-  createContainedSession: (sessionName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<boolean>;
   createPlainSession: (sessionName: string, skillCommand: string, token: string) => Promise<boolean>;
   pane: Pick<TmuxDeps, 'capture' | 'sendKeys'>;
   /**
-   * 提供時，contained /tp-request 改走 `claude -p`（不經 tmux，process 結束就是處理完）；
-   * 不提供就維持 tmux 互動式 REPL。實作要自己處理逾時（砍 process、回 timedOut）。
+   * contained /tp-request 的唯一執行路徑：`claude -p`，process 結束就是處理完（不經 tmux）。
+   * 實作要自己處理逾時（砍 process、回 timedOut）與 session 目錄清理。
    */
-  runContainedPrint?: (runName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<PrintRunResult>;
+  runContainedPrint: (runName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<PrintRunResult>;
   attachLog: (sessionName: string, skillCommand: string) => void;
 }
 
@@ -56,8 +53,6 @@ export const LEGACY_SESSION_PREFIX = 'tripline-request-';
 export const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
 /** print 模式同一行程連續處理的輪數上限（每輪處理完仍有新請求才會再跑）。 */
 export const PRINT_MAX_ROUNDS = 3;
-/** contained session 看門狗輪詢間隔。 */
-export const WATCH_INTERVAL_MS = 15_000;
 
 export function assertAllowedSkill(skillCommand: string): string {
   if (!ALLOWED_SKILLS.has(skillCommand)) {
@@ -243,53 +238,56 @@ export function createRequestWorker(deps: WorkerDeps) {
     return runSession(sessionName, skillCommand, acquired);
   }
 
-  async function runSession(sessionName: string, skillCommand: string, acquired: AcquiredToken): Promise<boolean> {
+  /** /tp-daily-check 等信任 skill 的 plain tmux session（fire-and-forget，skill 結束時自行關閉）。 */
+  async function runPlainSession(sessionName: string, skillCommand: string, token: string): Promise<boolean> {
     let created = false;
-    if (acquired.restrictTrip && deps.runContainedPrint) return runPrintSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip);
     const pane = { ...deps.pane, sleep: deps.sleep, log: deps.log };
     try {
-      created = acquired.restrictTrip
-        ? await deps.createContainedSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip)
-        : await deps.createPlainSession(sessionName, skillCommand, acquired.token);
+      created = await deps.createPlainSession(sessionName, skillCommand, token);
       if (!created) throw new Error('session 建立失敗');
-      if (acquired.restrictTrip) deps.attachLog(sessionName, skillCommand);
       if (!(await waitForRepl(pane, sessionName))) throw new Error('REPL 未就緒');
       if (!(await submitSkillCommand(pane, sessionName, skillCommand))) throw new Error('skill 未提交');
-      if (acquired.restrictTrip) {
-        deps.log(`Spawned CONTAINED session ${sessionName} (trip=${acquired.restrictTrip}, dontAsk+MCP-only+tp-agent, interactive REPL)`);
-        await watchContainedSession(sessionName, acquired.restrictTrip);
-      } else {
-        deps.attachLog(sessionName, skillCommand);
-        deps.log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
-      }
+      deps.attachLog(sessionName, skillCommand);
+      deps.log(`Spawned tmux session: ${sessionName} (skill=${skillCommand}, fire-and-forget; skill self-destructs at end)`);
       return true;
     } catch (error) {
       deps.logError(`session ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);
       if (created || deps.tmux.has(sessionName)) closeSession(sessionName);
-      if (acquired.restrictTrip) await reap(acquired.restrictTrip, 'error');
       return false;
     }
   }
 
+  async function runSession(sessionName: string, skillCommand: string, acquired: AcquiredToken): Promise<boolean> {
+    if (acquired.restrictTrip) return runPrintSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip);
+    return runPlainSession(sessionName, skillCommand, acquired.token);
+  }
+
   /**
-   * `claude -p` 路徑：每輪一個 process，結束即處理完。輪間若同行程又進來新請求就再跑一輪
-   * （tmux 路徑的 REPL 閒置後沒人再叫它，新請求會卡到 orphan cap）。
-   * process 失敗／逾時／輪數用盡仍有待處理 → 就地收屍，不留殭屍請求。
+   * contained `claude -p` 路徑：每輪一個 process，結束即處理完。輪間若同一行程又進來新請求就再跑一輪
+   * （舊的互動式 REPL 閒置後沒人再叫它，新請求會卡到 orphan cap）。
+   *
+   * 失敗收屍的範圍：只收「該輪開始時就在隊列」的請求（它們被嘗試過了）；最後一輪開始後才到的新請求
+   * 沒被任何人看過，不陪葬，留給下一個 tick。理由：process 失敗／輪數用盡／max-turns 耗盡，都代表
+   * 被嘗試過的請求不會被處理，留著只會每 10 分鐘無限重試。
+   * 原因：真的逾時才標 timed_out；其餘（非 0 結束、exit 0 卻沒處理完）一律 error，不誤導成逾時。
    */
   async function runPrintSession(sessionName: string, skillCommand: string, token: string, restrictTrip: string): Promise<boolean> {
     let last: PrintRunResult = { ok: true, timedOut: false };
+    let attempted: ReadonlySet<number> | undefined;
     try {
       for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
-        last = await deps.runContainedPrint!(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
+        const before = await listPendingIds(restrictTrip);
+        attempted = before ? new Set(before) : undefined; // 查不到 → 收屍時不縮範圍（保守：維持原行為）
+        last = await deps.runContainedPrint(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
         deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}）`);
-        if (!(await tripHasPending(restrictTrip))) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
+        const after = await listPendingIds(restrictTrip);
+        if (after && after.length === 0) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
         if (!last.ok) break;
       }
-      // 輪數用盡仍有待處理也收屍（含最後一輪才到的新請求）：留給下個 tick 會讓「試了 3 次都沒處理成功」的請求每 10 分鐘無限重試。
-      await reap(restrictTrip, (last.timedOut || last.ok) ? 'timed_out' : 'error');
+      await reap(restrictTrip, last.timedOut ? 'timed_out' : 'error', attempted);
     } catch (error) {
       deps.logError(`contained print ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);
-      await reap(restrictTrip, 'error');
+      await reap(restrictTrip, 'error', attempted);
     }
     return false;
   }
@@ -299,60 +297,41 @@ export function createRequestWorker(deps: WorkerDeps) {
     if (deps.tmux.has(sessionName)) throw new Error(`session ${sessionName} 未能終止，保留 request 等待後續處理`);
   }
 
-  /** 該 trip 是否仍有 open/processing 請求；查不到一律當「有」（保守：不誤殺）。 */
-  async function tripHasPending(tripId: string): Promise<boolean> {
+  /** 該 trip 還在隊列的 request id（open + processing）；任何一步查不到回 null（呼叫端須當「有待處理」保守處理）。 */
+  async function listPendingIds(tripId: string): Promise<number[] | null> {
     try {
       const svc = await deps.getServiceToken();
+      const ids: number[] = [];
       for (const status of ['processing', 'open'] as const) {
         const res = await deps.fetch(
-          `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=1`,
+          `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=50`,
           { headers: { Authorization: `Bearer ${svc}` } },
         );
-        if (!res.ok) return true;
-        const data = (await res.json().catch(() => null)) as { items?: unknown[] } | null;
-        if (!Array.isArray(data?.items)) return true;
-        if (data.items.length > 0) return true;
+        if (!res.ok) return null;
+        const data = (await res.json().catch(() => null)) as { items?: Array<{ id?: unknown }> } | null;
+        if (!Array.isArray(data?.items)) return null;
+        for (const item of data.items) if (typeof item?.id === 'number') ids.push(item.id);
       }
-      return false;
+      return ids;
     } catch {
-      return true;
+      return null;
     }
   }
 
-  /** ADR-0007 第一層：確定沒人會再處理時，把該 trip 的 open/processing 請求就地標終結。 */
-  function reap(tripId: string, reason: ReapReason): Promise<number> {
+  /** 該 trip 是否仍有 open/processing 請求；查不到一律當「有」（保守：不誤殺）。 */
+  async function tripHasPending(tripId: string): Promise<boolean> {
+    const ids = await listPendingIds(tripId);
+    return ids === null || ids.length > 0;
+  }
+
+  /** ADR-0007 第一層：確定沒人會再處理時，把該 trip 的 open/processing 請求就地標終結（`only` 縮小範圍）。 */
+  function reap(tripId: string, reason: ReapReason, only?: ReadonlySet<number>): Promise<number> {
     return failPendingRequests(
       { fetch: deps.fetch, apiBase: deps.apiBase, getToken: deps.getServiceToken, log: deps.log, logError: deps.logError },
       tripId,
       reason,
+      only,
     );
-  }
-
-  /**
-   * contained session 看門狗：每 WATCH_INTERVAL_MS 看一次，直到 session 自行結束（died）、
-   * trip 無待處理（drained）或到 orphan cap（deadline）。三種都 kill session；
-   * died / deadline 表示請求還沒處理完卻不會再有人處理 → 就地收屍 timed_out；
-   * drained 走正常收尾不收（那條路上沒有殭屍，硬收會誤殺剛進來的新請求）。
-   */
-  async function watchContainedSession(sessionName: string, restrictTrip: string): Promise<WatchOutcome> {
-    const deadline = deps.clock.now() + ORPHAN_MAX_AGE_MS;
-    let outcome: WatchOutcome = 'deadline';
-    while (deps.clock.now() < deadline) {
-      await deps.sleep(WATCH_INTERVAL_MS);
-      if (!deps.tmux.has(sessionName)) {
-        deps.log(`contained: session ${sessionName} 已自行結束`);
-        outcome = 'died';
-        break;
-      }
-      if (!(await tripHasPending(restrictTrip))) {
-        deps.log(`contained: trip ${restrictTrip} 無待處理 → 收尾 ${sessionName}`);
-        outcome = 'drained';
-        break;
-      }
-    }
-    closeSession(sessionName);
-    if (outcome !== 'drained') await reap(restrictTrip, 'timed_out');
-    return outcome;
   }
 
   return {
@@ -360,7 +339,6 @@ export function createRequestWorker(deps: WorkerDeps) {
     cleanupOrphans,
     tripHasPending,
     reap,
-    watchContainedSession,
     hasActiveSession,
     acquireToken,
     peekPendingRequest,

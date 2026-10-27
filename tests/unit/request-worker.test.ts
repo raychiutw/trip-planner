@@ -49,7 +49,7 @@ function makeDeps(over: Partial<WorkerDeps> & { sessions?: string[]; pending?: {
     containmentReady: vi.fn(() => true),
     pane: { capture: () => prompt, sendKeys: (_name, keys) => { prompt = keys === 'Enter' ? '❯ ' : `❯ ${keys}`; } },
     attachLog: vi.fn(),
-    createContainedSession: vi.fn(async () => true),
+    runContainedPrint: vi.fn(async () => ({ ok: true, timedOut: false })),
     createPlainSession: vi.fn(async () => true),
     ...over,
   };
@@ -72,18 +72,18 @@ describe('tick', () => {
     const { deps } = makeDeps({ pending: null });
     const w = createRequestWorker(deps);
     expect(await w.tick('api')).toBe('idle');
-    expect(deps.createContainedSession).not.toHaveBeenCalled();
+    expect(deps.runContainedPrint).not.toHaveBeenCalled();
     expect(deps.createPlainSession).not.toHaveBeenCalled();
   });
 
-  it('有 pending → peek(processing→open) → mint-restricted(request_id, API_SECRET) → contained spawn，session 名 = prefix + now + pid', async () => {
+  it('有 pending → peek(processing→open) → mint-restricted(request_id, API_SECRET) → claude -p，run 名 = prefix + now + pid + -r<輪>', async () => {
     const { deps, fetchMock } = makeDeps({ pending: { id: 77, tripId: 'trip-a' } });
     const w = createRequestWorker(deps);
     expect(await w.tick('api')).toBe('spawned');
     const mint = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/mint-restricted'))!;
     expect(JSON.parse(String((mint[1] as RequestInit).body))).toEqual({ request_id: '77' });
     expect((mint[1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer secret' });
-    expect(deps.createContainedSession).toHaveBeenCalledWith('tripline-tp-request-1700000000000-4242', '/tp-request', 'restricted-77', 'trip-a');
+    expect(deps.runContainedPrint).toHaveBeenCalledWith('tripline-tp-request-1700000000000-4242-r1', '/tp-request', 'restricted-77', 'trip-a');
     expect(w.status()).toMatchObject({ processedCount: 1, running: false });
   });
 
@@ -91,13 +91,13 @@ describe('tick', () => {
     const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, sessions: ['tripline-request-123-1'] });
     const w = createRequestWorker(deps);
     expect(await w.tick('job')).toBe('busy');
-    expect(deps.createContainedSession).not.toHaveBeenCalled();
+    expect(deps.runContainedPrint).not.toHaveBeenCalled();
   });
 
   it('同 skill 併發 tick → 第二個 busy（per-skill 鎖）；不同 skill 不互鎖', async () => {
     let release!: () => void;
-    const gate = new Promise<boolean>((r) => { release = () => r(true); });
-    const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, createContainedSession: vi.fn(() => gate) });
+    const gate = new Promise<void>((r) => { release = () => r(); });
+    const { deps } = makeDeps({ pending: { id: 1, tripId: 't' }, runContainedPrint: vi.fn(async () => { await gate; return { ok: true, timedOut: false }; }) });
     const w = createRequestWorker(deps);
     const first = w.tick('api', '/tp-request');
     expect(w.isRunning('/tp-request')).toBe(true);
@@ -115,7 +115,7 @@ describe('tick', () => {
     expect(await w.tick('api')).toBe('idle');
     expect(deps.alert).toHaveBeenCalledWith('mint-MINT_FAILED', 'failed', expect.stringContaining('mint-restricted'));
     expect(deps.createPlainSession).not.toHaveBeenCalled();
-    expect(deps.createContainedSession).not.toHaveBeenCalled();
+    expect(deps.runContainedPrint).not.toHaveBeenCalled();
   });
 
   it('containment 未就緒 → /tp-request 拒絕 spawn（failed + alert）', async () => {
@@ -162,7 +162,7 @@ describe('cleanupOrphans', () => {
 
 describe('#1265 收屍（ADR-0007 第一層）', () => {
   /** fake clock：每次 sleep 把時間往前撥 15s；fetch 回該 trip 是否仍有 pending。 */
-  function reapDeps(opts: { pendingRounds: number; sessionDiesAfter?: number; failPatchOk?: boolean }) {
+  function reapDeps(opts: { pendingRounds: number; failPatchOk?: boolean }) {
     let now = 1_700_000_000_000;
     let rounds = 0;
     const patched: string[] = [];
@@ -170,7 +170,7 @@ describe('#1265 收屍（ADR-0007 第一層）', () => {
     const { deps } = makeDeps({
       clock: { now: () => now },
       sleep: vi.fn(async (ms: number) => { now += ms; rounds++; }),
-      tmux: { list: () => '', kill: vi.fn(() => { alive = false; }), has: vi.fn(() => alive && (opts.sessionDiesAfter == null || rounds < opts.sessionDiesAfter)) },
+      tmux: { list: () => '', kill: vi.fn(() => { alive = false; }), has: vi.fn(() => alive) },
     });
     (deps.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.includes('/api/requests?status=') && url.includes('tripId=')) {
@@ -189,34 +189,6 @@ describe('#1265 收屍（ADR-0007 第一層）', () => {
 
   it('牆鐘（第二層 100 分鐘）必須大於 orphan cap（第一層 90 分鐘），兩層時鐘錯開', () => {
     expect(REQUEST_STALE_MINUTES * 60_000).toBeGreaterThan(ORPHAN_MAX_AGE_MS);
-  });
-
-  it('trip 無待處理（drained）→ kill session、不收屍', async () => {
-    const { deps, patched } = reapDeps({ pendingRounds: 2 });
-    const w = createRequestWorker(deps);
-    const outcome = await w.watchContainedSession('tripline-tp-request-1-1', 'trip-a');
-    expect(outcome).toBe('drained');
-    expect(deps.tmux.kill).toHaveBeenCalledWith('tripline-tp-request-1-1');
-    expect(patched).toEqual([]);
-  });
-
-  it('session 自行死亡（worker 確定不會再處理）→ 就地收屍 timed_out', async () => {
-    const { deps, patched } = reapDeps({ pendingRounds: 999, sessionDiesAfter: 3 });
-    const w = createRequestWorker(deps);
-    expect(await w.watchContainedSession('s', 'trip-a')).toBe('died');
-    expect(patched.length).toBeGreaterThan(0);
-    expect(JSON.parse(patched[0]!)).toMatchObject({ status: 'failed', terminalReason: 'timed_out' });
-  });
-
-  it('到 orphan cap（90 分鐘）仍有待處理 → kill + 收屍；撥時鐘驗證恰在 deadline 停', async () => {
-    const { deps, patched, clock } = reapDeps({ pendingRounds: 999 });
-    const start = clock();
-    const w = createRequestWorker(deps);
-    expect(await w.watchContainedSession('s', 'trip-a')).toBe('deadline');
-    expect(clock() - start).toBeGreaterThanOrEqual(ORPHAN_MAX_AGE_MS);
-    expect(clock() - start).toBeLessThan(ORPHAN_MAX_AGE_MS + 15_000 * 2);
-    expect(deps.tmux.kill).toHaveBeenCalledWith('s');
-    expect(JSON.parse(patched[0]!)).toMatchObject({ terminalReason: 'timed_out' });
   });
 
   it('reap(tripId, error)：spawn 失敗那類走 error 原因', async () => {
