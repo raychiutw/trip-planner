@@ -93,7 +93,8 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column; gap: 16px;
   color: var(--color-foreground);
 }
-@media (max-width: 1023px) { .favorites-wrap { padding: 16px 16px 32px; gap: 12px; } }
+/* #1445：手機底部讓出浮動 tab bar 的高度；原固定 32px 比 tab bar 佔位少，捲到底最後一張卡的「加入行程」被蓋住。 */
+@media (max-width: 1023px) { .favorites-wrap { padding: 16px 16px max(32px, calc(var(--nav-overlay-h, 0px) + 16px)); gap: 12px; } }
 
 .favorites-eyebrow {
   font-size: var(--font-size-eyebrow);
@@ -130,8 +131,19 @@ const SCOPED_STYLES = `
 .favorites-region-row,
 .favorites-type-row {
   display: flex; flex-wrap: wrap; gap: 8px;
+  align-items: center;
+}
+/* #1445 F10：兩排 chip 樣式相同，加列標籤分辨層級（aria-hidden：群組已有 aria-label，不重複朗讀）。 */
+.favorites-row-label {
+  flex: 0 0 auto;
+  min-width: 2.5em;
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
 }
 .favorites-chip {
+  position: relative;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   padding: 6px 14px; border-radius: var(--radius-full);
   background: var(--color-secondary); color: var(--color-muted);
@@ -141,6 +153,7 @@ const SCOPED_STYLES = `
   display: inline-flex; align-items: center; gap: 6px;
   transition: background 120ms, color 120ms, border-color 120ms;
 }
+.favorites-chip::before { content: ''; position: absolute; inset: -4px 0; } /* #1445 F4：視覺 36px，點擊區 44px */
 .favorites-chip:hover { background: var(--color-tertiary); color: var(--color-foreground); }
 .favorites-chip[aria-pressed="true"] {
   background: var(--color-accent-subtle);
@@ -547,6 +560,7 @@ export default function PoiFavoritesPage() {
                 aria-label="地區篩選"
                 data-testid="favorites-region-row"
               >
+                <span className="favorites-row-label" aria-hidden="true">地區</span>
                 <button
                   type="button"
                   className="favorites-chip"
@@ -577,6 +591,7 @@ export default function PoiFavoritesPage() {
               aria-label="景點類型篩選"
               data-testid="favorites-type-row"
             >
+              <span className="favorites-row-label" aria-hidden="true">類型</span>
               {TYPE_FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}

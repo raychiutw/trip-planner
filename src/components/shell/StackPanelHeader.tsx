@@ -16,6 +16,11 @@ export interface StackPanelHeaderProps {
   onBack?: () => void;
   /** 右上「✕」關整疊（整個關閉）。 */
   onClose: () => void;
+  /**
+   * 標題的 heading level。桌機右欄 panel 旁邊的中欄行程詳情已有 h1，這裡維持 2；
+   * 手機整頁下鑽（沒有別的 h1）傳 1，頁面才有恰好一個 h1（#1445 F11）。
+   */
+  headingLevel?: 1 | 2;
 }
 
 export const STACK_PANEL_HEADER_STYLES = `
@@ -55,7 +60,7 @@ export const STACK_PANEL_HEADER_STYLES = `
 .tp-stack-head-spacer { width: var(--spacing-tap-min); flex-shrink: 0; }
 `;
 
-export default function StackPanelHeader({ title, onBack, onClose }: StackPanelHeaderProps) {
+export default function StackPanelHeader({ title, onBack, onClose, headingLevel = 2 }: StackPanelHeaderProps) {
   return (
     <>
       <style>{STACK_PANEL_HEADER_STYLES}</style>
@@ -74,7 +79,7 @@ export default function StackPanelHeader({ title, onBack, onClose }: StackPanelH
           <span className="tp-stack-head-spacer" aria-hidden="true" />
         )}
         {title ? (
-          <span className="tp-stack-head-title" role="heading" aria-level={2}>{title}</span>
+          <span className="tp-stack-head-title" role="heading" aria-level={headingLevel}>{title}</span>
         ) : (
           <span style={{ flex: 1 }} aria-hidden="true" />
         )}

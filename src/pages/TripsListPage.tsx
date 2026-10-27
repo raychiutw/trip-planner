@@ -63,7 +63,9 @@ const SCOPED_STYLES = `
 .tp-trips-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  /* #1445：底部至少讓出浮動 tab bar 的高度（原固定 64px 比 tab bar 佔位少 8px，矮螢幕捲到底時
+   * 最後一張「新增行程」卡被蓋住）。 */
+  padding: 24px 16px max(64px, calc(var(--nav-overlay-h, 0px) + 16px));
 }
 
 /* heading 改用統一 <TitleBar>。.tp-trips-heading 已退役。 */

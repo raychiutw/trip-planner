@@ -224,6 +224,8 @@ const SCOPED_STYLES = `
 .tp-notes-section-title { font-size: var(--font-size-headline); font-weight: 700; line-height: 1.2; }
 .tp-notes-section-meta { margin-top: 2px; font-size: var(--font-size-caption); color: var(--color-muted); }
 .tp-notes-section-meta.is-warn { color: var(--color-accent-deep); font-weight: 600; }
+/* #1445：hover 底色是 --color-tertiary，深色下 muted 疊它只有 4.41:1；hover 時 meta 改用前景色。 */
+.tp-notes-section-head:hover .tp-notes-section-meta:not(.is-warn) { color: var(--color-foreground); }
 
 .tp-notes-section-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 

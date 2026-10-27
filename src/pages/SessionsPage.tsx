@@ -119,6 +119,9 @@ const SCOPED_STYLES = `
  * 全 codebase 只有本檔 :330 真的 render 這個 class —— LoginPage / ResetPasswordPage 也各有
  * 一份同名規則但沒有對應 JSX，那兩份已在本次刪除（見 #1157）。 */
 .tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent-text-on-tonal); }
+/* #1445 F1：banner 內的文字連結沿用 banner 的字色（accent-text-on-tonal，與底色成對）+ 底線。
+ * 原本是瀏覽器預設藍 #0000EE，手動選「深色」（UA 仍是淺色 color-scheme）時疊深底只有 1.63:1。 */
+.tp-banner-info a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 .tp-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
 

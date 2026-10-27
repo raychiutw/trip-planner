@@ -27,7 +27,8 @@ describe('tokens.css — mobile type scale override', () => {
 
   it('tp-hero-title mobile override 已存在（≤760px hero title override）', () => {
     // F003: DESIGN.md 規定 mobile hero title = 24px（原 22px 已更正）
-    expect(tokens).toContain('font-size: 24px');
+    // #1445 F16：手機 root 17px，24px 寫成 24/17 = 1.4118rem（實際仍 24px，且隨使用者字級放大）。
+    expect(tokens).toMatch(/font-size:\s*(?:24px|1\.4118rem)/);
   });
 
   it('24px hero title 必須在 @media (max-width: 760px) 區塊內的 .tp-hero-title scope 中', () => {
@@ -37,7 +38,7 @@ describe('tokens.css — mobile type scale override', () => {
     let m: RegExpExecArray | null;
     while ((m = mediaRe.exec(tokens)) !== null) {
       const slice = tokens.slice(m.index, m.index + 800);
-      if (/\.tp-hero-title[^}]*font-size:\s*24px/.test(slice)) {
+      if (/\.tp-hero-title[^}]*font-size:\s*(?:24px|1\.4118rem)/.test(slice)) {
         found = true;
         break;
       }

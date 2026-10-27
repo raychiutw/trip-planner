@@ -29,7 +29,6 @@ import { EVENT } from '../lib/events';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import InlineError from '../components/shared/InlineError';
@@ -300,15 +299,8 @@ export default function DeveloperAppNewPage() {
 
   if (!auth.user) return null;
 
-  const titleBarActions = (
-    <TitleBarPrimaryAction
-      label="建立"
-      busyLabel="建立中⋯"
-      busy={submitting}
-      onClick={() => void handleSubmit()}
-      testId="dev-app-new-titlebar-submit"
-    />
-  );
+  // #1445 F22：頂部原本另有一顆「建立」（TitleBarPrimaryAction）與底部「建立應用」重複送出。
+  // 只留底部這顆（旁邊有「取消」成對），標題列只剩返回。
 
   return (
     <AppShell
@@ -320,7 +312,6 @@ export default function DeveloperAppNewPage() {
             title="建立新應用"
             back={handleCancel}
             backLabel="返回應用列表"
-            actions={titleBarActions}
           />
           <div className="tp-dev-new-inner">
             <div className="tp-dev-new-card">

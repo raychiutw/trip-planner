@@ -33,6 +33,10 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
   height: 100%;
   overflow-y: auto;
+  /* #1445 F14：手機整頁模式保留浮動 GlobalBottomNav，底部有「新增成員」表單與角色選項，
+   * 不讓出導覽高度就會被 tab bar 蓋住且捲不出來（桌機右欄 --nav-overlay-h 為 0，不受影響）。 */
+  padding-bottom: var(--nav-overlay-h, 0px);
+  box-sizing: border-box;
 }
 /* 2026-07-21 dark-mode elevation audit：桌機第三欄（TripStackLayout 右欄 bare panel）
  * 內比中欄內容再高一階 — 面板自己不透明背景需對齊 .app-shell-sheet 的

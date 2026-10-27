@@ -130,6 +130,7 @@ const SCOPED_STYLES = `
   justify-content: center;
 }
 .tp-account-hero-name-edit {
+  position: relative;
   display: grid; place-items: center;
   width: 32px; height: 32px;
   background: transparent; border: none;
@@ -138,6 +139,7 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background-color 150ms, color 150ms;
 }
+.tp-account-hero-name-edit::before { content: ''; position: absolute; inset: -6px; } /* #1445 F4：視覺 32px，點擊區 44px */
 .tp-account-hero-name-edit:hover {
   background: var(--color-hover);
   color: var(--color-accent-text);

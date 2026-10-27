@@ -94,7 +94,7 @@ const SITES: Array<{ name: string; classIn: string; paramsIn: string; alpha: str
   { name: 'DesktopSidebar', classIn: 'src/components/shell/DesktopSidebar.tsx', paramsIn: 'src/components/shell/DesktopSidebar.tsx', alpha: '72%', filter: 'blur(30px) saturate(180%)' },
   { name: 'StackPanelHeader', classIn: 'src/components/shell/StackPanelHeader.tsx', paramsIn: 'src/components/shell/StackPanelHeader.tsx', alpha: '88%', filter: 'blur(14px)' },
   { name: 'GooglePoiCard', classIn: 'src/components/trip/GooglePoiCard.tsx', paramsIn: 'src/components/trip/GooglePoiCard.tsx', alpha: '88%', filter: 'blur(20px) saturate(1.5)' },
-  { name: 'MapEntryCard（參數在 MapPage）', classIn: 'src/components/trip/MapEntryCard.tsx', paramsIn: 'src/pages/MapPage.tsx', alpha: '88%', filter: 'blur(20px) saturate(1.5)' },
+  { name: 'MapEntryCard（參數在 MapPage）', classIn: 'src/components/trip/MapEntryCard.tsx', paramsIn: 'src/pages/MapPage.tsx', alpha: '88%', filter: 'none' }, // #1445 F6：卡片列不各自模糊（一次 N 層 blur）
   { name: 'LandingPage nav', classIn: 'src/pages/LandingPage.tsx', paramsIn: 'src/pages/LandingPage.tsx', alpha: '88%', filter: 'blur(20px) saturate(180%)' },
   { name: 'ChatPage composer', classIn: 'src/pages/ChatPage.tsx', paramsIn: 'src/pages/ChatPage.tsx', alpha: '92%', filter: 'blur(14px)' },
   { name: 'InfoSheet', classIn: 'src/components/trip/InfoSheet.tsx', paramsIn: 'src/components/trip/InfoSheet.tsx', alpha: '94%', filter: 'blur(var(--blur-glass, 14px))' },

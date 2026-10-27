@@ -2,6 +2,12 @@
 
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
+/* #1445 F7：使用者在「外觀設定」手動選深色／淺色時，body 的 .dark 與系統設定可能不一致。
+ * 只有 html 的 `light dark` 時，UA 預設樣式（連結色、原生 checkbox／radio／捲軸）仍照系統走：
+ * 系統淺色 + 手動深色 → 深色底上出現白色原生方框與預設藍 #0000EE 連結（1.6:1）。
+ * 在 body 上明確宣告，讓 UA 控制項與頁面主題一致。 */
+body.dark { color-scheme: dark; }
+body:not(.dark) { color-scheme: light; }
 
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
@@ -697,19 +703,19 @@ body.dark {
     .tp-hero-chip:last-child::after { content: none; }
     .tp-hero-title {
         /* rev2 細 day label：date 17px，非大 hero title */
-        font-size: 17px; font-weight: 700; margin: 0;
+        font-size: 1.0625rem; font-weight: 700; margin: 0; /* 17px @16px root；#1445 改 rem 才會隨使用者字級放大 */
         letter-spacing: -0.01em; line-height: 1.3;
         color: var(--color-foreground);
     }
     .tp-hero-sub {
-        font-size: 12px;
+        font-size: 0.75rem; /* 12px @16px root；手機 root 17px 的等值修正見檔尾 #1445 區塊 */
         color: var(--color-muted);
         font-variant-numeric: tabular-nums;
         margin: 3px 0 0;
     }
     @media (min-width: 961px) {
         .tp-hero { padding: 8px 2px; }
-        .tp-hero-title { font-size: 18px; }
+        .tp-hero-title { font-size: 1.125rem; } /* 18px @16px root */
     }
 
     /* Flight card (mockup FlightInfo) */
@@ -937,7 +943,7 @@ body.dark {
         .tp-page { padding: 0 28px 40px; }
     }
     @media (max-width: 960px) {
-        .tp-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
+        .tp-hero-title { font-size: 1.5rem; } /* 24px @16px root；mockup .tp-detail-hero-title compact:1877 (was 28px) */
     }
     /* Mobile type scale override (760px and below).
      * Breakpoint intentionally set below iPad mini portrait (744px so mini gets mobile
@@ -947,7 +953,7 @@ body.dark {
     @media (max-width: 760px) {
         .tp-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .tp-hero { padding: 18px; border-radius: var(--radius-md); }
-        .tp-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
+        .tp-hero-title { font-size: 1.4118rem; } /* F003: DESIGN.md mobile hero title = 24px（手機 root 17px → 24/17 rem；#1445 改 rem 讓大字型生效） */
         /* rev2 Section 02：手機沿用 base grid（node | body，排序模式插 grip 欄），只縮 gap/padding。
          * （先前殘留 v2.30.12 的 5-col + 36px icon 欄讓 body 崩成 36px；改用 auto-placement 統一模板。） */
         .tp-rail-item {
@@ -1504,7 +1510,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
   /* rev2 D-review #4：fit-content 膠囊在中欄/視窗水平置中（原 margin-left 12px 靠左，
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
-  padding: 4px;
+  padding: 5px 4px; /* 上下 5px：讓 tab 的不可見點擊區（見 .tp-map-day-tab::before）不被 overflow 裁掉，合計 ≥44px */
   /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
    * 同一玻璃材質族 —— 浮動玻璃膠囊（較強暖落影 + 亮 specular 上緣）。
    * （原本這裡還記著「secondary 底 88%，比 nav 62% 略實」的理由，已於 2026-07-21
@@ -1530,7 +1536,23 @@ body.dark .tp-toast { background: var(--color-secondary); }
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
+/* #1445 F9：strip 溢出時，還能捲的那一側做邊緣漸層（useDayStripNav 標 data-fade-start / data-fade-end）。
+ * mask 連容器的玻璃邊框一起淡出，這是刻意的：邊緣「消失」本身就是還有內容的暗示。 */
+.tp-map-day-tabs[data-fade-start="true"],
+.tp-map-day-tabs[data-fade-end="true"] {
+  --day-fade-l: 0px;
+  --day-fade-r: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+}
+.tp-map-day-tabs[data-fade-start="true"] { --day-fade-l: 28px; }
+/* 鍵盤聚焦其中一個 tab 時取消遮罩：邊緣 28px 的漸層會把焦點環吃掉（WCAG 2.4.11 focus not obscured）。 */
+.tp-map-day-tabs:has(.tp-map-day-tab:focus-visible) { -webkit-mask-image: none; mask-image: none; }
+.tp-map-day-tabs[data-fade-end="true"] { --day-fade-r: 28px; }
+/* #1445 F4：tab 視覺高 34px，點擊區用不可見 pseudo 擴成 44px（HIG／專案 tap-min）。 */
+.tp-map-day-tab::before { content: ''; position: absolute; inset: -5px 0; }
 .tp-map-day-tab {
+  position: relative;
   flex: 0 0 auto;
   padding: 5px 15px;
   border: none;
@@ -1704,7 +1726,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   font-variant-numeric: tabular-nums;
 }
 .tp-map-entry-card-time {
-  font-size: 12px;
+  font-size: 0.75rem; /* 12px @16px root */
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1733,7 +1755,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 }
 .tp-map-entry-card.is-active .tp-map-entry-card-icon { color: var(--color-accent); }
 .tp-map-entry-card-title {
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px @16px root */
   font-weight: 700;
   line-height: 1.35;
   color: var(--color-foreground);
@@ -1808,7 +1830,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
-    font-size: 18px; /* mockup compact 18px (was 22px) */
+    font-size: 1.0588rem; /* mockup compact 18px (was 22px)；手機 root 17px → 18/17 rem（#1445 改 rem） */
     line-height: 24px;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -2045,7 +2067,9 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  min-width: 240px;
+  /* #1445 F13：窄螢幕（含 200% 縮放的 195px）選單不可比視窗寬；水平夾限由 TripTitleSwitcher 量測後處理。 */
+  min-width: min(240px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
   max-height: 360px; overflow-y: auto;
   z-index: var(--z-popover, 1100);
   padding: 4px;
@@ -2195,4 +2219,19 @@ body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806
 @supports not (backdrop-filter: blur(1px)) {
   body { --tabbar-tint: var(--color-background); }
   body.dark { --tabbar-tint: var(--color-secondary); }
+}
+
+/* ===== #1445 F16：標題類文字改 rem 後，手機（root 17px）的等值修正 =====
+ * 這些字級原本是固定 px，使用者調大系統／瀏覽器字級時標題不動、內文變大，層級反轉。
+ * 改 rem 後桌機（root 16px）數值等同原 px；手機 root 是 106.25%（17px），所以在這裡用 px/17 的 rem
+ * 讓 100% 下兩種裝置的實際尺寸都與改動前一致。 */
+@media (max-width: 760px) {
+  .tp-hero-sub { font-size: 0.7059rem; }            /* 12px */
+  .tp-map-entry-card-time { font-size: 0.7059rem; } /* 12px */
+  .tp-map-entry-card-title { font-size: 0.8235rem; } /* 14px */
+}
+/* marker 編號字級（地圖 marker 的樣式函式以 var() 引用）。桌機 root 16px：12／13px；手機 root 17px：除以 17。 */
+:root { --marker-font-size: 0.75rem; --marker-font-size-focused: 0.8125rem; }
+@media (max-width: 760px) {
+  :root { --marker-font-size: 0.7059rem; --marker-font-size-focused: 0.7647rem; }
 }

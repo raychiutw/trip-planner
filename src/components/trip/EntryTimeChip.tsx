@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { updateEntry } from '../../lib/entryMutations';
+import { isAnySheetOpen } from '../../hooks/useSheetBehavior';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 import { TripTimePicker } from '../TripTimePicker';
@@ -89,6 +90,38 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
+  }, [open, closeAndSave]);
+
+  // Esc 關閉（#1445 F17）。popup 自己的 onKeyDown 只有「焦點在 popup 內」才收得到 Esc；
+  // 用滑鼠點開 chip 時焦點留在 chip 按鈕上（popup 外），Esc 沒人接，鍵盤使用者只能按「完成」。
+  // 加 document 層 listener 補這條路。焦點在 popup 內時 popup 的 onKeyDown 會 stopPropagation，
+  // 這裡不會重複觸發（否則會送兩次存檔）。內層 TripTimePicker 的 popover 是 React portal，其 Esc 靠
+  // 合成事件冒泡到 popup 的 onKeyDown 處理（TripTimePicker 本身沒有 Escape 處理）；若日後改成原生
+  // Popover API，這條冒泡路徑會斷，要改看 :popover-open。
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // IME 組字中的 Esc 是取消組字，不是關浮層；長按的重複 keydown 只處理第一下
+      // （第一下 setOpen(false) 的 cleanup 未必在下一個 keydown 前跑完，會存兩次）。
+      if (e.isComposing || e.keyCode === 229 || e.repeat) return;
+      // 別的浮層在最上層（engine sheet／原生 popover／行程下拉）→ Esc 讓給它，不要搶焦點或連帶關閉；
+      // 與 OperationShell 的 nested guard 同一套判斷。
+      if (isAnySheetOpen()) return;
+      try { if (document.querySelector(':popover-open')) return; } catch { /* jsdom 不支援 :popover-open */ }
+      if (document.querySelector('.tp-titlebar-trip-dropdown')) return;
+      if ((e.target as HTMLElement | null)?.closest?.('.tp-time-popover')) return;
+      // 焦點在 popup 內：popup 自己的 onKeyDown 會處理（並 stopPropagation）；capture 階段先到的這裡要讓開，否則存檔兩次。
+      if (popRef.current?.contains(e.target as Node)) return;
+      // 標成已處理：桌機右欄 panel（OperationShell）也在 document 上聽 Esc 並會整個關閉；
+      // 這個 popover 不是 Popover API、也不進 sheet registry，它的 nested guard 擋不到，
+      // 不標的話一次 Esc 會同時關 popover 與整個 panel（草稿一起丟）。capture 階段先於 bubble 階段的 panel handler。
+      e.preventDefault();
+      closeAndSave();
+      chipRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
   }, [open, closeAndSave]);
 
   const hasTime = !!(start || end);
