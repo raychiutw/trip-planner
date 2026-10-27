@@ -119,6 +119,29 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(worker.status().runningSkills).toEqual([]);
   });
 
+  it('讀不到隊列（API 回非預期內容）不能被當成「已清空」：不誤判成功、不誤收屍', async () => {
+    const host = fakeHost({ pending: 1 });
+    const original = host.deps.fetch;
+    host.deps.fetch = (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/requests' && init?.method !== 'PATCH' && url.searchParams.has('tripId')) return Promise.resolve(Response.json({ unavailable: true }));
+      return original(input, init);
+    };
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed'); // 無法確認清空 → 跑滿輪數後才放棄
+    expect(host.runs()).toBe(PRINT_MAX_ROUNDS);
+    expect(host.effects).toEqual([]); // reap 的列表也讀不到 → 不動手（誤殺比殭屍更糟）
+    expect(worker.status().runningSkills).toEqual([]);
+  });
+
+  it('失敗後鎖已釋放：下一個 tick 是 idle（沒待處理），不是 busy', async () => {
+    const host = fakeHost({ pending: 1, results: [{ ok: false, timedOut: false }] });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(worker.status().runningSkills).toEqual([]);
+    expect(await worker.tick('job')).toBe('idle'); // 隊列已空 → idle；若鎖沒放掉會是 busy
+  });
+
   it('同 skill 併發 tick → 第二個 busy（per-skill 鎖），完成後釋放', async () => {
     const host = fakeHost({ pending: 1 });
     let release!: () => void;
