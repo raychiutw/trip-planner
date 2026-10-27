@@ -282,9 +282,10 @@ export function createRequestWorker(deps: WorkerDeps) {
       for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
         last = await deps.runContainedPrint!(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
         deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}）`);
-        if (!(await tripHasPending(restrictTrip))) return true;
+        if (!(await tripHasPending(restrictTrip))) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
         if (!last.ok) break;
       }
+      // 輪數用盡仍有待處理也收屍（含最後一輪才到的新請求）：留給下個 tick 會讓「試了 3 次都沒處理成功」的請求每 10 分鐘無限重試。
       await reap(restrictTrip, (last.timedOut || last.ok) ? 'timed_out' : 'error');
     } catch (error) {
       deps.logError(`contained print ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);

@@ -66,6 +66,14 @@ describe('contained print mode（claude -p，不經 tmux）', () => {
     expect(host.effects).toEqual(['reap:error']);
   });
 
+  it('process 非 0 結束但待處理剛好清空：不收屍，但如實回報 failed（不計成成功）', async () => {
+    const host = fakeHost({ pending: 1, results: [{ ok: false, timedOut: false }] });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.effects).toEqual([]);
+    expect(worker.status().processedCount).toBe(0);
+  });
+
   it('逾時被砍：收屍為 timed_out', async () => {
     const host = fakeHost({ pending: 2, results: [{ ok: false, timedOut: true }] });
     const worker = createRequestWorker(host.deps);
@@ -115,15 +123,25 @@ describe('tripline-api-server 接線（print 模式預設 OFF）', () => {
   });
 
   it('逾時先 SIGTERM（sudo 會轉發給 claude），寬限後才 SIGKILL；不可一上來就 SIGKILL（claude 會變孤兒）', () => {
-    expect(src).toMatch(/child\.kill\('SIGTERM'\)[\s\S]{0,200}child\.kill\('SIGKILL'\)/);
+    expect(src.indexOf("child.kill('SIGTERM')")).toBeGreaterThan(-1);
     expect(src.indexOf("child.kill('SIGTERM')")).toBeLessThan(src.indexOf("child.kill('SIGKILL')"));
   });
 
-  it('輸出收完整段才脫敏寫檔（不逐 chunk 脫敏，避免 token 被切在 chunk 邊界漏過）', () => {
-    expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)/);
+  it('卡住的 process 不能讓鎖永遠不釋放：聽 exit 並有硬性期限，finish 只會執行一次', () => {
+    expect(src).toMatch(/child\.on\('exit'/);
+    expect(src).toMatch(/PRINT_HARD_DEADLINE_MS/);
+    expect(src).toMatch(/if \(done\) return;/);
   });
 
-  it('每輪結束都清掉 session 目錄（含 OAuth token 檔）', () => {
-    expect(src).toMatch(/finally\s*\{\s*runAsAgent\(\['rm', '-rf', prepared\.sessionDir\]\);/);
+  it('輸出收完整段才脫敏（含精確字串 token 與上限），log 檔 0600', () => {
+    expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)/);
+    expect(src).toMatch(/split\(sec\)\.join\('<redacted>'\)/);
+    expect(src).toMatch(/PRINT_LOG_MAX_BYTES/);
+    expect(src).toMatch(/mode: 0o600/);
+  });
+
+  it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併 pkill；rm 失敗要記 log', () => {
+    expect(src).toMatch(/finally\s*\{[\s\S]*?runAsAgent\(\['pkill', '-KILL', '-f', sessionDir\]\);[\s\S]*?runAsAgent\(\['rm', '-rf', sessionDir\]\);[\s\S]*?logError\(/);
+    expect(src.indexOf('const prepared = prepareContainedSessionDir(runName')).toBeGreaterThan(src.indexOf('async function runContainedPrint('));
   });
 });

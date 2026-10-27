@@ -253,6 +253,10 @@ async function createContainedSession(
 const PRINT_RUN_TIMEOUT_MS = 10 * 60 * 1000;
 /** SIGTERM 之後多久還沒結束才 SIGKILL。 */
 const PRINT_KILL_GRACE_MS = 10_000;
+/** process 已結束（或已 SIGKILL）後，再等多久 stdio 還沒關就放棄等待。 */
+const PRINT_HARD_DEADLINE_MS = 5_000;
+/** 單輪輸出收集上限（超過的部分丟棄）。 */
+const PRINT_LOG_MAX_BYTES = 1024 * 1024;
 
 /**
  * `claude -p` 路徑（TP_REQUEST_PRINT_MODE=1）：隔離參數與 tmux 路徑完全相同，只是 headless、
@@ -264,46 +268,65 @@ async function runContainedPrint(
   token: string,
   restrictTrip: string,
 ): Promise<PrintRunResult> {
-  const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
-  if (!prepared) return { ok: false, timedOut: false };
-  const cmd = buildContainedShellCommand({
-    claudeBin: CLAUDE_BIN, sessionName: runName, sessionDir: prepared.sessionDir,
-    settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
-    tokenFilePath: prepared.tokenFilePath, printSkill: skillCommand,
-  });
-  const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
-  mkdirSync(logDir, { recursive: true });
-  const logFile = join(logDir, `${runName}.log`);
-  const scrub = (t: string) => t.replace(/[Bb]earer [A-Za-z0-9._~+/=-]+/g, 'Bearer <redacted>').replace(/sk-ant-[A-Za-z0-9_-]+/g, '<redacted>');
+  const sessionDir = `${CONTAINED_BASE_DIR}/${runName}`;
   try {
+    // prepare 寫到一半失敗也會留下已寫好的 token 檔，所以清理放在 try 外層的 finally，一律執行。
+    const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
+    if (!prepared) return { ok: false, timedOut: false };
+    const cmd = buildContainedShellCommand({
+      claudeBin: CLAUDE_BIN, sessionName: runName, sessionDir: prepared.sessionDir,
+      settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
+      tokenFilePath: prepared.tokenFilePath, printSkill: skillCommand,
+    });
+    const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
+    mkdirSync(logDir, { recursive: true });
+    const logFile = join(logDir, `${runName}.log`);
+    // 精確字串（這次的 restrict token、OAuth token）+ 通用格式；restrict token 是不透明字串，regex 抓不到。
+    const secrets = [token, process.env.CLAUDE_CODE_OAUTH_TOKEN || ''].filter((v) => v.length >= 8);
+    const scrub = (t: string) => secrets
+      .reduce((acc, sec) => acc.split(sec).join('<redacted>'), t)
+      .replace(/[Bb]earer [A-Za-z0-9._~+/=-]+/g, 'Bearer <redacted>')
+      .replace(/sk-ant-[A-Za-z0-9_-]+/g, '<redacted>');
     return await new Promise<PrintRunResult>((resolve) => {
       const child = spawn('/bin/sh', ['-c', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
       let timedOut = false;
-      // 輸出只有幾 KB：收完整段再脫敏寫檔，token 不會剛好被切在兩個 chunk 之間漏過去。
-      const chunks: Buffer[] = [];
-      let killTimer: ReturnType<typeof setTimeout> | undefined;
-      // 先 SIGTERM：sudo 會轉發給 tp-agent 的 claude；直接 SIGKILL 只砍得到 sudo，claude 會變孤兒（實測）。
-      const timer = setTimeout(() => {
-        timedOut = true;
-        child.kill('SIGTERM');
-        killTimer = setTimeout(() => child.kill('SIGKILL'), PRINT_KILL_GRACE_MS);
-      }, PRINT_RUN_TIMEOUT_MS);
       let done = false;
+      // 收完整段再脫敏寫檔（token 不會剛好被切在兩個 chunk 之間漏過去），但設上限防被注入的大量輸出吃記憶體。
+      const chunks: Buffer[] = [];
+      let bytes = 0;
+      const collect = (b: Buffer) => { if (bytes < PRINT_LOG_MAX_BYTES) { chunks.push(b); bytes += b.length; } };
+      const timers: Array<ReturnType<typeof setTimeout>> = [];
       const finish = (ok: boolean) => {
-        if (done) return; // 'error' 之後 'close' 可能再來一次
+        if (done) return; // 'error'、'exit'、'close' 與硬性期限都可能各來一次
         done = true;
-        clearTimeout(timer);
-        clearTimeout(killTimer);
-        try { appendFileSync(logFile, scrub(Buffer.concat(chunks).toString())); } catch { /* best-effort log */ }
+        timers.forEach(clearTimeout);
+        child.stdout.destroy();
+        child.stderr.destroy();
+        try { appendFileSync(logFile, scrub(Buffer.concat(chunks).toString()), { mode: 0o600 }); } catch { /* best-effort log */ }
         resolve({ ok: ok && !timedOut, timedOut });
       };
-      child.stdout.on('data', (b: Buffer) => chunks.push(b));
-      child.stderr.on('data', (b: Buffer) => chunks.push(b));
+      // 先 SIGTERM：sudo 會轉發給 tp-agent 的 claude；直接 SIGKILL 只砍得到 sudo，claude 會變孤兒（實測）。
+      // 寬限後 SIGKILL，再給一段時間仍沒結束就硬性放棄等待，鎖不能因為卡住的 process 永遠不釋放。
+      timers.push(setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGTERM');
+        timers.push(setTimeout(() => {
+          child.kill('SIGKILL');
+          timers.push(setTimeout(() => finish(false), PRINT_HARD_DEADLINE_MS));
+        }, PRINT_KILL_GRACE_MS));
+      }, PRINT_RUN_TIMEOUT_MS));
+      child.stdout.on('data', collect);
+      child.stderr.on('data', collect);
       child.on('error', (err) => { logError(`contained print spawn 失敗：${err.message}`); finish(false); });
+      // 'close' 要等所有持有 pipe 的子孫都結束；claude 退了但 MCP 子程序還活著時會被拖住，所以也聽 'exit' 並短暫等待。
+      child.on('exit', (code) => { timers.push(setTimeout(() => finish(code === 0), PRINT_HARD_DEADLINE_MS)); });
       child.on('close', (code) => finish(code === 0));
     });
   } finally {
-    runAsAgent(['rm', '-rf', prepared.sessionDir]);
+    // 殘留的 claude／MCP 子程序（指令列帶有這一輪的 session 目錄）一併清掉，避免帶著 restrict token 繼續動行程。
+    runAsAgent(['pkill', '-KILL', '-f', sessionDir]);
+    const rm = runAsAgent(['rm', '-rf', sessionDir]);
+    if (rm.status !== 0) logError(`contained print: 清 session 目錄失敗（token 檔可能殘留）${sessionDir}：${rm.stderr || rm.status}`);
   }
 }
 
