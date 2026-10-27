@@ -81,6 +81,15 @@ Claude Code 的互動模式對 untrusted folder **一定**跳 trust 對話框（
 2. **pre-seed `<config>/.claude.json`**：`hasCompletedOnboarding:true`（跳過登入/主題 onboarding）+ `projects[sessionDir].hasTrustDialogAccepted:true`（pre-trust 那個空 sessionDir → 跳過 trust 對話框；空目錄信任=零授權）。
 3. **skill 探索**：`<config>/skills` symlink 到 repo `.claude/skills`（user-skill scope）→ `/tp-request` 找得到，但不用把 repo 當 workspace。
 
+## `claude -p` 模式（`TP_REQUEST_PRINT_MODE=1`）
+
+v2.30.7 曾因冷啟動可靠度放棄 `-p`；2026-10-27 在現行 CLI（2.1.311）以 tp-agent + `env -i` + `dontAsk` + `--strict-mcp-config` 實測 22 次全 exit 0、約 6 秒，skill 與 MCP 都正常載入，所以重新提供為**選用旗標**（預設 OFF，沿用 tmux 互動式 REPL）。
+
+- 隔離參數與 REPL 路徑完全相同（同一個 `buildContainedShellCommand`，只多 `-p <skill>`、stdin 接 `/dev/null`）。
+- process 結束就是處理完，不需要 watcher；輪間若同一行程又進來新請求就再跑一輪（上限 `PRINT_MAX_ROUNDS`=3），超過、非 0 結束、逾時（10 分鐘）都會就地收屍。這修掉 REPL 閒置後新請求卡到 orphan cap 的問題。
+- 輸出脫敏後寫進 `scripts/logs/tp-request/<run>.log`；每輪結束清掉 session 目錄（含 token 檔）。
+- 回退：把 `.env.local` 的 `TP_REQUEST_PRINT_MODE` 移除並 kickstart api-server。
+
 ## 已知 follow-up（不擋 merge；flag 目前 OFF）
 
 - **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-session 上限；被注入的 message 可能在 90 分鐘 session 內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。

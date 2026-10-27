@@ -10,7 +10,7 @@
  *   GET  /health                  — 健康檢查
  */
 
-import { spawnSync } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -24,7 +24,7 @@ import {
   buildMcpConfig,
 } from './lib/contained-spawn';
 import { throttledAlert, sleep } from './_lib/cron-shared';
-import { createRequestWorker } from './lib/request-worker';
+import { createRequestWorker, type PrintRunResult } from './lib/request-worker';
 import envLoader from './lib/load-env.js';
 
 // --- Load .env.local ---
@@ -152,12 +152,12 @@ function containmentReady(): boolean {
     return false;
   }
 }
-async function createContainedSession(
+/** 佈置 per-session 隔離目錄（tmux REPL 與 `claude -p` 兩條路徑共用）；失敗一律 fail-closed 回 null。 */
+function prepareContainedSessionDir(
   sessionName: string,
-  _skillCommand: string,
   token: string,
   restrictTrip: string,
-): Promise<boolean> {
+): { sessionDir: string; mcpConfigPath: string; tokenFilePath: string } | null {
   const sessionDir = `${CONTAINED_BASE_DIR}/${sessionName}`;
   const mcpConfigPath = `${sessionDir}/mcp-config.json`;
   const tokenFilePath = `${sessionDir}/oauth-token`;
@@ -167,7 +167,7 @@ async function createContainedSession(
     const mk = runAsAgent(['mkdir', '-p', '-m', '700', d]);
     if (mk.status !== 0) {
       logError(`contained: mkdir ${d} 失敗（fail-closed）：${mk.stderr || mk.status}`);
-      return false;
+      return null;
     }
   }
 
@@ -208,7 +208,7 @@ async function createContainedSession(
     const w = runAsAgent([NODE_BIN, '-e', WRITER, path], content);
     if (w.status !== 0) {
       logError(`contained: 寫 ${label} 失敗（fail-closed）：${w.stderr || w.status}`);
-      return false;
+      return null;
     }
   }
 
@@ -217,8 +217,21 @@ async function createContainedSession(
   const skillsLink = runAsAgent(['ln', '-sfn', join(PROJECT_DIR, '.claude', 'skills'), `${sessionDir}/config/skills`]);
   if (skillsLink.status !== 0) {
     logError(`contained: skills symlink 失敗（fail-closed）：${skillsLink.stderr || skillsLink.status}`);
-    return false;
+    return null;
   }
+
+  return { sessionDir, mcpConfigPath, tokenFilePath };
+}
+
+async function createContainedSession(
+  sessionName: string,
+  _skillCommand: string,
+  token: string,
+  restrictTrip: string,
+): Promise<boolean> {
+  const prepared = prepareContainedSessionDir(sessionName, token, restrictTrip);
+  if (!prepared) return false;
+  const { sessionDir, mcpConfigPath, tokenFilePath } = prepared;
 
   // 3. tmux starts the wrapper from PROJECT_DIR; the wrapper switches to the clean
   //    sessionDir as tp-agent. Worker owns readiness, submission and cleanup.
@@ -234,6 +247,64 @@ async function createContainedSession(
     return false;
   }
   return true;
+}
+
+/** 單輪 `claude -p` 的逾時（比 orphan cap 短很多：headless 正常 10 秒內完成）。 */
+const PRINT_RUN_TIMEOUT_MS = 10 * 60 * 1000;
+/** SIGTERM 之後多久還沒結束才 SIGKILL。 */
+const PRINT_KILL_GRACE_MS = 10_000;
+
+/**
+ * `claude -p` 路徑（TP_REQUEST_PRINT_MODE=1）：隔離參數與 tmux 路徑完全相同，只是 headless、
+ * 跑完 process 就結束。輸出脫敏後寫進 scripts/logs/tp-request/<runName>.log；結束後清掉 session 目錄（含 token 檔）。
+ */
+async function runContainedPrint(
+  runName: string,
+  skillCommand: string,
+  token: string,
+  restrictTrip: string,
+): Promise<PrintRunResult> {
+  const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
+  if (!prepared) return { ok: false, timedOut: false };
+  const cmd = buildContainedShellCommand({
+    claudeBin: CLAUDE_BIN, sessionName: runName, sessionDir: prepared.sessionDir,
+    settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
+    tokenFilePath: prepared.tokenFilePath, printSkill: skillCommand,
+  });
+  const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
+  mkdirSync(logDir, { recursive: true });
+  const logFile = join(logDir, `${runName}.log`);
+  const scrub = (t: string) => t.replace(/[Bb]earer [A-Za-z0-9._~+/=-]+/g, 'Bearer <redacted>').replace(/sk-ant-[A-Za-z0-9_-]+/g, '<redacted>');
+  try {
+    return await new Promise<PrintRunResult>((resolve) => {
+      const child = spawn('/bin/sh', ['-c', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
+      let timedOut = false;
+      // 輸出只有幾 KB：收完整段再脫敏寫檔，token 不會剛好被切在兩個 chunk 之間漏過去。
+      const chunks: Buffer[] = [];
+      let killTimer: ReturnType<typeof setTimeout> | undefined;
+      // 先 SIGTERM：sudo 會轉發給 tp-agent 的 claude；直接 SIGKILL 只砍得到 sudo，claude 會變孤兒（實測）。
+      const timer = setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGTERM');
+        killTimer = setTimeout(() => child.kill('SIGKILL'), PRINT_KILL_GRACE_MS);
+      }, PRINT_RUN_TIMEOUT_MS);
+      let done = false;
+      const finish = (ok: boolean) => {
+        if (done) return; // 'error' 之後 'close' 可能再來一次
+        done = true;
+        clearTimeout(timer);
+        clearTimeout(killTimer);
+        try { appendFileSync(logFile, scrub(Buffer.concat(chunks).toString())); } catch { /* best-effort log */ }
+        resolve({ ok: ok && !timedOut, timedOut });
+      };
+      child.stdout.on('data', (b: Buffer) => chunks.push(b));
+      child.stderr.on('data', (b: Buffer) => chunks.push(b));
+      child.on('error', (err) => { logError(`contained print spawn 失敗：${err.message}`); finish(false); });
+      child.on('close', (code) => finish(code === 0));
+    });
+  } finally {
+    runAsAgent(['rm', '-rf', prepared.sessionDir]);
+  }
 }
 
 /** best-effort: pipe session output to a scrubbed persistent log (shared by both paths). */
@@ -300,6 +371,7 @@ const worker = createRequestWorker({
   containmentReady,
   createContainedSession,
   createPlainSession,
+  runContainedPrint: process.env.TP_REQUEST_PRINT_MODE === '1' ? runContainedPrint : undefined,
   pane: tmuxDeps,
   attachLog: attachSessionLog,
 });

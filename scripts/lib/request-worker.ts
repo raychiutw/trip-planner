@@ -14,6 +14,8 @@ export interface PendingRequest { requestId: string; tripId: string }
 export type WatchOutcome = 'drained' | 'died' | 'deadline';
 export interface AcquiredToken { token: string; restrictTrip?: string }
 export type TickResult = 'spawned' | 'busy' | 'idle' | 'failed';
+/** `claude -p` 一次執行的結果：ok = exit 0；timedOut = 被逾時砍掉。 */
+export interface PrintRunResult { ok: boolean; timedOut: boolean }
 
 export interface WorkerDeps {
   fetch: typeof fetch;
@@ -41,12 +43,19 @@ export interface WorkerDeps {
   createContainedSession: (sessionName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<boolean>;
   createPlainSession: (sessionName: string, skillCommand: string, token: string) => Promise<boolean>;
   pane: Pick<TmuxDeps, 'capture' | 'sendKeys'>;
+  /**
+   * 提供時，contained /tp-request 改走 `claude -p`（不經 tmux，process 結束就是處理完）；
+   * 不提供就維持 tmux 互動式 REPL。實作要自己處理逾時（砍 process、回 timedOut）。
+   */
+  runContainedPrint?: (runName: string, skillCommand: string, token: string, restrictTrip: string) => Promise<PrintRunResult>;
   attachLog: (sessionName: string, skillCommand: string) => void;
 }
 
 export const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
 export const LEGACY_SESSION_PREFIX = 'tripline-request-';
 export const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
+/** print 模式同一行程連續處理的輪數上限（每輪處理完仍有新請求才會再跑）。 */
+export const PRINT_MAX_ROUNDS = 3;
 /** contained session 看門狗輪詢間隔。 */
 export const WATCH_INTERVAL_MS = 15_000;
 
@@ -236,6 +245,7 @@ export function createRequestWorker(deps: WorkerDeps) {
 
   async function runSession(sessionName: string, skillCommand: string, acquired: AcquiredToken): Promise<boolean> {
     let created = false;
+    if (acquired.restrictTrip && deps.runContainedPrint) return runPrintSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip);
     const pane = { ...deps.pane, sleep: deps.sleep, log: deps.log };
     try {
       created = acquired.restrictTrip
@@ -259,6 +269,28 @@ export function createRequestWorker(deps: WorkerDeps) {
       if (acquired.restrictTrip) await reap(acquired.restrictTrip, 'error');
       return false;
     }
+  }
+
+  /**
+   * `claude -p` 路徑：每輪一個 process，結束即處理完。輪間若同行程又進來新請求就再跑一輪
+   * （tmux 路徑的 REPL 閒置後沒人再叫它，新請求會卡到 orphan cap）。
+   * process 失敗／逾時／輪數用盡仍有待處理 → 就地收屍，不留殭屍請求。
+   */
+  async function runPrintSession(sessionName: string, skillCommand: string, token: string, restrictTrip: string): Promise<boolean> {
+    let last: PrintRunResult = { ok: true, timedOut: false };
+    try {
+      for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
+        last = await deps.runContainedPrint!(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
+        deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}）`);
+        if (!(await tripHasPending(restrictTrip))) return true;
+        if (!last.ok) break;
+      }
+      await reap(restrictTrip, (last.timedOut || last.ok) ? 'timed_out' : 'error');
+    } catch (error) {
+      deps.logError(`contained print ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);
+      await reap(restrictTrip, 'error');
+    }
+    return false;
   }
 
   function closeSession(sessionName: string): void {

@@ -45,6 +45,8 @@ export function buildContainedShellCommand(o: {
   settingsPath: string;
   mcpConfigPath: string;
   tokenFilePath: string;
+  /** 提供時改跑 `claude -p <skill>`（headless、跑完 process 即結束）；其餘隔離參數完全相同。 */
+  printSkill?: string;
 }): string {
   const q = shSingleQuote;
   const env = [
@@ -64,12 +66,14 @@ export function buildContainedShellCommand(o: {
   //   3. exec claude INTERACTIVELY (no -p). Positional args ($1..$6) keep every value —
   //      incl. the token FILE path — off claude's own argv (no `ps` leak).
   const inner =
-    'cd "$1" || exit 97; CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2") exec "$3" --permission-mode dontAsk ' +
-    '--settings "$4" --mcp-config "$5" --strict-mcp-config --name "$6"';
+    'cd "$1" || exit 97; CLAUDE_CODE_OAUTH_TOKEN=$(cat "$2") exec "$3" ' +
+    (o.printSkill !== undefined ? '-p "$6" ' : '') +
+    '--permission-mode dontAsk --settings "$4" --mcp-config "$5" --strict-mcp-config' +
+    (o.printSkill !== undefined ? '' : ' --name "$6"');
   return (
     `sudo -n -u ${TP_AGENT_USER} env -i ${env} /bin/sh -c '${inner}' tp-contained ` +
     `'${q(o.sessionDir)}' '${q(o.tokenFilePath)}' '${q(o.claudeBin)}' ` +
-    `'${q(o.settingsPath)}' '${q(o.mcpConfigPath)}' '${q(o.sessionName)}'`
+    `'${q(o.settingsPath)}' '${q(o.mcpConfigPath)}' '${q(o.printSkill ?? o.sessionName)}'`
   );
 }
 

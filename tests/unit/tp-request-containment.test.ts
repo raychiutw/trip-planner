@@ -157,3 +157,29 @@ describe('MCP server 路徑必須是 session 內的快照，不是共用工作�
     expect(src).toMatch(/readFileSync\(MCP_SERVER_PATH/);
   });
 });
+
+describe('buildContainedShellCommand — print mode（claude -p）', () => {
+  const printCmd = () => buildContainedShellCommand({ ...BASE, printSkill: '/tp-request' });
+
+  it('只多一個 -p <skill>，隔離參數（sudo/env -i/dontAsk/settings/strict-mcp）一個不少', () => {
+    const cmd = printCmd();
+    expect(cmd).toContain(`sudo -n -u ${TP_AGENT_USER} env -i `);
+    expect(cmd).toContain('-p "$6"');
+    expect(cmd).toContain('--permission-mode dontAsk');
+    expect(cmd).toContain('--settings "$4"');
+    expect(cmd).toContain('--mcp-config "$5"');
+    expect(cmd).toContain('--strict-mcp-config');
+    expect(cmd).not.toMatch(/dangerously-skip-permissions|bypassPermissions/);
+  });
+
+  it('$6 是 skill 指令（不是 session 名），且沒有 --name', () => {
+    const cmd = printCmd();
+    expect(cmd.trimEnd().endsWith(`'/tp-request'`)).toBe(true);
+    expect(cmd).not.toContain('--name');
+    expect(cmd).not.toContain(` '${BASE.sessionName}'`); // 沒有獨立的 session 名參數
+  });
+
+  it('預設（互動式）仍然沒有 -p', () => {
+    expect(buildContainedShellCommand(BASE)).not.toContain('-p "$6"');
+  });
+});
