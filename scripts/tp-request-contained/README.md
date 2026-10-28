@@ -105,6 +105,6 @@ v2.30.7 曾因冷啟動可靠度放棄 `-p`，改用 tmux 互動式 REPL；但 R
 
 ## 已知 follow-up
 
-- **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-request 的呼叫額度；`--max-turns 150` 與 10 分鐘逾時只是上限，被注入的 message 仍可能在這個範圍內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
+- **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-request 的呼叫額度；`--max-turns 150` 與單輪 30 分鐘逾時只是上限，被注入的 message 仍可能在這個範圍內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
 - **信任 skill 的 token 上 argv** —— `/tp-daily-check` 的 plain session 仍把 service token 插在 tmux 指令列（既有行為、`ps` 看得到）；這不是 `/tp-request` 的 fallback。後續可比照 contained 路徑改走 stdin。
 - **deny 用列舉（Claude Code 沒有「只准 allow、其餘全 deny」的權威模式）** —— `dontAsk` 會把未列的 meta-tool（Skill / ToolSearch / Workflow / Artifact …）當豁免放行，所以 `settings.json` 得**逐一列 deny**。風險：claude 未來新增一個沒列到的工具會漏。緩解：(1) **Layer A**（tp-agent OS 隔離）擋掉 FS/exec 類漏洞（讀憑證、跑 script）；(2) 真正需要 deny 擋的是**網路/外洩/spawn 類**（WebFetch / Artifact / SendUserFile / Workflow / Agent），這些已列。升 claude 版本後值得重跑 (0b) 的工具清單檢查、必要時補 deny。
