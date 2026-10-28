@@ -12,11 +12,12 @@ import {
   shSingleQuote,
   TP_AGENT_USER,
   CONTAINED_PATH,
+  PRINT_MAX_TURNS,
 } from '../../scripts/lib/contained-spawn';
 
 const BASE = {
   claudeBin: '/Users/ray/.local/bin/claude',
-  sessionName: 'tripline-tp-request-123-456',
+  skillCommand: '/tp-request',
   sessionDir: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456',
   settingsPath: '/repo/scripts/tp-request-contained/settings.json',
   mcpConfigPath: '/Users/tp-agent/.tripline-contained/tripline-tp-request-123-456/mcp-config.json',
@@ -60,11 +61,13 @@ describe('buildContainedShellCommand — layer B (capability lockdown)', () => {
     expect(cmd).toContain(`'${BASE.sessionDir}'`); // session dir passed as $1
   });
 
-  it('is INTERACTIVE — no -p (headless print mode was abandoned in v2.30.7); skill goes via the REPL', () => {
+  it('headless claude -p <skill>：skill 是 $6、有輪數上限、沒有 --name（不再是互動式 REPL）', () => {
     const cmd = buildContainedShellCommand(BASE);
-    expect(cmd).not.toContain(' -p '); // not headless; skill submitted via send-keys later
     expect(cmd).toContain('/bin/sh -c'); // launched through the OAuth sh wrapper
-    expect(cmd).toContain('--name "$6"'); // interactive claude with a display name
+    expect(cmd).toContain('-p "$6"');
+    expect(cmd).toContain(`--max-turns ${PRINT_MAX_TURNS}`); // 被注入的訊息不能無上限燒計費的 tool call
+    expect(cmd).not.toContain('--name');
+    expect(cmd.trimEnd().endsWith(`'/tp-request'`)).toBe(true);
   });
 
   it('NEVER passes --dangerously-skip-permissions / bypassPermissions (would void the allowlist)', () => {
@@ -89,9 +92,9 @@ describe('buildContainedShellCommand — neither token on the command line', () 
 });
 
 describe('buildContainedShellCommand — shell-injection safety', () => {
-  it('single-quotes every interpolated value; a malicious session name cannot break out', () => {
+  it('single-quotes every interpolated value; a malicious skill command cannot break out', () => {
     const evil = "x'; rm -rf ~; echo '";
-    const cmd = buildContainedShellCommand({ ...BASE, sessionName: evil });
+    const cmd = buildContainedShellCommand({ ...BASE, skillCommand: evil });
     // escaping applied: each ' becomes '\'' so the value stays inside its single quotes
     expect(cmd).toContain(shSingleQuote(evil));
     // the raw breakout (bare quote immediately closing then `;`) is neutralised
