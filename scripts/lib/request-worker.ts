@@ -55,6 +55,9 @@ export interface WorkerDeps {
 export const ALLOWED_SKILLS = new Set(['/tp-request', '/tp-daily-check']);
 export const LEGACY_SESSION_PREFIX = 'tripline-request-';
 export const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
+/** 列出某行程待處理請求時的單頁筆數；與 functions/api/requests.ts 的上限一致（超過會被截成 50）。 */
+const PENDING_LIST_PAGE_SIZE = 50;
+
 /** print 模式同一行程連續處理的輪數上限（每輪處理完仍有新請求才會再跑）。 */
 export const PRINT_MAX_ROUNDS = 3;
 
@@ -318,7 +321,7 @@ export function createRequestWorker(deps: WorkerDeps) {
       const ids: number[] = [];
       for (const status of ['processing', 'open'] as const) {
         const res = await deps.fetch(
-          `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=50`,
+          `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=${PENDING_LIST_PAGE_SIZE}`,
           { headers: { Authorization: `Bearer ${svc}` } },
         );
         if (!res.ok) return null;
