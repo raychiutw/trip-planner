@@ -189,6 +189,34 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(host.runs()).toBe(1);
   });
 
+  it('第 1 輪開始時查不到隊列、且 claude 失敗：至少收屍 peek 到的那一筆（否則每個 tick 原樣重跑到牆鐘）', async () => {
+    const host = fakeHost({ pending: 2, processes: false, results: [{ ok: false, timedOut: false }] });
+    const original = host.deps.fetch;
+    let tripListCalls = 0;
+    host.deps.fetch = (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/requests' && init?.method !== 'PATCH' && url.searchParams.has('tripId')) {
+        tripListCalls++;
+        if (tripListCalls === 1) return Promise.resolve(Response.json({ unavailable: true })); // 第 1 輪 before 讀不到
+      }
+      return original(input, init);
+    };
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.effects).toContain('reap:error:1'); // peek 到的是最舊的 id=1
+    expect(host.effects.some((e) => e.endsWith(':2'))).toBe(false); // 沒被確認嘗試過的不動
+  });
+
+  it('處理成功就回報 spawned：最後一輪結束後隊列仍有「執行當中才到的新請求」不算失敗', async () => {
+    const host = fakeHost({ pending: 1, arrivals: { 1: 1, 2: 1, 3: 1 } });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('spawned');
+    expect(host.runs()).toBe(PRINT_MAX_ROUNDS);
+    expect(host.effects).toEqual([]);
+    expect(host.queue()).toEqual([102]); // 留給下一個 tick
+    expect(worker.status().processedCount).toBe(1);
+  });
+
   it('鎖內每個打 /api/requests 的 fetch 都帶 timeout signal（連線卡住不能讓 /tp-request 永遠 busy）', async () => {
     const host = fakeHost({ pending: 2, processes: false });
     const worker = createRequestWorker(host.deps);

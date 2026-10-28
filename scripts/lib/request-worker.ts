@@ -11,7 +11,7 @@ import { failPendingRequests, type ReapReason } from './fail-pending-requests';
 import { waitForRepl, submitSkillCommand, type TmuxDeps } from './tmux-pane';
 
 export interface PendingRequest { requestId: string; tripId: string }
-export interface AcquiredToken { token: string; restrictTrip?: string }
+export interface AcquiredToken { token: string; restrictTrip?: string; /** mint 時 peek 到的那筆請求（contained 路徑用來保底收屍）。 */ requestId?: string }
 export type TickResult = 'spawned' | 'busy' | 'idle' | 'failed';
 /**
  * `claude -p` 一次執行的結果：ok = exit 0；timedOut = 被逾時砍掉；
@@ -135,7 +135,7 @@ export function createRequestWorker(deps: WorkerDeps) {
         }
         const { token, tripId } = await mintRestricted(pending.requestId);
         deps.log(`minted owner-restricted token for request ${pending.requestId} (trip ${tripId})`);
-        return { token, restrictTrip: tripId };
+        return { token, restrictTrip: tripId, requestId: pending.requestId };
       } catch (err) {
         const e = err as { kind?: string; message?: string };
         deps.logError(`mint-restricted 失敗（/tp-request 不 spawn，避免未-contained session 外洩）：[${e.kind ?? '?'}] ${e.message ?? err}`);
@@ -269,7 +269,7 @@ export function createRequestWorker(deps: WorkerDeps) {
   }
 
   async function runSession(sessionName: string, skillCommand: string, acquired: AcquiredToken): Promise<boolean> {
-    if (acquired.restrictTrip) return runPrintSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip);
+    if (acquired.restrictTrip) return runPrintSession(sessionName, skillCommand, acquired.token, acquired.restrictTrip, Number(acquired.requestId));
     return runPlainSession(sessionName, skillCommand, acquired.token);
   }
 
@@ -282,11 +282,15 @@ export function createRequestWorker(deps: WorkerDeps) {
    * 被嘗試過的請求不會被處理，留著只會每 10 分鐘無限重試。
    * 原因：真的逾時才標 timed_out；其餘（非 0 結束、exit 0 卻沒處理完）一律 error，不誤導成逾時。
    */
-  async function runPrintSession(sessionName: string, skillCommand: string, token: string, restrictTrip: string): Promise<boolean> {
+  async function runPrintSession(sessionName: string, skillCommand: string, token: string, restrictTrip: string, peekedId?: number): Promise<boolean> {
     let last: PrintRunResult = { ok: true, timedOut: false };
     // 被嘗試過的請求 id：各輪開始時隊列的聯集，只增不減。查不到就維持原集合（起初為空 → 收屍什麼都不動，
     // 交給 100 分鐘牆鐘兜底）：查不到時放寬成「全收」會把沒被任何人看過的新請求一起殺掉。
+    // 起點：peek 到的那筆（最舊、第一個會被處理）。第 1 輪開始時就查不到隊列的話，至少它能被收屍，
+    // 否則 claude 失敗時沒有任何東西被收，同一批請求會每個 tick 原樣重跑到 100 分鐘牆鐘。
     const attempted = new Set<number>();
+    const seed = Number.isFinite(peekedId) ? [peekedId as number] : [];
+    let queueUnknown = false; // 最後一次查隊列失敗 → 不能斷定處理成功
     try {
       for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
         const before = await listPendingIds(restrictTrip);
@@ -304,6 +308,7 @@ export function createRequestWorker(deps: WorkerDeps) {
           return false;
         }
         const after = await listPendingIds(restrictTrip);
+        queueUnknown = after === null;
         if (after && after.length === 0) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
         // 只有「這輪開始時隊列已知、而執行當中才到了新請求」才值得再跑一輪。查不到隊列、process 失敗、或沒有新請求
         // （剩下的全是已被嘗試卻沒處理成功的）→ 不再重跑：重跑同一批只會把不可信輸入觸發的花費乘上輪數。
@@ -313,10 +318,12 @@ export function createRequestWorker(deps: WorkerDeps) {
         // skill 會處理隊列裡所有待處理請求，沒辦法只挑新的跑：先把已被嘗試卻沒處理成功的收屍，下一輪就只剩新請求。
         if (stale.length) await reap(restrictTrip, 'error', new Set(stale));
       }
-      await reap(restrictTrip, last.timedOut ? 'timed_out' : 'error', attempted);
+      const reaped = await reap(restrictTrip, last.timedOut ? 'timed_out' : 'error', new Set([...seed, ...attempted]));
+      // process 正常結束且沒有任何已嘗試的請求被收屍 = 這次處理成功（最後一輪結束後才到的新請求留給下一個 tick，不算失敗）。
+      return last.ok && reaped === 0 && !queueUnknown;
     } catch (error) {
       deps.logError(`contained print ${sessionName} 失敗：${error instanceof Error ? error.message : String(error)}`);
-      await reap(restrictTrip, 'error', attempted);
+      await reap(restrictTrip, 'error', new Set([...seed, ...attempted]));
     }
     return false;
   }
