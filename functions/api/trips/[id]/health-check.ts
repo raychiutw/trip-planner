@@ -373,7 +373,7 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
         });
         await alertAdminTelegram(
           env,
-          `健檢觸發失敗（cron 15min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
+          `健檢觸發失敗（cron 5min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
         );
       }
     })(),
