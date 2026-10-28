@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.111] - 2026-10-29
+
+### Fixed
+- **AI 聊天的第二則訊息不再卡住**：以前 AI 處理完一則訊息後，同一行程接著送的訊息要等 90 分鐘孤兒上限才被收掉並標為逾時。現在每則請求用獨立的 `claude -p` 處理，跑完即結束，同一輪內新到的請求會接著處理（單次最多 3 輪），沒處理到的會明確標為失敗而不是空等。
+- **舊路徑漏掉的暫存目錄**：api-server 啟動時清掉上一代遺留的 contained run 目錄與殘留 process（上線時一次清掉 39 個，目錄內含該次請求的短效 token）。
+
+### Changed
+- 行程相關請求（`/tp-request`）一律走 `claude -p`，不再開 tmux REPL；`/tp-daily-check` 仍走原 tmux 路徑。無 feature flag。
+- 單輪上限 30 分鐘、150 turns；逾時先 SIGTERM（sudo 會轉送）、10 秒後 SIGKILL，並保證收屍與清目錄。
+
+### For contributors
+- 新增 `scripts/lib/print-run.ts`（`superviseRun`）、`scripts/lib/print-run-sweep.ts`（啟動清掃）；`request-worker` 的 `runContainedPrint` 為必要依賴，移除 `createContainedSession`／`watchContainedSession`。
+- `scripts/` 不在 repo tsconfig 內，新增 `print-run-types.test.ts` 以 `tsc --strict` 守門。
+- 已知限制見 `scripts/tp-request-contained/README.md`「已知限制」；ADR-0007 補 2026-10-27 addendum。另有兩個 Low：原始輸出超過 2MB 時 redaction 對跨界 token 前綴無效、log 截斷以字元計非 bytes。
+- 失敗時聊天仍沒有明確失敗提示（獨立缺口，未處理）。
+
 ## [2.57.110] - 2026-10-29
 
 ### Fixed
