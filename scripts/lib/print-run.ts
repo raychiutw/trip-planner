@@ -47,7 +47,7 @@ export interface SuperviseOpts {
   hardDeadlineMs: number;
   rawMaxBytes: number;
   logMaxBytes: number;
-  /** 原始收集被截斷時，結尾丟掉這麼多 bytes 才脫敏：token 若跨在截斷點上，脫敏只看得到前半截，會原樣寫進 log。 */
+  /** 原始收集被截斷時，脫敏後再丟掉結尾這麼多 bytes：token 若跨在截斷點上，脫敏只看得到前半截，會原樣寫進 log。 */
   rawTailMarginBytes?: number;
   scrub: (text: string) => string;
   writeLog: (text: string) => void;
