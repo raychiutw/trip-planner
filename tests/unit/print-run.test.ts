@@ -140,6 +140,16 @@ describe('superviseRun（claude -p 一輪的計時與收尾）', () => {
     expect(logs[0]).toBe('aaaaaaa');
   });
 
+  it('安全邊界要在脫敏之後才丟：切點落在完整 token 中間時，不能留下脫敏抓不到的半截', async () => {
+    const { child, logs, result } = setup({ rawMaxBytes: 10, logMaxBytes: 1000, rawTailMarginBytes: 4 });
+    child.stdout.emit('data', Buffer.from('aaaaSECRETbb'));
+    child.stdout.emit('data', Buffer.from('dropped'));
+    child.emit('close', 0);
+    await result;
+    expect(logs[0]).not.toContain('SEC');
+    expect(logs[0]).toBe('aaaa<redacte');
+  });
+
   it('logMaxBytes 以 bytes 計，不是字元數（中文一字 3 bytes）', async () => {
     const { child, logs, result } = setup({ logMaxBytes: 30 });
     child.stdout.emit('data', Buffer.from('字'.repeat(100)));

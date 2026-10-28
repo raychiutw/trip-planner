@@ -71,9 +71,10 @@ export function superviseRun(child: RunChild, o: SuperviseOpts): Promise<PrintRu
       child.stdout.destroy();
       child.stderr.destroy();
       try {
-        const raw = Buffer.concat(chunks);
-        const kept = truncated ? raw.subarray(0, Math.max(0, raw.length - (o.rawTailMarginBytes ?? PRINT_RAW_TAIL_MARGIN_BYTES))) : raw;
-        o.writeLog(Buffer.from(o.scrub(kept.toString())).subarray(0, o.logMaxBytes).toString());
+        // 先整段脫敏，再丟掉被截斷的尾巴（跨在截斷點上的 token 前綴必落在尾巴內），最後才以 bytes 截到上限。
+        let out = Buffer.from(o.scrub(Buffer.concat(chunks).toString()));
+        if (truncated) out = out.subarray(0, Math.max(0, out.length - (o.rawTailMarginBytes ?? PRINT_RAW_TAIL_MARGIN_BYTES)));
+        o.writeLog(out.subarray(0, o.logMaxBytes).toString());
       } catch { /* best-effort log */ }
       resolve({ ok: ok && !timedOut, timedOut, started });
     };
