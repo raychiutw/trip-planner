@@ -289,13 +289,16 @@ function createCheckSources(io = {}) {
 
   async function queryRequestErrors() {
     // 只看過去 24h 內的非 completed 請求（陳年 failed 會自然淡出）
-    // 使用者主動取消（terminal_reason=cancelled）是操作不是故障；IFNULL 讓 NULL 照報
+    // 使用者 15 分鐘內就取消 = 改變主意，不算故障；等滿 15 分鐘才取消多半是 AI 沒回
+    // （10/27 #285），照報。只認 status=failed 的取消：單帶 terminalReason 的 PATCH
+    // 能讓還在跑的請求掛上 cancelled。IFNULL 讓 NULL 照報。
     var rows = await queryD1(
       "SELECT id, trip_id, status, substr(message, 1, 80) as message, " +
       "substr(reply, 1, 80) as reply, created_at " +
       "FROM trip_requests " +
       "WHERE status != 'completed' " +
-      "  AND IFNULL(terminal_reason, '') != 'cancelled' " +
+      "  AND NOT (status = 'failed' AND IFNULL(terminal_reason, '') = 'cancelled' " +
+      "    AND COALESCE(updated_at, created_at) < datetime(created_at, '+15 minutes')) " +
       "  AND created_at >= datetime('now', '-1 day') " +
       "ORDER BY created_at DESC"
     );
