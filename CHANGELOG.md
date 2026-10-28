@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.110] - 2026-10-29
+
+### Fixed
+- **每日健檢不再把「使用者自己取消的請求」報成警告**：在聊天按「停止等待」取消的請求，10/28、10/29 連兩天被列成未完成請求（#285、#288）。現在 15 分鐘內就取消的不再列入；等滿 15 分鐘才放棄的照樣報，因為那通常代表 AI 沒回（10/27 #285 就是這種情況）。只認「已失敗且標記取消」的請求，還在排隊或處理中的請求一律照報。
+
+### For contributors
+- 新增 `tests/unit/daily-check-request-errors.test.ts`：用 in-memory SQLite 跑真實 SQL，涵蓋很快取消、久等取消、open/processing 掛 cancelled、`terminal_reason` 為 NULL 與其他終結原因；每個條件都以 mutation 驗證過會轉紅。
+- 已知限制：取消後若該請求再被 PATCH（例如 worker 遲到完成），`updated_at` 會往後推，很快取消的請求可能重新被報出（多報方向，與修正前行為相同）；要精確需另存取消時間。
+
 ## [2.57.109] - 2026-10-26
 
 ### Fixed
