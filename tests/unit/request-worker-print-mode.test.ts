@@ -248,6 +248,10 @@ describe('tripline-api-server 接線', () => {
     expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)\.slice\(0, PRINT_LOG_MAX_BYTES\)/);
   });
 
+  it('log 目錄只是輔助：mkdir 失敗不能讓整輪 reject（會被當成處理失敗而收屍）', () => {
+    expect(src).toMatch(/try \{ mkdirSync\(logDir, \{ recursive: true \}\); \} catch \{\s*\}/);
+  });
+
   it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併殺；rm 失敗要記 log', () => {
     expect(src).toMatch(/finally\s*\{[\s\S]*?killRunProcesses\(sessionDir\);[\s\S]*?runAsAgent\(\['rm', '-rf', sessionDir\]\);[\s\S]*?logError\(/);
     expect(src.indexOf('const prepared = prepareContainedSessionDir(runName')).toBeGreaterThan(src.indexOf('async function runContainedPrint('));

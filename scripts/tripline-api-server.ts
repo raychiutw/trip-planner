@@ -264,7 +264,8 @@ async function runContainedPrint(
       tokenFilePath: prepared.tokenFilePath, skillCommand,
     });
     const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
-    mkdirSync(logDir, { recursive: true });
+    // log 只是輔助：目錄建不起來不能讓整輪 reject（worker 會當成處理失敗而收屍）；寫檔本身也是 best-effort。
+    try { mkdirSync(logDir, { recursive: true }); } catch { /* best-effort log */ }
     const logFile = join(logDir, `${runName}.log`);
     // 精確字串（這次的 restrict token、OAuth token）+ 通用格式；restrict token 是不透明字串，regex 抓不到。
     const secrets = [token, process.env.CLAUDE_CODE_OAUTH_TOKEN || ''].filter((v) => v.length >= 8);
