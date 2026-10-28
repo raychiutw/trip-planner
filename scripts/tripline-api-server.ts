@@ -10,7 +10,8 @@
  *   GET  /health                  — 健康檢查
  */
 
-import { spawn, spawnSync } from 'child_process';
+import { spawn, spawnSync, type ChildProcessByStdio } from 'child_process';
+import type { Readable } from 'stream';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -251,7 +252,7 @@ async function runContainedPrint(
     // 佈置與 spawn 階段的任何例外（例如 git pull 窗口讀不到 MCP server 檔）＝ claude 根本沒開始處理：
     // 回 started:false 讓 worker 不收屍；往上拋會被當成「處理失敗」而把使用者請求標成 failed。
     // 清理放在外層 finally：prepare 寫到一半失敗也會留下已寫好的 token 檔。
-    let child: ReturnType<typeof spawn>;
+    let child: ChildProcessByStdio<null, Readable, Readable>;
     let logFile: string;
     try {
       const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
