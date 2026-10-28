@@ -97,6 +97,8 @@ v2.30.7 曾因冷啟動可靠度放棄 `-p`，改用 tmux 互動式 REPL；但 R
 
 - **全域序列鎖，最長約 31 分鐘**：`tick` 持有單一 `/tp-request` 鎖，3 輪 × 10 分鐘逾時。同一個旅伴連續灌請求會讓其他行程排隊；失敗會收屍所以不會無限，但沒有 per-trip 冷卻。鎖在記憶體，跨進程保護靠 api-server 單實例（launchd）與啟動清掃。
 - **脫敏是精確字串 + 兩條 regex**：若 claude 輸出把 token 做 JSON 轉義、URL-encode 或截斷後印出會漏。log 檔 0600，但內容含旅伴對話，`scripts/logs/` 不要被別的備份或 sync 流程帶走。
+- **沒開始處理 vs 處理失敗**：目錄佈置失敗、spawn 失敗（`started:false`）不收屍，請求留給下一個 tick 重試；claude 有跑但非 0 結束（含 OAuth token 過期／被停用而秒退）視為處理失敗，立刻標 `error` —— 使用者看得到失敗，而不是像舊 REPL 路徑那樣空等 18 分鐘（2026-10-27 事故）。
+- **清理失敗的殘留只在 api-server 啟動時補清**：`rm` 失敗會 alert，但沒有週期性重掃；api-server 常駐數週不重啟時，殘留的 token 檔（tp-agent 0600）會留著。
 - **同一批請求只跑一輪**：exit 0 卻沒處理完（agent 拒絕、被注入訊息誘導不更新狀態）不會重跑，直接收屍為 `error`；只有「執行當中才到的新請求」才會再跑一輪。
 
 ## 已知 follow-up

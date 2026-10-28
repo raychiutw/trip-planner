@@ -240,8 +240,9 @@ const PRINT_RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const PRINT_KILL_GRACE_MS = 10_000;
 /** process 已結束（或已 SIGKILL）後，再等多久 stdio 還沒關就放棄等待。 */
 const PRINT_HARD_DEADLINE_MS = 5_000;
-/** 單輪輸出收集上限（超過的部分丟棄）。 */
+/** 單輪 log 檔上限；收集時留 2 倍緩衝，先整段脫敏再截斷，切點不會把 token 切成脫敏抓不到的半截。 */
 const PRINT_LOG_MAX_BYTES = 1024 * 1024;
+const PRINT_RAW_MAX_BYTES = 2 * PRINT_LOG_MAX_BYTES;
 
 /**
  * contained `/tp-request` 的唯一執行路徑：`claude -p`（headless、跑完 process 就結束）。輸出脫敏後寫進 scripts/logs/tp-request/<runName>.log；結束後清掉 session 目錄（含 token 檔）。
@@ -256,7 +257,7 @@ async function runContainedPrint(
   try {
     // prepare 寫到一半失敗也會留下已寫好的 token 檔，所以清理放在 try 外層的 finally，一律執行。
     const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
-    if (!prepared) return { ok: false, timedOut: false };
+    if (!prepared) return { ok: false, timedOut: false, started: false };
     const cmd = buildContainedShellCommand({
       claudeBin: CLAUDE_BIN, sessionDir: prepared.sessionDir,
       settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
@@ -278,16 +279,16 @@ async function runContainedPrint(
       // 收完整段再脫敏寫檔（token 不會剛好被切在兩個 chunk 之間漏過去），但設上限防被注入的大量輸出吃記憶體。
       const chunks: Buffer[] = [];
       let bytes = 0;
-      const collect = (b: Buffer) => { if (bytes < PRINT_LOG_MAX_BYTES) { chunks.push(b); bytes += b.length; } };
+      const collect = (b: Buffer) => { if (bytes < PRINT_RAW_MAX_BYTES) { chunks.push(b); bytes += b.length; } };
       const timers: Array<ReturnType<typeof setTimeout>> = [];
-      const finish = (ok: boolean) => {
+      const finish = (ok: boolean, started = true) => {
         if (done) return; // 'error'、'exit'、'close' 與硬性期限都可能各來一次
         done = true;
         timers.forEach(clearTimeout);
         child.stdout.destroy();
         child.stderr.destroy();
-        try { appendFileSync(logFile, scrub(Buffer.concat(chunks).toString()), { mode: 0o600 }); } catch { /* best-effort log */ }
-        resolve({ ok: ok && !timedOut, timedOut });
+        try { appendFileSync(logFile, scrub(Buffer.concat(chunks).toString()).slice(0, PRINT_LOG_MAX_BYTES), { mode: 0o600 }); } catch { /* best-effort log */ }
+        resolve({ ok: ok && !timedOut, timedOut, started });
       };
       // 先 SIGTERM：sudo 會轉發給 tp-agent 的 claude；直接 SIGKILL 只砍得到 sudo，claude 會變孤兒（實測）。
       // 寬限後 SIGKILL，再給一段時間仍沒結束就硬性放棄等待，鎖不能因為卡住的 process 永遠不釋放。
@@ -301,7 +302,7 @@ async function runContainedPrint(
       }, PRINT_RUN_TIMEOUT_MS));
       child.stdout.on('data', collect);
       child.stderr.on('data', collect);
-      child.on('error', (err) => { logError(`contained print spawn 失敗：${err.message}`); finish(false); });
+      child.on('error', (err) => { logError(`contained print spawn 失敗：${err.message}`); finish(false, false); });
       // 'close' 要等所有持有 pipe 的子孫都結束；claude 退了但 MCP 子程序還活著時會被拖住，所以也聽 'exit' 並短暫等待。
       child.on('exit', (code) => { timers.push(setTimeout(() => finish(code === 0), PRINT_HARD_DEADLINE_MS)); });
       child.on('close', (code) => finish(code === 0));

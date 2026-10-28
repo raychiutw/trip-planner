@@ -131,6 +131,23 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(host.effects.some((e) => e.endsWith(':100'))).toBe(false);
   });
 
+  it('根本沒開始處理（prepare 失敗、spawn error）：不收屍，請求留在隊列給下一個 tick 重試', async () => {
+    const host = fakeHost({ pending: 2, processes: false, results: [{ ok: false, timedOut: false, started: false }] });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.runs()).toBe(1); // 不在同一個 tick 內硬重跑
+    expect(host.effects).toEqual([]); // 沒被嘗試過的請求不能被標成「處理失敗」
+    expect(host.queue()).toEqual([1, 2]);
+    expect(worker.status().runningSkills).toEqual([]);
+  });
+
+  it('started 缺省視為已開始（process 有跑，只是失敗）：照舊收屍', async () => {
+    const host = fakeHost({ pending: 2, processes: false, results: [{ ok: false, timedOut: false }] });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.effects).toEqual(['reap:error:1', 'reap:error:2']);
+  });
+
   it('runContainedPrint 丟例外也釋放鎖並收屍為 error', async () => {
     const host = fakeHost({ pending: 1 });
     host.deps.runContainedPrint = async () => { throw new Error('spawn failed'); };
@@ -222,6 +239,13 @@ describe('tripline-api-server 接線', () => {
   it('runAsAgent 有 timeout（spawnSync 會凍住整個 event loop）；清理失敗要 alert', () => {
     expect(src).toMatch(/spawnSync\('sudo'[\s\S]*?timeout: RUN_AS_AGENT_TIMEOUT_MS/);
     expect(src).toMatch(/throttledAlert\('print-run-cleanup-failed'/);
+  });
+
+  it('prepare 失敗與 spawn error 回報 started:false（讓 worker 不收屍）；輸出先脫敏再截斷', () => {
+    expect(src).toMatch(/if \(!prepared\) return \{ ok: false, timedOut: false, started: false \};/);
+    expect(src).toMatch(/logError\(`contained print spawn 失敗[\s\S]*?finish\(false, false\)/);
+    expect(src).toMatch(/PRINT_RAW_MAX_BYTES/);
+    expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)\.slice\(0, PRINT_LOG_MAX_BYTES\)/);
   });
 
   it('清理在最外層 finally：prepare 寫到一半失敗也會清；殘留子程序一併殺；rm 失敗要記 log', () => {

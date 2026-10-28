@@ -13,8 +13,12 @@ import { waitForRepl, submitSkillCommand, type TmuxDeps } from './tmux-pane';
 export interface PendingRequest { requestId: string; tripId: string }
 export interface AcquiredToken { token: string; restrictTrip?: string }
 export type TickResult = 'spawned' | 'busy' | 'idle' | 'failed';
-/** `claude -p` 一次執行的結果：ok = exit 0；timedOut = 被逾時砍掉。 */
-export interface PrintRunResult { ok: boolean; timedOut: boolean }
+/**
+ * `claude -p` 一次執行的結果：ok = exit 0；timedOut = 被逾時砍掉；
+ * started = false 表示 claude 根本沒開始處理（目錄佈置失敗、spawn 失敗）——請求沒被嘗試過，不能算「處理失敗」。
+ * 省略視為 true（process 有跑）。
+ */
+export interface PrintRunResult { ok: boolean; timedOut: boolean; started?: boolean }
 
 export interface WorkerDeps {
   fetch: typeof fetch;
@@ -281,7 +285,13 @@ export function createRequestWorker(deps: WorkerDeps) {
         const before = await listPendingIds(restrictTrip);
         for (const id of before ?? []) attempted.add(id);
         last = await deps.runContainedPrint(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
-        deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}）`);
+        deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}, started=${last.started ?? true}）`);
+        // 基礎設施失敗（sudo 暫時失靈、磁碟滿…）：請求沒被嘗試過，留在隊列給下一個 tick 重試，
+        // 由 100 分鐘牆鐘兜底；標成 failed 會讓使用者的請求因為我們這邊的暫時故障而白白作廢。
+        if (last.started === false) {
+          deps.logError(`contained print ${sessionName} 第 ${round} 輪未能開始處理 → 不收屍，留給下一個 tick`);
+          return false;
+        }
         const after = await listPendingIds(restrictTrip);
         if (after && after.length === 0) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
         // 查不到、process 失敗、或剩下的全是這輪開始前就在隊列的請求（已被嘗試卻沒處理成功）→ 不再重跑：
