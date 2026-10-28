@@ -24,6 +24,8 @@ export const PRINT_HARD_DEADLINE_MS = 5_000;
 /** 單輪 log 檔上限；原始收集留 2 倍緩衝。 */
 export const PRINT_LOG_MAX_BYTES = 1024 * 1024;
 export const PRINT_RAW_MAX_BYTES = 2 * PRINT_LOG_MAX_BYTES;
+/** 截斷時結尾留的安全邊界，要大於任何 token 長度（restrict token 約數百字元）。 */
+export const PRINT_RAW_TAIL_MARGIN_BYTES = 4096;
 
 interface StreamLike {
   on(event: 'data', cb: (chunk: Buffer) => void): unknown;
@@ -45,6 +47,8 @@ export interface SuperviseOpts {
   hardDeadlineMs: number;
   rawMaxBytes: number;
   logMaxBytes: number;
+  /** 原始收集被截斷時，結尾丟掉這麼多 bytes 才脫敏：token 若跨在截斷點上，脫敏只看得到前半截，會原樣寫進 log。 */
+  rawTailMarginBytes?: number;
   scrub: (text: string) => string;
   writeLog: (text: string) => void;
   onSpawnError?: (err: Error) => void;
@@ -56,7 +60,8 @@ export function superviseRun(child: RunChild, o: SuperviseOpts): Promise<PrintRu
     let done = false;
     const chunks: Buffer[] = [];
     let bytes = 0;
-    const collect = (b: Buffer) => { if (bytes < o.rawMaxBytes) { chunks.push(b); bytes += b.length; } };
+    let truncated = false;
+    const collect = (b: Buffer) => { if (bytes < o.rawMaxBytes) { chunks.push(b); bytes += b.length; } else truncated = true; };
     const timers: Array<ReturnType<typeof setTimeout>> = [];
 
     const finish = (ok: boolean, started = true) => {
@@ -65,7 +70,11 @@ export function superviseRun(child: RunChild, o: SuperviseOpts): Promise<PrintRu
       timers.forEach(clearTimeout);
       child.stdout.destroy();
       child.stderr.destroy();
-      try { o.writeLog(o.scrub(Buffer.concat(chunks).toString()).slice(0, o.logMaxBytes)); } catch { /* best-effort log */ }
+      try {
+        const raw = Buffer.concat(chunks);
+        const kept = truncated ? raw.subarray(0, Math.max(0, raw.length - (o.rawTailMarginBytes ?? PRINT_RAW_TAIL_MARGIN_BYTES))) : raw;
+        o.writeLog(Buffer.from(o.scrub(kept.toString())).subarray(0, o.logMaxBytes).toString());
+      } catch { /* best-effort log */ }
       resolve({ ok: ok && !timedOut, timedOut, started });
     };
 
