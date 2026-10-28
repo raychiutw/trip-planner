@@ -248,31 +248,40 @@ async function runContainedPrint(
 ): Promise<PrintRunResult> {
   const sessionDir = `${CONTAINED_BASE_DIR}/${runName}`;
   try {
-    // prepare 寫到一半失敗也會留下已寫好的 token 檔，所以清理放在 try 外層的 finally，一律執行。
-    const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
-    if (!prepared) return { ok: false, timedOut: false, started: false };
-    const cmd = buildContainedShellCommand({
-      claudeBin: CLAUDE_BIN, sessionDir: prepared.sessionDir,
-      settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
-      tokenFilePath: prepared.tokenFilePath, skillCommand,
-    });
-    const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
-    // log 只是輔助：目錄建不起來不能讓整輪 reject（worker 會當成處理失敗而收屍）；寫檔本身也是 best-effort。
-    try { mkdirSync(logDir, { recursive: true }); } catch { /* best-effort log */ }
-    const logFile = join(logDir, `${runName}.log`);
+    // 佈置與 spawn 階段的任何例外（例如 git pull 窗口讀不到 MCP server 檔）＝ claude 根本沒開始處理：
+    // 回 started:false 讓 worker 不收屍；往上拋會被當成「處理失敗」而把使用者請求標成 failed。
+    // 清理放在外層 finally：prepare 寫到一半失敗也會留下已寫好的 token 檔。
+    let child: ReturnType<typeof spawn>;
+    let logFile: string;
+    try {
+      const prepared = prepareContainedSessionDir(runName, token, restrictTrip);
+      if (!prepared) return { ok: false, timedOut: false, started: false };
+      const cmd = buildContainedShellCommand({
+        claudeBin: CLAUDE_BIN, sessionDir: prepared.sessionDir,
+        settingsPath: CONTAINED_SETTINGS_PATH, mcpConfigPath: prepared.mcpConfigPath,
+        tokenFilePath: prepared.tokenFilePath, skillCommand,
+      });
+      const logDir = join(PROJECT_DIR, 'scripts', 'logs', skillCommand.replace(/^\//, '').replace(/[^a-zA-Z0-9-]/g, '-'));
+      // log 只是輔助：目錄建不起來不能讓整輪失敗；寫檔本身也是 best-effort。
+      try { mkdirSync(logDir, { recursive: true }); } catch { /* best-effort log */ }
+      logFile = join(logDir, `${runName}.log`);
+      child = spawn('/bin/sh', ['-c', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (err) {
+      logError(`contained print 啟動前失敗（不收屍，留給下一個 tick）：${err instanceof Error ? err.message : String(err)}`);
+      return { ok: false, timedOut: false, started: false };
+    }
     // 精確字串（這次的 restrict token、OAuth token）+ 通用格式；restrict token 是不透明字串，regex 抓不到。
     const secrets = [token, process.env.CLAUDE_CODE_OAUTH_TOKEN || ''].filter((v) => v.length >= 8);
     const scrub = (t: string) => secrets
       .reduce((acc, sec) => acc.split(sec).join('<redacted>'), t)
       .replace(/[Bb]earer [A-Za-z0-9._~+/=-]+/g, 'Bearer <redacted>')
       .replace(/sk-ant-[A-Za-z0-9_-]+/g, '<redacted>');
-    const child = spawn('/bin/sh', ['-c', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
     return await superviseRun(child, {
       timeoutMs: PRINT_RUN_TIMEOUT_MS, killGraceMs: PRINT_KILL_GRACE_MS, hardDeadlineMs: PRINT_HARD_DEADLINE_MS,
       rawMaxBytes: PRINT_RAW_MAX_BYTES, logMaxBytes: PRINT_LOG_MAX_BYTES,
       scrub,
       writeLog: (text) => appendFileSync(logFile, text, { mode: 0o600 }),
-      onSpawnError: (err) => logError(`contained print spawn 失敗：${err.message}`),
+      onSpawnError: (err) => logError(`contained print child error：${err.message}`),
     });
   } finally {
     // 殘留的 claude／MCP 子程序（指令列帶有這一輪的 session 目錄）一併清掉，避免帶著 restrict token 繼續動行程。

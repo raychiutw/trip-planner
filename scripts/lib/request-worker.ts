@@ -91,6 +91,7 @@ export function createRequestWorker(deps: WorkerDeps) {
       try {
         const res = await deps.fetch(`${deps.apiBase}/api/requests?status=${status}&sort=asc&limit=1`, {
           headers: { Authorization: `Bearer ${svcToken}` },
+          signal: AbortSignal.timeout(QUEUE_FETCH_TIMEOUT_MS),
         });
         if (!res.ok) continue;
         const data = ((await res.json().catch(() => null)) ?? {}) as { items?: Array<{ id?: unknown; tripId?: unknown }> };
@@ -110,6 +111,7 @@ export function createRequestWorker(deps: WorkerDeps) {
     const res = await deps.fetch(`${deps.apiBase}/api/oauth/mint-restricted`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${deps.apiSecret}`, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(QUEUE_FETCH_TIMEOUT_MS),
       body: JSON.stringify({ request_id: requestId }),
     });
     if (!res.ok) {
@@ -303,9 +305,13 @@ export function createRequestWorker(deps: WorkerDeps) {
         }
         const after = await listPendingIds(restrictTrip);
         if (after && after.length === 0) return last.ok; // process 失敗但已無待處理：不需收屍，也不算成功
-        // 查不到、process 失敗、或剩下的全是這輪開始前就在隊列的請求（已被嘗試卻沒處理成功）→ 不再重跑：
-        // 重跑同一批只會把不可信輸入觸發的花費乘上輪數。只有「執行當中才到的新請求」才值得再跑一輪。
-        if (!after || !last.ok || !after.some((id) => !before || !before.includes(id))) break;
+        // 只有「這輪開始時隊列已知、而執行當中才到了新請求」才值得再跑一輪。查不到隊列、process 失敗、或沒有新請求
+        // （剩下的全是已被嘗試卻沒處理成功的）→ 不再重跑：重跑同一批只會把不可信輸入觸發的花費乘上輪數。
+        if (!after || !before || !last.ok) break;
+        const stale = after.filter((id) => before.includes(id));
+        if (stale.length === after.length) break; // 沒有新請求
+        // skill 會處理隊列裡所有待處理請求，沒辦法只挑新的跑：先把已被嘗試卻沒處理成功的收屍，下一輪就只剩新請求。
+        if (stale.length) await reap(restrictTrip, 'error', new Set(stale));
       }
       await reap(restrictTrip, last.timedOut ? 'timed_out' : 'error', attempted);
     } catch (error) {

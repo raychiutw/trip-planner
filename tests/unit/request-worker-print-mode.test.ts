@@ -20,7 +20,7 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
     log: () => {}, logError: () => {}, alert: () => {}, containmentReady: () => true,
     fetch: async (input, init) => {
       const url = new URL(String(input));
-      if (url.pathname.startsWith('/api/requests') && !init?.signal) unguardedFetches.push(`${init?.method ?? 'GET'} ${url.pathname}${url.search}`);
+      if ((url.pathname.startsWith('/api/requests') || url.pathname.endsWith('mint-restricted')) && !init?.signal) unguardedFetches.push(`${init?.method ?? 'GET'} ${url.pathname}${url.search}`);
       if (url.pathname.endsWith('mint-restricted')) return Response.json({ access_token: 'trip-token', restrict_trip: 't1' });
       if (url.pathname === '/api/requests' && init?.method !== 'PATCH') {
         // 只在 open 回整個隊列，避免 processing + open 被當成兩批
@@ -162,12 +162,39 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(host.queue()).toEqual([100]);
   });
 
+  it('新請求到達時，已嘗試卻沒處理成功的請求先收屍，再為新請求跑下一輪（不原樣重跑同一批）', async () => {
+    // 第 1 輪處理掉 id=1、執行當中進來 100；id=2 被嘗試卻沒處理 → 先收屍 2，第 2 輪只剩 100
+    const host = fakeHost({ pending: 2, arrivals: { 1: 1 } });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('spawned');
+    expect(host.runs()).toBe(2);
+    expect(host.effects).toEqual(['reap:error:2']);
+    expect(host.queue()).toEqual([]);
+  });
+
+  it('輪次判斷查不到「這輪開始時的隊列」時不當成全是新請求去重跑', async () => {
+    const host = fakeHost({ pending: 2, arrivals: { 1: 1 } });
+    const original = host.deps.fetch;
+    let tripListCalls = 0;
+    host.deps.fetch = (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/api/requests' && init?.method !== 'PATCH' && url.searchParams.has('tripId')) {
+        tripListCalls++;
+        if (tripListCalls === 1) return Promise.resolve(Response.json({ unavailable: true })); // 只有第 1 輪的 before 讀不到（一失敗 listPendingIds 就直接回 null，不會再打第二個狀態）
+      }
+      return original(input, init);
+    };
+    const worker = createRequestWorker(host.deps);
+    await worker.tick('job');
+    expect(host.runs()).toBe(1);
+  });
+
   it('鎖內每個打 /api/requests 的 fetch 都帶 timeout signal（連線卡住不能讓 /tp-request 永遠 busy）', async () => {
     const host = fakeHost({ pending: 2, processes: false });
     const worker = createRequestWorker(host.deps);
     await worker.tick('job');
-    // tick 一開始的 peek 是既有行為不在此限；其餘（列出隊列、收屍的列表與 PATCH）都要有
-    expect(host.unguardedFetches.filter((f) => !/sort=asc/.test(f))).toEqual([]);
+    // peek、mint、列出隊列、收屍的列表與 PATCH 都在鎖內，都要有
+    expect(host.unguardedFetches).toEqual([]);
   });
 
   it('runContainedPrint 丟例外也釋放鎖並收屍為 error', async () => {
@@ -250,6 +277,14 @@ describe('tripline-api-server 接線', () => {
     expect(src).toMatch(/await superviseRun\(child, \{/);
     expect(src).toMatch(/writeLog: \(text\) => appendFileSync\(logFile, text, \{ mode: 0o600 \}\)/);
     expect(src).toMatch(/scrub,/);
+  });
+
+  it('佈置／spawn 階段的例外回報 started:false，不往上拋（否則會被當成處理失敗而收屍）', () => {
+    expect(src).toMatch(/catch \(err\) \{\s*logError\(`contained print 啟動前失敗[\s\S]*?return \{ ok: false, timedOut: false, started: false \};/);
+    // 整個 prepare → spawn 都在這個 try 之內
+    const body = src.slice(src.indexOf('async function runContainedPrint('));
+    expect(body.indexOf('prepareContainedSessionDir(runName')).toBeLessThan(body.indexOf('啟動前失敗'));
+    expect(body.indexOf("spawn('/bin/sh'")).toBeLessThan(body.indexOf('啟動前失敗'));
   });
 
   it('log 目錄只是輔助：mkdir 失敗不能讓整輪 reject（會被當成處理失敗而收屍）', () => {

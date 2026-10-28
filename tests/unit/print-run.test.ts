@@ -95,6 +95,22 @@ describe('superviseRun（claude -p 一輪的計時與收尾）', () => {
     expect(logs).toHaveLength(1);
   });
 
+  it('kill() 失敗也會觸發 error（例如 EPERM）：已逾時的 run 不能被誤判成「沒開始」', async () => {
+    const { child, result } = setup();
+    await vi.advanceTimersByTimeAsync(T.timeoutMs);
+    child.emit('error', new Error('kill EPERM'));
+    child.emit('exit', null); child.emit('close', null);
+    expect(await result).toMatchObject({ ok: false, timedOut: true, started: true });
+  });
+
+  it('已經有輸出之後才來的 error 也代表 process 有跑：不收尾成 started:false，交給 exit/close 決定', async () => {
+    const { child, result } = setup();
+    child.stdout.emit('data', Buffer.from('working…'));
+    child.emit('error', new Error('stdio hiccup'));
+    child.emit('exit', 0); child.emit('close', 0);
+    expect(await result).toEqual({ ok: true, timedOut: false, started: true });
+  });
+
   it('exit、close、硬性期限都來也只收尾一次', async () => {
     const { child, logs, result } = setup();
     child.emit('exit', 0); child.emit('close', 0);

@@ -80,7 +80,13 @@ export function superviseRun(child: RunChild, o: SuperviseOpts): Promise<PrintRu
 
     child.stdout.on('data', collect);
     child.stderr.on('data', collect);
-    child.on('error', (err) => { o.onSpawnError?.(err); finish(false, false); });
+    child.on('error', (err) => {
+      o.onSpawnError?.(err);
+      // 'error' 不只在 spawn 失敗時來，kill() 失敗（例如 EPERM）也會：已逾時、或已經有輸出，代表 process 有跑，
+      // 不能算「沒開始」（worker 會因此不收屍而讓同一批請求被原樣重跑），交給 exit／close／期限收尾。
+      if (timedOut || bytes > 0) return;
+      finish(false, false);
+    });
     child.on('exit', (code) => { timers.push(setTimeout(() => finish(code === 0), o.hardDeadlineMs)); });
     child.on('close', (code) => finish(code === 0));
   });
