@@ -55,7 +55,7 @@
 
 ## 更新（2026-10-27）：contained 路徑改為 `claude -p`
 
-contained `/tp-request` 不再是常駐 tmux REPL + watcher：每輪是一個 `claude -p` process，結束即處理完（最多 `PRINT_MAX_ROUNDS`=3 輪 × 單輪 10 分鐘逾時，約 31 分鐘）。上文「session 的 `tripHasPending()` 自己 kill-session」的機制只剩 plain tmux session（`/tp-daily-check`）還適用；`ORPHAN_MAX_AGE_MS`（90 分鐘）仍是 `cleanupOrphans` 的上限，所以「牆鐘必須大於它」的不變量不變（由 `request-worker.test.ts` 鎖住），100 分鐘對 contained 路徑只是更寬鬆的安全網。
+contained `/tp-request` 不再是常駐 tmux REPL + watcher：每輪是一個 `claude -p` process，結束即處理完（最多 `PRINT_MAX_ROUNDS`=3 輪 × 單輪 30 分鐘逾時，約 91 分鐘）。上文「session 的 `tripHasPending()` 自己 kill-session」的機制只剩 plain tmux session（`/tp-daily-check`）還適用；`ORPHAN_MAX_AGE_MS`（90 分鐘）仍是 `cleanupOrphans` 的上限，所以「牆鐘必須大於它」的不變量不變（由 `request-worker.test.ts` 鎖住），contained 路徑最壞情況（3 輪都跑滿）約 91 分鐘，仍小於 100 分鐘牆鐘，但餘裕只有幾分鐘；通常一輪數秒到數分鐘就結束。
 
 第一層收屍的範圍也收窄了：只收「該輪開始時就在隊列」（已被嘗試過）的請求，之後才到的新請求留給下一個 tick；原因 `timed_out` 只給真的逾時，其餘一律 `error`。細節見 `scripts/tp-request-contained/README.md`。
 

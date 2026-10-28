@@ -84,9 +84,9 @@ grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' /Users/ray/Projects/trip-planner/.env.local 
 
 v2.30.7 曾因冷啟動可靠度放棄 `-p`，改用 tmux 互動式 REPL；但 REPL 做完就閒置，**同一行程之後又進來的新請求沒有人再叫它處理**，要等到 90 分鐘 orphan cap 才被收屍（#287）。2026-10-27 在現行 CLI（2.1.311）以 tp-agent + `env -i` + `dontAsk` + `--strict-mcp-config` 實測 22 次全 exit 0、約 6 秒，skill 與 MCP 都正常載入，所以直接改回 `-p`，不設旗標。
 
-- 隔離參數與先前完全相同（`buildContainedShellCommand`：`sudo -u tp-agent`、`env -i`、`dontAsk`、`--settings`、`--strict-mcp-config`、0600 token 檔），多了 `-p <skill>` 與 `--max-turns 80`（耗盡時 exit 1，視為失敗）；stdin 接 `/dev/null`。
+- 隔離參數與先前完全相同（`buildContainedShellCommand`：`sudo -u tp-agent`、`env -i`、`dontAsk`、`--settings`、`--strict-mcp-config`、0600 token 檔），多了 `-p <skill>` 與 `--max-turns 150`（耗盡時 exit 1，視為失敗）；stdin 接 `/dev/null`。
 - process 結束就是處理完；輪間若同一行程又進來新請求就再跑一輪（上限 `PRINT_MAX_ROUNDS`=3）。
-- **失敗收屍**：非 0 結束、逾時（10 分鐘）、輪數用盡仍有待處理 → 就地標終結，但**只收「該輪開始時就在隊列」的請求**；之後才到的新請求沒被看過，留給下一個 tick。原因：真逾時 `timed_out`，其餘（含 exit 0 卻沒處理）`error`。
+- **失敗收屍**：非 0 結束、逾時（單輪 30 分鐘）、輪數用盡仍有待處理 → 就地標終結，但**只收「該輪開始時就在隊列」的請求**；之後才到的新請求沒被看過，留給下一個 tick。原因：真逾時 `timed_out`，其餘（含 exit 0 卻沒處理）`error`。
 - **逾時先 SIGTERM**（sudo 會轉發給 claude；直接 SIGKILL 只殺得到 sudo，claude 會變孤兒，實測），寬限 10 秒才 SIGKILL，再給 5 秒就放棄等待，tick 鎖不會被卡住的 process 永遠佔住。
 - **清理**：每輪結束（含 prepare 寫到一半失敗）都殺殘留子程序（命令列帶該輪目錄）並刪 session 目錄（含 token 檔）。
 - **api-server 啟動時清掃**上一代殘留（`print-run-sweep.ts`）：重啟不會帶走 tp-agent 的 claude，舊目錄與 token 檔也不會自己消失。這同時會清掉升級前舊 REPL 路徑留下的目錄。
@@ -95,14 +95,16 @@ v2.30.7 曾因冷啟動可靠度放棄 `-p`，改用 tmux 互動式 REPL；但 R
 
 ## 已知限制（不擋 merge，維運時要知道）
 
-- **全域序列鎖，最長約 31 分鐘**：`tick` 持有單一 `/tp-request` 鎖，3 輪 × 10 分鐘逾時。同一個旅伴連續灌請求會讓其他行程排隊；失敗會收屍所以不會無限，但沒有 per-trip 冷卻。鎖在記憶體，跨進程保護靠 api-server 單實例（launchd）與啟動清掃。
+- **全域序列鎖，最長約 91 分鐘**：`tick` 持有單一 `/tp-request` 鎖，最多 3 輪 × 單輪 30 分鐘逾時（通常 10 秒內結束；只有「執行當中才到的新請求」才會多跑一輪）。同一個旅伴連續灌請求會讓其他行程排隊；失敗會收屍所以不會無限，但沒有 per-trip 冷卻。鎖在記憶體，跨進程保護靠 api-server 單實例（launchd）與啟動清掃。
 - **脫敏是精確字串 + 兩條 regex**：若 claude 輸出把 token 做 JSON 轉義、URL-encode 或截斷後印出會漏。log 檔 0600，但內容含旅伴對話，`scripts/logs/` 不要被別的備份或 sync 流程帶走。
 - **沒開始處理 vs 處理失敗**：目錄佈置失敗、spawn 失敗（`started:false`）不收屍，請求留給下一個 tick 重試；claude 有跑但非 0 結束（含 OAuth token 過期／被停用而秒退）視為處理失敗，立刻標 `error` —— 使用者看得到失敗，而不是像舊 REPL 路徑那樣空等 18 分鐘（2026-10-27 事故）。
 - **清理失敗的殘留只在 api-server 啟動時補清**：`rm` 失敗會 alert，但沒有週期性重掃；api-server 常駐數週不重啟時，殘留的 token 檔（tp-agent 0600）會留著。
+- **單輪上限 30 分鐘／150 輪是估計值**：舊 REPL 路徑的上限是 90 分鐘（#237 多天餐廳替換超過 40 分鐘），這裡在不放大花費與讓大型請求做得完之間取折衷，尚未用真實的大型請求驗證；做不完會被標 `error`。`.claude/skills/tp-request/SKILL.md` 裡「做不完先回報進度、status 保持 processing、下一輪接續」只適用一般（plain）模式，contained 的 `-p` 一輪就要做完。
+- **不要在同一台機器用別的 `TRIPLINE_PORT` 再起一個 api-server 實例**：啟動清掃是機器層級的（`CONTAINED_BASE_DIR` 底下所有 run 目錄），第二個實例會把正式實例進行中的 run 一併殺掉並刪目錄。
 - **同一批請求只跑一輪**：exit 0 卻沒處理完（agent 拒絕、被注入訊息誘導不更新狀態）不會重跑，直接收屍為 `error`；只有「執行當中才到的新請求」才會再跑一輪。
 
 ## 已知 follow-up
 
-- **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-request 的呼叫額度；`--max-turns 80` 與 10 分鐘逾時只是上限，被注入的 message 仍可能在這個範圍內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
+- **per-session Google-API 額度** —— `recomputeTravel` / `enrichPoi` / `poiSearch` 會打有計費的 Google API，目前沒有 per-request 的呼叫額度；`--max-turns 150` 與 10 分鐘逾時只是上限，被注入的 message 仍可能在這個範圍內燒額度。之後用 `bumpRateLimit` 加一個以 request 為 key 的額度。
 - **信任 skill 的 token 上 argv** —— `/tp-daily-check` 的 plain session 仍把 service token 插在 tmux 指令列（既有行為、`ps` 看得到）；這不是 `/tp-request` 的 fallback。後續可比照 contained 路徑改走 stdin。
 - **deny 用列舉（Claude Code 沒有「只准 allow、其餘全 deny」的權威模式）** —— `dontAsk` 會把未列的 meta-tool（Skill / ToolSearch / Workflow / Artifact …）當豁免放行，所以 `settings.json` 得**逐一列 deny**。風險：claude 未來新增一個沒列到的工具會漏。緩解：(1) **Layer A**（tp-agent OS 隔離）擋掉 FS/exec 類漏洞（讀憑證、跑 script）；(2) 真正需要 deny 擋的是**網路/外洩/spawn 類**（WebFetch / Artifact / SendUserFile / Workflow / Agent），這些已列。升 claude 版本後值得重跑 (0b) 的工具清單檢查、必要時補 deny。

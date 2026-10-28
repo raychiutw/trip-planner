@@ -57,6 +57,8 @@ export const LEGACY_SESSION_PREFIX = 'tripline-request-';
 export const ORPHAN_MAX_AGE_MS = 90 * 60 * 1000; // 90 minutes
 /** 列出某行程待處理請求時的單頁筆數；與 functions/api/requests.ts 的上限一致（超過會被截成 50）。 */
 const PENDING_LIST_PAGE_SIZE = 50;
+/** 鎖內查隊列／收屍的單次 fetch 逾時；連線卡住不能讓 /tp-request 永遠 busy。 */
+export const QUEUE_FETCH_TIMEOUT_MS = 15_000;
 
 /** print 模式同一行程連續處理的輪數上限（每輪處理完仍有新請求才會再跑）。 */
 export const PRINT_MAX_ROUNDS = 3;
@@ -286,13 +288,17 @@ export function createRequestWorker(deps: WorkerDeps) {
     try {
       for (let round = 1; round <= PRINT_MAX_ROUNDS; round++) {
         const before = await listPendingIds(restrictTrip);
+        const priorAttempted = new Set(attempted); // 前幾輪已被嘗試過的（不含這輪才第一次看到的）
         for (const id of before ?? []) attempted.add(id);
         last = await deps.runContainedPrint(`${sessionName}-r${round}`, skillCommand, token, restrictTrip);
         deps.log(`contained print: ${sessionName} 第 ${round} 輪結束（ok=${last.ok}, timedOut=${last.timedOut}, started=${last.started ?? true}）`);
         // 基礎設施失敗（sudo 暫時失靈、磁碟滿…）：請求沒被嘗試過，留在隊列給下一個 tick 重試，
         // 由 100 分鐘牆鐘兜底；標成 failed 會讓使用者的請求因為我們這邊的暫時故障而白白作廢。
         if (last.started === false) {
-          deps.logError(`contained print ${sessionName} 第 ${round} 輪未能開始處理 → 不收屍，留給下一個 tick`);
+          // 第 2 輪以後才沒能開始：前幾輪已被嘗試卻沒處理成功的請求不能留著，否則下個 tick 會原樣重跑它們。
+          // 這輪才第一次看到的請求沒被嘗試過，不動。
+          deps.logError(`contained print ${sessionName} 第 ${round} 輪未能開始處理 → 不收屍${priorAttempted.size ? '（已嘗試過的除外）' : ''}，其餘留給下一個 tick`);
+          if (priorAttempted.size) await reap(restrictTrip, 'error', priorAttempted);
           return false;
         }
         const after = await listPendingIds(restrictTrip);
@@ -322,7 +328,7 @@ export function createRequestWorker(deps: WorkerDeps) {
       for (const status of ['processing', 'open'] as const) {
         const res = await deps.fetch(
           `${deps.apiBase}/api/requests?status=${status}&tripId=${encodeURIComponent(tripId)}&limit=${PENDING_LIST_PAGE_SIZE}`,
-          { headers: { Authorization: `Bearer ${svc}` } },
+          { headers: { Authorization: `Bearer ${svc}` }, signal: AbortSignal.timeout(QUEUE_FETCH_TIMEOUT_MS) },
         );
         if (!res.ok) return null;
         const data = (await res.json().catch(() => null)) as { items?: Array<{ id?: unknown }> } | null;
@@ -344,7 +350,7 @@ export function createRequestWorker(deps: WorkerDeps) {
   /** ADR-0007 第一層：確定沒人會再處理時，把該 trip 的 open/processing 請求就地標終結（`only` 縮小範圍）。 */
   function reap(tripId: string, reason: ReapReason, only?: ReadonlySet<number>): Promise<number> {
     return failPendingRequests(
-      { fetch: deps.fetch, apiBase: deps.apiBase, getToken: deps.getServiceToken, log: deps.log, logError: deps.logError },
+      { fetch: deps.fetch, apiBase: deps.apiBase, getToken: deps.getServiceToken, log: deps.log, logError: deps.logError, fetchTimeoutMs: QUEUE_FETCH_TIMEOUT_MS },
       tripId,
       reason,
       only,

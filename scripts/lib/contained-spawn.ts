@@ -13,7 +13,7 @@
 export const TP_AGENT_USER = 'tp-agent';
 
 /** 單輪 `claude -p` 的 tool-call 輪數上限；耗盡時 claude 以 exit 1 結束（實測），worker 視為失敗並收屍。 */
-export const PRINT_MAX_TURNS = 80;
+export const PRINT_MAX_TURNS = 150;
 
 /** Minimal, secret-free PATH for the scrubbed (`env -i`) contained claude process. */
 export const CONTAINED_PATH = '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin';

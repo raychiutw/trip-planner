@@ -24,6 +24,8 @@ export interface FailPendingDeps {
   getToken: () => Promise<string>;
   log: (msg: string) => void;
   logError: (msg: string) => void;
+  /** 每個 fetch 的逾時（ms）；省略 = 不設（舊呼叫端相容）。 */
+  fetchTimeoutMs?: number;
 }
 
 /**
@@ -52,13 +54,14 @@ export async function failPendingRequests(
     return 0;
   }
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const signal = () => (deps.fetchTimeoutMs ? AbortSignal.timeout(deps.fetchTimeoutMs) : undefined);
 
   const ids: number[] = [];
   for (const status of ['processing', 'open'] as const) {
     try {
       const url = `${deps.apiBase}/api/requests?status=${status}`
         + `&tripId=${encodeURIComponent(tripId)}&limit=50`;
-      const res = await deps.fetch(url, { headers });
+      const res = await deps.fetch(url, { headers, signal: signal() });
       // 不確定就不動手：查不到 ≠ 沒有待處理。誤判成「沒有」只是這輪不收（牆鐘兜底），
       // 誤判成「有」則無從發生（下面只走 items 裡真的有的 id）。
       if (!res.ok) {
@@ -85,6 +88,7 @@ export async function failPendingRequests(
       const res = await deps.fetch(`${deps.apiBase}/api/requests/${id}`, {
         method: 'PATCH',
         headers,
+        signal: signal(),
         body: JSON.stringify({ status: 'failed', terminalReason: reason }),
       });
       if (res.ok) {

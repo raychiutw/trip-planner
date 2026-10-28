@@ -12,6 +12,7 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
   let runs = 0;
   const effects: string[] = [];
   const tmuxSessions: string[] = [];
+  const unguardedFetches: string[] = []; // 鎖內、沒帶 timeout signal 的 fetch
   const deps: WorkerDeps = {
     apiBase: 'https://api.test', apiSecret: 'bootstrap', pid: 7,
     getServiceToken: async () => 'service', userTokenEnabled: (skill) => skill === '/tp-request',
@@ -19,6 +20,7 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
     log: () => {}, logError: () => {}, alert: () => {}, containmentReady: () => true,
     fetch: async (input, init) => {
       const url = new URL(String(input));
+      if (url.pathname.startsWith('/api/requests') && !init?.signal) unguardedFetches.push(`${init?.method ?? 'GET'} ${url.pathname}${url.search}`);
       if (url.pathname.endsWith('mint-restricted')) return Response.json({ access_token: 'trip-token', restrict_trip: 't1' });
       if (url.pathname === '/api/requests' && init?.method !== 'PATCH') {
         // 只在 open 回整個隊列，避免 processing + open 被當成兩批
@@ -40,12 +42,14 @@ function fakeHost(opts: { pending: number; arrivals?: Record<number, number>; re
     pane: { capture: () => '', sendKeys: () => {} },
     runContainedPrint: async () => {
       runs++;
+      const result = opts.results?.[runs - 1] ?? { ok: true, timedOut: false };
+      if (result.started === false) return result; // 根本沒開始：隊列不會有任何變化
       if ((opts.processesPerRun?.[runs - 1] ?? opts.processes) !== false) queue = queue.slice(1); // processes:false = claude exit 0 卻什麼都沒處理
       for (let i = 0; i < (opts.arrivals?.[runs] ?? 0); i++) queue.push(nextArrival++);
-      return opts.results?.[runs - 1] ?? { ok: true, timedOut: false };
+      return result;
     },
   };
-  return { deps, effects, tmuxSessions, runs: () => runs, queue: () => queue };
+  return { deps, effects, tmuxSessions, unguardedFetches, runs: () => runs, queue: () => queue };
 }
 
 describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
@@ -148,6 +152,24 @@ describe('contained /tp-request 走 claude -p（不經 tmux）', () => {
     expect(host.effects).toEqual(['reap:error:1', 'reap:error:2']);
   });
 
+  it('第 2 輪才發現沒開始處理：前一輪已被嘗試卻沒處理成功的請求要收屍，執行當中才到的新請求不動', async () => {
+    // 第 1 輪處理掉 id=1、執行當中進來 100；id=2 被嘗試卻沒被處理 → 第 2 輪（為了 100）沒能開始
+    const host = fakeHost({ pending: 2, arrivals: { 1: 1 }, results: [{ ok: true, timedOut: false }, { ok: false, timedOut: false, started: false }] });
+    const worker = createRequestWorker(host.deps);
+    expect(await worker.tick('job')).toBe('failed');
+    expect(host.runs()).toBe(2);
+    expect(host.effects).toEqual(['reap:error:2']); // 不收屍的話 id=2 會在下個 tick 被原樣重跑
+    expect(host.queue()).toEqual([100]);
+  });
+
+  it('鎖內每個打 /api/requests 的 fetch 都帶 timeout signal（連線卡住不能讓 /tp-request 永遠 busy）', async () => {
+    const host = fakeHost({ pending: 2, processes: false });
+    const worker = createRequestWorker(host.deps);
+    await worker.tick('job');
+    // tick 一開始的 peek 是既有行為不在此限；其餘（列出隊列、收屍的列表與 PATCH）都要有
+    expect(host.unguardedFetches.filter((f) => !/sort=asc/.test(f))).toEqual([]);
+  });
+
   it('runContainedPrint 丟例外也釋放鎖並收屍為 error', async () => {
     const host = fakeHost({ pending: 1 });
     host.deps.runContainedPrint = async () => { throw new Error('spawn failed'); };
@@ -214,24 +236,6 @@ describe('tripline-api-server 接線', () => {
     expect(src).not.toMatch(/createContainedSession|watchContainedSession/);
   });
 
-  it('逾時先 SIGTERM（sudo 會轉發給 claude），寬限後才 SIGKILL；不可一上來就 SIGKILL（claude 會變孤兒）', () => {
-    expect(src.indexOf("child.kill('SIGTERM')")).toBeGreaterThan(-1);
-    expect(src.indexOf("child.kill('SIGTERM')")).toBeLessThan(src.indexOf("child.kill('SIGKILL')"));
-  });
-
-  it('卡住的 process 不能讓鎖永遠不釋放：聽 exit 並有硬性期限，finish 只會執行一次', () => {
-    expect(src).toMatch(/child\.on\('exit'/);
-    expect(src).toMatch(/PRINT_HARD_DEADLINE_MS/);
-    expect(src).toMatch(/if \(done\) return;/);
-  });
-
-  it('輸出收完整段才脫敏（含精確字串 token 與上限），log 檔 0600', () => {
-    expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)/);
-    expect(src).toMatch(/split\(sec\)\.join\('<redacted>'\)/);
-    expect(src).toMatch(/PRINT_LOG_MAX_BYTES/);
-    expect(src).toMatch(/mode: 0o600/);
-  });
-
   it('pkill 樣式要跳脫並錨定結尾（否則 -r1 會連帶殺 -r10、路徑的 . 會變萬用字元）', () => {
     expect(src).toMatch(/function killRunProcesses[\s\S]*?replace\(\/\[\.\*\+\?\^\$\{\}\(\)\|\[\\\]\\\\\]\/g[\s\S]*?\(\/\|\$\| \)/);
   });
@@ -241,11 +245,11 @@ describe('tripline-api-server 接線', () => {
     expect(src).toMatch(/throttledAlert\('print-run-cleanup-failed'/);
   });
 
-  it('prepare 失敗與 spawn error 回報 started:false（讓 worker 不收屍）；輸出先脫敏再截斷', () => {
+  it('prepare 失敗回報 started:false（讓 worker 不收屍）；計時與收尾交給 superviseRun（行為見 print-run.test.ts）', () => {
     expect(src).toMatch(/if \(!prepared\) return \{ ok: false, timedOut: false, started: false \};/);
-    expect(src).toMatch(/logError\(`contained print spawn 失敗[\s\S]*?finish\(false, false\)/);
-    expect(src).toMatch(/PRINT_RAW_MAX_BYTES/);
-    expect(src).toMatch(/scrub\(Buffer\.concat\(chunks\)\.toString\(\)\)\.slice\(0, PRINT_LOG_MAX_BYTES\)/);
+    expect(src).toMatch(/await superviseRun\(child, \{/);
+    expect(src).toMatch(/writeLog: \(text\) => appendFileSync\(logFile, text, \{ mode: 0o600 \}\)/);
+    expect(src).toMatch(/scrub,/);
   });
 
   it('log 目錄只是輔助：mkdir 失敗不能讓整輪 reject（會被當成處理失敗而收屍）', () => {
