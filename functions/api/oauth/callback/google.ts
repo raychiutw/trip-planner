@@ -20,10 +20,9 @@
  *   6. 302 redirect to state.redirectAfterLogin
  */
 import { D1Adapter, type AdapterPayload } from '../../../../src/server/oauth-d1-adapter';
-import { issueSession } from '../../_session';
-import { requireSessionUser } from '../../_session';
+import { issueSession, requireSessionUser } from '../../_session';
 import { mobileOAuthContract } from '../../_mobileOAuth';
-import { deleteReauthSessionId, grantDeleteReauth, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from '../../account/_deleteReauth';
+import { DELETE_PROOF_TTL_MS, deleteReauthSessionId, grantDeleteReauth, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from '../../account/_deleteReauth';
 import { verifyGoogleIdToken } from '../../../../src/server/oauth-client/google-id-token';
 import type { Env } from '../../_types';
 
@@ -81,7 +80,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const providerError = url.searchParams.get('error');
 
   if (!state) {
-    return errorResponse('OAUTH_MISSING_PARAMS', '缺少 code 或 state');
+    return errorResponse('OAUTH_MISSING_PARAMS', '缺少 state');
   }
 
   // 1. Validate state (CSRF + replay guard)
@@ -179,7 +178,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const authTime = claims['auth_time'];
     if (typeof authTime !== 'number' || !Number.isFinite(authTime) ||
         authTime * 1000 < stateRow.createdAt - 5000 || authTime * 1000 > Date.now() + 5000 ||
-        Date.now() - authTime * 1000 > 5 * 60 * 1000) {
+        Date.now() - authTime * 1000 > DELETE_PROOF_TTL_MS) {
       return reauthFailure('請重新驗證身分');
     }
     const identity = await context.env.DB.prepare('SELECT user_id FROM auth_identities WHERE provider = ? AND provider_user_id = ?')

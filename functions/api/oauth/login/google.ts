@@ -79,11 +79,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Store state in D1 (CSRF protection + replay guard via consume on callback)
   const adapter = new D1Adapter(context.env.DB, 'OAuthState');
-  await adapter.upsert(
-    state,
-    { provider: 'google', redirectAfterLogin, createdAt: Date.now(), ...(reauth ? { reauth } : {}) },
-    STATE_TTL_SEC,
-  );
+  try {
+    await adapter.upsert(
+      state,
+      { provider: 'google', redirectAfterLogin, createdAt: Date.now(), ...(reauth ? { reauth } : {}) },
+      STATE_TTL_SEC,
+    );
+  } catch (err) {
+    // challenge 已轉為 started 但 state 沒寫成功：還原，否則使用者只能等它過期
+    if (reauth?.challengeId && reauth.grantId) {
+      await transitionMobileDeleteChallenge(context.env.DB, reauth.challengeId, reauth.uid, reauth.grantId, 'started', 'pending').catch(() => {});
+    }
+    throw err;
+  }
 
   // Build Google OIDC authorize URL
   const callbackUri = `${url.origin}/api/oauth/callback/google`;

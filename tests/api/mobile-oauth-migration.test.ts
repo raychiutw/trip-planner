@@ -18,6 +18,10 @@ let db: D1Database;
 beforeAll(async () => { db = await createTestDb(); }, 30000);
 afterAll(disposeMiniflare);
 
+const runSql = async (sql: string) => {
+  for (const stmt of sql.replace(/--[^\n]*/g, '').split(';').map(x => x.trim()).filter(Boolean)) await db.prepare(stmt).run();
+};
+
 const redirectsOf = async (clientId: string) => {
   const row = await db.prepare('SELECT redirect_uris FROM client_apps WHERE client_id = ?')
     .bind(clientId).first<{ redirect_uris: string }>();
@@ -43,14 +47,16 @@ describe('0097 mobile OAuth callback migration', () => {
     const before = (await redirectsOf('tripline-mobile'))!.filter(u => u !== MOBILE_PROD_REDIRECT);
     await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?)")
       .bind(JSON.stringify({ clientId: 'tripline-mobile-dev' }), Number.MAX_SAFE_INTEGER).run();
-    for (const stmt of ROLLBACK.replace(/--[^\n]*/g, '').split(';').map(s => s.trim()).filter(Boolean)) {
-      await db.prepare(stmt).run();
+    try {
+      await runSql(ROLLBACK);
+      expect(await redirectsOf('tripline-mobile')).toEqual(before);
+      expect(await redirectsOf('tripline-mobile-uat')).toBeNull();
+      expect(await redirectsOf('tripline-mobile-dev')).toBeNull();
+      const left = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id = 't-dev'").first<{ n: number }>();
+      expect(left?.n).toBe(0);
+    } finally {
+      await runSql(FORWARD); // 各測試檔共用同一份 D1：forward 是冪等的，重放即還原註冊，不影響後面的檔案
     }
-    expect(await redirectsOf('tripline-mobile')).toEqual(before);
-    expect(await redirectsOf('tripline-mobile-uat')).toBeNull();
-    expect(await redirectsOf('tripline-mobile-dev')).toBeNull();
-    const left = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id = 't-dev'").first<{ n: number }>();
-    expect(left?.n).toBe(0);
   });
 });
 

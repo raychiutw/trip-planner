@@ -1,10 +1,10 @@
 import { getSessionCookie } from '../_cookies';
-import { sha256Base64 } from '../_utils';
-import { generateOpaqueToken } from '../_utils';
+import { generateOpaqueToken, sha256Base64 } from '../_utils';
 import { AppError } from '../_errors';
 
 const PROOF_NAME = 'AccountDeleteProof';
-const PROOF_TTL_MS = 5 * 60 * 1000;
+/** 重新驗證證明與 mobile challenge 的有效期；Google auth_time 的新鮮度也用同一個值。 */
+export const DELETE_PROOF_TTL_MS = 5 * 60 * 1000;
 const CHALLENGE_NAME = 'AccountDeleteChallenge';
 
 export function mobileCallbackUrl(env: { MOBILE_OAUTH_CALLBACK_URL?: string }): URL {
@@ -26,7 +26,7 @@ interface MobileChallenge {
 export async function createMobileDeleteChallenge(db: D1Database, uid: string, grantId: string, clientId: string): Promise<string> {
   const id = generateOpaqueToken();
   await db.prepare('INSERT INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)')
-    .bind(CHALLENGE_NAME, id, JSON.stringify({ uid, grantId, clientId, status: 'pending' }), Date.now() + PROOF_TTL_MS).run();
+    .bind(CHALLENGE_NAME, id, JSON.stringify({ uid, grantId, clientId, status: 'pending' }), Date.now() + DELETE_PROOF_TTL_MS).run();
   return id;
 }
 
@@ -57,7 +57,7 @@ export async function grantDeleteReauth(db: D1Database, request: Request, userId
   const id = await deleteReauthSessionId(request);
   if (!id) return false;
   await db.prepare('INSERT OR REPLACE INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)')
-    .bind(PROOF_NAME, id, JSON.stringify({ uid: userId }), Date.now() + PROOF_TTL_MS)
+    .bind(PROOF_NAME, id, JSON.stringify({ uid: userId }), Date.now() + DELETE_PROOF_TTL_MS)
     .run();
   return true;
 }

@@ -25,3 +25,19 @@ Flutter Bearer flow:
 5. Once `verified`, call `DELETE /api/account` with `{ "confirm": "DELETE", "challengeId": "opaque" }` and a Bearer token from the same grant. The server reserves the five-minute challenge and erases the account in one atomic D1 batch. The response includes `{ "ok": true, "tripsDeleted", "auditRowsAnonymized", "tablesCleared" }`; account OAuth tokens are removed. If erasure fails, D1 rolls it back and restores the still-unexpired challenge for retry. If the challenge is absent, expired, cancelled, mismatched or already used, the response is HTTP 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` and the account remains intact.
 
 The mobile challenge status is tied to one attempt. A failed/expired/cancelled attempt requires starting a new challenge. The browser and app must not treat a generic signed-in session, an access token, a redirect URL, or the string `DELETE` as proof of fresh identity. Google must return an `auth_time` no more than five minutes old and not earlier than this attempt; otherwise the server fails closed. Provider capability requires live Google verification before this contract is marked operational.
+
+## Error reference
+
+| Endpoint | Status / code | When |
+|---|---|---|
+| `POST /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The account has no linked Google identity, or the Bearer token is not the environment's mobile client |
+| `POST /api/account/delete-reauth` | 500 `SERVER_MISCONFIG` | `MOBILE_OAUTH_CALLBACK_URL` is missing, not HTTPS, or does not match the environment's registered redirect |
+| `GET` / `DELETE /api/account/delete-reauth` | 400 `DATA_VALIDATION` | `challenge_id` is missing |
+| `GET` / `DELETE /api/account/delete-reauth` | 404 | Unknown challenge, or it belongs to another user, grant or client |
+| `GET /api/account/delete-reauth` | 200 `{ "status": "expired", "expiresIn": 0 }` | The challenge lifetime has passed; otherwise `expiresIn` is omitted |
+| `DELETE /api/account/delete-reauth` | 409 `DATA_CONFLICT` | The challenge is already `used` or changed state concurrently |
+| `GET /api/oauth/login/google?purpose=account-delete` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | Challenge is not `pending`, is expired, or its client does not match the environment. A challenge can be started once; open `authorizeUrl` a single time |
+| `GET /api/oauth/login/google?purpose=account-delete` (browser) | 400 `ACCOUNT_DELETE_REAUTH_UNAVAILABLE` | No session, or the account has no linked Google identity |
+| `DELETE /api/account` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | No usable proof: absent, expired, cancelled, mismatched, or already used |
+| `GET` / `DELETE /api/account` | 403 `PERM_DENIED` | A Bearer token that is not the environment's mobile OAuth client. Such a token no longer falls back to a cookie session on these two endpoints |
+| `GET /api/oauth/callback/google` | `OAUTH_PROVIDER_DENIED` | Google returned `error=` for a normal login (previously this surfaced as `OAUTH_MISSING_PARAMS`). Re-authentication attempts redirect with `status=failed` instead |

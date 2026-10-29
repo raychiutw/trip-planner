@@ -1,7 +1,7 @@
 import { AppError } from '../_errors';
 import { getPublicOrigin, rawJson } from '../_utils';
 import { mobileOAuthContract } from '../_mobileOAuth';
-import { createMobileDeleteChallenge, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { DELETE_PROOF_TTL_MS, createMobileDeleteChallenge, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
 import { requireMobileAccountActor } from './_accountActor';
 import type { Env } from '../_types';
 
@@ -30,7 +30,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const authorizeUrl = new URL('/api/oauth/login/google', getPublicOrigin(context.env, context.request));
   authorizeUrl.searchParams.set('purpose', 'account-delete');
   authorizeUrl.searchParams.set('challenge', challengeId);
-  const response = rawJson({ challengeId, authorizeUrl: authorizeUrl.toString(), expiresIn: 300 });
+  const response = rawJson({ challengeId, authorizeUrl: authorizeUrl.toString(), expiresIn: DELETE_PROOF_TTL_MS / 1000 });
   response.headers.set('Cache-Control', 'no-store');
   return response;
 };
