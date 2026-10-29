@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.114] - 2026-10-30
+
+> ⚠️ **尚未達到可上線狀態**：後端與契約已完成並通過全部自動測試，但「Google 是否真的回傳 `auth_time`」尚未在真實環境驗證。若 Google 不回傳，純 Google 帳號的刪除會 fail-closed 而無法完成（舊的「只輸入 DELETE」路徑已移除）。見 `docs/api/mobile-oauth-account-delete.md` 的 Known limits。
+
+### Changed
+- **刪除帳號需要近期重新驗證身分**：純 Google 登入的帳號不能再只靠登入狀態加輸入 `DELETE` 刪除，必須先完成同一個 Google 帳號的重新驗證（最多 5 分鐘內、一次性）。有密碼的帳號維持原本的密碼確認。Web 帳號頁與 mobile app 共用同一套規則；取消、逾時、驗證到別的帳號都會保留帳號與行程。
+
+### Added
+- **Mobile App 正式 OAuth callback 契約**：production／UAT／development 各自精確註冊 client 與 redirect（不開 wildcard、不跨環境），附 iOS／Android 的 app link 關聯檔；mobile 端以 grant 綁定的 challenge 完成刪除帳號（建立、查狀態、取消、刪除）。契約與錯誤碼見 `docs/api/mobile-oauth-account-delete.md`。
+- migration `0097_mobile_oauth_callbacks`（附 rollback）：只新增註冊，不覆蓋營運端自己登記的 redirect。**這是 additive migration，必須先套用到 production（與 staging）D1 再 merge。**
+
+### Fixed
+- 刪除帳號的抹除改為單一 D1 batch：失敗會整批回滾，帳號保持完整、同一份驗證可重試（原本逐表刪除可能留下刪到一半的狀態）。
+- 開始驗證時若暫存 state 寫入失敗，challenge 會還原成可重試，不必等 5 分鐘過期。
+
+### For contributors
+- 由 UAT PR #1351／#1352 移植到目前 master（原 PR #1415，migration 由 0095 改號為 0097）。Refs #1347、#1349。
+- 新增守門測試：challenge 狀態矩陣（非 verified／過期／別人的／client 不符、並行只有一個成功、抹除失敗後還原、取消後 callback 重放不能復活）、migration 冪等與 rollback（含真實 snake_case token 形狀）、`.well-known` 與 `_headers`。每個守門都做過 mutation 驗證。
+- Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
+- 已知且刻意不在本 PR 處理：其他裝置的 session cookie 在刪帳號後仍有效（既有行為，`session_devices` 是刪除而非撤銷）、刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
+- 上線前必做：（1）UAT 實測 Google 是否回傳 `auth_time`，否則需決定其他新鮮度證明；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 套用 0097；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
+
 ## [2.57.113] - 2026-10-29
 
 ### Fixed
