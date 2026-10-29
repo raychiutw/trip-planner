@@ -8,6 +8,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
 import { onRequestDelete } from '../../functions/api/account/index';
 import { onRequestGet as startGoogle } from '../../functions/api/oauth/login/google';
+import { onRequestGet as completeGoogle } from '../../functions/api/oauth/callback/google';
 import { onRequestDelete as cancelChallenge } from '../../functions/api/account/delete-reauth';
 import { createMobileDeleteChallenge, readMobileDeleteChallenge } from '../../functions/api/account/_deleteReauth';
 import { MOBILE_PROD_REDIRECT } from '../../functions/api/_mobileOAuth';
@@ -15,6 +16,9 @@ import { createTestDb, disposeMiniflare } from './setup';
 import { mockAuth, mockContext, mockEnv } from './helpers';
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
+vi.mock('../../src/server/oauth-client/google-id-token', () => ({
+  verifyGoogleIdToken: vi.fn(async (idToken: string) => JSON.parse(atob(idToken.split('.')[1]!))),
+}));
 type Status = 'pending' | 'started' | 'verified' | 'failed' | 'cancelled' | 'used';
 
 let db: D1Database;
@@ -147,5 +151,25 @@ describe('開始驗證時 state 寫入失敗', () => {
     } finally { broken.mockRestore(); }
     expect(await statusOf(cid)).toBe('pending');
     expect((await start()).status).toBe(302);
+  });
+});
+
+describe('GET /api/oauth/callback/google：取消後的 callback 不能讓 challenge 復活', () => {
+  it('started 時被取消，之後 Google 回來（驗證成功）也只會得到 failed，challenge 維持 cancelled 且不能刪帳號', async () => {
+    const u = await seed();
+    const cid = await challengeIn(u, 'pending');
+    const e = mockEnv(db, { SESSION_SECRET, ENVIRONMENT: 'production', PUBLIC_ORIGIN: 'https://x.com', GOOGLE_CLIENT_ID: 'gid', GOOGLE_CLIENT_SECRET: 'secret', MOBILE_OAUTH_CALLBACK_URL: MOBILE_PROD_REDIRECT });
+    const google = await startGoogle(mockContext({ request: new Request(`https://x.com/api/oauth/login/google?purpose=account-delete&challenge=${cid}`), env: e }) as never);
+    const state = new URL(google.headers.get('Location')!).searchParams.get('state')!;
+    expect((await cancel(u, cid)).status).toBe(200);
+    const idToken = `h.${btoa(JSON.stringify({ sub: `g-${u.id}`, email: `${u.id}@example.com`, email_verified: true, auth_time: Math.floor(Date.now() / 1000) }))}.s`;
+    const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
+    try {
+      const done = await completeGoogle(mockContext({ request: new Request(`https://x.com/api/oauth/callback/google?code=c&state=${state}`), env: e }) as never);
+      expect(done.headers.get('Location')).toBe(`${MOBILE_PROD_REDIRECT}?challenge_id=${cid}&status=failed`);
+    } finally { provider.mockRestore(); }
+    expect(await statusOf(cid)).toBe('cancelled');
+    await expect(del(u, { confirm: 'DELETE', challengeId: cid })).rejects.toMatchObject({ code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' });
+    expect(await userExists(u.id)).toBe(true);
   });
 });
