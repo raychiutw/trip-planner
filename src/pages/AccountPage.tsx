@@ -22,7 +22,7 @@ import { writeAuthHint } from '../lib/authHint';
 
 /** GET /api/account 的刪除影響預覽。 */
 interface DeleteAccountPreview {
-  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 用確認字串 */
+  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 先完成 Google 重新驗證，再輸入確認字串 */
   hasPassword: boolean;
   reauthProvider: 'google' | null;
   reauthenticated: boolean;
@@ -421,7 +421,7 @@ export default function AccountPage() {
     });
   }, [openDeleteModal, user?.id]);
 
-  /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */
+  /** 二次確認是否已滿足：有密碼要打密碼；純 OAuth 要先完成 Google 重新驗證，再打 DELETE。 */
   const canConfirmDelete = deletePreview
     ? (deletePreview.hasPassword ? deleteInput.length > 0 :
       deletePreview.reauthProvider === 'google' && deleteInput === 'DELETE')

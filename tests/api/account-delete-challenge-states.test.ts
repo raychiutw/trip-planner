@@ -84,7 +84,7 @@ describe('DELETE /api/account：mobile challenge 只有 verified 才能消耗', 
     expect(await userExists(u.id)).toBe(false);
   });
 
-  it('抹除失敗：challenge 從 used 還原成 verified 可重試；過期後不會被還原', async () => {
+  it('抹除失敗：challenge 從 used 還原成 verified，同一個 challenge 可重試', async () => {
     const u = await seed();
     const cid = await challengeIn(u, 'verified');
     await db.prepare(`CREATE TRIGGER chal_fail_${u.id.replace(/-/g, '_')} BEFORE DELETE ON users

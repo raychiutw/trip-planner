@@ -36,7 +36,7 @@ interface DeleteAccountBody {
   challengeId?: unknown;
 }
 
-/** 純 OAuth 帳號用的確認字串。刻意用英文大寫，避免輸入法誤觸。 */
+/** 純 OAuth 帳號的確認字串（另需近期 Google 重新驗證，只打這個不夠）。刻意用英文大寫，避免輸入法誤觸。 */
 const CONFIRM_PHRASE = 'DELETE';
 
 /**

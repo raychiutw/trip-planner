@@ -30,14 +30,25 @@ The mobile challenge status is tied to one attempt. A failed/expired/cancelled a
 
 | Endpoint | Status / code | When |
 |---|---|---|
-| `POST /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The account has no linked Google identity, or the Bearer token is not the environment's mobile client |
+| `POST /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The account has no linked Google identity |
+| `POST` / `GET` / `DELETE /api/account/delete-reauth` | 403 `PERM_DENIED` | The Bearer token is not the environment's mobile OAuth client, is a service or trip-restricted token, or has no `grantId` / user. No `Authorization` header at all is 401 `AUTH_REQUIRED` |
 | `POST /api/account/delete-reauth` | 500 `SERVER_MISCONFIG` | `MOBILE_OAUTH_CALLBACK_URL` is missing, not HTTPS, or does not match the environment's registered redirect |
 | `GET` / `DELETE /api/account/delete-reauth` | 400 `DATA_VALIDATION` | `challenge_id` is missing |
 | `GET` / `DELETE /api/account/delete-reauth` | 404 | Unknown challenge, or it belongs to another user, grant or client |
 | `GET /api/account/delete-reauth` | 200 `{ "status": "expired", "expiresIn": 0 }` | The challenge lifetime has passed; otherwise `expiresIn` is omitted |
-| `DELETE /api/account/delete-reauth` | 409 `DATA_CONFLICT` | The challenge is already `used` or changed state concurrently |
+| `DELETE /api/account/delete-reauth` | 409 `DATA_CONFLICT` | The challenge is `used` or `failed`, or changed state concurrently. Cancelling an already `cancelled` challenge is idempotent (200 `{ "status": "cancelled" }`) |
+| `DELETE /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The challenge has expired |
 | `GET /api/oauth/login/google?purpose=account-delete` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | Challenge is not `pending`, is expired, or its client does not match the environment. A challenge can be started once; open `authorizeUrl` a single time |
-| `GET /api/oauth/login/google?purpose=account-delete` (browser) | 400 `ACCOUNT_DELETE_REAUTH_UNAVAILABLE` | No session, or the account has no linked Google identity |
+| `GET /api/oauth/login/google?purpose=account-delete` (browser) | 401 `AUTH_REQUIRED` | No session |
+| `GET /api/oauth/login/google?purpose=account-delete` (browser) | 400 `ACCOUNT_DELETE_REAUTH_UNAVAILABLE` | The account has no linked Google identity |
 | `DELETE /api/account` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | No usable proof: absent, expired, cancelled, mismatched, or already used |
 | `GET` / `DELETE /api/account` | 403 `PERM_DENIED` | A Bearer token that is not the environment's mobile OAuth client. Such a token no longer falls back to a cookie session on these two endpoints |
-| `GET /api/oauth/callback/google` | `OAUTH_PROVIDER_DENIED` | Google returned `error=` for a normal login (previously this surfaced as `OAUTH_MISSING_PARAMS`). Re-authentication attempts redirect with `status=failed` instead |
+| `GET /api/oauth/callback/google` | 400 `OAUTH_PROVIDER_DENIED` | Google returned `error=` for a normal login (previously this surfaced as `OAUTH_MISSING_PARAMS`). For a re-authentication attempt a mobile challenge redirects to the app link with `status=failed`, and a browser session redirects to `/account?deleteReauth=failed` |
+
+## Known limits before this contract is operational
+
+- **Google `auth_time` is unverified.** The backend requires an ID-token `auth_time` no older than five minutes and not earlier than the attempt, and asks Google with `max_age=0` and a `claims` request. Google's published discovery document (`claims_supported`) does not list `auth_time` and does not advertise `claims_parameter_supported`. If Google does not return it, every re-authentication fails closed and a Google-only account cannot be deleted through this path. A real Google round-trip on UAT must show the claim before production enablement; otherwise a different freshness proof is a product decision.
+- **Local development.** The `tripline-mobile-dev` client exists for the OAuth code flow only. `POST /api/account/delete-reauth` requires an HTTPS `MOBILE_OAUTH_CALLBACK_URL` and therefore returns 500 `SERVER_MISCONFIG` under the loopback development contract.
+- **Callback host.** `mobile-callback.trip-planner-dby.pages.dev` must be a separately controlled Pages project. If it is an alias of the main project's branch deployments, whoever can push that branch controls where the authorization code lands. This repository holds no configuration for that host.
+- **Challenge lifetime.** One five-minute lifetime covers the whole mobile flow (create, Google login, app-link return, final `DELETE`). A slow login can end as `status=failed`; start a new challenge.
+- **Existing `tripline-mobile` builds.** Only the exact production HTTPS redirect is accepted for new authorization-code sign-ins. Builds that used the old loopback redirect cannot start a new sign-in; refresh-token grants are not affected.
