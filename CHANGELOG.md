@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.113] - 2026-10-29
+
+### Fixed
+- **行程筆記 AI 生成不再 10 分鐘就被判逾時**：筆記 job 的逾時由 10 分鐘改為 100 分鐘（必須大於 contained `claude -p` 一個 tick 的最壞 90 分鐘），原本在 session 仍正常工作時就被標 `timed_out`（prod 實測約 41% 陣亡率，完成的 job 有跑到 101 分鐘的）。等待文案改為「通常 2–15 分鐘，行程較大時可能更久」，避免使用者誤以為卡住而重按。
+
+### For contributors
+- 由舊 PR #1224 更新而來：`_noteAi.ts` 的收屍結構已被 master 重構，這裡只同步逾時訊息為 100 分鐘；`tp-request-note-ai-contract` 的守衛由「> ORPHAN_MAX_AGE_MS」改為由 `PRINT_MAX_ROUNDS × PRINT_RUN_TIMEOUT_MS` 推算（已 mutation 驗證：改成 +80 分鐘轉紅）。
+- migration 0091 的欄位 DEFAULT 仍是 +10 分鐘，刻意不改（見測試內註解）。
+
 ## [2.57.112] - 2026-10-29
 
 ### Changed
