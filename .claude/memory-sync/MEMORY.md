@@ -9,7 +9,6 @@
 - [rules-architecture.md](rules-architecture.md) — CSS/JS 拆分、桌機面板、交通統計、AI 修改流程
 - [rules-md-format.md](rules-md-format.md) — 行程 MD 檔案格式定義
 - [rules-agent.md](rules-agent.md) — Agent Teams 使用規範
-- [rules-openspec.md](rules-openspec.md) — OpenSpec 開發流程規範
 
 ## 專案資訊
 

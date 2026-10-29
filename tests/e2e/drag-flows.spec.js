@@ -8,9 +8,8 @@
  *   - 8.3 keyboard Tab + Space + Arrow + Enter
  *
  * 範圍備註：
- *   - Ideas tab (TripSheet) 在當前 IA 已 redirect 到 /trips?selected=:id（見
- *     openspec/changes/archive/2026-04-25-url-driven-sheet-state），E2E 路徑
- *     上 Ideas drag UI 不可達 → 8.1 promote / 8.2 mobile drag 用「a11y / DOM
+ *   - Ideas tab (TripSheet) 在當前 IA 已 redirect 到 /trips?selected=:id，E2E
+ *     路徑上 Ideas drag UI 不可達 → 8.1 promote / 8.2 mobile drag 用「a11y / DOM
  *     contract 可達性」驗證取代 runtime drag gesture。
  *   - dnd-kit gesture 在 Playwright 跨 jsdom + headed 不穩，runtime drag 完整
  *     scenario 留 V2 lift DndContext 後（含真正 Ideas tab UI）跑。
@@ -117,6 +116,21 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
 });
 
 test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
+  test('menu step reorder saves the new order and returns focus to the moved entry', async ({ page }) => {
+    let savedOrder;
+    await page.route('**/api/trips/*/entries/batch', async (route) => {
+      savedOrder = route.request().postDataJSON().updates.map((entry) => entry.id);
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+    await page.goto(`/trips?selected=${TRIP_ID}`);
+    const rail = page.locator('.tp-rail').filter({ has: page.getByTestId('timeline-rail-row-101') });
+    await rail.getByTestId('timeline-rail-menu-101').click();
+    await rail.getByTestId('timeline-rail-move-down-101').click();
+    await expect.poll(() => savedOrder?.slice(0, 2)).toEqual([102, 101]);
+    await expect(rail.locator('[data-testid^="timeline-rail-row-"]').first()).toHaveAttribute('data-testid', 'timeline-rail-row-102');
+    await expect(rail.getByTestId('timeline-rail-menu-101')).toBeFocused();
+  });
+
   test('Tab focuses timeline grip handle; Space initiates drag (dnd-kit built-in)', async ({ page }) => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();

@@ -13,7 +13,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, mockAuth, mockServiceAuth, mockContext, jsonRequest, seedTrip, seedEntry, seedPoi, getDayId, callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/trips/[id]/health-check';
-import { onRequestPatch } from '../../functions/api/requests/[id]';
+import { onRequestPatch, onRequestGet as getRequest } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -308,6 +308,103 @@ describe('GET /api/trips/:id/health-check', () => {
 });
 
 describe('PATCH /api/requests/:id 完成 hook → trip_health_reports', () => {
+  it('重跑期間與失敗後保留上次報告，成功才換成新 findings', async () => {
+    const tripId = 'health-last-known-report';
+    await seedTrip(db, { id: tripId });
+    await seedOneEntry(tripId);
+    const start = async () => {
+      const res = await callHandler(onRequestPost, mockContext({
+        request: jsonRequest(`https://test.com/api/trips/${tripId}/health-check`, 'POST'),
+        env, auth: mockAuth(), params: { id: tripId },
+      }));
+      return (await res.json() as { report: { requestId: number; findings: unknown[]; completedAt: string | null } }).report;
+    };
+    const finish = (requestId: number, status: 'completed' | 'failed', reply: string) =>
+      callHandler(onRequestPatch, mockContext({
+        request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', { status, reply }),
+        env, auth: mockServiceAuth(), params: { id: String(requestId) },
+      }));
+    const read = async () => {
+      const res = await callHandler(onRequestGet, mockContext({
+        request: new Request(`https://test.com/api/trips/${tripId}/health-check`),
+        env, auth: mockAuth(), params: { id: tripId },
+      }));
+      return (await res.json() as { report: { status: string; requestId: number; findings: unknown[]; completedAt: string | null } }).report;
+    };
+    const oldFinding = { severity: 'high', title: '舊問題', description: '舊報告' };
+    const first = await start();
+    expect((await finish(first.requestId, 'completed', JSON.stringify([oldFinding]))).status).toBe(200);
+    const previous = await read();
+    expect(previous.findings).toEqual([oldFinding]);
+
+    const second = await start();
+    expect(second.requestId).not.toBe(first.requestId);
+    expect(second.findings).toEqual([oldFinding]);
+    expect(second.completedAt).toBe(previous.completedAt);
+    expect(await read()).toMatchObject({ status: 'pending', requestId: second.requestId, findings: [oldFinding] });
+
+    expect((await finish(second.requestId, 'failed', '暫時失敗')).status).toBe(200);
+    expect(await read()).toMatchObject({ status: 'failed', requestId: second.requestId, findings: [oldFinding] });
+
+    const third = await start();
+    const newFinding = { severity: 'low', title: '新問題', description: '新報告' };
+    expect((await finish(third.requestId, 'completed', JSON.stringify([newFinding]))).status).toBe(200);
+    expect(await read()).toMatchObject({ status: 'completed', requestId: third.requestId, findings: [newFinding] });
+  });
+
+  it.each([
+    ['completed', '[]', 'AI 健檢完成 — 行程沒發現問題。'],
+    ['completed', JSON.stringify([{ severity: 'high', title: '午餐衝突' }, { severity: 'medium', title: '晚餐衝突' }, { severity: 'low', title: '緩衝不足' }]), '發現 3 個 finding（high 1 · medium 1 · low 1）'],
+    ['failed', 'Claude timeout', 'AI 健檢失敗 — Claude timeout'],
+  ])('聊天讀回 %s 健檢的人話摘要：%s', async (status, reply, expected) => {
+    const tripId = `summary-${status}-${reply.length}`;
+    await seedTrip(db, { id: tripId });
+    await seedOneEntry(tripId);
+    const started = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${tripId}/health-check`, 'POST'),
+      env, auth: mockAuth(), params: { id: tripId },
+    }));
+    const { report } = await started.json() as { report: { requestId: number } };
+    expect((await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${report.requestId}`, 'PATCH', {
+        status, reply, ...(status === 'failed' ? { terminalReason: 'error' } : {}),
+      }),
+      env, auth: mockServiceAuth(), params: { id: String(report.requestId) },
+    }))).status).toBe(200);
+    const read = await callHandler(getRequest, mockContext({
+      request: new Request(`https://test.com/api/requests/${report.requestId}`),
+      env, auth: mockAuth(), params: { id: String(report.requestId) },
+    }));
+    const visible = await read.json() as { status: string; reply: string; terminalReason: string | null };
+    expect(visible.status).toBe(status);
+    expect(visible.reply).toContain(expected);
+    expect(visible.reply).toContain(`/trip/${tripId}/health`);
+    expect(visible.terminalReason).toBe(status === 'failed' ? 'error' : null);
+  });
+
+  it('重送完成通知後，健檢報告仍保留原本的 findings', async () => {
+    const tripId = 'health-repeated-completion';
+    await seedTrip(db, { id: tripId });
+    await seedOneEntry(tripId);
+    const started = await callHandler(onRequestPost, mockContext({
+      request: jsonRequest(`https://test.com/api/trips/${tripId}/health-check`, 'POST'),
+      env, auth: mockAuth(), params: { id: tripId },
+    }));
+    const { report } = await started.json() as { report: { requestId: number } };
+    const patch = (body: Record<string, unknown>) => callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${report.requestId}`, 'PATCH', body),
+      env, auth: mockServiceAuth(), params: { id: String(report.requestId) },
+    }));
+    const finding = { severity: 'high', title: '午餐時間衝突', description: '餐廳營業時間已過' };
+    expect((await patch({ status: 'completed', reply: JSON.stringify([finding]) })).status).toBe(200);
+    expect((await patch({ status: 'completed' })).status).toBe(200);
+    const reread = await callHandler(onRequestGet, mockContext({
+      request: new Request(`https://test.com/api/trips/${tripId}/health-check`),
+      env, auth: mockAuth(), params: { id: tripId },
+    }));
+    expect(await reread.json()).toMatchObject({ report: { status: 'completed', findings: [finding] } });
+  });
+
   it('reply 是 JSON array → findings 寫入 + status=completed', async () => {
     // 先建 trip + request via POST endpoint 取得 requestId
     await seedTrip(db, { id: 'trip-hook' });

@@ -1,81 +1,82 @@
 # Tripline
 
-專為小團體量身打造的旅遊行程網站，讓每位旅伴都能輕鬆查閱行程、即時掌握天氣與交通資訊。
+給小團體用的旅遊行程規劃網站。把景點排進每天的時間軸，路線、車程與行前資訊都在同一個地方，旅伴打開就看得懂。
 
-🔗 **線上 Demo**：[https://trip-planner-dby.pages.dev/](https://trip-planner-dby.pages.dev/)
+🔗 **立即使用**：[https://trip-planner-dby.pages.dev/](https://trip-planner-dby.pages.dev/)
 
----
+📱 **iOS / Android 版**：[Tripline Flutter](https://github.com/raychiutw/trip-planner.flutter)（目前只提供原始碼，還沒有商店下載連結）
+
+![Tripline 桌機版：左側每日時間軸，右側同步顯示地圖路線](docs/readme/desktop-trip.png)
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/readme/mobile-trip.png" width="200" alt="手機版每日時間軸"><br>每日時間軸</td>
+    <td align="center"><img src="docs/readme/mobile-map.png" width="200" alt="手機版地圖路線"><br>每日路線地圖</td>
+    <td align="center"><img src="docs/readme/mobile-chat.png" width="200" alt="手機版 AI 聊天"><br>說一句話就改行程</td>
+  </tr>
+</table>
+
+## 出發前你會反覆做的三件事
+
+### 💬 說一句話就改好
+
+講「把第三天的美國村移到第二天」或「把第二天的午餐改成沖繩麵」，AI 會幫你移動停留點、重算車程，再告訴你改了什麼，不用自己一格一格拖。
+
+### 🗺️ 每天的路線一眼看完
+
+每天的路線用不同顏色畫出來，馬上看出哪天在繞路。地圖頁可以切換一般地圖或衛星圖；用電腦看時，展開時間軸上的停留點，旁邊的地圖會飛到那個點，點地圖上的停留點則能直接看它的詳細資料。
+
+![地圖頁：每天的停留點與路線畫在同一張地圖上](docs/readme/desktop-map.png)
+
+### ✅ 出發前先健檢
+
+時間排太緊、來回繞路、營業時間對不上，AI 健檢會從五個面向掃一遍，出發前就知道哪裡要調整。
 
 ## 功能特色
 
-### 行程瀏覽
+### 排行程
 
-- 📋 **多行程支援** — 同時管理多套旅遊計畫，一鍵切換
-- 🗓️ **每日時間軸** — 景點、餐廳、購物、飯店依時間排列，清晰呈現一天行程
-- 🍽️ **三選一餐廳推薦** — 每個用餐時段提供三間選擇，含評分、價位與地圖連結
-- 🗺️ **多地圖支援** — 每個景點直連 Google Maps、Apple Maps、Naver Maps（v2.19.0 改 client 端 `mapsUrl` 從 lat/lng 即時組 URL）
+- **每日時間軸**：景點、餐廳、購物與住宿依時間排好，每個停留點都看得到停留多久
+- **停留點之間的交通**：開車與步行的時間、距離自動算好，調整順序後跟著更新；公車、地鐵、火車等大眾運輸路段會先估一個時間（沖繩單軌另有估算），也可以自己填實際時間
+- **景點資訊**：可以顯示景點的 Google 評分與營業時間（視景點資料而定）
+- **正選與備選**：同一個時段可以放一個正選景點和幾個備選，臨時改主意不用重排
+- **跨城市行程**：一趟旅程可以分配多個目的地與天數，例如沖繩 3 天、京都 2 天
+- **地圖直連**：每個景點一鍵開啟 Google Maps 或 Apple Maps
 
-### 行程編輯（v2.19.0+）
+### 行前準備
 
-- ✏️ **新增 / 編輯行程** — 可改名稱、描述、語言、發布狀態、目的地清單（拖排 / 加 POI / 分配天數）
-- 🔁 **正選 / 備選景點** — 同一個行程 entry 可掛 1 個正選 POI + 多個備選 POI（v2.27.0 `trip_entry_pois` junction table），搜尋與收藏都能加入備選
-- 🌐 **Google Places 自動補資料** — v2.23.0 起切 Google Maps Platform。POI 即時 `POST /api/pois/:id/enrich` (Place Details API) + 30 天 daily refresh (50/day cap) 自動更新評分 / 營業時間 / 狀態 (active / closed / missing)
-- 🚗 **景點重排自動更新車程** — 拖拉景點順序時自動 Google Routes API 重算路徑 (driving / walking / transit)。無 fallback，網路失敗顯示 stale ⚠
-- 📅 **多目的地子表** — 跨城市行程可分配每地天數（沖繩 3 天 / 京都 2 天）
+- **行程筆記**：航班、住宿、預訂、行前須知與緊急聯絡分類整理
+- **探索與收藏**：搜尋景點與餐廳，先收藏起來，之後再排進行程
+- **歸檔**：玩回來的行程可以歸檔，清單只留下正在規劃的旅程
 
-### 即時資訊
+<table>
+  <tr>
+    <td align="center"><img src="docs/readme/mobile-notes.png" width="200" alt="行程筆記"><br>行程筆記</td>
+    <td align="center"><img src="docs/readme/mobile-health.png" width="200" alt="AI 健檢"><br>AI 健檢</td>
+  </tr>
+</table>
 
-- 🌤️ **天氣預報** — 行程日期在 16 天預報範圍內自動顯示逐時天氣
-- 🚗 **交通資訊就地呈現** — 每個停留點之間直接顯示交通時間、距離、方式，不必跳到統計卡
-- ⏳ **倒數計時器** — 顯示距離出發還有幾天
+### 和旅伴一起
 
-### 外觀與體驗
+- **共同編輯**：邀請旅伴加入，一起安排同一份行程
+- **分享連結**：產生唯讀的分享連結，可設定有效期限、要公開哪些筆記，也能匿名分享
+- **列印與匯出**：A4 排版的列印文件，也能下載成 PDF 或 JSON
+- **匯入行程**：從 Tripline 下載的 JSON 檔可以再匯入，繼續編排
 
-- 🌙 **深色模式** — 支援淺色、深色、跟隨系統三種模式
-- 🎨 **V2 Terracotta 設計系統** — `#A97A4A` 柔褐 accent + cream bg (v2.4.0+，取代舊 Sunshine/ClearSky/Japanese 三主題)
-- 🖨️ **列印模式** — A4 排版最佳化，可直接列印或輸出 PDF
-- 📱 **響應式設計** — 手機、平板、桌機均有對應排版
-- ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取（含 maskable icon v2.33.63）
+![列印預覽：整份行程整理成 A4 文件](docs/readme/desktop-print.png)
 
-### 介面架構（v2.4.0+）
+### 隨時隨地
 
-- 🖥️ **桌機 3-pane shell（≥1024px）** — `--grid-3pane-desktop: 216px 1fr 1fr`（左 sidebar + 中央 timeline + 右欄），兩欄頁面走 `--grid-2pane-desktop: 216px 1fr`。sidebar 是中文 label nav（聊天 / 行程 / 地圖 / 收藏）。**帳號不在 nav** — sidebar 左下獨立 chip（未登入時顯示「未登入」chip）。Trip detail TitleBar action 桌機是 **icon + 文字 label**，手機（≤760px）才 icon-only（W3 於 2026-07-24 推翻先前的全 icon-only）
-- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav **4-tab IA：聊天 / 行程 / 地圖 / 收藏**。**帳號已移出 tab slot** — header 右上圓圈（`AccountCircle`）→ 覆蓋當前頁的 Account sheet，自有 nav stack。配合 ActiveTripContext，從 trip 進其他 tab 自動帶入當前 trip context
-- 🧭 **兩個 form factor 共用同一份 IA 定義** — `src/components/shell/navItems.ts` 的 `PRIMARY_NAV_ITEMS` 是這 4 個 tab 的單一來源，`GlobalBottomNav`（手機）與 `DesktopSidebar`（桌機）都讀它，避免路徑 pattern 兩份漂移。改 IA 從這裡改
-- 🔗 **URL-driven sheet state** — `/trip/:id?sheet=map|chat` 可深度連結 + 瀏覽器 back/forward 正常。chat tab embed `<ChatPage embedded lockTripId>` trip-scoped AI 聊天
-- 🎨 **V2 Terracotta 設計系統** — `#A97A4A` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）。**accent 不當文字色**（文字走 `--color-accent-text`，見 [DESIGN.md](DESIGN.md) §Color Approach）
-- 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
-- 🗺️ **POI Master + Entry junction** — `pois` 是 master (AI 維護)，`trip_entry_pois` junction (v2.27.0) 可一 entry 掛多 POI (master sort_order=1 + alternates)。v2.29.0 起 `trip_pois` 已 drop，metadata 改 master / junction 兩處
-- 🤖 **AI 健檢** — `/trip/:id/health` 全頁 (v2.31.0)，severity-grouped findings + action_target deep-link 跳轉
-- 📨 **OAuth invitation** — invitation token HMAC stored，30 天 / 7 天 retention auto sweep (v2.33.61)
+- **手機、平板、桌機都好用**：桌機同時看時間軸與地圖，手機用底部分頁切換
+- **深色模式**：淺色、深色或跟隨系統
+- **加入主畫面**：可以像 App 一樣從主畫面開啟
+- **帳號安全**：查看目前登入中的裝置，可以登出單一裝置或一次登出其他所有裝置
 
-### 帳號與認證（v2.4.0+）
+<table>
+  <tr>
+    <td align="center"><img src="docs/readme/mobile-trip-dark.png" width="200" alt="深色模式：每日時間軸"></td>
+    <td align="center"><img src="docs/readme/mobile-map-dark.png" width="200" alt="深色模式：地圖"></td>
+    <td align="center"><img src="docs/readme/mobile-chat-dark.png" width="200" alt="深色模式：AI 聊天"></td>
+  </tr>
+</table>
 
-- 🔐 **V2 OAuth sole auth** — Cloudflare Access 已全拆，瀏覽器走 self-signup + email/password（`tripline_session` opaque cookie）
-- 🤖 **CLI / service tokens** — `/api/oauth/token` `grant_type=client_credentials`（RFC 6749 §4.4）給 scheduler scripts、admin tooling 用
-- 📧 **Email verification + password reset** — 自建流程帶 1h TTL token + 限制（rate limit、anti-enumeration）
-- 🖥️ **多裝置 session 管理** — `/settings/sessions` 看登入裝置、撤銷單一 session 或一鍵登出全部其他裝置
-- 🔌 **OAuth client_apps** — `/settings/connected-apps`（user 端撤銷授權）+ `/developer/apps`（dev 端建立 OAuth client）
-
-### 旅伴協作
-
-- 💬 **旅伴請求系統** — 傳送「改行程」或「問建議」請求給行程管理員
-- 📧 **每日健康日報** — 透過 Gmail 自動寄送當日行程摘要
-
-### 匯出與備份
-
-- 💾 **下載行程** — 支援 PDF、Markdown、JSON、CSV 四種格式
-
----
-
----
-
-## 技術文件
-
-- [ARCHITECTURE.md](ARCHITECTURE.md) — 系統組成、資料流、信任邊界、部署拓撲
-- [CONTRIBUTING.md](CONTRIBUTING.md) — 新手上路、測試、commit 慣例、常見任務
-- [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、single-theme + dark mode）
-- [CLAUDE.md](CLAUDE.md) — 開發流程與 gstack pipeline
-- [TODOS.md](TODOS.md) — 已知待辦與 follow-up
-- [SPEC.md](SPEC.md) — 進行中的多階段規格（目前：POI Unification 三階段計劃）
-- [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

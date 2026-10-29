@@ -3,11 +3,11 @@
  *   GET  → list this trip's share links (NO token / token_hash ever returned).
  *   POST → create a new share link; returns the raw token ONCE (only chance to copy).
  *
- * Auth: requireAuth + hasWritePermission(tripId) — re-checked LIVE on every call
+ * Auth: requireAuth + requireTripWrite(tripId) — re-checked LIVE on every call
  * (never trusts created_by as a standing grant). PR2 adds PATCH section/expiry edits;
  * revoke/delete live in shares/[shareId].ts.
  */
-import { requireAuth, hasWritePermission } from '../../_auth';
+import { requireAuth, requireTripWrite } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json } from '../../_utils';
 import {
@@ -19,19 +19,12 @@ import {
 } from '../../_share';
 import type { Env } from '../../_types';
 
-async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
-  const auth = requireAuth(context);
-  const ok = await hasWritePermission(context.env.DB, auth, tripId);
-  if (!ok) throw new AppError('PERM_DENIED');
-  return auth;
-}
-
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
   // Intentional: listing/managing share links is a WRITE-tier capability — a viewer
   // collaborator (read-only) cannot see or manage links. Do NOT relax to hasPermission.
-  await requireTripWrite(context, id);
+  await requireTripWrite(db, requireAuth(context), id);
 
   // Includes revoked-but-not-deleted rows so retained view_count analytics stay reachable.
   const { results } = await db
@@ -47,7 +40,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
   const db = context.env.DB;
-  const auth = await requireTripWrite(context, id);
+  const auth = requireAuth(context);
+  await requireTripWrite(db, auth, id);
 
   const body = (await context.request.json().catch(() => ({}))) as Record<string, unknown>;
   const visible = sanitizeVisibleSections(

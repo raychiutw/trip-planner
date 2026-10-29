@@ -26,6 +26,7 @@
  * 回：{ access_token, token_type: 'Bearer', expires_in, restrict_trip }；cache-control: no-store。
  */
 import { AppError } from '../_errors';
+import { updateRequest } from '../_requestTermination';
 import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken, parseFormOrJson } from '../_utils';
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
@@ -70,11 +71,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // 3. request_id → trip_id + status（必須存在且仍在佇列）。
   const reqRow = (await db
-    .prepare('SELECT trip_id, status FROM trip_requests WHERE id = ?')
+    .prepare('SELECT * FROM trip_requests WHERE id = ?')
     .bind(requestId)
     .first()) as { trip_id?: string; status?: string } | null;
   if (!reqRow || !reqRow.trip_id) throw new AppError('DATA_NOT_FOUND', 'request 不存在');
   if (!MINTABLE_STATUSES.has(reqRow.status ?? '')) {
+    if (reqRow.status === 'completed' || reqRow.status === 'failed') {
+      try {
+        await updateRequest(db, { ...reqRow, id: requestId }, { status: reqRow.status }, {
+          changedBy: 'system:mint-restricted-retry',
+        });
+      } catch (error) {
+        console.error('[mint-restricted] terminal cleanup retry failed:', error);
+      }
+    }
     throw new AppError('PERM_DENIED', `request 狀態 ${reqRow.status} 不可 mint（須 open/processing）`);
   }
   const tripId = reqRow.trip_id;
@@ -104,48 +114,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
       context.env,
     );
-    // Queue-jam 防禦：no_consent 是「永久」失敗（owner 沒授權 AI，不會自己好）。
-    // peekPendingRequest 每輪 sort=asc 撈最舊 open request → 反覆撞同一筆 403、且餓死其後
-    // 所有請求。把它 park 成 failed（peek 只撈 open/processing → 跳過），寫 user-facing reply
-    // 指引授權。只在仍活著時改（idempotent）。park 失敗不改「拒絕 mint」語意，下輪 cron 再試。
-    // ⚠️ trip_requests UPDATE 刻意排第一條且「不」用 db.batch 原子化：即使後兩條 linked
-    // UPDATE blip，request 已 park → 隊列仍解（主目標）。原子化反而會讓任一失敗整批 rollback、
-    // 隊列該輪不通 —— 別改。orphan pending linked row 僅在後兩條 blip（罕見 transient D1）時殘留：
-    // health_reports（PK=trip_id）下次健檢覆寫復原；note_ai_jobs（UNIQUE request_id + autoincrement
-    // id）不會自癒，卡住的 pending row 殘留（無害，只虛增 pending 計數；adversarial F5，容忍）。
+    // 拒發 token 的語意不受收尾故障影響；共用流程先解除隊列，再獨立收尾。
     try {
-      await db
-        .prepare(
-          // terminal_reason（ADR-0007 / migration 0092）：park 是一種終結，原因要記下來，
-          // 否則按原因聚合會整個漏掉 needs_consent 這一類。bind 順序不變（字面值不佔 ?）。
-          `UPDATE trip_requests
-              SET status = 'failed', terminal_reason = 'needs_consent', reply = ?, updated_at = datetime('now')
-            WHERE id = ? AND status IN ('open', 'processing')`,
-        )
-        .bind(NEEDS_CONSENT_REPLY, requestId)
-        .run();
-      // 若這筆其實是 health-check / notes 請求（peekPendingRequest 撈最舊 pending，不分型別），
-      // 連動把 linked 報告/工作也標記 failed —— 否則它們的 row 會停在 active 狀態（完成 reconcile
-      // 只跑在 requests/[id] PATCH 路徑，此處走 API_SECRET 無法呼 PATCH）。純 planning 請求（如
-      // 事故 250）無 linked row → 兩條 UPDATE no-op。理想抽共用 failRequest helper（follow-up）。
-      await db
-        .prepare(
-          `UPDATE trip_health_reports SET status = 'failed', error_message = ?, completed_at = datetime('now')
-             WHERE request_id = ? AND status = 'pending'`,
-        )
-        .bind('需要行程擁有者授權 AI 才能執行健檢', requestId)
-        .run();
-      await db
-        .prepare(
-          `UPDATE trip_note_ai_jobs
-              SET status = 'failed',
-                  error_code = 'NOTES_AI_APPLY_FAILED',
-                  error_message = ?,
-                  completed_at = datetime('now')
-            WHERE request_id = ? AND status IN ('pending', 'processing')`,
-        )
-        .bind('需要行程擁有者授權 AI 才能生成', requestId)
-        .run();
+      await updateRequest(db, { ...reqRow, id: requestId }, {
+        status: 'failed', terminalReason: 'needs_consent', reply: NEEDS_CONSENT_REPLY,
+      }, { changedBy: 'system:mint-restricted', onlyIfActive: true });
     } catch (parkErr) {
       console.error('[mint-restricted] park needs-consent request failed:', parkErr);
     }

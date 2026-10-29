@@ -19,7 +19,8 @@
 
 set -eo pipefail
 
-REPO_ROOT="/Users/ray/Projects/trip-planner"
+# 由腳本自己的位置推導（scripts/ 的上一層），不寫死絕對路徑；zsh 的 ${0:A:h:h} = 絕對化後取兩次 dirname。
+REPO_ROOT="${0:A:h:h}"
 LOG_DIR="$REPO_ROOT/scripts/logs"
 LOG_RETENTION_DAYS=30
 LOG_MAX_BYTES=10485760    # 10 MB for general single-file logs

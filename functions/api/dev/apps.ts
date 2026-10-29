@@ -192,13 +192,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
  * redirect_uris / allowed_scopes JSON column is corrupt — one bad row falls
  * back to [] instead of 500-ing the whole list.
  */
-function safeParseArray(value: unknown): unknown {
-  if (typeof value !== 'string') return value;
+function safeParseArray(value: unknown): string[] {
+  let parsed: unknown;
   try {
-    return JSON.parse(value) as unknown;
+    parsed = typeof value === 'string' ? JSON.parse(value) as unknown : value;
   } catch {
     return [];
   }
+  return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -223,5 +224,4 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   return rawJson({ apps });
 };
-
 

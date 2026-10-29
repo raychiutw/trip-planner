@@ -19,6 +19,7 @@ const MOCK_TRIPS_LIST = [
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
+    role: 'owner',
     countries: '["JP"]',
     published: 1,
     lang: 'zh-TW',
@@ -33,6 +34,7 @@ const MOCK_TRIPS_LIST = [
     name: '釜山三日遊',
     owner: 'Demo',
     title: '2026 釜山三日遊',
+    role: 'owner',
     countries: '["KR"]',
     published: 1,
     lang: 'zh-TW',
@@ -646,10 +648,10 @@ const MOCK_SESSIONS = [
 
 const MOCK_CONNECTED_APPS = [
   {
-    client_id: 'weather-importer',
-    app_name: 'Weather Importer',
+    client_id: 'calendar-exporter',
+    app_name: 'Calendar Exporter',
     app_logo_url: null,
-    app_description: 'Imports local weather into Tripline',
+    app_description: 'Exports Tripline itineraries to local calendars',
     homepage_url: null,
     status: 'active',
     scopes: ['read:trips', 'write:trips'],
@@ -704,7 +706,7 @@ async function setupApiMocks(page) {
   // 這個 mock 就成了唯一還在假設舊契約的地方 —— e2e 因此看不到標題。
   //
   // 真實 /api/my-trips 本來就帶 name/title/countries/totalDays/startDate/
-  // endDate/memberCount，mock 照實回才不會再與 prod 脫節。
+  // endDate/memberCount/role，mock 照實回才不會再與 prod 脫節。
   await page.route(/\/api\/my-trips$/, (route) => {
     route.fulfill({
       status: 200,
@@ -819,6 +821,24 @@ async function setupApiMocks(page) {
 
   // /api/trip-ideas route removed — endpoint retired in V2 cutover (migration 0046)。
   // 任何 e2e 仍 hit 此 path 應該得到 default 404 (Worker handler not found)。
+
+  // 共編成員與待回覆邀請（#1445 設計審查守門要看到「新增成員」表單，成員清單載入失敗時表單不渲染）。
+  // 資料量比照 production 共編頁的真實樣態（擁有者 + 2 位成員），版面高度才與真實使用者看到的一致。
+  await page.route(/\/api\/permissions(?:\?.*)?$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 1, email: 'owner@example.com', displayName: 'Owner', tripId: 'okinawa-trip-2026-Ray', role: 'owner' },
+        { id: 2, email: 'member-a@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+        { id: 3, email: 'member-b@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+      ]),
+    });
+  });
+  await page.route(/\/api\/invitations(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }),
+  }));
 
   await page.route(/\/api\/trips/, (route) => {
     const url = route.request().url();
@@ -965,6 +985,7 @@ async function setupApiMocks(page) {
 module.exports = {
   setupApiMocks,
   MOCK_TRIPS_LIST,
+  MOCK_USER,
   MOCK_TRIP_META_OKINAWA,
   MOCK_TRIP_META_BUSAN,
   MOCK_DAYS_OKINAWA,

@@ -40,7 +40,7 @@ tp-edit、tp-request、tp-rebuild 修改行程資料時的共用流程：
 
 ### 1b. Entry location 座標（鐵律）
 
-> ⚠️ **每個實體地點 entry 必須有 lat/lng 座標。** 缺座標 = 天氣功能失效 + 地圖無法顯示 + travel 無法計算。
+> ⚠️ **每個實體地點 entry 必須有 lat/lng 座標。** 缺座標 = 地圖無法顯示 + travel 無法計算。
 
 **查詢方式**：用 Google Maps 搜尋 `maps` 欄位的文字，從結果取得 lat/lng。WebSearch 查「{地點名} 座標」或「{地點名} Google Maps」。
 

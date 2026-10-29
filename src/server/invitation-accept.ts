@@ -9,7 +9,7 @@
  *   1. HMAC token → token_hash
  *   2. SELECT trip_invitations WHERE token_hash
  *   3. Check expired / accepted / email match
- *   4. Atomic batch INSERT OR IGNORE trip_permissions + UPDATE accepted_at
+ *   4. Atomic batch 按邀請角色 INSERT OR IGNORE trip_permissions + UPDATE accepted_at
  *   5. 撈 trip title 給 caller 回應使用
  */
 import type { D1Database } from '@cloudflare/workers-types';
@@ -29,6 +29,7 @@ export type InvitationAcceptResult =
 
 interface InvitationRow {
   trip_id: string;
+  role: string;
   invited_email: string;
   expires_at: string;
   accepted_at: string | null;
@@ -44,7 +45,7 @@ export async function tryAcceptInvitation(
 
   const invitation = await db
     .prepare(
-      `SELECT trip_id, invited_email, expires_at, accepted_at
+      `SELECT trip_id, role, invited_email, expires_at, accepted_at
        FROM trip_invitations
        WHERE token_hash = ?
        LIMIT 1`,
@@ -68,9 +69,9 @@ export async function tryAcceptInvitation(
     db
       .prepare(
         `INSERT OR IGNORE INTO trip_permissions (trip_id, role, user_id)
-         VALUES (?, 'member', ?)`,
+         VALUES (?, ?, ?)`,
       )
-      .bind(invitation.trip_id, user.id),
+      .bind(invitation.trip_id, invitation.role === 'viewer' ? 'viewer' : 'member', user.id),
     db
       .prepare(
         `UPDATE trip_invitations SET accepted_at = ?, accepted_by = ?

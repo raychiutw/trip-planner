@@ -134,6 +134,39 @@ describe('GET /api/requests', () => {
 });
 
 describe('PATCH /api/requests/:id', () => {
+  it.each(['open', 'processing', 'completed', 'failed'])('accepts current status %s through the real PATCH and GET endpoints', async (status) => {
+    const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-req', 'status validation ' + status, 'user@test.com').first<{ id: number }>();
+    const response = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${row!.id}`, 'PATCH', { status }),
+      env, auth: mockServiceAuth(), params: { id: String(row!.id) },
+    }));
+    expect(response.status).toBe(200);
+    const read = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${row!.id}`),
+      env, auth: mockAuth(), params: { id: String(row!.id) },
+    }));
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ status });
+  });
+
+  it.each(['closed', 'received', 'invalid'])('rejects retired or unknown status %s without changing the request', async (status) => {
+    const row = await db.prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
+      .bind('trip-req', 'invalid status ' + status, 'user@test.com').first<{ id: number }>();
+    const response = await callHandler(onRequestPatch, mockContext({
+      request: jsonRequest(`https://test.com/api/requests/${row!.id}`, 'PATCH', { status }),
+      env, auth: mockServiceAuth(), params: { id: String(row!.id) },
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: 'DATA_VALIDATION' } });
+    const read = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${row!.id}`),
+      env, auth: mockAuth(), params: { id: String(row!.id) },
+    }));
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ status: 'open' });
+  });
+
   it('service token（companion scope）回覆請求 → 200', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/requests/${requestId}`, 'PATCH', {
@@ -247,14 +280,16 @@ describe('PATCH /api/requests/:id', () => {
       expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
     });
 
-    it('completed → failed 允許（failed 任何狀態都可標記）', async () => {
+    it('completed 後收到 failed 仍回 200，保留首次完成狀態', async () => {
       const ctx = mockContext({
         request: jsonRequest(`https://test.com/api/requests/${monoReqId}`, 'PATCH', { status: 'failed' }),
         env,
         auth: mockServiceAuth(),
         params: { id: String(monoReqId) },
       });
-      expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+      const response = await callHandler(onRequestPatch, ctx);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ status: 'completed', terminalReason: null });
     });
 
     it('未知 status value 拒絕 400', async () => {
@@ -337,6 +372,22 @@ describe('終結原因 terminal_reason (ADR-0007)', () => {
       terminalReason: 'because-i-said-so',
     }));
     expect(resp.status).toBe(400);
+  });
+
+  it('重複終結保留第一次停止等待的原因，遲到回覆仍可讀回', async () => {
+    const id = await newRequest('首次終結原因');
+    await callHandler(onRequestPatch, patch(id, { status: 'failed', terminalReason: 'cancelled' }));
+    const response = await callHandler(onRequestPatch, patch(id, {
+      status: 'failed', terminalReason: 'timed_out', reply: '已完成整理',
+    }));
+    expect(response.status).toBe(200);
+    const reread = await callHandler(onRequestGetOne, mockContext({
+      request: new Request(`https://test.com/api/requests/${id}`), env,
+      auth: mockAuth(), params: { id: String(id) },
+    }));
+    expect(await reread.json()).toMatchObject({
+      status: 'failed', terminalReason: 'cancelled', reply: '已完成整理',
+    });
   });
 });
 

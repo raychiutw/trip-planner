@@ -2,8 +2,7 @@
  * _entry_pois.ts — trip_entry_pois 操作 helper（v2.27.0 multi-POI per entry）
  *
  * Design 紀要 + Phase 1 → Phase 2 cutover 細節：見 PR / commit body + migration
- * 0057 / 0058 header 註解。完整 design doc 由 gbrain 維護（feat-multi-poi-per-
- * entry-design-2026-05-11），不在 repo 內。
+ * 0057 / 0058 header 註解。
  *
  * ## 核心 invariants
  *

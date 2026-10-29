@@ -11,6 +11,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import envLoader from '../lib/load-env.js';
+import telegram from '../lib/telegram.js';
 
 export interface CronEnv {
   apiUrl: string;
@@ -22,33 +24,15 @@ const DEFAULT_API = 'https://trip-planner-dby.pages.dev';
 const REFRESH_LEADTIME_SEC = 60;
 
 /** Load TRIPLINE_API_URL + TRIPLINE_API_CLIENT_ID/SECRET from env then .env.local fallback.
- * v2.33.49 round 8a: align quote-strip with `lib/load-env.js` (handle both
- * single and double quotes; previously only `"` → silent value-corruption if
- * any secret is wrapped in single quotes). 同時驗 key 不含 shell metacharacter
- * (defense in depth — .env.local 是 source of truth)。
+ * 解析交給 `lib/load-env.js` 的 parseEnv（去引號、驗 key、支援多行值）。
  */
 export function loadCronEnv(): CronEnv {
-  const envPath = join(process.cwd(), '.env.local');
+  const envPath = join(envLoader.REPO_ROOT, '.env.local');
   const raw = (() => {
     try { return readFileSync(envPath, 'utf-8'); } catch { return ''; }
   })();
-  const map = new Map<string, string>();
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const idx = trimmed.indexOf('=');
-    if (idx < 0) continue;
-    const key = trimmed.slice(0, idx).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
-    let val = trimmed.slice(idx + 1).trim();
-    if (
-      (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
-    ) {
-      val = val.slice(1, -1);
-    }
-    map.set(key, val);
-  }
+  // 全 repo 唯一的 .env.local parser（scripts/lib/load-env.js）：支援跨多行值、去引號、驗 key。
+  const map = new Map<string, string>(Object.entries(envLoader.parseEnv(raw)));
   // TRIPLINE_API_BASE = CF Pages deployment (admin endpoints + new v2.23 endpoints).
   // TRIPLINE_API_URL = mac mini Tailscale funnel (legacy /api routes only) — DO NOT USE.
   const apiUrl = (
@@ -165,35 +149,17 @@ export function makeApiClient(env: CronEnv) {
   };
 }
 
-// v2.33.50 round 8b: warn once when env missing (silent no-op 是 daily-check
-// 本身要 surface 的故障模式)。模組級 flag 避免每次 alert spam stderr。
-let _telegramEnvWarned = false;
-let _telegramBadFormatWarned = false;
+// 送出規則（token／chat id 驗證、env 優先序、不丟例外）全在 scripts/lib/telegram.js。
+// 這裡只保留「設定缺失／格式錯誤各只警告一次」——靜默 no-op 正是 daily-check 要 surface 的故障模式，
+// 但每次 alert 都 spam stderr 沒有意義（模組級 flag）。
+const _telegramWarned = new Set<string>();
 /** Telegram alert (best-effort). */
 export async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '';
-  const chat = process.env.TELEGRAM_CHAT_ID || '';
-  if (!tok || !chat) {
-    if (!_telegramEnvWarned) {
-      _telegramEnvWarned = true;
-      console.warn('[alertTelegram] TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID missing — alerts disabled');
-    }
-    return;
+  const r = await telegram.sendTelegram(msg);
+  if (!r.ok && (r.reason === 'not-configured' || r.reason === 'bad-token' || r.reason === 'bad-chat') && !_telegramWarned.has(r.reason)) {
+    _telegramWarned.add(r.reason);
+    console.warn(`[alertTelegram] Telegram 設定不可用（${r.reason}）— alerts disabled`);
   }
-  // v2.33.50 round 8b LOW: validate token format defense in depth (同
-  // send-telegram.sh v2.33.49 fix)。
-  if (!/^[0-9]+:[A-Za-z0-9_-]+$/.test(tok)) {
-    if (!_telegramBadFormatWarned) {
-      _telegramBadFormatWarned = true;
-      console.warn('[alertTelegram] TELEGRAM_BOT_TOKEN 格式不合法，alerts disabled');
-    }
-    return;
-  }
-  await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chat, text: msg }),
-  }).catch(() => undefined);
 }
 
 export function sleep(ms: number): Promise<void> {

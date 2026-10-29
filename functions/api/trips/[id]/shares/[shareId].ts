@@ -11,23 +11,16 @@
  * (create a fresh link). IDOR defence (S6): every op binds `AND trip_id = ?` + affected-
  * rows = 1, else 404. Auth re-checked live.
  */
-import { requireAuth, hasWritePermission } from '../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json } from '../../../_utils';
 import { generateShareToken, hashToken, sanitizeVisibleSections, validateExpiresAt } from '../../../_share';
 import type { Env } from '../../../_types';
 
-async function requireTripWrite(context: Parameters<PagesFunction<Env>>[0], tripId: string) {
-  const auth = requireAuth(context);
-  const ok = await hasWritePermission(context.env.DB, auth, tripId);
-  if (!ok) throw new AppError('PERM_DENIED');
-  return auth;
-}
-
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { id, shareId } = context.params as { id: string; shareId: string };
   const db = context.env.DB;
-  await requireTripWrite(context, id);
+  await requireTripWrite(db, requireAuth(context), id);
   const body = (await context.request.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (body.action === 'revoke') {
@@ -100,7 +93,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { id, shareId } = context.params as { id: string; shareId: string };
   const db = context.env.DB;
-  await requireTripWrite(context, id);
+  await requireTripWrite(db, requireAuth(context), id);
 
   const res = await db
     .prepare('DELETE FROM trip_shares WHERE id = ? AND trip_id = ?')

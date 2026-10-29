@@ -1,19 +1,17 @@
 /**
- * _tripWrite — shared low-level primitives for creating a new trip via chunked,
- * rollback-safe D1 writes. Consumed by both POST /api/trips/import (attacker JSON)
- * and POST /api/share/:token/clone (trusted server-side share payload).
+ * _tripWrite — low-level primitives for creating a new trip via chunked,
+ * rollback-safe D1 writes. Both creation endpoints call the shared module.
  *
- * D1 has no interactive transaction, db.batch() can't chain a generated id into a
- * later statement, and has a ~100-statement-per-batch limit — so callers run CHUNKED
+ * New-trip creation consumes generated ids in JavaScript, so the module runs CHUNKED
  * sequential batches with INSERT…RETURNING id, track created ids, and connect-root
- * rollback on any failure. POIs are find-or-create by UNIQUE(name,type): pre-existing
- * rows are reused AS-IS (never mutated → no shared-catalog poisoning), only newly-
- * created ids are tracked for rollback.
+ * rollback on any failure. POIs are find-or-create by UNIQUE(name,type) with
+ * fill-null policy: existing non-null fields stay intact; only newly-created
+ * ids are tracked for rollback. The full creation flow lives in _createTrip.ts.
  */
 import { AppError } from '../_errors';
 import { genTripId } from '../../../src/lib/tripId';
 
-export const BATCH_CHUNK = 50; // stay well under D1's ~100-statement-per-batch limit
+export const BATCH_CHUNK = 50; // application chunk size for new-trip creation; not D1's batch statement limit
 export const MAX_TRIPS_PER_USER = 1000;
 
 type Stmt = D1PreparedStatement;
@@ -23,43 +21,6 @@ export function reqId(r: D1Result, msg = '寫入失敗'): number {
   const id = (r.results?.[0] as { id?: number } | undefined)?.id;
   if (typeof id !== 'number' || id <= 0) throw new AppError('SYS_DB_ERROR', msg);
   return id;
-}
-
-export interface ResolvablePoi {
-  type: string;
-  name: string;
-  category: string | null;
-  lat: number | null;
-  lng: number | null;
-  hours: string | null;
-  rating: number | null;
-  price?: string | null;
-  address: string | null;
-  placeId: string | null;
-}
-
-/**
- * Find-or-create a POI by UNIQUE(name, type). pois enforces that index, so callers
- * MUST reuse an existing row rather than INSERT a duplicate. Pre-existing pois are
- * returned AS-IS (never mutated); only newly-created ids are tracked for rollback.
- */
-export async function resolvePoi(db: D1Database, p: ResolvablePoi, createdPoiIds: number[]): Promise<number> {
-  const found = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (found && typeof found.id === 'number') return found.id;
-  const ins = await db
-    .prepare(
-      'INSERT OR IGNORE INTO pois (type, name, category, lat, lng, hours, rating, price, address, place_id, source) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id',
-    )
-    .bind(p.type, p.name, p.category, p.lat, p.lng, p.hours, p.rating, p.price ?? null, p.address, p.placeId, 'imported')
-    .first<{ id: number }>();
-  if (ins && typeof ins.id === 'number') {
-    createdPoiIds.push(ins.id);
-    return ins.id;
-  }
-  // Lost the INSERT-OR-IGNORE race (concurrent insert of same name+type) → re-fetch.
-  const ref = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1').bind(p.name, p.type).first<{ id: number }>();
-  if (!ref || typeof ref.id !== 'number') throw new AppError('SYS_DB_ERROR', 'POI 解析失敗');
-  return ref.id;
 }
 
 /** Run statements in chunked atomic batches; onResult fires per result as each chunk
@@ -89,6 +50,7 @@ export async function rollbackTrip(db: D1Database, tripId: string, entryIds: num
     const chunk = poiIds.slice(i, i + 100);
     stmts.push(db.prepare(`DELETE FROM pois WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk));
   }
+  stmts.push(db.prepare('DELETE FROM audit_log WHERE trip_id = ?').bind(tripId));
   stmts.push(db.prepare('DELETE FROM trips WHERE id = ?').bind(tripId));
   await runChunked(db, stmts);
 }

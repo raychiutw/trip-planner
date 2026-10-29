@@ -1,6 +1,6 @@
 # HIG Navigation / Sheet Semantics — Web 完整重寫 Plan
 
-> Spec 來源:Flutter plan `trip-planner.flutter/docs/superpowers/plans/2026-07-18-hig-navigation-sheet-semantics.md`(當 HIG 語意 SoT)+ macOS HIG(桌機)+ iOS HIG(手機)+ 本專案 `DESIGN.md`。
+> 規範來源：Apple macOS HIG（桌機）+ iOS HIG（手機）+ 本專案 `DESIGN.md`。
 > 稽核明細:scratchpad `hig-audit.md`(四方對照,4 個 Explore agent 測繪)。
 > 分支:`feat/rev2-hig-nav-sheet`(疊 `feat/rev2-shell`,桌機=rev2)。
 

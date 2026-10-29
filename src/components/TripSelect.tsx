@@ -53,7 +53,8 @@ export function TripSelect<V extends string | number>({
         <ListboxButton
           id={id}
           className={triggerClass}
-          aria-label={ariaLabel}
+          // WCAG 2.5.3 Label in Name：無障礙名稱必須包含畫面上看得到的目前值。
+          aria-label={ariaLabel ? `${ariaLabel} ${display}` : undefined}
         >
           <span className="tp-select-value">{display}</span>
           <svg className="tp-select-chev" viewBox="0 0 20 20" aria-hidden="true">

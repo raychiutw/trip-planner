@@ -209,7 +209,6 @@ case "$SMOKE_SCOPE" in
   *)
     echo "  ${YELLOW}WARN${RESET} scope: $SMOKE_SCOPE"
     echo "  缺 companion scope — 確認 admin 已 UPDATE client_apps.allowed_scopes 含 companion"
-    echo "  詳見 docs/runbooks/2026-05-05-poi-favorites-rename-merge-runbook.md step 1"
     ;;
 esac
 unset TRIPLINE_API_CLIENT_SECRET

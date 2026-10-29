@@ -14,6 +14,38 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('MapPage bottom day tabs', () => {
+  test('map viewport leaves a visible attribution area above cards and mobile navigation', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/trip/okinawa-trip-2026-Ray/map?day=all');
+    await expect(page.locator('.tp-map-entry-card').first()).toBeVisible();
+    await expect(page.locator('.tp-map-container')).toBeVisible();
+
+    const measure = () => page.evaluate(() => {
+      const map = document.querySelector('.tp-map-container').getBoundingClientRect();
+      const cards = document.querySelector('.map-page-cards').getBoundingClientRect();
+      const navElement = document.querySelector('.tp-global-bottom-nav');
+      const nav = navElement?.getClientRects().length ? navElement.getBoundingClientRect() : null;
+      const fabs = document.querySelector('.tp-map-fabs')?.getBoundingClientRect();
+      // Approximate the native Google footer's bottom 25px; its exact markup is API-owned.
+      const attributionTop = map.bottom - 25;
+      return { mapBottom: map.bottom, cardsTop: cards.top, navTop: nav?.top, fabsBottom: fabs?.bottom, attributionTop };
+    });
+
+    for (const viewport of [{ width: 375, height: 812 }, { width: 1280, height: 800 }]) {
+      await page.setViewportSize(viewport);
+      const positions = await measure();
+      expect(positions.mapBottom).toBeLessThanOrEqual(positions.cardsTop - 8);
+      if (positions.navTop !== undefined) expect(positions.mapBottom).toBeLessThan(positions.navTop);
+      if (positions.fabsBottom !== undefined) expect(positions.fabsBottom).toBeLessThan(positions.attributionTop);
+    }
+
+    // A taller Google POI accessory must shrink the viewport instead of covering its footer.
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.locator('.map-page-cards').evaluate((cards) => { cards.style.height = '180px'; });
+    const withTallCard = await measure();
+    expect(withTallCard.mapBottom).toBeLessThanOrEqual(withTallCard.cardsTop - 8);
+  });
+
   test('switching a bottom day tab updates URL and resets cards to day-local index', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/map?day=all');
 

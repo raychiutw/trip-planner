@@ -2,6 +2,12 @@
 
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
+/* #1445 F7：使用者在「外觀設定」手動選深色／淺色時，body 的 .dark 與系統設定可能不一致。
+ * 只有 html 的 `light dark` 時，UA 預設樣式（連結色、原生 checkbox／radio／捲軸）仍照系統走：
+ * 系統淺色 + 手動深色 → 深色底上出現白色原生方框與預設藍 #0000EE 連結（1.6:1）。
+ * 在 body 上明確宣告，讓 UA 控制項與頁面主題一致。 */
+body.dark { color-scheme: dark; }
+body:not(.dark) { color-scheme: light; }
 
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
@@ -350,6 +356,9 @@ body.dark {
     --scrollbar-thumb-hover: #A89978;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;
+    /* TripPage 列印模式的「離開」鈕用 Tailwind 任意值（class 裡直接寫變數名）引用，不是 var() ——
+     * v2.31.71 清「沒人用的 token」時因此被誤刪，z-index 失效兩季（2026-09-24 補回）。 */
+    --z-print-exit: 9999;
 }
 
 /* ===== Global reset ===== */
@@ -686,7 +695,7 @@ body.dark {
     .tp-hero-chip {
         padding: 0; border: none;
         font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
-        color: var(--color-accent-text);
+        color: var(--color-accent-text-on-tonal); /* #1423：疊在 tonal 底時 accent-text 只有 4.28 */
     }
     .tp-hero-chip::after {
         content: "·"; margin: 0 2px 0 6px; opacity: 0.4;
@@ -694,19 +703,19 @@ body.dark {
     .tp-hero-chip:last-child::after { content: none; }
     .tp-hero-title {
         /* rev2 細 day label：date 17px，非大 hero title */
-        font-size: 17px; font-weight: 700; margin: 0;
+        font-size: 1.0625rem; font-weight: 700; margin: 0; /* 17px @16px root；#1445 改 rem 才會隨使用者字級放大 */
         letter-spacing: -0.01em; line-height: 1.3;
         color: var(--color-foreground);
     }
     .tp-hero-sub {
-        font-size: 12px;
+        font-size: 0.75rem; /* 12px @16px root；手機 root 17px 的等值修正見檔尾 #1445 區塊 */
         color: var(--color-muted);
         font-variant-numeric: tabular-nums;
         margin: 3px 0 0;
     }
     @media (min-width: 961px) {
         .tp-hero { padding: 8px 2px; }
-        .tp-hero-title { font-size: 18px; }
+        .tp-hero-title { font-size: 1.125rem; } /* 18px @16px root */
     }
 
     /* Flight card (mockup FlightInfo) */
@@ -814,9 +823,6 @@ body.dark {
         line-height: 1;
         z-index: 1;
     }
-    /* rev2 mockup：飯店 node 給床 icon（不給號碼）+ accent 邊/字 —— 當日路線起訖錨點、非「第幾站」。 */
-    .tp-rail-dot[data-hotel] { border-color: var(--color-accent); color: var(--color-accent); }
-    .tp-rail-dot .svg-icon { width: 13px; height: 13px; }
     /* 柔褐三色 tone（2026-06）：每 tone 設一組 --tone-* 供 card/icon/dot/label 取用；
        neutral 不設 → var() fallback 回原中性樣式。tier token 在此被引用 → Tailwind 不 tree-shake。 */
     /* --tone-* 同時套到 rail item 與展開明細 .tp-rail-detail（detail 是 item 的 sibling，
@@ -937,7 +943,7 @@ body.dark {
         .tp-page { padding: 0 28px 40px; }
     }
     @media (max-width: 960px) {
-        .tp-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
+        .tp-hero-title { font-size: 1.5rem; } /* 24px @16px root；mockup .tp-detail-hero-title compact:1877 (was 28px) */
     }
     /* Mobile type scale override (760px and below).
      * Breakpoint intentionally set below iPad mini portrait (744px so mini gets mobile
@@ -947,7 +953,7 @@ body.dark {
     @media (max-width: 760px) {
         .tp-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .tp-hero { padding: 18px; border-radius: var(--radius-md); }
-        .tp-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
+        .tp-hero-title { font-size: 1.4118rem; } /* F003: DESIGN.md mobile hero title = 24px（手機 root 17px → 24/17 rem；#1445 改 rem 讓大字型生效） */
         /* rev2 Section 02：手機沿用 base grid（node | body，排序模式插 grip 欄），只縮 gap/padding。
          * （先前殘留 v2.30.12 的 5-col + 36px icon 欄讓 body 崩成 36px；改用 auto-placement 統一模板。） */
         .tp-rail-item {
@@ -1504,7 +1510,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
   /* rev2 D-review #4：fit-content 膠囊在中欄/視窗水平置中（原 margin-left 12px 靠左，
      桌機寬中欄下明顯偏左）。auto 左右 margin 置中,少天時置中、多天時仍可捲。 */
   margin: 6px auto 8px;
-  padding: 4px;
+  padding: 5px 4px; /* 上下 5px：讓 tab 的不可見點擊區（見 .tp-map-day-tab::before）不被 overflow 裁掉，合計 ≥44px */
   /* rev2 owner 2026-07-19「day tab 比照功能tab（底部浮動膠囊）的效果」：與 .tp-global-bottom-nav
    * 同一玻璃材質族 —— 浮動玻璃膠囊（較強暖落影 + 亮 specular 上緣）。
    * （原本這裡還記著「secondary 底 88%，比 nav 62% 略實」的理由，已於 2026-07-21
@@ -1530,7 +1536,23 @@ body.dark .tp-toast { background: var(--color-secondary); }
   border-radius: var(--radius-full);
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
+/* #1445 F9：strip 溢出時，還能捲的那一側做邊緣漸層（useDayStripNav 標 data-fade-start / data-fade-end）。
+ * mask 連容器的玻璃邊框一起淡出，這是刻意的：邊緣「消失」本身就是還有內容的暗示。 */
+.tp-map-day-tabs[data-fade-start="true"],
+.tp-map-day-tabs[data-fade-end="true"] {
+  --day-fade-l: 0px;
+  --day-fade-r: 0px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--day-fade-l), #000 calc(100% - var(--day-fade-r)), transparent 100%);
+}
+.tp-map-day-tabs[data-fade-start="true"] { --day-fade-l: 28px; }
+/* 鍵盤聚焦其中一個 tab 時取消遮罩：邊緣 28px 的漸層會把焦點環吃掉（WCAG 2.4.11 focus not obscured）。 */
+.tp-map-day-tabs:has(.tp-map-day-tab:focus-visible) { -webkit-mask-image: none; mask-image: none; }
+.tp-map-day-tabs[data-fade-end="true"] { --day-fade-r: 28px; }
+/* #1445 F4：tab 視覺高 34px，點擊區用不可見 pseudo 擴成 44px（HIG／專案 tap-min）。 */
+.tp-map-day-tab::before { content: ''; position: absolute; inset: -5px 0; }
 .tp-map-day-tab {
+  position: relative;
   flex: 0 0 auto;
   padding: 5px 15px;
   border: none;
@@ -1704,7 +1726,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   font-variant-numeric: tabular-nums;
 }
 .tp-map-entry-card-time {
-  font-size: 12px;
+  font-size: 0.75rem; /* 12px @16px root */
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1733,7 +1755,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 }
 .tp-map-entry-card.is-active .tp-map-entry-card-icon { color: var(--color-accent); }
 .tp-map-entry-card-title {
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px @16px root */
   font-weight: 700;
   line-height: 1.35;
   color: var(--color-foreground);
@@ -1808,7 +1830,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     backdrop-filter: var(--tabbar-filter);
   }
   .tp-titlebar-title {
-    font-size: 18px; /* mockup compact 18px (was 22px) */
+    font-size: 1.0588rem; /* mockup compact 18px (was 22px)；手機 root 17px → 18/17 rem（#1445 改 rem） */
     line-height: 24px;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -1966,7 +1988,10 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
 /* 標題即切換器（owner 2026-07-21：「點下行程名稱後切換，名稱後面接一個 V」）。
  * 取代原本 TitleBar 右側那顆分離的 `⇄ ▾` 圖示按鈕 —— 標題本來就是最自然的入口。 */
-.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; }
+/* #1424：必須 max-width:100%。inline-flex 容器 shrink-to-fit 寬度的下限是內容的 min-content，而
+ * white-space:nowrap 的文字 min-content 就是全文寬 —— overflow:hidden 只降低 flex 的「自動最小
+ * 尺寸」、不降低容器固有寬度。沒有它，長標題會撐出 <h1> 被硬切（沒有 …、下拉箭頭也被切掉）。 */
+.tp-titlebar-trip-title-wrap { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
 .tp-titlebar-trip-title {
   display: inline-flex; align-items: center; gap: 4px;
   min-width: 0; min-height: 44px; /* HIG 最小觸控目標 */
@@ -2042,7 +2067,9 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  min-width: 240px;
+  /* #1445 F13：窄螢幕（含 200% 縮放的 195px）選單不可比視窗寬；水平夾限由 TripTitleSwitcher 量測後處理。 */
+  min-width: min(240px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
   max-height: 360px; overflow-y: auto;
   z-index: var(--z-popover, 1100);
   padding: 4px;
@@ -2089,6 +2116,23 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   }
 }
 
+/* ───── 毛玻璃面 module（#1422 / architecture review #1）─────
+ * interface：元素加 class `tp-glass`，並在自己的規則裡宣告參數（都有預設值）：
+ *   --glass-alpha   一般模式底色的不透明度，預設 88%
+ *   --glass-filter  一般模式的 backdrop-filter，預設 blur(20px)
+ *   --glass-base    底色，預設 --color-background
+ * implementation：下面這一份 recipe，加上「降低透明度／提高對比」時的降級（見下方合併區塊）。
+ * 不要在元件裡再手寫 `backdrop-filter` 或半透明底 —— 守門測試 tests/unit/glass-surface-module.test.ts 會紅，
+ * 瀏覽器端由 tests/e2e/glass-degrade.spec.js 用 computed style 驗證降級真的生效。
+ * 一般模式 `--glass-reduce-*` 都未定義 → 取 fallback，computed 值與改版前逐項相同。
+ * ⚠ 位置要晚於 `.tp-map-entry-card` 等基礎樣式，同 specificity 時才蓋得過它們的底色。 */
+.tp-glass {
+  background: var(--glass-reduce-bg, color-mix(in srgb, var(--glass-base, var(--color-background)) var(--glass-alpha, 88%), transparent));
+  /* 只寫標準屬性、不成對寫 -webkit-：lightningcss 會把成對宣告去重、留下 Chromium 不認得的 -webkit- 版，
+   * 整面玻璃在 Chrome 失效（見上方 .tp-bottom-nav 附近的同類說明）。前綴交給建置工具補。 */
+  backdrop-filter: var(--glass-reduce-filter, var(--glass-filter, blur(20px)));
+}
+
 /* ── tab 膠囊材質的可及性降級 ───────────────────────────────────────
  * 放在檔案最後：Tailwind 4 會把所有 @layer 攤平，覆寫靠的是「特異性 + 來源順序」，
  * 不是 layer 順序。body.dark 的特異性是 (0,1,1)，這裡要蓋過它就必須排在它之後。
@@ -2101,8 +2145,13 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * color-mix 半透明底也顯式蓋成全不透明（模糊沒了、3-6% 透出仍會干擾）。 */
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
+  }
+  /* 必須放在 **body**（與定義同層）。--tabbar-* 與 --color-glass-* 定義在 body {}，
+   * 子元素繼承的是離它最近的 body 的值；只覆寫 :root 會被 body 自己的宣告蓋住 —— 這個降級
+   * 因此從 W5 起一直是死碼。 */
+  body {
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
@@ -2123,8 +2172,10 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     --color-success-deep: #04503D;   /* on #E1F1E7 → 8.08（一般階 4.60） */
     --color-warning-deep: #6B3B00;   /* on #FEEED8 → 8.19（一般階 4.59） */
     --color-destructive: #87240E;    /* on #FDECEC → 8.03（一般階 4.85） */
-    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --blur-glass: 0px;
+  }
+  body {                             /* 同上：必須與定義同層（body），:root 會被 body 遮蔽 */
+    --tabbar-tint: var(--color-background); --tabbar-filter: none;
     --color-glass-nav: var(--color-background);
     --color-glass-toast: var(--color-secondary);
   }
@@ -2139,8 +2190,48 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   body.dark .tp-bottom-nav, body.dark .tp-page-bottom-bar { background: var(--color-secondary); }
 }
 
+/* 降級 token（毛玻璃面 module 的另一半）：降低透明度、提高對比任一成立就全部玻璃面一起降級。
+ * 只定義在這一處 —— 一般模式這些 token 未定義，`.tp-glass` 取自己的 fallback。
+ * 放在 :root／body.dark（不是 @theme）：動態名的 token 放 @theme 會被 tree-shake。 */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root {
+    --glass-reduce-filter: none;
+    --glass-reduce-bg: var(--color-background);
+    /* 圖片上的深色 scrim 圓鈕（探索頁愛心）：降級時改不透明深色，白色圖示對比不再取決於底下的圖。 */
+    --glass-reduce-scrim: #2C2C2E; --glass-reduce-scrim-hover: #1C1C1E;
+  }
+  body.dark { --glass-reduce-bg: var(--color-secondary); }
+}
+
+/* 第三欄 sheet（.app-shell-sheet，背景 = --color-tertiary，owner 刻意的「再高一階」表面）。
+ * #1423：深色下 --color-muted(#A1A1A6) 疊 tertiary 只有 4.41、--color-destructive(#FF6B52) 4.04，
+ * 差一點到 AA 4.5。只在**這個表面內**局部提亮，不動全站 token（muted 疊 background／secondary
+ * 已過，全站調亮只會改到不需要改的地方）。sheet 內所有 muted／destructive 文字自動繼承。 */
+body.dark .app-shell-sheet { --color-muted: #ABABB0; --color-destructive: #FF806A; }
+/* 「提高對比」時 destructive 已有更高的加強階（#FFB9AB，上方 prefers-contrast 區塊）。上面那條
+ * 局部覆寫離子孫更近，會把它蓋回 #FF806A —— 使用者要求提高對比時反而降低對比（code review 抓到）。
+ * 必須排在上一條之後、同特異性，所以放在它正下方。 */
+@media (prefers-contrast: more) {
+  body.dark .app-shell-sheet { --color-destructive: #FFB9AB; }
+}
+
 /* 不支援 backdrop-filter 的瀏覽器：低 alpha tint 沒有模糊撐著會糊成一片。 */
 @supports not (backdrop-filter: blur(1px)) {
-  :root { --tabbar-tint: var(--color-background); }
+  body { --tabbar-tint: var(--color-background); }
   body.dark { --tabbar-tint: var(--color-secondary); }
+}
+
+/* ===== #1445 F16：標題類文字改 rem 後，手機（root 17px）的等值修正 =====
+ * 這些字級原本是固定 px，使用者調大系統／瀏覽器字級時標題不動、內文變大，層級反轉。
+ * 改 rem 後桌機（root 16px）數值等同原 px；手機 root 是 106.25%（17px），所以在這裡用 px/17 的 rem
+ * 讓 100% 下兩種裝置的實際尺寸都與改動前一致。 */
+@media (max-width: 760px) {
+  .tp-hero-sub { font-size: 0.7059rem; }            /* 12px */
+  .tp-map-entry-card-time { font-size: 0.7059rem; } /* 12px */
+  .tp-map-entry-card-title { font-size: 0.8235rem; } /* 14px */
+}
+/* marker 編號字級（地圖 marker 的樣式函式以 var() 引用）。桌機 root 16px：12／13px；手機 root 17px：除以 17。 */
+:root { --marker-font-size: 0.75rem; --marker-font-size-focused: 0.8125rem; }
+@media (max-width: 760px) {
+  :root { --marker-font-size: 0.7059rem; --marker-font-size-focused: 0.7647rem; }
 }

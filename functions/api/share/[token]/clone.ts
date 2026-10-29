@@ -5,22 +5,24 @@
  * Copies the always-public trip BODY (days / entries / POIs / segments) + ONLY the
  * share's VISIBLE note sections (default-deny via parseVisibleSections) — a private
  * section the owner didn't enable can never reach the clone. New trip owned by the
- * caller (data_source='cloned', published=0). POIs find-or-create by UNIQUE(name,type)
- * — never mutates the shared catalog. per-user rate limit + trips cap; connect-root
- * rollback on any failure.
+ * caller (data_source='cloned', published=0). POIs use fill-null. Per-user rate
+ * limit + trips cap precede the shared new-trip creation and compensation flow.
  */
 import { requireAuth, assertNotTripRestricted } from '../../_auth';
 import { json } from '../../_utils';
 import { AppError } from '../../_errors';
 import { resolveActiveShare, parseVisibleSections, type ShareSection } from '../../_share';
-import { reqId, resolvePoi, runChunked, rollbackTrip, assertTripCap, type ResolvablePoi } from '../../trips/_tripWrite';
+import { assertTripCap } from '../../trips/_tripWrite';
+import { createTripFromPlan, type NewTripPlan } from '../../trips/_createTrip';
+import type { FindOrCreatePoiData } from '../../_poi';
 import { checkRateLimit, bumpRateLimit, clientIp, RATE_LIMITS } from '../../_rate_limit';
 import type { Env } from '../../_types';
 
 type Stmt = D1PreparedStatement;
 type Row = Record<string, unknown>;
 const rows = (r: { results?: unknown[] } | null): Row[] => (r?.results as Row[]) ?? [];
-const poiFrom = (r: Row): ResolvablePoi => ({
+// clone 與匯入同 policy=fill-null（spec #1255 / #1258，owner 2026-09-05 拍板）：撞既有 master 只補 NULL 欄；source='imported'、country 不猜。
+const poiFrom = (r: Row): FindOrCreatePoiData => ({
   type: String(r.type ?? 'attraction'),
   name: String(r.name ?? ''),
   category: (r.category as string) ?? null,
@@ -30,7 +32,8 @@ const poiFrom = (r: Row): ResolvablePoi => ({
   rating: (r.rating as number) ?? null,
   price: (r.price as string) ?? null,
   address: (r.address as string) ?? null,
-  placeId: (r.place_id as string) ?? null,
+  place_id: (r.place_id as string) ?? null,
+  source: 'imported',
 });
 
 function notFound(): Response {
@@ -98,9 +101,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!trip) return notFound();
 
   const tripId = `cln-${crypto.randomUUID()}`;
-  const now = new Date().toISOString();
-  const createdEntryIds: number[] = [];
-  const createdPoiIds: number[] = [];
 
   // Map a note row to its INSERT (content columns only — never id / trip_id / timestamps).
   function noteStmts(): Stmt[] {
@@ -118,90 +118,49 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return out;
   }
 
-  try {
-    // ---- Batch A: trip + permissions + destinations + doc stubs + visible notes ----
-    await runChunked(db, [
-      db.prepare('INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, lang) VALUES (?,?,?,?,?,?,?,?,?)')
-        // 複製出的行程在顯示標題（title || name）後綴「-複製」，便於與來源區分。
-        .bind(tripId, `${trip.name ?? '未命名行程'}-複製`, auth.userId, trip.title ? `${trip.title}-複製` : null, trip.description, trip.countries ?? 'JP', 0, 'cloned', trip.lang ?? 'zh-TW'),
-      db.prepare('INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?,?,?)').bind(auth.userId, tripId, 'owner'),
-      ...rows(destsR).map((d, i) => db.prepare('INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas) VALUES (?,?,?,?,?,?,?)')
-        .bind(tripId, i + 1, d.name, d.lat, d.lng, d.day_quota ?? 0, d.sub_areas ?? null)),
-      ...noteStmts(),
-    ]);
-
-    // ---- Batch B: days RETURNING id → map old day id → new day id ----
-    const srcDays = rows(daysR);
-    const dayIdMap = new Map<number, number>();
-    await runChunked(
-      db,
-      srcDays.map((d) => db.prepare('INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?,?,?,?,?) RETURNING id')
-        .bind(tripId, d.day_num, d.date, d.day_of_week, d.label)),
-      (r, idx) => dayIdMap.set(srcDays[idx]!.id as number, reqId(r, '複製寫入失敗')),
-    );
-
-    // ---- Batch C: entries RETURNING id → map old entry id → new entry id ----
-    const srcEntries = rows(entriesR);
-    const poiCountByEntry = new Map<number, number>();
-    for (const ep of rows(epR)) poiCountByEntry.set(ep.entry_id as number, (poiCountByEntry.get(ep.entry_id as number) ?? 0) + 1);
-    const entryIdMap = new Map<number, number>();
-    await runChunked(
-      db,
-      srcEntries.map((e) => {
-        const newDayId = dayIdMap.get(e.day_id as number);
-        if (newDayId === undefined) throw new AppError('SYS_DB_ERROR', '複製寫入失敗（entry 缺 day 關聯）');
-        // migration 0078: 不再 copy entry-level note；per-POI note 隨 trip_entry_pois copy（含 ep.note）。
-        return db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time, end_time, description, source, entry_pois_version) VALUES (?,?,?,?,?,?,?) RETURNING id')
-          .bind(newDayId, e.sort_order, e.start_time, e.end_time, e.description, e.source, (poiCountByEntry.get(e.id as number) ?? 0) > 0 ? 1 : 0);
-      }),
-      (r, idx) => {
-        const id = reqId(r, '複製寫入失敗');
-        createdEntryIds.push(id);
-        entryIdMap.set(srcEntries[idx]!.id as number, id);
-      },
-    );
-
-    // ---- entry POIs (find-or-create) + hotels + segments ----
-    const tail: Stmt[] = [];
-    const seenByEntry = new Map<number, Set<number>>();
-    const soByEntry = new Map<number, number>();
-    for (const ep of rows(epR)) {
-      const newEntryId = entryIdMap.get(ep.entry_id as number);
-      if (newEntryId === undefined) continue;
-      const poiId = await resolvePoi(db, poiFrom(ep), createdPoiIds);
-      const seen = seenByEntry.get(newEntryId) ?? new Set<number>();
-      if (seen.has(poiId)) continue; // UNIQUE(entry_id, poi_id)
-      seen.add(poiId);
-      seenByEntry.set(newEntryId, seen);
-      const so = (soByEntry.get(newEntryId) ?? 0) + 1;
-      soByEntry.set(newEntryId, so);
-      tail.push(db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(newEntryId, poiId, so, ep.description, ep.note, ep.reservation, ep.reservation_url, now, now));
-    }
-    for (const h of rows(hotelsR)) {
-      const newDayId = dayIdMap.get(h.day_id as number);
-      if (newDayId === undefined) continue;
-      const poiId = await resolvePoi(db, poiFrom(h), createdPoiIds);
-      tail.push(db.prepare('UPDATE trip_days SET hotel_poi_id = ? WHERE id = ?').bind(poiId, newDayId));
-    }
-    for (const s of rows(segsR)) {
-      const from = entryIdMap.get(s.from_entry_id as number);
-      const to = entryIdMap.get(s.to_entry_id as number);
-      if (from === undefined || to === undefined) continue;
-      tail.push(db.prepare('INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, version, no_travel) VALUES (?,?,?,?,?,?,?,?,?,0,?)')
-        .bind(tripId, from, to, s.mode, s.submode ?? null, s.min, s.distance_m, s.source, s.source === 'google' ? Date.now() : null, s.no_travel === 1 ? 1 : null));
-    }
-    await runChunked(db, tail);
-
-    return json({ ok: true, tripId, daysCreated: srcDays.length }, 201);
-  } catch (err) {
-    try {
-      await rollbackTrip(db, tripId, createdEntryIds, createdPoiIds);
-    } catch (rbErr) {
-      console.error('[share/clone] ROLLBACK FAILED — possible orphaned data', { tripId, rbErr });
-    }
-    if (err instanceof AppError) throw err;
-    console.error('[share/clone] failed, rolled back', { tripId, err });
-    throw new AppError('SYS_DB_ERROR', '複製失敗，請稍後重試');
+  const days: NewTripPlan['days'] = rows(daysR).map((d) => ({
+    dayNum: d.day_num as number, date: d.date as string, dayOfWeek: d.day_of_week as string,
+    label: d.label as string, hotel: null, entries: [],
+  }));
+  const dayById = new Map(rows(daysR).map((d, i) => [d.id as number, days[i]!]));
+  const poisByEntry = new Map<number, NewTripPlan['days'][number]['entries'][number]['pois']>();
+  for (const ep of rows(epR)) {
+    const list = poisByEntry.get(ep.entry_id as number) ?? [];
+    list.push({ data: poiFrom(ep), fields: {
+      description: ep.description as string | null, note: ep.note as string | null,
+      reservation: ep.reservation as string | null, reservationUrl: ep.reservation_url as string | null,
+    } });
+    poisByEntry.set(ep.entry_id as number, list);
   }
+  for (const e of rows(entriesR)) {
+    const day = dayById.get(e.day_id as number);
+    if (!day) throw new AppError('SYS_DB_ERROR', '複製寫入失敗（entry 缺 day 關聯）');
+    day.entries.push({
+      key: e.id as number, sortOrder: e.sort_order as number, startTime: e.start_time as string | null,
+      endTime: e.end_time as string | null, description: e.description as string | null,
+      source: e.source as string | null, pois: poisByEntry.get(e.id as number) ?? [],
+    });
+  }
+  for (const h of rows(hotelsR)) {
+    const day = dayById.get(h.day_id as number);
+    if (day) day.hotel = poiFrom(h);
+  }
+  const plan: NewTripPlan = {
+    tripId, ownerId: auth.userId,
+    name: `${trip.name ?? '未命名行程'}-複製`, title: trip.title ? `${trip.title}-複製` : null,
+    description: trip.description, countries: trip.countries ?? 'JP', published: 0,
+    dataSource: 'cloned', lang: trip.lang ?? 'zh-TW',
+    destinations: rows(destsR).map((d) => ({ name: d.name as string, lat: d.lat as number | null,
+      lng: d.lng as number | null, dayQuota: (d.day_quota as number | null) ?? 0,
+      subAreas: (d.sub_areas as string | null) ?? null })),
+    notes: noteStmts(), days,
+    segments: rows(segsR).map((s) => ({ fromKey: s.from_entry_id as number, toKey: s.to_entry_id as number,
+      mode: s.mode as string, submode: (s.submode as string | null) ?? null, min: s.min as number | null,
+      distanceM: s.distance_m as number | null, source: s.source as string | null,
+      noTravel: s.no_travel === 1 ? 1 : null })),
+    audit: { changedBy: auth.email || auth.userId, diff: { via: 'share-clone', sourceTripId: src } },
+    failureDetail: '複製失敗，請稍後重試',
+  };
+  await createTripFromPlan(db, plan);
+  return json({ ok: true, tripId, daysCreated: days.length }, 201);
 };

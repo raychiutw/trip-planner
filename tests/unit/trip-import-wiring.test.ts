@@ -1,7 +1,6 @@
 /**
- * PR3 — import endpoint + frontend wiring (source grep).
- * The D1 orchestration can't be unit-tested without a live binding (verified on
- * prod); this locks the security + structural contract.
+ * 匯入驗證邊界與前端入口的既有靜態守衛。
+ * 建立、ID 對應與補償由 trip-import-creation.integration.test.ts 的真 D1 行為測試驗證。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -10,75 +9,9 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 
-const ENDPOINT = read('functions/api/trips/import.ts');
 const VALIDATE = read('functions/api/trips/_import.ts');
-// v2.40.0 PR3: orchestration primitives extracted to _tripWrite (shared with clone).
-const TRIPWRITE = read('functions/api/trips/_tripWrite.ts');
 const BTN = read('src/components/trips/ImportTripButton.tsx');
 const LIST = read('src/pages/TripsListPage.tsx');
-
-describe('POST /api/trips/import — endpoint', () => {
-  it('is a POST handler, auth-gated on a V2 user id', () => {
-    expect(ENDPOINT).toMatch(/export const onRequestPost/);
-    expect(ENDPOINT).toMatch(/requireAuth\(context\)/);
-    expect(ENDPOINT).toMatch(/auth\.userId/);
-  });
-  it('enforces the REAL body size (reads text, caps, then parses — not Content-Length)', () => {
-    expect(ENDPOINT).toMatch(/await context\.request\.text\(\)/);
-    expect(ENDPOINT).toMatch(/text\.length > MAX_IMPORT_BYTES/);
-    expect(ENDPOINT).not.toMatch(/headers\.get\('Content-Length'\)/);
-  });
-  it('caps trips-per-user (anti import-spam) via shared _tripWrite', () => {
-    expect(ENDPOINT).toMatch(/assertTripCap\(/);
-    expect(TRIPWRITE).toMatch(/MAX_TRIPS_PER_USER/);
-    expect(TRIPWRITE).toMatch(/COUNT\(\*\)[\s\S]*owner_user_id/);
-  });
-  it('chunks batches under D1 limit + RETURNING id throws on miss (shared _tripWrite)', () => {
-    expect(TRIPWRITE).toMatch(/BATCH_CHUNK = 50/);
-    expect(ENDPOINT).toMatch(/runChunked/);
-    expect(TRIPWRITE).toMatch(/function reqId/);
-  });
-  it('trip_entry_pois carries trip-specific overrides (round-trip fidelity)', () => {
-    expect(ENDPOINT).toMatch(/INSERT INTO trip_entry_pois \(entry_id, poi_id, sort_order, description, note, reservation, reservation_url/);
-  });
-  it('migration 0078: trip_entries INSERT 不再帶 note；entry-level note coalesce 到 master poi', () => {
-    // entry-level note column 已 DROP — INSERT INTO trip_entries 欄位清單不得含 note。
-    expect(ENDPOINT).not.toMatch(/INSERT INTO trip_entries[^)]*\bnote\b/);
-    // master(so===1) note fallback 到舊檔 e.note，保 round-trip 不遺失。
-    expect(ENDPOINT).toMatch(/so === 1 \? \(p\.note \?\? e\.note/);
-  });
-  it('runs the pure validator and rejects on failure', () => {
-    expect(ENDPOINT).toMatch(/parseAndValidateImport/);
-    expect(ENDPOINT).toMatch(/if \(!result\.ok\) throw new AppError/);
-  });
-  it('creates a NEW trip id, owner = current user, data_source imported', () => {
-    // 2026-07-21：原本斷言 `crypto.randomUUID()`，那是匯入自己寫死的 `imp-<uuid>`。
-    // ID 規則已收斂到 src/lib/tripId 的共用 genTripId（owner 由 demo 行程編號
-    // 不合慣例而發現），這裡改鎖「用共用產生器」而非鎖特定亂數實作。
-    expect(ENDPOINT).toMatch(/generateUniqueTripId\(/);
-    expect(ENDPOINT).toContain("'imported'");
-    expect(ENDPOINT).toMatch(/owner_user_id/);
-  });
-  it('find-or-creates pois by UNIQUE(name,type) and NEVER mutates an existing one (shared _tripWrite)', () => {
-    expect(ENDPOINT).toMatch(/resolvePoi/); // imported + used
-    expect(TRIPWRITE).toMatch(/export async function resolvePoi/);
-    expect(TRIPWRITE).toMatch(/SELECT id FROM pois WHERE name = \? AND type = \?/);
-    expect(TRIPWRITE).toMatch(/INSERT OR IGNORE INTO pois/);
-    expect(TRIPWRITE).not.toMatch(/UPDATE pois/); // never poison a shared catalog row
-  });
-  it('dedupes resolved poi_ids per entry (UNIQUE(entry_id, poi_id))', () => {
-    expect(ENDPOINT).toMatch(/seenPoi/);
-  });
-  it('rolls back (connect-root delete) on any failure (shared _tripWrite)', () => {
-    expect(ENDPOINT).toMatch(/await rollbackTrip\(/);
-    expect(TRIPWRITE).toMatch(/export async function rollbackTrip/);
-    expect(TRIPWRITE).toMatch(/DELETE FROM trips WHERE id = \?/);
-  });
-  it('remaps segments by positional index to new entry ids', () => {
-    expect(ENDPOINT).toMatch(/posToEntryId/);
-    expect(ENDPOINT).toMatch(/from_entry_id, to_entry_id/);
-  });
-});
 
 describe('_import.ts — security boundary', () => {
   it('exports the validator + dangerous-key guard + caps (incl TOTAL caps)', () => {

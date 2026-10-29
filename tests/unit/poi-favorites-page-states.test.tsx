@@ -1,7 +1,7 @@
 /**
  * PoiFavoritesPage 8-state matrix + region pill + a11y unit test
  *
- * 對齊 DESIGN.md L645-665 + docs/design-sessions/2026-05-04-favorites-redesign.html mockup v4：
+ * 對齊 DESIGN.md 收藏頁規範：
  *   8 states: loading / empty-pool / filter-no-results / error / data /
  *             optimistic-delete / bulk-action-busy / pagination
  *   region pill row + type filter row 用 role="group" + aria-pressed (NOT role="tablist")

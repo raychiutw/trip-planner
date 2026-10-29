@@ -7,13 +7,11 @@
  * 失敗統一走 showToast (對齊 mockup spec + 既有 EditEntryPage / EditTripPage pattern)。
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const TIMELINE = readFileSync(
-  join(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-  'utf8',
-);
+const TIMELINE = readTimelineRailSources();
 const DIALOG = readFileSync(
   join(__dirname, '../../src/components/trip/TravelPillDialog.tsx'),
   'utf8',

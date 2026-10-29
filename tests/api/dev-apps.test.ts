@@ -220,6 +220,22 @@ describe('GET /api/dev/apps', () => {
     expect(json.apps[0]?.allowed_scopes).toEqual(['openid', 'profile']);
   });
 
+  it('normalizes malformed historical JSON columns without hiding valid apps', async () => {
+    const stmt = makeStmt(null, [
+      { client_id: 'tp_valid', redirect_uris: '["https://example.com/cb"]', allowed_scopes: '["openid"]' },
+      { client_id: 'tp_null', redirect_uris: 'null', allowed_scopes: '{}' },
+      { client_id: 'tp_mixed', redirect_uris: '["https://example.com/other",42,null]', allowed_scopes: '["profile",false]' },
+    ]);
+    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn().mockReturnValue(stmt) } };
+    const req = await makeAuthedRequest('https://x.com/api/dev/apps', 'GET');
+    const res = await onRequestGet(makeContext(req, env));
+    const json = await res.json() as { apps: Array<Record<string, unknown>> };
+    expect(json.apps.map((app) => app.redirect_uris)).toEqual([
+      ['https://example.com/cb'], [], ['https://example.com/other'],
+    ]);
+    expect(json.apps.map((app) => app.allowed_scopes)).toEqual([['openid'], [], ['profile']]);
+  });
+
   it('filters by owner_user_id (session.uid)', async () => {
     const stmt = makeStmt(null, []);
     const dbPrepare = vi.fn().mockReturnValue(stmt);

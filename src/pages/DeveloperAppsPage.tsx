@@ -16,11 +16,12 @@
  *   - 預設 client_type='public'（PKCE 強制，不需 secret）
  *   - redirect_uris textarea: HTTPS-only validation 由後端做
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -28,6 +29,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -38,34 +40,32 @@ const SCOPED_STYLES = `
 
 /* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
-.tp-list-table {
+.tp-app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.tp-app-card {
+  min-width: 0; padding: 16px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
 }
-.tp-list-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  align-items: center;
-  gap: 16px; padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-subheadline);
-}
-.tp-list-row:last-child { border-bottom: none; }
-.tp-list-header {
-  background: var(--color-secondary);
-  font-size: var(--font-size-caption2);
-  font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-.tp-app-name { font-weight: 600; }
+.tp-app-name { margin: 0; font-size: var(--font-size-subheadline); font-weight: 600; overflow-wrap: anywhere; }
 .tp-app-cid {
   font-family: 'SF Mono', ui-monospace, monospace;
   font-size: var(--font-size-caption);
   color: var(--color-muted);
+  overflow-wrap: anywhere;
 }
+.tp-app-uri-list { margin-top: 12px; }
+.tp-app-uri-label { color: var(--color-muted); font-size: var(--font-size-caption); font-weight: 600; }
+.tp-app-uri { margin-top: 8px; }
+.tp-app-uri code { display: block; font-size: var(--font-size-caption); overflow-wrap: anywhere; }
+.tp-app-uri .tp-btn { margin-top: 6px; }
+.tp-app-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.tp-app-created { color: var(--color-muted); font-size: var(--font-size-caption); text-align: right; }
+@media (max-width: 760px) { .tp-app-grid { grid-template-columns: minmax(0, 1fr); } }
 .tp-pill {
   display: inline-flex; padding: 2px 8px;
   border-radius: var(--radius-xs);
@@ -103,6 +103,22 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 .tp-error-banner { color: var(--color-destructive); }
+.tp-dev-permission-banner { max-width: 920px; margin: 16px auto 0; }
+.tp-dev-page-error {
+  padding: 32px 24px; background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  text-align: center;
+}
+.tp-dev-page-error-title { margin: 0 0 12px; font-weight: 700; color: var(--color-foreground); }
+.tp-dev-page-error-desc { margin: 0 0 12px; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-dev-page-error-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.tp-dev-page-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-dev-page-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 `;
 
 interface ClientApp {
@@ -133,15 +149,24 @@ export default function DeveloperAppsPage() {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<'forbidden' | 'failed' | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [copyState, setCopyState] = useState<{ key: string; success: boolean } | null>(null);
+  const loadSequence = useRef(0);
+  const titlebarActionRef = useRef<HTMLButtonElement>(null);
 
   async function loadApps() {
+    const sequence = ++loadSequence.current;
     setError(null);
+    setCopyState(null);
     try {
       const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
-      setApps(json.apps);
+      if (sequence === loadSequence.current) setApps(json.apps);
     } catch (err) {
-      setError(err instanceof Error ? '無法載入應用列表，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+      if (sequence === loadSequence.current) {
+        setApps(null);
+        setError(err instanceof ApiError && err.status === 403 ? 'forbidden' : 'failed');
+      }
     }
   }
 
@@ -157,6 +182,27 @@ export default function DeveloperAppsPage() {
     return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
 
+  const actionLabel = retrying ? '載入中…' : error === 'failed' ? '重新載入應用列表' : '建立新應用';
+  async function retryApps() {
+    setRetrying(true);
+    try { await loadApps(); }
+    finally { setRetrying(false); }
+  }
+  function handleTitleBarAction() {
+    if (retrying) return;
+    if (error === 'failed') void retryApps();
+    else navigate('/developer/apps/new');
+  }
+  async function copyUri(key: string, uri: string) {
+    const sequence = loadSequence.current;
+    try {
+      await navigator.clipboard.writeText(uri);
+      if (sequence === loadSequence.current) setCopyState({ key, success: true });
+    } catch {
+      if (sequence === loadSequence.current) setCopyState({ key, success: false });
+    }
+  }
+
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
@@ -167,28 +213,46 @@ export default function DeveloperAppsPage() {
       <TitleBar
         title="應用"
         back={() => navigate('/account')}
-        actions={
+        actions={error !== 'forbidden' ? (
           <button
             type="button"
+            ref={titlebarActionRef}
             className="tp-titlebar-action"
-            onClick={() => navigate('/developer/apps/new')}
-            aria-label="建立新應用"
-            title="建立新應用"
-            data-testid="dev-apps-new"
+            onClick={handleTitleBarAction}
+            aria-label={actionLabel}
+            aria-disabled={retrying}
+            aria-busy={retrying}
+            title={actionLabel}
+            data-testid={!error && !retrying ? 'dev-apps-new' : undefined}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              {(error === 'failed' || retrying) && <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" />}
+              {!error && !retrying && <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
             </svg>
-            <span className="tp-titlebar-action-label">建立新應用</span>
+            <span className="tp-titlebar-action-label">{actionLabel}</span>
           </button>
-        }
+        ) : undefined}
       />
-      <div className="tp-dev-inner">
+      {error === 'forbidden' && <ErrorBanner
+        message="沒有權限查看開發者應用，請返回帳號。"
+        className="tp-dev-permission-banner"
+        testId="dev-apps-error"
+      />}
+      <div className="tp-dev-inner" data-testid="dev-apps-content">
         <p className="tp-page-eyebrow">開發者後台</p>
         <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
-        {error && <ErrorBanner message={error} testId="dev-apps-error" />}
+        {error === 'failed' && <PageErrorState
+          className="tp-dev-page-error"
+          title="無法載入應用列表"
+          message="資料暫時無法取得，請重試。"
+          onRetry={() => { titlebarActionRef.current?.focus(); void retryApps(); }}
+          testId="dev-apps-error"
+        >
+          <div className="tp-dev-page-error-actions">
+            <button type="button" className="tp-btn tp-btn-secondary" onClick={() => navigate('/account')}>返回帳號</button>
+          </div>
+        </PageErrorState>}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>
@@ -209,25 +273,34 @@ export default function DeveloperAppsPage() {
         )}
 
         {apps !== null && apps.length > 0 && (
-          <div className="tp-list-table">
-            <div className="tp-list-row tp-list-header">
-              <div>應用</div>
-              <div>狀態</div>
-              <div>建立日期</div>
-              <div></div>
-            </div>
+          <div className="tp-app-grid">
             {apps.map((app) => {
               const pill = statusPill(app.status);
+              const uris = Array.isArray(app.redirect_uris)
+                ? app.redirect_uris.filter((uri): uri is string => typeof uri === 'string')
+                : [];
               return (
-                <div className="tp-list-row" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
-                  <div>
-                    <div className="tp-app-name">{app.app_name}</div>
-                    <div className="tp-app-cid">{app.client_id}</div>
+                <article className="tp-app-card" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
+                  <h2 className="tp-app-name">{app.app_name}</h2>
+                  <div className="tp-app-cid">{app.client_id}</div>
+                  <div className="tp-app-uri-list">
+                    <div className="tp-app-uri-label">重新導向 URI</div>
+                    {uris.length === 0 && <div className="tp-app-uri-label">尚未設定</div>}
+                    {uris.map((uri, index) => {
+                      const key = `${app.client_id}:${index}`;
+                      return <div className="tp-app-uri" key={key}>
+                        <code>{uri}</code>
+                        <button type="button" className="tp-btn tp-btn-secondary" onClick={() => void copyUri(key, uri)} aria-label={`${copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製重新導向 URI'} ${index + 1}，${app.app_name}（${app.client_id}）`} aria-live="polite">
+                          {copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製 URI'}
+                        </button>
+                      </div>;
+                    })}
                   </div>
-                  <div><span className={pill.className}>{pill.label}</span></div>
-                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</div>
-                  <div></div>
-                </div>
+                  <div className="tp-app-card-bottom">
+                    <span className={pill.className}>{pill.label}</span>
+                    <span className="tp-app-created">建立 {parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</span>
+                  </div>
+                </article>
               );
             })}
           </div>

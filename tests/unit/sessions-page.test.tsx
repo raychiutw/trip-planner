@@ -2,8 +2,9 @@
  * SessionsPage unit test — V2-P6 multi-device session management UI
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { readAuthHint, writeAuthHint } from '../../src/lib/authHint';
 
 // Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
@@ -59,9 +60,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  localStorage.clear();
 });
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="current-path">{location.pathname}</output>;
+}
 
 describe('SessionsPage', () => {
   it('shows loading initially', () => {
@@ -97,6 +105,20 @@ describe('SessionsPage', () => {
     expect(screen.getByText('未知裝置')).toBeTruthy();
     // current pill
     expect(screen.getByText('目前')).toBeTruthy();
+  });
+
+  it('keeps relative activity prominent with a local calendar date beside each session', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    const current = await screen.findByTestId('sessions-row-sess_current');
+    expect(within(current).getByText('剛才')).toBeTruthy();
+    expect(within(current).getAllByText(/2026/)).toHaveLength(2);
+    expect(within(screen.getByTestId('sessions-row-sess_phone')).getByText('3 小時前')).toBeTruthy();
   });
 
   it('current session has no revoke button; non-current does', async () => {
@@ -201,20 +223,63 @@ describe('SessionsPage', () => {
     expect(screen.queryByTestId('sessions-row-sess_old')).toBeTruthy();
   });
 
-  it('GET fail → error banner', async () => {
+  it('the other-devices confirmation starts on the safe action and Escape returns focus', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    const trigger = await screen.findByTestId('sessions-revoke-all');
+    trigger.focus();
+    fireEvent.click(trigger);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('confirm-modal-cancel')));
+    fireEvent.keyDown(screen.getByTestId('confirm-modal'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal')).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('GET fail → existing list frame contains a page error with retry and back', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('net')));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('sessions-error')).toBeTruthy());
+    const error = await screen.findByTestId('sessions-load-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.closest('.tp-list')).toBeTruthy();
+    expect(screen.getByText('裝置')).toBeTruthy();
+    expect(screen.getByText('上次活動')).toBeTruthy();
+    expect(within(error).getByRole('button', { name: '重新載入裝置' })).toBeTruthy();
+    expect(within(error).getByRole('button', { name: '返回帳號' })).toBeTruthy();
+    expect(screen.queryByTestId('sessions-revoke-all')).toBeNull();
   });
 
-  it('GET non-200 → error banner', async () => {
+  it('GET non-200 → page error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('boom', { status: 500 })));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('sessions-error')).toBeTruthy());
+    await screen.findByTestId('sessions-load-error');
+  });
+
+  it('failed GET can retry in place and return to the confirmed device list', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('failed', { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    const error = await screen.findByTestId('sessions-load-error');
+    const retry = within(error).getByRole('button', { name: '重新載入裝置' });
+    retry.focus();
+    fireEvent.click(retry);
+    await screen.findByTestId('sessions-row-sess_current');
+    expect(screen.queryByTestId('sessions-load-error')).toBeNull();
+    expect(screen.getByTestId('sessions-row-sess_phone')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('Revoke fail → keeps row + shows error', async () => {
@@ -231,6 +296,107 @@ describe('SessionsPage', () => {
     await waitFor(() => expect(screen.queryByTestId('sessions-error')).toBeTruthy());
     // Row still there because DELETE failed
     expect(screen.queryByTestId('sessions-row-sess_phone')).toBeTruthy();
+  });
+
+  it('retrying a failed single-device revoke clears the stale error after confirmed success', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('forbidden', { status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-revoke-sess_phone')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-revoke-sess_phone'));
+    await waitFor(() => expect(screen.getByTestId('sessions-error')).toBeTruthy());
+    expect(screen.getByTestId('sessions-row-sess_phone')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('sessions-revoke-sess_phone'));
+    await waitFor(() => expect(screen.queryByTestId('sessions-row-sess_phone')).toBeNull());
+    expect(screen.queryByTestId('sessions-error')).toBeNull();
+    expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy();
+  });
+
+  it('failed revoke of other devices retains every row and can be confirmed again', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('server error', { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked: 2 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><SessionsPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-revoke-all')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-revoke-all'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.getByTestId('sessions-error')).toBeTruthy());
+    expect(screen.getByTestId('sessions-row-sess_phone')).toBeTruthy();
+    expect(screen.getByTestId('sessions-row-sess_old')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('sessions-revoke-all'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('sessions-row-sess_phone')).toBeNull());
+    expect(screen.queryByTestId('sessions-row-sess_old')).toBeNull();
+    expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy();
+    expect(screen.queryByTestId('sessions-error')).toBeNull();
+  });
+
+  it('current-device logout rejects an HTTP failure without changing login state', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('server error', { status: 500 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    writeAuthHint(true);
+
+    render(<MemoryRouter initialEntries={['/settings/sessions']}><SessionsPage /><LocationProbe /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-logout')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+    await waitFor(() => expect(screen.getByTestId('sessions-error')).toBeTruthy());
+    expect(screen.getByTestId('current-path').textContent).toBe('/settings/sessions');
+    expect(readAuthHint()).toBe(true);
+  });
+
+  it('a lost logout response still returns to login when the server says the session was revoked', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('response lost'))
+      .mockResolvedValueOnce(new Response('unauthorized', { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    writeAuthHint(true);
+
+    render(<MemoryRouter initialEntries={['/settings/sessions']}><SessionsPage /><LocationProbe /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/login'));
+    expect(readAuthHint()).toBe(false);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/oauth/userinfo');
+  });
+
+  it('current-device logout failure keeps the session page and allows retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'u1' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    writeAuthHint(true);
+
+    render(<MemoryRouter initialEntries={['/settings/sessions']}><SessionsPage /><LocationProbe /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+
+    await waitFor(() => expect(screen.getByTestId('sessions-error')).toBeTruthy());
+    expect(screen.getByTestId('current-path').textContent).toBe('/settings/sessions');
+    expect(readAuthHint()).toBe(true);
+
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/login'));
+    expect(readAuthHint()).toBe(false);
   });
 
   it('encodes sid in DELETE URL (path injection defence)', async () => {

@@ -186,42 +186,8 @@ describe('POST /api/oauth/mint-restricted', () => {
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 
-  it('owner 無 Consent → 把 request park 成 failed（peek 跳過、不卡佇列）+ 寫授權指引 reply', async () => {
-    mockConsentFind.mockResolvedValue(undefined);
-    const db = makeDb({ request: openReq, owner });
-    await expect(onRequestPost(makeContext({ request_id: 42 }, { db }))).rejects.toMatchObject({ code: 'PERM_DENIED' });
-    const park = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_requests\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));
-    expect(park).toBeTruthy();
-    // 只 park 仍活著的（idempotent，不改已結案）
-    expect(park.sql).toMatch(/status IN \('open', 'processing'\)/i);
-    // bind = [reply, requestId]；requestId 正規化為 string '42'
-    expect(park.args[1]).toBe('42');
-    expect(String(park.args[0])).toContain('授權');
-    // ADR-0007：終結原因要寫進 terminal_reason，否則「按原因聚合」（獨立成欄的
-    // 唯一理由）漏掉整個 needs_consent 類別，那個值也就永遠沒人寫。
-    expect(park.sql).toMatch(/terminal_reason\s*=\s*'needs_consent'/i);
-    // 連動把 linked health-check / notes 也標記 failed（否則完成 reconcile 只跑 PATCH 路徑、永遠 pending）
-    const healthFail = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_health_reports\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));
-    const notesFail = db._runs.find((r: { sql: string }) => /UPDATE\s+trip_note_ai_jobs\s+SET\s+status\s*=\s*'failed'/i.test(r.sql));
-    expect(healthFail?.args[1]).toBe('42');
-    expect(notesFail?.args[1]).toBe('42');
-    expect(notesFail?.sql).toMatch(/status IN \('pending', 'processing'\)/i);
-    expect(notesFail?.sql).toContain("error_code = 'NOTES_AI_APPLY_FAILED'");
-    expect(mockUpsert).not.toHaveBeenCalled();
-  });
-
-  it('park UPDATE 失敗不影響 PERM_DENIED（park best-effort，下輪 cron 再試）', async () => {
-    mockConsentFind.mockResolvedValue(undefined);
-    const db: any = makeDb({ request: openReq, owner });
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = (sql: string) => {
-      if (/UPDATE\s+trip_requests/i.test(sql)) {
-        return { bind: () => ({ run: async () => { throw new Error('D1 write blip'); } }) };
-      }
-      return origPrepare(sql);
-    };
-    await expect(onRequestPost(makeContext({ request_id: 42 }, { db }))).rejects.toMatchObject({ code: 'PERM_DENIED' });
-  });
+  // Queue release、linked cleanup、storage faults 與 terminal races 改由
+  // tests/api/request-automatic-termination.integration.test.ts 透過真實 D1 驗證。
 
   it('trip owner 查不到 → 不發 token', async () => {
     await expect(

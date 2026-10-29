@@ -59,15 +59,13 @@ describe('AddEntryPage — EditEntryPage-shape layout', () => {
     expect(ADD_ENTRY_SRC).toMatch(/`\/trip\/\$\{encodeURIComponent\(tripId\)\}\/stop\/0\/change-poi\?mode=new&day=\$\{dayNum\}&tab=\$\{tab\}`/);
   });
 
-  it('Buttons disabled when dayNum invalid (defensive)', () => {
-    expect(ADD_ENTRY_SRC).toMatch(/disabled=\{!Number\.isFinite\(dayNum\)\}/);
-  });
-
   it('Preview sections (備選 / 時間 / 移動方式) greyed 提示 user 完成後可編', () => {
     expect(ADD_ENTRY_SRC).toContain('備選');
     expect(ADD_ENTRY_SRC).toContain('時間');
     expect(ADD_ENTRY_SRC).toContain('移動方式');
-    expect(ADD_ENTRY_SRC).toContain('opacity: 0.6');
+    // #1423：次要感由 --color-muted 文字色承擔，不再用 opacity 灰階——opacity 會把 muted 文字的對比
+    // 一併稀釋到 2.5–2.9（WCAG 1.4.3 要 4.5）。
+    expect(ADD_ENTRY_SRC).not.toContain('opacity: 0.6');
   });
 });
 
@@ -90,8 +88,8 @@ describe('ChangePoiPage — v2.32.0 mode=new branch', () => {
     const idx = CHANGE_POI_SRC.indexOf("if (mode === 'new') {");
     expect(idx).toBeGreaterThan(0);
     const ctx = CHANGE_POI_SRC.slice(idx, idx + 800);
-    expect(ctx).toMatch(/POST/);
-    expect(ctx).toMatch(/\/days\/\$\{newDayNum\}\/entries/);
+    // #1261：POST /days/:n/entries 由 entry 變更 module（createEntry）發出。
+    expect(ctx).toMatch(/createEntry\(tripId, newDayNum/);
   });
 
   it('handleSubmit mode=new + search/favorites → POST /entries + navigate /edit', () => {

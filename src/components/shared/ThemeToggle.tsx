@@ -1,7 +1,7 @@
 /**
- * ThemeToggle — 3-way 深淺模式 segmented control（淺 / 自動 / 深）.
+ * ThemeToggle — 3-way 深淺模式 segmented control（淺色 / 跟隨系統 / 深色）.
  *
- * Used by DesktopSidebar (bottom CTA) and SessionsPage (mobile 帳號 entry).
+ * Used by AppearanceSettingsPage and SessionsPage.
  * Backed by useDarkMode — writes to localStorage('color-mode'), toggles
  * `body.dark`, and updates <meta name="theme-color">.
  */
@@ -35,9 +35,9 @@ const SCOPED_STYLES = `
 `;
 
 const OPTIONS: Array<{ key: 'light' | 'auto' | 'dark'; label: string }> = [
-  { key: 'light', label: '淺' },
-  { key: 'auto', label: '自動' },
-  { key: 'dark', label: '深' },
+  { key: 'light', label: '淺色' },
+  { key: 'auto', label: '跟隨系統' },
+  { key: 'dark', label: '深色' },
 ];
 
 export interface ThemeToggleProps {

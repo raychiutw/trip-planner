@@ -11,7 +11,7 @@
  *   - 「登出其他全部裝置」mass revoke（除當前外）
  *   - 異地裝置警示（不同 ip_hash_prefix → 警示樣式）— optional V2-P6 future
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -23,6 +23,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { writeAuthHint } from '../lib/authHint';
 
@@ -84,13 +85,25 @@ const SCOPED_STYLES = `
   font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tp-pill-current { background: var(--color-success-bg); color: var(--color-foreground); }
+.tp-pill-current { background: var(--color-success-bg); color: var(--color-foreground); flex-shrink: 0; white-space: nowrap; }
 .tp-device-detail {
   font-size: var(--font-size-caption); color: var(--color-muted);
   margin-top: 2px;
 }
 
-.tp-time { font-size: var(--font-size-footnote); color: var(--color-muted); }
+.tp-time { font-size: var(--font-size-footnote); color: var(--color-foreground); }
+.tp-time-absolute { margin-top: 2px; color: var(--color-muted); font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .tp-sessions-shell { padding-bottom: 96px; }
+  .tp-row:not(.tp-row-header) { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .tp-row:not(.tp-row-header) .tp-time { grid-column: 1; grid-row: 2; margin-left: 48px; }
+  .tp-row-action { grid-column: 2; grid-row: 1 / 3; }
+  .tp-row-header { display: none; }
+  .tp-sessions-load-frame .tp-row-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .tp-sessions-load-frame .tp-row-header div:last-child { display: none; }
+  .tp-device-info { min-width: 0; }
+  .tp-device-name, .tp-device-detail { overflow-wrap: anywhere; }
+}
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */
 
@@ -106,6 +119,9 @@ const SCOPED_STYLES = `
  * 全 codebase 只有本檔 :330 真的 render 這個 class —— LoginPage / ResetPasswordPage 也各有
  * 一份同名規則但沒有對應 JSX，那兩份已在本次刪除（見 #1157）。 */
 .tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent-text-on-tonal); }
+/* #1445 F1：banner 內的文字連結沿用 banner 的字色（accent-text-on-tonal，與底色成對）+ 底線。
+ * 原本是瀏覽器預設藍 #0000EE，手動選「深色」（UA 仍是淺色 color-scheme）時疊深底只有 1.63:1。 */
+.tp-banner-info a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 .tp-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
 
@@ -113,6 +129,16 @@ const SCOPED_STYLES = `
   padding: 32px; text-align: center;
   color: var(--color-muted);
 }
+.tp-sessions-load-error { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 32px 24px; text-align: center; }
+.tp-sessions-load-error-title { flex-basis: 100%; margin: 0; font-size: var(--font-size-headline); font-weight: 700; }
+.tp-sessions-load-error-desc { flex-basis: 100%; margin: 0 0 4px; font-size: var(--font-size-footnote); color: var(--color-muted); }
+.tp-sessions-load-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border-control); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-sessions-load-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* PR-O 2026-04-26：登出區搬到頁面最下方（user 指示）+ 簡化為純 logout button。
  * 深淺模式 toggle 仍留在帳號頁但移到 logout 上方，跟 logout 共用同一容器。 */
@@ -171,23 +197,50 @@ function relativeTime(iso: string): string {
   return `${day} 天前`;
 }
 
+function localDateTime(iso: string): string {
+  const date = parseUtcDate(iso);
+  return date ? new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  }).format(date) : iso;
+}
+
 export default function SessionsPage() {
   useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   const navigate = useNavigate();
   const { user } = useCurrentUser();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const loadPending = useRef(false);
+  const retryRequested = useRef(false);
+  const pageRef = useRef<HTMLDivElement>(null);
   const [revokingSid, setRevokingSid] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
   const [revokeAllConfirmOpen, setRevokeAllConfirmOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function load() {
+    if (loadPending.current) return;
+    loadPending.current = true;
+    setLoading(true);
     setError(null);
     try {
       const json = await apiFetch<{ sessions: SessionRow[] }>('/account/sessions');
       setSessions(json.sessions);
-    } catch (err) {
-      setError(err instanceof Error ? '無法載入登入裝置，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
+      setLoadError(false);
+      if (retryRequested.current) {
+        retryRequested.current = false;
+        requestAnimationFrame(() => {
+          pageRef.current?.querySelector<HTMLButtonElement>('[data-testid="titlebar"] button[aria-label="返回"]')?.focus();
+        });
+      }
+    } catch {
+      setSessions(null);
+      setLoadError(true);
+    } finally {
+      loadPending.current = false;
+      setLoading(false);
     }
   }
 
@@ -200,6 +253,7 @@ export default function SessionsPage() {
     try {
       await apiFetch(`/account/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
       setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
+      setError(null);
     } catch {
       setError('登出此裝置失敗，請稍後再試。');
     } finally {
@@ -213,9 +267,9 @@ export default function SessionsPage() {
     setRevokingAll(true);
     try {
       await apiFetch('/account/sessions', { method: 'DELETE' });
-      // Optimistic: remove all non-current rows locally — match revokeOne() pattern,
-      // saves a round-trip vs reloading the list
+      // The server confirmed the revoke; remove only non-current rows locally.
       setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
+      setError(null);
     } catch {
       setError('登出其他裝置失敗，請稍後再試。');
     } finally {
@@ -231,7 +285,7 @@ export default function SessionsPage() {
       bottomNav={<GlobalBottomNav authed={user !== null} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-sessions-shell" data-testid="sessions-page">
+      <div className="tp-sessions-shell" data-testid="sessions-page" ref={pageRef}>
       <TitleBar
         title="登入裝置"
         back={() => navigate('/account')}
@@ -241,7 +295,6 @@ export default function SessionsPage() {
             className="tp-titlebar-action"
             onClick={() => setRevokeAllConfirmOpen(true)}
             disabled={revokingAll}
-            aria-label="登出其他全部裝置"
             title="登出其他全部裝置"
             data-testid="sessions-revoke-all"
           >
@@ -258,8 +311,26 @@ export default function SessionsPage() {
         <p className="tp-page-eyebrow">帳號</p>
         {user?.email && <p className="tp-page-meta" data-testid="sessions-user-email">{user.email}</p>}
 
-        {sessions === null && !error && (
+        {sessions === null && !loadError && (
           <div className="tp-loading" data-testid="sessions-loading">載入中…</div>
+        )}
+
+        {loadError && (
+          <div className="tp-list tp-sessions-load-frame">
+            <div className="tp-row tp-row-header">
+              <div>裝置</div><div>上次活動</div><div></div>
+            </div>
+            <PageErrorState
+              className="tp-sessions-load-error"
+              title="無法載入登入裝置"
+              message="目前無法確認登入裝置；登入狀態尚未改變。"
+              retryLabel={loading ? '載入中…' : '重新載入裝置'}
+              onRetry={() => { retryRequested.current = true; void load(); }}
+              testId="sessions-load-error"
+            >
+              <button type="button" className="tp-btn" onClick={() => navigate('/account')}>返回帳號</button>
+            </PageErrorState>
+          </div>
         )}
 
         {sessions !== null && sessions.length === 0 && (
@@ -302,7 +373,7 @@ export default function SessionsPage() {
                       )}
                     </div>
                     <div className="tp-device-detail">
-                      建立 {relativeTime(s.created_at)}
+                      建立 {localDateTime(s.created_at)}
                       {s.ip_hash_prefix && (
                         <span title="IP 位址的雜湊前綴（privacy）— 同一網路下相同">
                           {' · 裝置 ID '}{s.ip_hash_prefix}…
@@ -311,8 +382,11 @@ export default function SessionsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tp-time">{relativeTime(s.last_seen_at)}</div>
-                <div>
+                <div className="tp-time">
+                  <div>{relativeTime(s.last_seen_at)}</div>
+                  <div className="tp-time-absolute">{localDateTime(s.last_seen_at)}</div>
+                </div>
+                <div className="tp-row-action">
                   {!s.is_current && (
                     <button
                       className="tp-btn tp-btn-destructive"
@@ -357,20 +431,39 @@ export default function SessionsPage() {
             type="button"
             className="tp-account-logout-btn"
             data-testid="sessions-logout"
+            disabled={loggingOut}
             onClick={async () => {
+              if (loggingOut) return;
+              setLoggingOut(true);
+              setError(null);
               try {
-                await apiFetchRaw('/oauth/logout', { method: 'POST' });
+                const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
+                if (!response.ok) throw new Error('Logout failed');
+                writeAuthHint(false);
+                navigate('/login', { replace: true });
               } catch {
-                /* ignore — navigate to /login regardless */
+                // The server may have revoked the session even if its response was lost.
+                try {
+                  const status = await apiFetchRaw('/oauth/userinfo');
+                  if (status.status === 401) {
+                    writeAuthHint(false);
+                    navigate('/login', { replace: true });
+                    return;
+                  }
+                  if (status.ok) {
+                    setError('登出失敗，請稍後再試。');
+                    return;
+                  }
+                } catch {
+                  // The session result remains unknown until connectivity returns.
+                }
+                setError('無法確認登出結果，請檢查連線後再試。');
+              } finally {
+                setLoggingOut(false);
               }
-              // 同 AccountPage 的登出：清掉「上次已登入」旗標（見 lib/authHint），
-              // 否則登出後第一次進 `/` 會被轉去 /trips 再彈回 /login。
-              // 放在 try/catch 之外 —— 登出請求失敗與否，使用者的意圖都是登出。
-              writeAuthHint(false);
-              navigate('/login', { replace: true });
             }}
           >
-            登出此帳號
+            {loggingOut ? '登出中…' : '登出此帳號'}
           </button>
         </div>
       </div>

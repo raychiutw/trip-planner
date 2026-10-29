@@ -2,7 +2,7 @@
 
 Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東西前先看這份，確保新增的 code 落在對的層次。
 
-使用者介紹請看 [README.md](README.md)。設計系統與視覺規範請看 [DESIGN.md](DESIGN.md)。開發流程請看 [CLAUDE.md](CLAUDE.md)。
+使用者介紹請看 [README.md](README.md)。設計系統與視覺規範請看 [DESIGN.md](DESIGN.md)。開發流程請看 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -29,7 +29,7 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 │                       使用者瀏覽器                                │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │  React SPA (src/entries/main.tsx, BrowserRouter)         │  │
-│  │  5-tab IA: 聊天 / 行程 / 地圖 / 收藏 / 帳號 (mobile)     │  │
+│  │  4-tab IA: 聊天 / 行程 / 地圖 / 收藏 + 帳號 sheet       │  │
 │  │  Desktop sidebar nav + 3-pane shell (≥1024px)            │  │
 │  │  /trips list, /trip/:id (TripLayout), /chat, /map,       │  │
 │  │  /favorites, /explore, /account, /auth/* OAuth flow ...  │  │
@@ -67,13 +67,13 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 
 ### 入口與路由
 
-`src/entries/main.tsx` 單一 SPA 入口，5-tab IA + 多 sub-route。完整 route table
+`src/entries/main.tsx` 單一 SPA 入口，4-tab IA + 帳號 sheet + 多 sub-route。完整 route table
 見 main.tsx，主要 group:
 
 | Path group | 用途 |
 |-----------|------|
 | `/trips`, `/trip/:tripId/*` | 行程 list + TripLayout (含 collab / health / edit / add-* / stop edit) |
-| `/chat`, `/map`, `/explore`, `/favorites` | global 5-tab pages (有 ActiveTripContext) |
+| `/chat`, `/map`, `/explore`, `/favorites` | global 4-tab pages (有 ActiveTripContext) |
 | `/login`, `/signup`, `/login/forgot`, `/auth/*` | V2 OAuth 流程 (含 verify email landing v2.33.59) |
 | `/account/*`, `/settings/*` | account hub + sessions / connected-apps / developer (alias) |
 | `/admin`, `/manage` | 已 2026-04-26 拆，redirect to `/trips` / `/chat` |
@@ -88,14 +88,21 @@ src/
 ├── entries/main.tsx         SPA 入口 + lazyWithRetry (v2.33.67 retry-budget reset)
 ├── pages/                   ~30 個 page (含 OAuth flow / settings / 動作頁 fullpage migrations)
 ├── components/
-│   ├── trip/                Timeline / DayNav / DaySection / TripMapRail / DayMap ...
+│   ├── trip/                TimelineRail（拆 RailRow / EntryTimeChip / RailRowMenu / StopPoiChoiceCard）/
+│   │                        DayNav / DaySection / TripMapRail / DayMap ...
 │   └── shared/              Icon / Toast / ErrorBoundary / PageNav ...
-├── hooks/                   useTrip / useDarkMode / usePrintMode / usePermissions ...
+├── hooks/                   useTrip / useTripRead（useTripMeta／useTripDays／useTripDestinations）/ useConversation / useDarkMode / usePrintMode / usePermissions ...
 ├── lib/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
+│   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
+│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   ├── tripMutations.ts     行程層變更：archiveTrip/unarchiveTrip/deleteTrip/deleteDay 回 Result，
+│   │                        成功 emit tripUpdated；不 toast、不導覽（同 entryMutations 慣例）
+│   ├── segmentMutations.ts  手動車程建立／更新，成功 emit segmentUpdated 觸發共用讀取
+│   ├── travelRecompute.ts   車程重算 single-flight、gap signature、403 停用與失敗狀態
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
-│   └── ...                  localStorage、sentry、weather、timelineUtils
+│   └── ...                  localStorage、sentry、timelineUtils
 └── types/                   trip.ts / api.ts
 ```
 
@@ -106,6 +113,10 @@ src/
 1. **Server state** — `useTrip`（SWR-style fetch + cache），`useRequests`（SSE）
 2. **Cross-component UI state** — React context（`DarkModeProvider`、`PermissionsProvider`）
 3. **Local state** — `useState` / `useRef`，不外流
+
+`useTripSegments` 是 segment 讀取與自動補算的共同入口。TripPage provider 共用一次讀取給時間軸與日區塊；獨立編輯頁自行讀取。entry/segment 更新會使舊讀取失效，完成新讀取後才判定相鄰 entry 的缺口，並交由 `travelRecompute` 按 day scope 去重與回報待更新狀態。
+`segmentMutations.saveSegment` 負責兩個手動編輯入口的 POST／PATCH 與成功事件；版本重試及表單錯誤提示留在各入口。刷新結果由 `useTripSegments` 處理，不改寫已成功的儲存結果。
+`useMyTrips` 依使用者共用 `/my-trips` 清單讀取、同時請求、刷新與最新結果；`useTripSelection` 將清單與 `ActiveTripContext` 偏好接合。聊天、行程清單、行程明細、root 地圖、行程地圖與側欄沿用同一清單與偏好；明確 URL／行程 sheet 目標仍優先，存取權由實際行程讀取判定。失敗讀取不確認空清單。root `/map` 只導向選定行程地圖或顯示空狀態，days、pins 與 Google 地圖操作留在 `/trip/:id/map`。桌機 `/trips` 的上次檢視行程及日期還原留在清單頁，手機仍先呈現清單。
 
 ### CSS 架構
 
@@ -145,7 +156,10 @@ functions/api/
 ├── _auth.ts             auth helpers（isAdmin, requireAuth）
 ├── _audit.ts            寫 audit_log
 ├── _errors.ts           AppError + errorResponse
-├── _poi.ts              findOrCreatePoi + POI write helpers (v2.29.0 後 pois master only, trip_pois drop)
+├── _poi.ts              findOrCreatePoi 單一 POI resolver（policy: keep/fill-null，#1256 合併舊 resolvePoi）
+├── _entryWrite.ts       entry intake：createEntry / createEntriesBatch / replaceDayEntries，唯一可 INSERT trip_entries 的入口（#1259，eslint 守門）
+├── _requestTermination.ts  共用 request 狀態更新、可重試的健檢／筆記收尾與 stale reap
+├── _requestHealthCompletion.ts  健檢結果與對話摘要收尾
 ├── _entry_pois.ts       trip_entry_pois junction CRUD (v2.27.0 multi-POI per entry)
 ├── _session.ts / _cookies.ts  V2 OAuth session cookie helpers
 ├── _auth_audit.ts       auth_audit_log writer (HMAC IP hash via SESSION_IP_HASH_SECRET, v2.33.62)
@@ -153,10 +167,11 @@ functions/api/
 ├── _maps_lock.ts        Google Maps Platform kill switch (app_settings)
 ├── _app_settings.ts     typed app_settings accessor (v2.33.62)
 ├── oauth/               OAuth 2.1 server endpoints (signup/login/forgot/reset/verify/authorize/consent/token/logout/well-known)
+│   └── _tokenLifecycle.ts  授權碼交換與 refresh 輪替的驗證、消耗、完整發行及 family 撤銷
 ├── _types.ts            Env / shared types
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
-├── trips/               trips CRUD + batch days endpoint
+├── trips/               trips CRUD + batch days endpoint；_createTrip.ts 持有新行程分批建立、ID 對應及補償
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD
@@ -205,8 +220,12 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 - `trip_pois` 整表 — 之前 COALESCE pattern (trip_pois overrides pois) 已過時
 - `saved_pois` → 改名 `poi_favorites` (v2.22.0 migration 0050)
 
-**POI 讀寫**: backend 用 `findOrCreatePoi(db, {...})` (functions/api/_poi.ts) +
-`syncEntryMaster` / `addAlternate` / `setMaster` (functions/api/_entry_pois.ts)。
+**POI 讀寫**: backend 用 `findOrCreatePoi(db, data, opts)` (functions/api/_poi.ts，`opts.policy` 為
+`'keep'` 或 `'fill-null'`) + `syncEntryMaster` / `addAlternate` / `setMaster`
+(functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
+`createEntriesBatch`／`replaceDayEntries`，functions/api/_entryWrite.ts）。整日重寫由 `replaceDayEntries`
+一次提交 entries、junction、備選資料、hotel／parking 與版本；其他建立入口保留共用 intake，
+見 `CONTEXT.md` 的「entry intake」詞條。
 
 ### Google Maps Platform stack (v2.23.0+)
 
@@ -384,6 +403,7 @@ tests/
 | [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
+| [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 
@@ -405,7 +425,7 @@ tests/
 | **v2.20.0** | 0046 phase 1 | `trip_ideas` table 退場 phase 1；tp-request mode rip-out 啟動。 |
 | **v2.19.x** | 0045 | `pois.google_rating` → `rating`；`pois.maps` DROPPED；`trips.{auto_scroll,og_description,footer,food_prefs,is_default,self_drive}` DROPPED。 |
 
-**找舊欄名 / 舊 route 規則**：grep 整個 codebase 後 fail → 對照表確認是否已 rename → 改用新名 → 不要寫 alias。新功能 reference `openspec/specs/` 而非 `openspec/changes/archive/`（archive spec 有 banner 標明 superseded）。
+**找舊欄名 / 舊 route 規則**：grep 整個 codebase 後 fail → 對照表確認是否已 rename → 改用新名 → 不要寫 alias。新需求與規格走 GitHub Issues；現行架構以本文件、程式碼與測試為準。
 
 ---
 
@@ -414,6 +434,7 @@ tests/
 - [README.md](README.md) — 使用者介紹、功能特色
 - [CONTEXT.md](CONTEXT.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
 - [docs/adr/](docs/adr/) — 架構決策記錄（為什麼是這樣）
-- [CLAUDE.md](CLAUDE.md) — 開發流程、gstack pipeline
+- [AGENTS.md](AGENTS.md) — Matt Pocock 官方技能流程與 Tripline 發布規則
+- [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
 - [DESIGN.md](DESIGN.md) — 設計系統、視覺 tokens
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

@@ -6,8 +6,7 @@
  * Active：card border-color = accent + ring + num filled accent + icon accent
  *
  * 視覺對應：docs/design-sessions/terracotta-preview-v2.html Section 20 entry cards
- * Spec: openspec/changes/terracotta-pages-refactor/specs/terracotta-page-layout/spec.md
- *       Requirement「Pin type icon 系統（entry card 上）」
+ * 規範：DESIGN.md §Stop Card 與 §地圖 chrome 子例外
  */
 
 export type EntryKind = 'hotel' | 'food' | 'sight' | 'shopping' | 'other';
@@ -74,7 +73,7 @@ export default function MapEntryCard({
        * 不改成 <div role="listitem"><button> 包一層：那會讓 wrapper 變成 flex child，
        * flex: 0 0 220px 與 scroll-snap 都要搬，改動面遠大於本票該有的。 */
       aria-current={isActive ? 'true' : undefined}
-      className={`tp-map-entry-card${isActive ? ' is-active' : ''}`}
+      className={`tp-map-entry-card tp-glass${isActive ? ' is-active' : ''}`}
       onClick={onClick}
       data-card-entry-id={dataEntryId}
     >

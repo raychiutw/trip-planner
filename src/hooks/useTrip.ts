@@ -58,16 +58,24 @@ export function useTrip(tripId: string | null): UseTripReturn {
   // Single ref mirrors allDays for sync cache lookups (avoids stale closures)
   const allDaysRef = useRef(allDays);
   allDaysRef.current = allDays;
+  // 每次切換都有獨立 scope，連 A → B → A 也不能接受第一輪 A 的舊回應。
+  const scopeRef = useRef({ tripId, reads: new Map<number, number>() });
+  if (scopeRef.current.tripId !== tripId) scopeRef.current = { tripId, reads: new Map() };
+  const scope = scopeRef.current;
 
   /* --- Fetch a single day --- */
   const fetchDay = useCallback(
     async (dayNum: number): Promise<Day | null> => {
-      if (!tripId || !Number.isInteger(dayNum) || dayNum < 1) return null;
+      if (!tripId || scopeRef.current !== scope || !Number.isInteger(dayNum) || dayNum < 1) return null;
       const cached = allDaysRef.current[dayNum];
       if (cached) return cached;
+      const read = (scope.reads.get(dayNum) ?? 0) + 1;
+      scope.reads.set(dayNum, read);
+      const isCurrent = () => scopeRef.current === scope && scope.reads.get(dayNum) === read;
 
       try {
         const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${dayNum}`);
+        if (!isCurrent()) return null;
         const day = mapDayResponse(raw);
         // v2.33.39 round 4: 之前直接 allDaysRef.current[dayNum] = day mutate ref
         // 而 caller 讀的 React state 沒同步 → switchDay 後手動補 setAllDays，
@@ -76,13 +84,14 @@ export function useTrip(tripId: string | null): UseTripReturn {
         setAllDays((prev) => (prev[dayNum] === day ? prev : { ...prev, [dayNum]: day }));
         return day;
       } catch (err) {
+        if (!isCurrent()) return null;
         if (err instanceof ApiError) {
           showErrorToast(err.message, err.severity);
         }
         return null;
       }
     },
-    [tripId],
+    [tripId, scope],
   );
 
   /* --- Switch to a specific day --- */

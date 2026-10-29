@@ -205,7 +205,6 @@ export interface Poi {
  * Full day response from GET /api/trips/:id/days/:num
  * DB table: trip_days (renamed from days)
  * DB columns: id, trip_id, day_num, date, day_of_week, label, updated_at
- * Note: weather removed — derived at runtime from entries' locations + times
  */
 export interface Day {
   id: number;

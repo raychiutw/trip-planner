@@ -89,6 +89,8 @@ export interface TpMapProps {
   zoomControlPosition?:
     | 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT'
     | 'LEFT_CENTER' | 'RIGHT_CENTER';
+  /** Optional caller-owned action beside retry when the map cannot load. */
+  errorAction?: React.ReactNode;
 }
 
 /* ===== Inline styles (scoped to this component) ===== */
@@ -179,6 +181,7 @@ const TpMap = memo(function TpMap({
   fitOnce = false,
   onMapReady,
   zoomControlPosition,
+  errorAction,
 }: TpMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
 
@@ -315,7 +318,7 @@ const TpMap = memo(function TpMap({
               }
               onRetry={() => window.location.reload()}
               className="tp-page-error"
-            />
+            >{errorAction}</PageErrorState>
           </div>
         )}
       </div>

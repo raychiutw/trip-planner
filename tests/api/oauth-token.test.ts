@@ -6,7 +6,7 @@ import { onRequestPost } from '../../functions/api/oauth/token';
 import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
-  DB?: { prepare: ReturnType<typeof vi.fn> };
+  DB?: { prepare: ReturnType<typeof vi.fn>; batch?: (statements: { run: () => Promise<unknown> }[]) => Promise<unknown[]> };
   OAUTH_SIGNING_PRIVATE_KEY?: string;
 }
 
@@ -62,6 +62,9 @@ function makeAuthorizationCodePayload(overrides: Partial<Record<string, unknown>
 }
 
 function makeContext(body: unknown, env: MockEnv, contentType = 'application/json'): Parameters<typeof onRequestPost>[0] {
+  // Legacy protocol fixtures execute batch statements; transaction guarantees are
+  // covered separately by real D1 lifecycle integration tests.
+  if (env.DB) env.DB.batch ??= (statements) => Promise.all(statements.map((statement) => statement.run()));
   let bodyStr: string;
   if (contentType === 'application/x-www-form-urlencoded' && typeof body === 'object' && body !== null) {
     bodyStr = new URLSearchParams(body as Record<string, string>).toString();
@@ -377,12 +380,12 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error_description: string }).error_description).toContain('reuse detected');
-    // Cascade DELETE on grantId ran for both AccessToken + RefreshToken
+    // One family DELETE covers both AccessToken + RefreshToken
     // (v2.33.58 round 12 加 name IN allowlist — SQL 含 DELETE...json_extract 但不緊鄰)
     const cascadeCalls = sqls.filter((s) =>
       s.includes('DELETE FROM oauth_models') && s.includes('json_extract(payload'),
     );
-    expect(cascadeCalls.length).toBeGreaterThanOrEqual(2);
+    expect(cascadeCalls.length).toBe(1);
   });
 
   it('400 invalid_grant when refresh_token unknown / expired', async () => {

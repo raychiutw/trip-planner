@@ -1,16 +1,14 @@
 /**
  * no-emoji-icons contract test — terracotta-icon-svg-sweep (Section 1)
  *
- * 對照 OpenSpec change `terracotta-mockup-parity-v2` spec/terracotta-icon-svg-sweep
- * 跟 CLAUDE.md「icon 用 inline SVG，不用 emoji 或 icon font」規範。掃描
+ * 對照 CLAUDE.md「icon 用 inline SVG，不用 emoji 或 icon font」規範。掃描
  * src/components/ + src/pages/ 全 .tsx file，禁止 emoji unicode 出現於 JSX
  * source（剝除 // 跟 / * ... * / comment 後）。
  *
  * 例外：src/components/shared/Icon.tsx 自身（icon catalog comment 跟 placeholder
  * 範例字符可能含 emoji）。
  *
- * 違規 emoji 範圍 = mockup 主要違規列表（見 OpenSpec change spec.md
- * `terracotta-icon-svg-sweep` Requirement 1）：
+ * 違規 emoji 範圍 = mockup 主要違規列表：
  * 🗑 trash / 🔍 search / ⛶ maximize / ⎘ copy / ⇅ arrows-vertical /
  * ❤ heart / 🚗 car / 📋 clipboard
  *
@@ -103,7 +101,7 @@ describe('no-emoji-icons contract (terracotta-icon-svg-sweep)', () => {
     expect(EXCLUDE_FILE_NAMES.some((n) => iconFile.endsWith(n))).toBe(true);
   });
 
-  it('掃描 dir + 排除 list 對齊 OpenSpec spec', () => {
+  it('掃描 dir + 排除 list 對齊 repository 設計規範', () => {
     expect(SCAN_DIRS).toEqual(['src/components', 'src/pages']);
     expect(EXCLUDE_FILE_NAMES).toContain('Icon.tsx');
     expect(BANNED_CHARS.length).toBeGreaterThanOrEqual(8);

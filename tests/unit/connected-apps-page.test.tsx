@@ -47,7 +47,7 @@ function routedFetch(opts: { apps?: unknown[]; authorized?: boolean } = {}) {
       return Promise.resolve(new Response(JSON.stringify({ authorized: opts.authorized ?? false }), { status: 200 }));
     }
     if (init?.method === 'DELETE') {
-      return Promise.resolve(new Response(JSON.stringify({ ok: true, revoked_client_id: 'x' }), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify({ ok: true, revoked_client_id: decodeURIComponent(u.split('/').pop() ?? '') }), { status: 200 }));
     }
     return Promise.resolve(new Response(JSON.stringify({ apps: opts.apps ?? [] }), { status: 200 }));
   });
@@ -61,6 +61,7 @@ function deleteCalls(fetchMock: ReturnType<typeof vi.fn>) {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-04-25T12:00:00Z'));
+  window.scrollTo = vi.fn();
 });
 
 afterEach(() => {
@@ -92,8 +93,8 @@ describe('ConnectedAppsPage', () => {
     await waitFor(() => expect(screen.queryByTestId('connected-apps-row-tp_abc')).toBeTruthy());
     expect(screen.getByText('Trip Buddy')).toBeTruthy();
     expect(screen.getByText('MapMate')).toBeTruthy();
-    expect(screen.getAllByText('openid').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('trips.read')).toBeTruthy();
+    expect(screen.getAllByText('身分識別').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('查看行程')).toBeTruthy();
   });
 
   it('Revoke button → opens confirm modal (二次確認)', async () => {

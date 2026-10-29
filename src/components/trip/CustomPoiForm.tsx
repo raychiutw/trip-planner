@@ -329,22 +329,24 @@ export function CustomPoiForm({
 }: Props) {
   const [flyToSignal, setFlyToSignal] =
     useState<{ coord: CustomPoiCoord; zoom?: number } | null>(null);
+  const [addressError, setAddressError] = useState(false);
 
   const typeahead = usePlacesAutocomplete(regionCode ? { regionCode } : undefined);
 
   const handlePick = useCallback(
     async (placeId: string) => {
+      setAddressError(false);
       const closingToken = typeahead.pickSuggestion(placeId);
       try {
         const qs = new URLSearchParams({ placeId });
         if (closingToken) qs.set('sessionToken', closingToken);
         const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
-        if (!res.ok) return;
+        if (!res.ok) throw new Error('resolve failed');
         const data = (await res.json()) as { lat: number; lng: number };
-        if (!isValidCoord({ lat: data.lat, lng: data.lng })) return;
+        if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
         setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
       } catch {
-        // silent — user can still drag map manually
+        setAddressError(true);
       }
     },
     [typeahead],
@@ -395,7 +397,7 @@ export function CustomPoiForm({
                 id={`${testIdPrefix}-address`}
                 type="text"
                 value={typeahead.query}
-                onChange={(e) => typeahead.setQuery(e.target.value)}
+                onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                 placeholder="輸入地址縮放地圖（選填）"
                 autoComplete="off"
                 data-testid={`${testIdPrefix}-address-typeahead`}
@@ -433,6 +435,7 @@ export function CustomPoiForm({
             <div className="tp-custom-poi-form-helper">
               選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。
             </div>
+            {addressError && <div className="tp-custom-poi-form-row-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
           </div>
         </div>
 

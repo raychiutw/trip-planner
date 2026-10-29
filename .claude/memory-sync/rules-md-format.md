@@ -35,7 +35,6 @@ id: 1
 date: 2026-07-29
 dayOfWeek: 三
 label: 北谷          # ≤ 8 字
-weather: {"label":"北谷","locations":[{"lat":26.33,"lon":127.78,"name":"北谷","start":0,"end":23}]}
 ```
 
 ## Hotel 區段

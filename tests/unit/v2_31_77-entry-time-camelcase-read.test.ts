@@ -5,8 +5,7 @@
  *
  * 從 v2.29.0 (`trip_entries.time` DROP COLUMN) 起，6 個 frontend 模組的 read
  * path 一直用 snake_case → 永遠 undefined → 各種 silent 失效（TimelineRail
- * row 不顯時間、buildWeatherDay 預設 0 點、
- * parseEntryTimeRange 全 null）。本 test 鎖此修正後的 invariant。
+ * row 不顯時間、parseEntryTimeRange 全 null）。本 test 鎖此修正後的 invariant。
  *
  * 寫操作（PATCH /trip-entries body）保留 snake_case — backend ALLOWED_FIELDS
  * 是 ['start_time', 'end_time']，frontend write 端 (EditEntryPage) 不變。
@@ -16,7 +15,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEntryTime } from '../../src/lib/timelineUtils';
 import { parseEntryTimeRange } from '../../src/lib/drag-strategy';
-import { buildWeatherDay } from '../../src/lib/weather';
 
 describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () => {
   describe('parseEntryTime accepts camelCase input', () => {
@@ -46,40 +44,9 @@ describe('v2.31.77: entry time read uses camelCase (startTime / endTime)', () =>
     });
   });
 
-  describe('buildWeatherDay accepts camelCase input', () => {
-    it('reads the current master POI shape and parses startTime', () => {
-      const day = buildWeatherDay('2026-05-18', [
-        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: 26.21, lng: 127.72 } },
-        { startTime: '15:00', master: { poiId: 2, name: '景點 B', lat: 26.50, lng: 127.99 } },
-      ]);
-      expect(day).not.toBeNull();
-      expect(day!.locations).toEqual([
-        { name: '景點 A', lat: 26.21, lon: 127.72, start: 9 },
-        { name: '景點 B', lat: 26.50, lon: 127.99, start: 15 },
-      ]);
-    });
-
-    it('deduplicates adjacent master POIs within 0.01 degrees', () => {
-      const day = buildWeatherDay('2026-05-18', [
-        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: 26.21, lng: 127.72 } },
-        { startTime: '10:00', master: { poiId: 2, name: '景點 A 旁', lat: 26.215, lng: 127.725 } },
-        { startTime: '15:00', master: { poiId: 3, name: '景點 B', lat: 26.50, lng: 127.99 } },
-      ]);
-      expect(day?.locations.map((location) => location.name)).toEqual(['景點 A', '景點 B']);
-    });
-
-    it('returns null when no master POI has usable coordinates', () => {
-      expect(buildWeatherDay('2026-05-18', [
-        { startTime: '09:00', master: { poiId: 1, name: '景點 A', lat: null, lng: null } },
-        { startTime: '15:00', master: null },
-      ])).toBeNull();
-    });
-  });
-
   describe('source-grep: no .start_time / .end_time READS in src/ (writes excluded)', () => {
     const SRC_READ_FILES = [
       '../../src/lib/timelineUtils.ts',
-      '../../src/lib/weather.ts',
       '../../src/lib/drag-strategy.ts',
       '../../src/lib/mapDay.ts',
     ];

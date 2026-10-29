@@ -142,6 +142,14 @@ const EMPTY_NOTES: PrintNotes = {
   flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
 };
 
+function requireCompletePrintData(days: unknown, notes: unknown): void {
+  const sections = ['flights', 'lodgings', 'reservations', 'pretripNotes', 'emergencyContacts'] as const;
+  if (!Array.isArray(days) || !notes || typeof notes !== 'object'
+    || !sections.every((section) => Array.isArray((notes as Raw)[section]))) {
+    throw new Error('行程列印資料不完整');
+  }
+}
+
 /**
  * Map one raw `?all=1` timeline entry → PrintEntry via the canonical
  * `toTimelineEntry` mapper (so time/title/rating/travel match exactly what the
@@ -224,15 +232,17 @@ export function mapRawToPrintData(meta: Raw, daysRaw: unknown, notesRaw: Raw | n
 /**
  * Load everything the print document needs in parallel:
  * trip meta + days (with timeline/travel/hotel) + 5-section trip notes.
- * Notes failure is non-fatal (older trips may 404) → empty notes.
+ * All sections are required. An empty notes response is valid; a failed notes
+ * request cannot be mistaken for an empty section in a complete export.
  */
 export async function loadTripPrintData(tripId: string): Promise<TripPrintData> {
   const id = encodeURIComponent(tripId);
   const [meta, daysRaw, notesRaw] = await Promise.all([
     apiFetch<Raw>(`/trips/${id}`),
     apiFetch<Raw[]>(`/trips/${id}/days?all=1`),
-    apiFetch<Raw>(`/trips/${id}/notes`).catch(() => null),
+    apiFetch<Raw>(`/trips/${id}/notes`),
   ]);
+  requireCompletePrintData(daysRaw, notesRaw);
   return mapRawToPrintData(meta, daysRaw, notesRaw);
 }
 
@@ -249,6 +259,7 @@ export interface SharePrintData {
  */
 export async function loadSharePrintData(token: string): Promise<SharePrintData> {
   const res = await apiFetch<{ meta: Raw; days: unknown; notes: Raw }>(`/share/${encodeURIComponent(token)}`);
+  requireCompletePrintData(res.days, res.notes);
   return {
     data: mapRawToPrintData(res.meta, res.days, res.notes),
     sharedBy: str(res.meta?.sharedBy) ?? '',

@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { describe, expect, it } from 'vitest';
 import { MouseSensor, PointerSensor, TouchSensor } from '@dnd-kit/core';
 import fs from 'node:fs';
@@ -44,10 +45,7 @@ describe('Keyboard a11y contract (Section 5)', () => {
   });
 
   it('5.4 TimelineRail 套用中文 announcements (IdeasTabContent retired in V2 cutover)', () => {
-    const timelineSrc = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const timelineSrc = readTimelineRailSources();
     expect(timelineSrc).toContain('accessibility={TP_DRAG_ACCESSIBILITY}');
   });
 });
@@ -86,10 +84,7 @@ describe('touch/mouse sensor separation (drag vs scroll conflict fix)', () => {
 });
 
 describe('TimelineRail grip touch-action (drag vs scroll conflict fix)', () => {
-  const TIMELINE_RAIL_SRC = fs.readFileSync(
-    path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-    'utf8',
-  );
+  const TIMELINE_RAIL_SRC = readTimelineRailSources();
 
   it('grip no longer pins touch-action:none (which blocked native scroll → dead-zone)', () => {
     expect(TIMELINE_RAIL_SRC).not.toContain('touch-action: none');

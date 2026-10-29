@@ -40,6 +40,8 @@
 
 **Trigger:** Crash-free sessions rate < 99% over 1h
 **Filter:** Latest release（B-P6 task 10.1 後 release name = `tripline@<ver>-<sha>`)
+
+> ⚠️ **Sentry SDK 11 升版後（2026-10）口徑改變**：瀏覽器 session 受未捕捉錯誤影響改記為 `unhandled` 而非 `crashed`，session 生命週期由 route 改 page。官方只說 crash-free rate「expect to shift」，方向與幅度未載明；舊基準不可直接比較，請升版後觀察數日再依 Threshold revision flow 重訂門檻。Web Vitals 也改為每次 soft navigation 各報一組，p75 基準同樣斷層。
 **Action:** Email Ray
 **Why:** 監控新 release 是否引入 stability regression。99% 是 web SaaS 業界 baseline
 

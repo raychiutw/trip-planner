@@ -24,6 +24,7 @@ export interface PageErrorStateProps {
   testId?: string;
   /** retry button data-testid */
   retryTestId?: string;
+  children?: ReactNode;
 }
 
 export default function PageErrorState({
@@ -34,6 +35,7 @@ export default function PageErrorState({
   className = 'tp-page-error',
   testId,
   retryTestId,
+  children,
 }: PageErrorStateProps) {
   return (
     <div className={className} data-testid={testId} role="alert">
@@ -49,6 +51,7 @@ export default function PageErrorState({
           {retryLabel}
         </button>
       )}
+      {children}
     </div>
   );
 }

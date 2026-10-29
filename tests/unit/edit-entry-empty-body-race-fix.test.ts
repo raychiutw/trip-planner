@@ -38,7 +38,7 @@ describe('PR12 (A): empty body race guard', () => {
   });
 
   it('requests.length === 0 → 早 return 不走 success path 寫 originalRef', () => {
-    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+return;/);
+    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+if \(!hasFormChanges\(\)\) return true;\s+failedAutoSaveRef\.current = draftSignature;\s+return false;/);
   });
 });
 
@@ -57,7 +57,7 @@ describe('PR12 (B) / PR14 / PR18: EditEntryPage handleSave 失敗走 toast', () 
   });
 
   it('catch path 也加 showToast', () => {
-    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';\s+showToast\(msg, 'error', 6000\)/);
+    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';[\s\S]*?showToast\(msg, 'error', 6000\)/);
   });
 
   it('body 內 InlineError 拔掉（duplicate of toast）', () => {

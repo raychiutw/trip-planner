@@ -12,17 +12,24 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import EditEntryPage from '../../src/pages/EditEntryPage';
 import { pickTime } from './__helpers__/tripTimePicker';
 
 // Mocks
 const navigateSpy = vi.fn();
+const navigationMode = vi.hoisted(() => ({ real: false }));
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
-    useNavigate: () => navigateSpy,
+    useNavigate: () => {
+      const navigate = actual.useNavigate();
+      return ((...args: Parameters<typeof navigate>) => {
+        navigateSpy(...args);
+        if (navigationMode.real) return navigate(...args);
+      }) as typeof navigate;
+    },
   };
 });
 
@@ -208,16 +215,14 @@ function setupApiMocks() {
 }
 
 function renderPage() {
-  return render(
-    <MemoryRouter initialEntries={['/trip/okinawa-2026/stop/42/edit']}>
-      <Routes>
-        <Route path="/trip/:tripId/stop/:entryId/edit" element={<EditEntryPage />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+  const router = createMemoryRouter([
+    { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
+  ], { initialEntries: ['/trip/okinawa-2026/stop/42/edit'] });
+  return render(<RouterProvider router={router} />);
 }
 
 beforeEach(() => {
+  navigationMode.real = false;
   vi.clearAllMocks();
   navigateSpy.mockClear();
   mockSegmentMap.clear();
@@ -564,6 +569,172 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     );
     expect(JSON.parse((patchCall![1] as { body: string }).body).note).toBe('新備註內容');
   });
+
+  it('備註離線儲存失敗時留在編輯頁，可重試後離開', async () => {
+    setupAltsMocks();
+    let attempts = 0;
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/pois/100')) {
+        attempts++;
+        if (attempts === 1) return Promise.reject(new TypeError('Failed to fetch'));
+      }
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '待保存' } });
+    fireEvent.click(screen.getByLabelText('返回上一層'));
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeTruthy());
+    expect(navigateSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('重試儲存'));
+    await waitFor(() => expect(attempts).toBe(2));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith(expect.stringContaining('focus=42')));
+    expect(attempts).toBe(2);
+  });
+
+  it('備註 PATCH 超過等待上限時可留在原處，晚到成功不會自行導覽或重送', async () => {
+    let resolvePatch!: () => void;
+    const gate = new Promise<void>((resolve) => { resolvePatch = resolve; });
+    setupAltsMocks();
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      const response = { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) };
+      return url.includes('/pois/100') ? gate.then(() => response) : Promise.resolve(response);
+    });
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '慢網保留內容' } });
+    fireEvent.click(screen.getByLabelText('返回上一層'));
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeTruthy(), { timeout: 1800 });
+    expect(navigateSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('繼續編輯'));
+    resolvePatch();
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal')).toBeNull());
+    expect(navigateSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('返回上一層'));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith(expect.stringContaining('focus=42')));
+    expect((apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.filter((call: unknown[]) => String(call[0]).includes('/pois/100'))).toHaveLength(1);
+  });
+
+  it('明確放棄後才離開失敗的備註編輯', async () => {
+    setupAltsMocks();
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => Promise.resolve(
+      url.includes('/pois/100')
+        ? { ok: false, status: 503, text: () => Promise.resolve('無法儲存') }
+        : { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) },
+    ));
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '放棄內容' } });
+    fireEvent.click(screen.getByLabelText('關閉'));
+    await waitFor(() => expect(screen.getByText('放棄變更')).toBeTruthy());
+    expect(navigateSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('放棄變更'));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
+  });
+
+  it('站內換行程與瀏覽器返回都等備註保存，失敗時保留原位置', async () => {
+    navigationMode.real = true;
+    setupAltsMocks();
+    let attempts = 0;
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/pois/100') && ++attempts === 1) {
+        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+      }
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+    });
+    const router = createMemoryRouter([
+      { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
+      { path: '/trips', element: <div>其他行程</div> },
+    ], { initialEntries: ['/trips?selected=old', '/trip/okinawa-2026/stop/42/edit'], initialIndex: 1 });
+    render(<RouterProvider router={router} />);
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-poi-note-read-100'));
+    fireEvent.change(screen.getByTestId('edit-entry-poi-note-input-100'), { target: { value: '換行程前的筆記' } });
+    await router.navigate('/trips?selected=other');
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeTruthy());
+    expect(router.state.location.pathname).toBe('/trip/okinawa-2026/stop/42/edit');
+    fireEvent.click(screen.getByText('繼續編輯'));
+    await router.navigate(-1);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/trips'));
+    expect(router.state.location.search).toBe('?selected=old');
+    expect(attempts).toBe(2);
+  });
+
+  it('活動說明儲存失敗時關閉留在原頁，重試只送尚未成功的欄位', async () => {
+    let attempts = 0;
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/entries/42') && ++attempts === 1) {
+        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+      }
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '仍在本頁的說明' } });
+    fireEvent.click(screen.getByLabelText('關閉'));
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeTruthy());
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect((screen.getByTestId('edit-entry-description-input') as HTMLTextAreaElement).value).toBe('仍在本頁的說明');
+    await new Promise((resolve) => setTimeout(resolve, 950));
+    expect(attempts).toBe(1);
+    fireEvent.click(screen.getByText('重試儲存'));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
+    expect(attempts).toBe(2);
+  });
+
+  it('說明已保存但移動方式失敗時，重試不重送已成功的說明', async () => {
+    let segmentAttempts = 0;
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith('/segments') && ++segmentAttempts === 1) {
+        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+      }
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '已保存的說明' } });
+    fireEvent.click(screen.getByTestId('edit-entry-mode-walking'));
+    fireEvent.click(screen.getByLabelText('關閉'));
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeTruthy());
+    expect(screen.getByTestId('confirm-modal').textContent).toContain('移動方式');
+    expect(screen.getByTestId('confirm-modal').textContent).not.toContain('時間／活動說明');
+    fireEvent.click(screen.getByText('重試儲存'));
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalled());
+    const paths = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls.map((call: unknown[]) => String(call[0]));
+    expect(paths.filter((path) => path.endsWith('/entries/42'))).toHaveLength(1);
+    expect(segmentAttempts).toBe(2);
+  });
+
+  it('root tab 導覽在未保存時被擋住，明確放棄後才切換', async () => {
+    navigationMode.real = true;
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false, status: 503, text: () => Promise.resolve('暫時無法儲存'),
+    });
+    const router = createMemoryRouter([
+      { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
+      { path: '/map', element: <div>地圖頁</div> },
+    ], { initialEntries: ['/trip/okinawa-2026/stop/42/edit'] });
+    render(<RouterProvider router={router} />);
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '未存的說明' } });
+    await router.navigate('/map');
+    await waitFor(() => expect(screen.getByText('放棄變更')).toBeTruthy());
+    expect(router.state.location.pathname).toBe('/trip/okinawa-2026/stop/42/edit');
+    fireEvent.click(screen.getByText('放棄變更'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/map'));
+  });
+
+  it('整頁卸載時對未存表單請求瀏覽器原生提示', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('edit-entry-description-input'), { target: { value: '尚未送出的內容' } });
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
 });
 
 // =========================================================================
@@ -662,7 +833,8 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => {
-      const calls = (apiFetch as ReturnType<typeof vi.fn>).mock.calls;
+      // #1261：/master 由 entry 變更 module 以 apiFetchRaw 發出
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
       const masterCall = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/master'));
       expect(masterCall).toBeTruthy();
       const opts = masterCall![1] as RequestInit;
@@ -754,6 +926,38 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     });
   });
 
+  it('移除備選 → confirm → DELETE /entries/42/alternates/201?entryPoisVersion=…（走 entry 變更 module）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alt-delete-201')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-alt-delete-201'));
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal-confirm')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const del = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).includes('/alternates/201'));
+      expect(del).toBeTruthy();
+      expect(del![0]).toMatch(/\/alternates\/201\?entryPoisVersion=/);
+      expect((del![1] as RequestInit).method).toBe('DELETE');
+    });
+  });
+
+  it('備選下移一格 → PATCH /alternates/reorder { order, entryPoisVersion }（走 entry 變更 module）', async () => {
+    setupAltsMocks();
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-alt-down-201')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-alt-down-201'));
+    await waitFor(() => {
+      const calls = (apiFetchRaw as ReturnType<typeof vi.fn>).mock.calls;
+      const re = calls.find((c) => typeof c[0] === 'string' && (c[0] as string).endsWith('/alternates/reorder'));
+      expect(re).toBeTruthy();
+      const body = JSON.parse((re![1] as RequestInit).body as string);
+      expect(body.order).toHaveLength(2);
+      expect(body.order[1]).toBe(201);
+      expect(body.entryPoisVersion).toBe('2026-05-11T12:00:00');
+    });
+  });
+
   it('「搜尋加入備選」按鈕 → navigate 到 change-poi alternate search tab', async () => {
     setupAltsMocks();
     renderPage();
@@ -781,14 +985,17 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       setupAltsMocks();
       // 第一次 PATCH 409 STALE_ENTRY，第二次成功；DAY_DATA refresh 仍回原 master
       let patchCallCount = 0;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
           if (patchCallCount === 1) {
-            return Promise.reject(new ApiError('STALE_ENTRY', 409));
+            return Promise.resolve(new Response(JSON.stringify({ error: { code: 'STALE_ENTRY' } }), { status: 409 }));
           }
-          return Promise.resolve({});
+          return Promise.resolve(new Response('{}', { status: 200 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         if (url.includes('/entries/42')) return Promise.resolve({ ...ENTRY, entryPoisVersion: '999' });
         if (url.endsWith('/days')) return Promise.resolve(DAYS);
         if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);
@@ -825,11 +1032,14 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
       };
       let patchCallCount = 0;
       let refreshed = false;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
-          return Promise.reject(new ApiError('STALE_ENTRY', 409));
+          return Promise.resolve(new Response(JSON.stringify({ error: { code: 'STALE_ENTRY' } }), { status: 409 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         // 一開始回原 DAY_DATA_WITH_ALTS，refresh 後回 AFTER_OTHER_TAB_SWAP
         if (url.includes('/days/3')) {
           const data = refreshed ? DAY_DATA_AFTER_OTHER_TAB_SWAP : DAY_DATA_WITH_ALTS;
@@ -862,11 +1072,14 @@ describe('EditEntryPage — v2.27.0 alternates section', () => {
     it('PATCH /master 非 STALE_ENTRY 錯誤 → 不 retry，直接 surface error', async () => {
       const { ApiError } = await import('../../src/lib/errors');
       let patchCallCount = 0;
-      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
+      (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string, opts?: RequestInit) => {
         if (typeof url === 'string' && url.includes('/master') && opts?.method === 'PATCH') {
           patchCallCount += 1;
-          return Promise.reject(new ApiError('SYS_INTERNAL', 500));
+          return Promise.resolve(new Response(JSON.stringify({ error: { code: 'SYS_INTERNAL' } }), { status: 500 }));
         }
+        return Promise.resolve(new Response('', { status: 200 }));
+      });
+      (apiFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
         if (url.includes('/entries/42')) return Promise.resolve(ENTRY);
         if (url.endsWith('/days')) return Promise.resolve(DAYS);
         if (url.includes('/days/3')) return Promise.resolve(DAY_DATA_WITH_ALTS);

@@ -4,8 +4,8 @@
  * v2.22.0 改 4-field 純時間驅動：{ tripId, dayNum, startTime, endTime }。
  * 不再含 position radio / anchorEntryId — server 依 startTime 自動排 sort_order。
  *
- * mockup-driven hard gate aligned (docs/design-sessions/2026-05-04-favorites-redesign.html v4
- * sign-off 2026-05-04，frame B1/B2/B3)。對齊 DESIGN.md L580-602 規範。
+ * mockup-driven hard gate 已於 2026-05-04 sign-off；現行規範以 DESIGN.md
+ * 的收藏加入行程流程為準。
  *
  * Mockup classes：tp-form-poi-summary / tp-form / tp-form-field / tp-form-label /
  * tp-form-select / tp-form-input.tabular / tp-form-help / tp-form-actions / tp-action-btn。
@@ -25,8 +25,10 @@ import { TripSelect } from '../components/TripSelect';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useAddToTripTarget } from '../hooks/useAddToTripTarget';
 import { apiFetch } from '../lib/apiClient';
-import { requestTravelRecompute } from '../lib/travelRecompute';
+import { createEntry, addFavoriteToTrip } from '../lib/entryMutations';
+import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { POI_TYPE_LABELS, mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
@@ -187,11 +189,30 @@ const SCOPED_STYLES = `
   text-decoration: none; font-weight: 600;
 }
 
+/* 載入失敗（缺參數等）。#1424：PageErrorState 依 root class 衍生 -title/-desc/-btn；
+ * 這塊渲染在 .tp-favorites-add-to-trip 容器外，原本的 root class tp-error 沒有對應樣式，
+ * 顯示成裸文字加瀏覽器預設按鈕。樣式與 .favorites-error 同一套（置中卡片、膠囊按鈕）。 */
+.tp-favorites-load-error {
+  padding: 32px 24px; background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.tp-favorites-load-error-title { margin: 0; font-weight: 700; color: var(--color-foreground); }
+.tp-favorites-load-error-desc { margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-favorites-load-error-btn {
+  font: inherit; font-weight: 600; padding: 8px 18px;
+  border-radius: var(--radius-full); border: 1px solid var(--color-border);
+  background: var(--color-secondary); color: var(--color-foreground);
+  min-height: var(--spacing-tap-min); cursor: pointer;
+}
+.tp-favorites-load-error-btn:hover { background: var(--color-hover); }
+
 /* Submit error */
 .tp-favorites-add-to-trip .tp-error {
   padding: 12px 16px; border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
-  color: var(--color-danger); border: 1px solid var(--color-danger);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive); border: 1px solid var(--color-destructive);
   font-size: var(--font-size-footnote);
 }
 `;
@@ -211,17 +232,16 @@ export default function AddPoiFavoriteToTripPage() {
   // Loading / data states
   const [favorite, setFavorite] = useState<PoiFavorite | null>(null);
   const [trips, setTrips] = useState<TripBrief[] | null>(null);
-  const [days, setDays] = useState<DayBrief[] | null>(null);
-  const [daysLoading, setDaysLoading] = useState(false);
 
   // Form state — 4 fields (純時間驅動 v2.22.0)
   const [tripId, setTripId] = useState('');
-  const [dayNum, setDayNum] = useState<number | ''>('');
+  const { status: dayStatus, days, dayNum, selectDay, retry: retryDays } = useAddToTripTarget<DayBrief>(tripId);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
   // Status states
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadRequest, setLoadRequest] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [conflictPayload, setConflictPayload] = useState<ConflictWith | null>(null);
@@ -298,44 +318,17 @@ export default function AddPoiFavoriteToTripPage() {
         setLoadError(err instanceof Error ? err.message : '載入失敗');
       });
     return () => { cancelled = true; };
-  }, [favoriteId, isDirectMode, directPoi]);
-
-  useEffect(() => {
-    if (!tripId) {
-      setDays(null);
-      setDaysLoading(false);
-      setDayNum('');
-      return;
-    }
-    let cancelled = false;
-    setDaysLoading(true);
-    setDayNum('');
-    // 改打 /trips/:id/days array endpoint — `/trips/:id` 只回 trip meta，不含 days
-    apiFetch<DayBrief[]>(`/trips/${encodeURIComponent(tripId)}/days`)
-      .then((data) => {
-        if (cancelled) return;
-        const dayList = Array.isArray(data) ? data : [];
-        setDays(dayList);
-        setDaysLoading(false);
-        if (dayList.length > 0) setDayNum(dayList[0]!.dayNum);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDays([]);
-        setDaysLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [tripId]);
+  }, [favoriteId, isDirectMode, directPoi, loadRequest]);
 
   const canSubmit = useMemo(() => {
-    if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
+    if (!favorite || !tripId || dayNum === null || dayStatus !== 'ready' || submitting) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
     if (endTime && !TIME_RE.test(endTime)) return false;
     return true;
-  }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting]);
+  }, [favorite, tripId, dayNum, dayStatus, startTime, endTime, submitting]);
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || dayNum === null) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -343,30 +336,23 @@ export default function AddPoiFavoriteToTripPage() {
         // direct mode：POI 從 explore 帶來，沒對應 favorite → 直接 POST entries（同 AddStopPage 'search' tab）。
         // entries.ts 後端只認 body.time（"HH:MM-HH:MM" 單欄位），需在前端 join。
         const time = startTime && endTime ? `${startTime}-${endTime}` : undefined;
-        await apiFetch(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
-          method: 'POST',
-          body: JSON.stringify({
-            name: favorite.poiName,
-            note: favorite.poiAddress || undefined,
-            lat: favorite.poiLat,
-            lng: favorite.poiLng,
-            source: 'google',
-            time,
-            poi_type: mapGooglePrimaryTypeToPoiType(favorite.poiType),
-          }),
+        const r = await createEntry(tripId, dayNum, {
+          name: favorite.poiName,
+          note: favorite.poiAddress || undefined,
+          lat: favorite.poiLat,
+          lng: favorite.poiLng,
+          source: 'google',
+          time,
+          poi_type: mapGooglePrimaryTypeToPoiType(favorite.poiType),
         });
-        // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
-        void requestTravelRecompute(tripId, dayNum).catch(() => undefined);
+        if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       } else {
-        await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
-          method: 'POST',
-          body: JSON.stringify({
-            tripId,
-            dayNum: Number(dayNum),
-            startTime: startTime || undefined,
-            endTime: endTime || undefined,
-          }),
+        // #1261：收藏 fast-path 也走 module —— 以前這條沒重算車程。
+        const r = await addFavoriteToTrip(favoriteId!, tripId, dayNum, {
+          startTime: startTime || undefined,
+          endTime: endTime || undefined,
         });
+        if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       }
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
       navigate(`/trips?${params.toString()}`, { replace: true });
@@ -408,8 +394,9 @@ export default function AddPoiFavoriteToTripPage() {
       <PageErrorState
         title="載入失敗"
         message={loadError}
-        retryLabel={null}
-        className="tp-error"
+        retryLabel="重試"
+        onRetry={() => { setLoadError(null); setLoadRequest((value) => value + 1); }}
+        className="tp-favorites-load-error"
         testId="favorites-add-to-trip-load-error"
       />
     );
@@ -446,7 +433,7 @@ export default function AddPoiFavoriteToTripPage() {
       </div>
     );
   } else {
-    const selectedDay = days?.find((d) => d.dayNum === dayNum);
+    const selectedDay = days.find((d) => d.dayNum === dayNum);
     mainContent = (
       <div className="tp-favorites-add-to-trip">
         <div className="tp-form-poi-summary" data-tone={poiTypeToTone(mapGooglePrimaryTypeToPoiType(favorite.poiType))}>
@@ -489,24 +476,29 @@ export default function AddPoiFavoriteToTripPage() {
 
             <div className="tp-form-field">
               <label className="tp-form-label" htmlFor="atstr-day">天數</label>
-              {daysLoading ? (
+              {dayStatus === 'loading' ? (
                 <div
                   className="tp-skel"
                   data-testid="favorites-add-to-trip-day-skeleton"
                   aria-busy="true"
                   aria-live="polite"
                 />
+              ) : dayStatus === 'error' ? (
+                <div role="alert" className="tp-error" data-testid="favorites-add-to-trip-day-error">
+                  日期載入失敗，請重試
+                  <button type="button" onClick={retryDays}>重試</button>
+                </div>
               ) : (
                 <div data-testid="favorites-add-to-trip-day">
                   <TripSelect<string>
                     id="atstr-day"
-                    value={String(dayNum)}
-                    onChange={(v) => setDayNum(v === '' ? '' : Number(v))}
-                    disabled={!days || days.length === 0}
-                    placeholder={days && days.length === 0 ? '該行程沒有天數' : '選擇天數…'}
+                    value={dayNum === null ? '' : String(dayNum)}
+                    onChange={(v) => { if (v !== '') selectDay(Number(v)); }}
+                    disabled={dayStatus !== 'ready' || days.length === 0}
+                    placeholder={dayStatus === 'ready' && days.length === 0 ? '該行程沒有天數' : '選擇天數…'}
                     ariaLabel="天數"
                     options={
-                      days && days.length > 0
+                      days.length > 0
                         ? days.map((d) => ({
                             value: String(d.dayNum),
                             label: `Day ${d.dayNum}${d.label ? ` · ${d.label}` : ''} (${d.date})`,

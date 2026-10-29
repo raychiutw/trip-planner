@@ -20,13 +20,16 @@ import { readAuthHint } from '../lib/authHint';
 const SCOPED_STYLES = `
 .tp-lp{background:var(--color-background);color:var(--color-foreground);min-height:100dvh}
 
+/* 插畫示意色，值取自視覺 SoT mockup。刻意不用 DAY_PALETTE —— DESIGN.md 規定
+ * day palette 只用於地圖 polyline 與 entry card。這組沒定義時 SVG 不報錯、直接隱形。 */
+.tp-lp{--d1:#C9857F;--d2:#7FA8C9;--d3:#8FBF8A;--d4:#C9A97F}
+body.dark .tp-lp{--d1:#D9968F;--d2:#8FB8D9;--d3:#9FCF9A;--d4:#D9B98F}
+
 /* ── 頂列 ── */
 .tp-lp-nav{
   position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
   padding:12px 18px;
-  background:color-mix(in srgb,var(--color-background) 88%,transparent);
-  backdrop-filter:blur(20px) saturate(180%);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  --glass-alpha:88%;--glass-filter:blur(20px) saturate(180%);   /* recipe：tokens.css 的 .tp-glass */
   border-bottom:1px solid var(--color-border);
 }
 .tp-lp-brand{font-size:18px;font-weight:800;letter-spacing:-.02em}
@@ -52,6 +55,7 @@ const SCOPED_STYLES = `
 }
 .tp-lp-h1 em{font-style:normal;color:var(--color-accent-text)}
 .tp-lp-sub{font-size:var(--font-size-body);line-height:1.7;color:var(--color-muted);margin:0 0 26px;max-width:50ch}
+.tp-lp-import-note{font-size:var(--font-size-callout);line-height:1.5;color:var(--color-muted);margin:16px 0 0;max-width:50ch}
 .tp-lp-cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .tp-lp-cta{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -138,23 +142,24 @@ export default function LandingPage() {
     <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-lp" data-testid="landing-page">
-        <nav className="tp-lp-nav">
+        <nav className="tp-lp-nav tp-glass">
           <div className="tp-lp-brand">Trip<span>line</span></div>
           <div className="tp-lp-nav-spacer" />
           <a className="tp-lp-nav-login" href="/login">登入</a>
         </nav>
 
+        <main>
         <header className="tp-lp-hero">
           <div className="tp-lp-hero-copy">
             <div className="tp-lp-eyebrow">旅遊行程規劃</div>
-            <h1 className="tp-lp-h1">行程排壞了，<br /><em>講一句話</em>就好</h1>
+            <h1 className="tp-lp-h1">開始規劃<br /><em>下一趟旅程</em></h1>
             <p className="tp-lp-sub">
-              「第二天下午排太趕」——說出來，行程自己調整，還會告訴你動了哪些點、車程差多少。
-              不用一格一格拖。
+              登入後建立行程，安排景點與每天的路線。想調整時，說一句話就能改，並看見車程與停留點如何變動。
             </p>
             <div className="tp-lp-cta-row">
-              <a className="tp-lp-cta" href="/login">登入後開始使用</a>
+              <a className="tp-lp-cta" href="/login">登入後開始規劃</a>
             </div>
+            <p className="tp-lp-import-note">已有行程？登入後可用 JSON 匯入，再接著編排。</p>
           </div>
 
           <div className="tp-lp-hero-visual">
@@ -237,11 +242,12 @@ export default function LandingPage() {
 
         <section className="tp-lp-close">
           <div className="tp-lp-close-inner">
-            <h2>行程還在試算表裡？</h2>
-            <p>登入後就能開始排，也可以把既有行程用 JSON 匯入。</p>
-            <a className="tp-lp-cta" href="/login">登入後開始使用</a>
+            <h2>準備好開始規劃？</h2>
+            <p>登入後建立行程；已有行程的 JSON 檔，也能匯入後繼續編排。</p>
+            <a className="tp-lp-cta" href="/login">登入後開始規劃</a>
           </div>
         </section>
+        </main>
 
         <footer className="tp-lp-foot">
           <span>© 2026 Tripline</span>

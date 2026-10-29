@@ -2,8 +2,7 @@
 /**
  * Migration 0050 schema verify — poi_favorites table 結構正確
  *
- * 對映 OpenSpec change poi-favorites-rename / specs/poi-favorites/spec.md
- * Requirement: POI 收藏池 D1 schema
+ * Contract: POI 收藏池 D1 schema
  *
  * 用 node env（不是預設 jsdom）— Miniflare ProxyStubHandler 不支援 jsdom。
  */

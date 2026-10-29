@@ -1,4 +1,4 @@
-import { hasWritePermission, requireAuth } from '../../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../../_auth';
 import { logAudit } from '../../../../../_audit';
 import { AppError } from '../../../../../_errors';
 import { isNoteAiDocType } from '../../../../../_noteAi';
@@ -11,9 +11,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const docType = context.params.type as string;
   const exclusionId = parseIntParam(context.params.exclusionId as string);
   if (!isNoteAiDocType(docType) || !exclusionId) throw new AppError('DATA_VALIDATION');
-  if (!(await hasWritePermission(context.env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(context.env.DB, auth, tripId);
 
   const exclusion = await context.env.DB.prepare(
     `DELETE FROM trip_note_ai_exclusions

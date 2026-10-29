@@ -2,8 +2,8 @@
  * NotificationsSettingsPage — Section 2 (terracotta-account-hub-page) sub-page
  *
  * Route: /account/notifications
- * Stub page — mockup section 19 規範有此 row 但 backend 通知功能尚在開發中。
- * 初版顯示「即將推出」 + 預先 list 規劃中的通知類型。後續 polish 補實際 toggle。
+ * Stub page — mockup section 19 規範有此 row，通知功能尚未開放。
+ * 規劃中的類型僅供說明，並非可操作設定。
  */
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -62,8 +62,6 @@ const SCOPED_STYLES = `
   display: flex; align-items: center; gap: 14px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 .tp-notif-row:last-child { border-bottom: none; }
 .tp-notif-row-icon {
@@ -74,7 +72,7 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-notif-row-icon .svg-icon { width: 18px; height: 18px; }
-.tp-notif-row-body { flex: 1; }
+.tp-notif-row-body { flex: 1; min-width: 0; }
 .tp-notif-row-title {
   font-size: var(--font-size-callout); font-weight: 600;
   color: var(--color-foreground);
@@ -107,21 +105,21 @@ export default function NotificationsSettingsPage() {
       <div className="tp-notif-inner">
         <section className="tp-notif-stub">
           <div className="tp-notif-stub-icon" aria-hidden="true"><Icon name="lightbulb" /></div>
-          <h2 className="tp-notif-stub-title">即將推出</h2>
+          <h2 className="tp-notif-stub-title">通知功能尚未開放</h2>
           <p className="tp-notif-stub-copy">
-            通知功能還在開發中。下面列的是規劃中的通知類型，未來開放後可以分別開啟或關閉。
+            以下是規劃中的通知類型，目前無法設定或接收通知。
           </p>
         </section>
 
-        <section className="tp-notif-list">
+        <section className="tp-notif-list" role="list" aria-label="規劃中的通知類型">
           {PLANNED_TYPES.map((t) => (
-            <div key={t.key} className="tp-notif-row" data-testid={`notif-row-${t.key}`}>
+            <div key={t.key} className="tp-notif-row" role="listitem" data-testid={`notif-row-${t.key}`}>
               <div className="tp-notif-row-icon" aria-hidden="true"><Icon name={t.icon} /></div>
               <div className="tp-notif-row-body">
                 <div className="tp-notif-row-title">{t.title}</div>
                 <div className="tp-notif-row-helper">{t.helper}</div>
               </div>
-              <div className="tp-notif-row-status">即將推出</div>
+              <div className="tp-notif-row-status">規劃中</div>
             </div>
           ))}
         </section>

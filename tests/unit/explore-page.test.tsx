@@ -293,7 +293,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     // 點「拉麵」細類 → 只剩 ramen_restaurant
     fireEvent.click(getByTestId('explore-cat-拉麵'));
     expect(getByTestId('explore-cat-拉麵').className).toContain('is-active');
-    expect(getByTestId('explore-cat-拉麵').getAttribute('aria-selected')).toBe('true');
+    expect(getByTestId('explore-cat-拉麵').getAttribute('aria-pressed')).toBe('true');
     expect(getByTestId('explore-cat-all').className).not.toContain('is-active');
     expect(() => getByTestId('explore-save-btn-p2')).toThrow();
     expect(getByTestId('explore-save-btn-p1')).toBeTruthy();

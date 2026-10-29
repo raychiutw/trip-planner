@@ -29,14 +29,16 @@ if [ ! -x "$REPO_ROOT/scripts/funnel-guard/guard.sh" ]; then
   exit 1
 fi
 
-# 預檢：tailscale CLI + jq 必須存在
-for bin in /opt/homebrew/bin/tailscale jq; do
-  if ! command -v "$bin" >/dev/null 2>&1 && [ ! -x "$bin" ]; then
-    echo "✗ 缺少必要工具：$bin" >&2
-    echo "  jq 安裝：brew install jq" >&2
-    exit 1
-  fi
-done
+# 預檢：tailscale CLI（brew 或 macOS App 版）+ jq 必須存在
+if [ ! -x /opt/homebrew/bin/tailscale ] && [ ! -x /usr/local/bin/tailscale ] && [ ! -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+  echo "✗ 找不到 tailscale CLI（/opt/homebrew/bin、/usr/local/bin、Tailscale.app）" >&2
+  exit 1
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "✗ 缺少必要工具：jq" >&2
+  echo "  jq 安裝：brew install jq" >&2
+  exit 1
+fi
 
 mkdir -p "$LOG_DIR"
 mkdir -p "$(dirname "$DST_PLIST")"

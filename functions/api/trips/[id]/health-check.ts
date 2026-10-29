@@ -17,7 +17,7 @@
  * trip_health_reports.findings_json + status='completed'。
  */
 
-import { hasPermission, hasWritePermission, requireAuth} from '../../_auth';
+import { hasPermission, requireAuth, requireTripWrite } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json } from '../../_utils';
 import { recordEmailEvent } from '../../_audit';
@@ -196,14 +196,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 // POST — 觸發新一輪 health check
+function storedFindings(raw: unknown): unknown[] {
+  try {
+    const parsed = JSON.parse(String(raw || '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return []; // GET logs and alerts on corrupt stored rows.
+  }
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
   // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable
@@ -238,12 +245,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         userId: existing.user_id,
         status: existing.status,
         requestId: existing.request_id,
-        findings: [],
+        findings: storedFindings(existing.findings_json),
         createdAt: existing.created_at,
         completedAt: existing.completed_at,
       },
     }, 200);
   }
+
+  const previous = await env.DB.prepare(
+    'SELECT findings_json, completed_at FROM trip_health_reports WHERE trip_id = ?',
+  ).bind(tripId).first<{ findings_json: string | null; completed_at: string | null }>();
+  const previousFindings = storedFindings(previous?.findings_json);
 
   // v2.55.x: 把 trip_segments 記錄的移動時間/距離嵌進 prompt，作為 timing/distance
   // 的唯一權威來源。之前 prompt 只給靜態指示、沒給實際數字 → Claude 憑地理位置瞎估 →
@@ -312,10 +324,9 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
          user_id = excluded.user_id,
          status = 'pending',
          request_id = excluded.request_id,
-         findings_json = NULL,
          error_message = NULL,
-         created_at = datetime('now'),
-         completed_at = NULL`,
+         -- Keep the last finished report until a new completion replaces it.
+         created_at = datetime('now')`,
     )
     .bind(tripId, auth.userId, requestId)
     .run();
@@ -362,7 +373,7 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
         });
         await alertAdminTelegram(
           env,
-          `健檢觸發失敗（cron 15min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
+          `健檢觸發失敗（cron 5min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
         );
       }
     })(),
@@ -375,8 +386,9 @@ ${formatSegmentRecords(segRes.results ?? [])}`;
         userId: auth.userId,
         status: 'pending',
         requestId,
-        findings: [],
+        findings: previousFindings,
         createdAt: new Date().toISOString(),
+        completedAt: previous?.completed_at ?? null,
       },
     },
     202,

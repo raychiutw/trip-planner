@@ -122,7 +122,9 @@ const SCOPED_STYLES = `
 }
 .tp-notes-emergency-phone-btn:hover { background: var(--color-accent-bg); }
 .tp-notes-emergency-phone-btn.is-urgent {
-  background: var(--color-priority-high-bg);
+  /* #1445 F12：原 --color-priority-high-bg 是半透明紅，實際底色隨父層而變（淺色疊米色 4.24:1、
+   * 深色疊 sheet／頁面 3.45–3.95:1）。改用不透明的 destructive-bg，與 destructive 文字成對（淺 4.85、深 4.78+）。 */
+  background: var(--color-destructive-bg);
   color: var(--color-destructive);
 }
 .tp-notes-emergency-phone-btn.is-urgent:hover { filter: brightness(0.95); }

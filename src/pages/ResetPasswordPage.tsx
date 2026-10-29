@@ -10,13 +10,14 @@
  *   - submitting form
  *   - success: '密碼已更新' + 提示「為了安全，所有裝置已登出」
  *   - token invalid/expired (RESET_TOKEN_INVALID): error UI + 重新申請連結
- *   - bad password (RESET_INVALID_PASSWORD): inline field error
+ *   - bad password (RESET_PASSWORD_TOO_SHORT / RESET_PASSWORD_FORMAT): inline field error
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
 import InlineError from '../components/shared/InlineError';
+import { MIN_PASSWORD_LEN } from '../server/password';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -127,7 +128,7 @@ interface PasswordChecks {
 
 function checkPassword(pw: string): PasswordChecks {
   return {
-    lengthOk: pw.length >= 8,
+    lengthOk: pw.length >= MIN_PASSWORD_LEN,
     hasLetter: /[A-Za-z]/.test(pw),
     hasNumber: /\d/.test(pw),
   };
@@ -152,8 +153,11 @@ export default function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [tokenInvalid, setTokenInvalid] = useState(false);
-  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwError, setPwError] = useState<{ field: 'password' | 'confirm'; message: string } | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
+  const submittingRef = useRef(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmRef = useRef<HTMLInputElement>(null);
 
   const checks = useMemo(() => checkPassword(password), [password]);
   const strength = useMemo(() => strengthLevel(checks), [checks]);
@@ -161,18 +165,22 @@ export default function ResetPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     setPwError(null);
     setBannerError(null);
 
     if (!checks.lengthOk) {
-      setPwError('密碼至少 8 字元');
+      setPwError({ field: 'password', message: `密碼至少 ${MIN_PASSWORD_LEN} 字元` });
+      passwordRef.current?.focus();
       return;
     }
     if (!passwordsMatch) {
-      setPwError('兩次輸入的密碼不一致');
+      setPwError({ field: 'confirm', message: '兩次輸入的密碼不一致' });
+      confirmRef.current?.focus();
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await apiFetchRaw('/oauth/reset-password', {
@@ -190,8 +198,15 @@ export default function ResetPasswordPage() {
         case 'RESET_TOKEN_MISSING':
           setTokenInvalid(true);
           break;
-        case 'RESET_INVALID_PASSWORD':
-          setPwError('密碼格式不符（至少 8 字元）');
+        case 'RESET_PASSWORD_TOO_SHORT':
+        case 'RESET_PASSWORD_FORMAT':
+          setPwError({ field: 'password', message: code === 'RESET_PASSWORD_TOO_SHORT'
+            ? `密碼至少 ${MIN_PASSWORD_LEN} 字元`
+            : '密碼格式無法使用，請更換密碼後再試' });
+          passwordRef.current?.focus();
+          break;
+        case 'RESET_RATE_LIMITED':
+          setBannerError('重設嘗試過多，請稍後再試。');
           break;
         default:
           setBannerError('暫時無法處理，請稍後再試。');
@@ -199,6 +214,7 @@ export default function ResetPasswordPage() {
     } catch {
       setBannerError('網路連線失敗，請稍後再試。');
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -276,7 +292,7 @@ export default function ResetPasswordPage() {
         </div>
         <div className="tp-auth-headline">
           <h1>設定新密碼</h1>
-          <p>建立一組新密碼，至少 8 字元，包含字母與數字。</p>
+          <p>建立一組至少 {MIN_PASSWORD_LEN} 字元的新密碼。</p>
         </div>
 
         {bannerError && (
@@ -288,18 +304,22 @@ export default function ResetPasswordPage() {
         <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
             <label htmlFor="reset-password">
-              新密碼 <span className="tp-hint">至少 8 字元</span>
+              新密碼 <span className="tp-hint">至少 {MIN_PASSWORD_LEN} 字元</span>
             </label>
             <input
               id="reset-password"
+              ref={passwordRef}
               type="password"
               autoComplete="new-password"
-              minLength={8}
+              minLength={MIN_PASSWORD_LEN}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); if (pwError?.field === 'password') setPwError(null); }}
+              aria-invalid={pwError?.field === 'password' || undefined}
+              aria-describedby={pwError?.field === 'password' ? 'reset-pw-error' : undefined}
               data-testid="reset-password-input"
             />
+            {pwError?.field === 'password' && <InlineError message={pwError.message} testId="reset-pw-error" />}
             <div className="tp-pw-strength" data-testid="reset-pw-strength">
               <div className="tp-pw-bars">
                 {([0, 1, 2, 3] as const).map((i) => (
@@ -325,7 +345,7 @@ export default function ResetPasswordPage() {
                       ? <polyline points="20 6 9 17 4 12" />
                       : <circle cx="12" cy="12" r="10" />}
                   </svg>
-                  長度 ≥ 8 字
+                  長度 ≥ {MIN_PASSWORD_LEN} 字
                 </span>
                 <span className={`tp-pw-check ${checks.hasLetter && checks.hasNumber ? 'tp-pw-check-ok' : ''}`} data-testid="reset-check-mix">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -343,14 +363,17 @@ export default function ResetPasswordPage() {
             <label htmlFor="reset-confirm">再次輸入新密碼</label>
             <input
               id="reset-confirm"
+              ref={confirmRef}
               type="password"
               autoComplete="new-password"
               required
               value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
+              onChange={(e) => { setConfirm(e.target.value); if (pwError?.field === 'confirm') setPwError(null); }}
+              aria-invalid={pwError?.field === 'confirm' || undefined}
+              aria-describedby={pwError?.field === 'confirm' ? 'reset-pw-error' : undefined}
               data-testid="reset-confirm"
             />
-            {pwError && <InlineError message={pwError} testId="reset-pw-error" />}
+            {pwError?.field === 'confirm' && <InlineError message={pwError.message} testId="reset-pw-error" />}
           </div>
 
           <button
@@ -372,7 +395,7 @@ export default function ResetPasswordPage() {
       <AuthBrandHero
         eyebrow="最後一步"
         headline={<>最後一步<br />就完成了。</>}
-        sub="設好新密碼，你會自動登入並進入「行程」頁。記得密碼存到密碼管理器（1Password / Apple Keychain / Google Password）。"
+        sub="設好新密碼後，請用新密碼登入。記得密碼存到密碼管理器（1Password / Apple Keychain / Google Password）。"
         items={[
           {
             icon: <polyline points="20,6 9,17 4,12" />,

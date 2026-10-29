@@ -13,8 +13,11 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockContext, mockEnv, mockServiceAuth, seedTrip, seedUser } from './helpers';
-import { onRequestPatch } from '../../functions/api/requests/[id]/index';
+import { callHandler, jsonRequest, mockContext, mockEnv, mockAuth, mockServiceAuth, seedTrip, seedUser } from './helpers';
+import { onRequestPatch, onRequestGet as getRequest } from '../../functions/api/requests/[id]/index';
+import { onRequestGet as getAiState } from '../../functions/api/trips/[id]/notes/ai-state';
+import { onRequestGet as getNotes } from '../../functions/api/trips/[id]/notes';
+import { onRequestPost as generateNotes } from '../../functions/api/trips/[id]/notes/[type]/generate';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -43,10 +46,10 @@ async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency
   return { requestId: req!.id, jobId: job!.id };
 }
 
-async function callPatch(requestId: number, body: Record<string, unknown>) {
+async function callPatch(requestId: number, body: Record<string, unknown>, requestEnv = env) {
   const ctx = mockContext({
     request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', body),
-    env,
+    env: requestEnv,
     // Phase 3：PATCH /requests/:id 由帶 companion scope 的 service token 執行（Claude CLI）
     auth: mockServiceAuth(),
     params: { id: String(requestId) },
@@ -54,7 +57,115 @@ async function callPatch(requestId: number, body: Record<string, unknown>) {
   return callHandler(onRequestPatch, ctx);
 }
 
+async function readTrip(handler: typeof getAiState | typeof getNotes, id = tripId) {
+  const response = await callHandler(handler, mockContext({
+    request: new Request(`https://test/api/trips/${id}/notes`),
+    env, auth: mockAuth({ email: ownerEmail }), params: { id },
+  }));
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+function failDatabaseOnce(operation: 'prepare' | 'batch', match: (sql: string) => boolean = () => true): D1Database {
+  let failed = false;
+  return new Proxy(db, {
+    get(target, property) {
+      const member = Reflect.get(target, property);
+      if (typeof member !== 'function') return member;
+      return (...args: unknown[]) => {
+        if (!failed && property === operation && match(String(args[0]))) {
+          failed = true;
+          throw new Error('Injected database outage');
+        }
+        return Reflect.apply(member, target, args);
+      };
+    },
+  });
+}
+
 describe('PATCH /requests/:id — notes generation completion hook', () => {
+  it('舊 generation 的遲到回報不覆寫新 generation 的筆記', async () => {
+    const id = 'notes-terminal-generations';
+    await seedTrip(db, { id, owner: ownerEmail });
+    const generate = async () => {
+      const response = await callHandler(generateNotes, mockContext({
+        request: jsonRequest(`https://test/api/trips/${id}/notes/tips/generate`, 'POST'),
+        env, auth: mockAuth({ email: ownerEmail }), params: { id, type: 'tips' },
+      }));
+      expect(response.status).toBe(202);
+      return response.json() as Promise<{ requestId: number; generation: number }>;
+    };
+    const old = await generate();
+    expect(old.generation).toBe(1);
+    await callPatch(old.requestId, { status: 'failed', terminalReason: 'cancelled' });
+    const current = await generate();
+    expect(current.generation).toBe(2);
+    await callPatch(current.requestId, {
+      status: 'completed', reply: JSON.stringify([{ title: '第二版', content: '新成果', section: '一般' }]),
+    });
+    const saved = await readTrip(getNotes, id);
+    expect(saved.pretripNotes).toContainEqual(expect.objectContaining({ title: '第二版', content: '新成果' }));
+    const lateReply = JSON.stringify([{ title: '第一版', content: '過時成果', section: '一般' }]);
+    await callPatch(old.requestId, { status: 'completed', reply: lateReply });
+    expect((await readTrip(getNotes, id)).pretripNotes).toEqual(saved.pretripNotes);
+    expect((await readTrip(getAiState, id)).jobs).toContainEqual(expect.objectContaining({ generation: 2, status: 'completed' }));
+    const late = await callHandler(getRequest, mockContext({
+      request: new Request(`https://test/api/requests/${old.requestId}`), env,
+      auth: mockAuth({ email: ownerEmail }), params: { id: String(old.requestId) },
+    }));
+    expect(await late.json()).toMatchObject({ status: 'failed', terminalReason: 'cancelled', reply: lateReply });
+  });
+
+  it('筆記寫入暫時失敗可重送完成通知，成功後不重複套用', async () => {
+    const { requestId } = await createJobAndRequest('tips');
+    const faulty = mockEnv(failDatabaseOnce('batch'));
+    expect((await callPatch(requestId, {
+      status: 'completed', reply: JSON.stringify([{ title: '雨具', content: '準備雨衣', section: '裝備' }]),
+    }, faulty)).status).toBe(200);
+    expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({
+      requestId, status: 'pending', errorCode: 'NOTES_AI_APPLY_FAILED',
+    }));
+    await callPatch(requestId, { status: 'completed' });
+    const first = await readTrip(getNotes);
+    expect(first.pretripNotes).toContainEqual(expect.objectContaining({ title: '雨具', content: '準備雨衣' }));
+    await callPatch(requestId, { status: 'completed' });
+    expect((await readTrip(getNotes)).pretripNotes).toEqual(first.pretripNotes);
+    expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({
+      requestId, status: 'completed', insertedCount: 1, errorCode: null,
+    }));
+  });
+
+  it('停止等待後收尾失敗，遲到的純 status 通知可補做收尾', async () => {
+    const { requestId } = await createJobAndRequest('tips');
+    const faulty = mockEnv(failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_note_ai_jobs/.test(sql)));
+    expect((await callPatch(requestId, { status: 'failed', terminalReason: 'cancelled' }, faulty)).status).toBe(200);
+    expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({ requestId, status: 'pending' }));
+    expect((await callPatch(requestId, { status: 'completed' })).status).toBe(200);
+    expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({ requestId, status: 'failed' }));
+    const request = await callHandler(getRequest, mockContext({
+      request: new Request(`https://test/api/requests/${requestId}`), env,
+      auth: mockAuth({ email: ownerEmail }), params: { id: String(requestId) },
+    }));
+    expect(await request.json()).toMatchObject({ status: 'failed', terminalReason: 'cancelled' });
+  });
+
+  it('健檢關聯讀取失敗仍終結 request，並獨立完成筆記', async () => {
+    const { requestId } = await createJobAndRequest('tips');
+    const faulty = mockEnv(failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_health_reports/.test(sql)));
+    const response = await callPatch(requestId, {
+      status: 'completed', reply: JSON.stringify([{ title: '登山', content: '攜帶飲水', section: '活動' }]),
+    }, faulty);
+    expect(response.status).toBe(200);
+    const request = await callHandler(getRequest, mockContext({
+      request: new Request(`https://test/api/requests/${requestId}`), env,
+      auth: mockAuth({ email: ownerEmail }), params: { id: String(requestId) },
+    }));
+    expect(await request.json()).toMatchObject({ status: 'completed' });
+    expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({
+      docType: 'tips', requestId, status: 'completed',
+    }));
+    expect((await readTrip(getNotes)).pretripNotes).toContainEqual(expect.objectContaining({ title: '登山', content: '攜帶飲水' }));
+  });
+
   describe('docType=lodging-tips', () => {
     it('完成 → INSERT trip_pretrip_notes ai_source=lodging-tips', async () => {
       const { requestId, jobId } = await createJobAndRequest('lodging-tips');

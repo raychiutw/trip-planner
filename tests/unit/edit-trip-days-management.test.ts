@@ -40,11 +40,9 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     );
   });
 
-  it('handleConfirmDelete DELETE /days/:dayNum', () => {
+  it('handleConfirmDelete 走 tripMutations.deleteDay（endpoint／錯誤訊息／事件的行為見 trip-mutations.test.tsx）', () => {
     expect(EDIT_TRIP_SRC).toMatch(/handleConfirmDelete = useCallback/);
-    expect(EDIT_TRIP_SRC).toMatch(
-      /apiFetchRaw\([\s\S]{0,80}\/days\/\$\{dayNum\}`,[\s\S]{0,80}method: 'DELETE'/,
-    );
+    expect(EDIT_TRIP_SRC).toMatch(/await deleteDay\(tripId, dayNum\)/);
   });
 
   it('ConfirmModal import + mount with pendingDelete state', () => {

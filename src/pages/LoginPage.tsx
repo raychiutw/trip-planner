@@ -9,7 +9,7 @@
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
- *   ?invitation=token → 登入成功後自動 POST /api/invitations/accept → redirect 該 trip
+ *   ?invitation=token → 登入後接受邀請；失敗回原邀請頁顯示結果
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -137,7 +137,7 @@ const SCOPED_STYLES = `
 }
 .tp-bs-footnote {
   font-size: var(--font-size-caption2);
-  opacity: 0.6;
+  opacity: 0.8; /* #1423：0.6 落在 hero 底上只有 3.7–3.9；0.8 ≥ 4.9，仍是頁面最淡的一行 */
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
@@ -179,6 +179,12 @@ const SCOPED_STYLES = `
 }
 
 /* .tp-form / .tp-form-row 移到 css/tokens.css；LoginPage 用 .tp-form--auth 拉高觸控尺寸。 */
+.tp-login-password-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.tp-login-password-header label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
 /* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
 .tp-divider {
@@ -216,6 +222,12 @@ const SCOPED_STYLES = `
   font-weight: 600; text-decoration: none;
 }
 .tp-login-footer a:hover { text-decoration: underline; }
+.tp-login-privacy {
+  border-top: 1px solid var(--color-border);
+  margin-top: 16px;
+  padding-top: 18px;
+  font-size: var(--font-size-caption);
+}
 `;
 
 interface ApiError {
@@ -244,14 +256,17 @@ export default function LoginPage() {
   const verified = params.get('verified') === '1';
   const verifyError = params.get('verify_error');
   const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
-  /** V2 共編：登入完成後接受邀請 + 導頁到該 trip。失敗 graceful → 走 default redirect。 */
   const invitationToken = params.get('invitation');
+  const invitationPath = invitationToken ? `/invite?token=${encodeURIComponent(invitationToken)}` : null;
+  const googleRedirect = invitationPath ?? redirectAfter;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
+  const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
+  const isLocked = lockedRetryAfter !== null;
   // v2.33.47 round 7b LOW: lazy init via useState — 之前 mount-effect read 後
   // 才 setFailureCount，first paint 顯 0 然後 warning banner 突然冒出。lazy
   // init 直接從 sessionStorage 起手避免 flash。
@@ -307,7 +322,7 @@ export default function LoginPage() {
       if (res.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
-        if (invitationToken) {
+        if (invitationPath) {
           try {
             const acceptRes = await apiFetchRaw('/invitations/accept', {
               method: 'POST',
@@ -318,9 +333,11 @@ export default function LoginPage() {
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
-            // accept failed → fall through to default redirect (使用者體驗：仍登入成功)
+            navigate(invitationPath);
+            return;
           } catch {
-            // network error → fall through
+            navigate(invitationPath);
+            return;
           }
         }
         navigate(redirectAfter ?? '/trips');
@@ -380,6 +397,10 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedRetryAfter !== null]);
 
+  useEffect(() => {
+    if (isLocked) lockoutHeadingRef.current?.focus();
+  }, [isLocked]);
+
   // Lockout view — single-column (no brand hero, full-bleed alarming UX)
   if (lockedRetryAfter !== null) {
     const minutes = Math.floor(lockedRetryAfter / 60);
@@ -412,7 +433,7 @@ export default function LoginPage() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h1 className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
+          <h1 ref={lockoutHeadingRef} tabIndex={-1} className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
           <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-subheadline)', margin: '0 0 16px' }}>
             為了保護帳號安全，我們暫時鎖定了登入功能。
           </p>
@@ -461,13 +482,13 @@ export default function LoginPage() {
         </div>
 
         {verified && (
-          <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
+          <div className="tp-banner tp-banner-success" role="status" data-testid="login-banner-verified">
             電子郵件驗證成功！請登入。
           </div>
         )}
 
         {verifyError && (
-          <div className="tp-banner tp-banner-warning" data-testid="login-banner-verify-error">
+          <div className="tp-banner tp-banner-warning" role="alert" data-testid="login-banner-verify-error">
             {verifyError === 'expired' && '驗證連結已過期，請重新申請或註冊。'}
             {verifyError === 'used' && '此驗證連結已使用過。'}
             {verifyError === 'missing_token' && '驗證連結無效。'}
@@ -499,10 +520,10 @@ export default function LoginPage() {
             />
           </div>
           <div className="tp-form-row">
-            <label htmlFor="login-password">
-              密碼
+            <div className="tp-login-password-header">
+              <label htmlFor="login-password">密碼</label>
               <a href="/login/forgot" className="tp-hint-link" data-testid="login-forgot-link">忘記密碼？</a>
-            </label>
+            </div>
             <input
               id="login-password"
               type="password"
@@ -529,7 +550,7 @@ export default function LoginPage() {
             <div className="tp-divider">或</div>
             <a
               className="tp-btn tp-btn-secondary"
-              href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
+              href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
               data-testid="login-google"
             >
               <GoogleLogo />
@@ -539,7 +560,8 @@ export default function LoginPage() {
         )}
 
         <div className="tp-login-footer">
-          沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
+          沒有帳號？<a href={invitationToken ? `/signup?invitation=${encodeURIComponent(invitationToken)}` : '/signup'} data-testid="login-signup-link">建立帳號</a>
+          <div className="tp-login-privacy"><a href="/privacy?from=login" target="_blank" rel="noreferrer">隱私權政策</a></div>
         </div>
         </div>
       </div>

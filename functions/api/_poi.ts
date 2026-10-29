@@ -1,7 +1,7 @@
 /**
- * Shared POI find-or-create helper.
- * Race-safe: uses INSERT OR IGNORE + re-fetch with UNIQUE(name, type) index.
- * COALESCE update: fills NULL fields on existing rows without overwriting.
+ * 單一 POI resolver（#1256 合併舊 resolvePoi 與 findOrCreatePoi）。
+ * Race-safe: INSERT OR IGNORE + re-fetch with UNIQUE(name, type) index.
+ * 找到既有 row 時的行為由 policy 決定（見 ResolvePoiOptions），不再靠選函式。
  */
 import { AppError } from './_errors';
 import { normalizePoiAddress } from '../../src/lib/maps/normalize-address';
@@ -128,6 +128,24 @@ export function normalizeFindOrCreatePoiPayload(raw: FindOrCreatePoiPayload): Fi
   };
 }
 
+/**
+ * 既有 POI 撞到時怎麼辦 —— ADR-0001 的 immutable master 由這個參數守門。
+ *   keep      ：任何欄位不改。目前沒有呼叫端（匯入／clone 於 2026-09-05 owner 拍板改走
+ *               fill-null），留給日後「絕不動 master」的路徑。
+ *   fill-null ：只 COALESCE 補 NULL 欄，非 NULL 值不覆蓋（所有現行路徑）。
+ * createdPoiIds：只記「本次新建」的 id，供失敗時 rollback；既有 row 不記。
+ */
+export interface ResolvePoiOptions {
+  policy: 'keep' | 'fill-null';
+  createdPoiIds?: number[];
+  /**
+   * 新建 row 時 country 未給／null 的預設。預設 'JP'（既有 UI 路徑慣例）；匯入／clone 傳 null
+   * 表示不猜國家。只影響 INSERT，不影響 fill-null 的 COALESCE（null 一律跳過、不會把既有
+   * NULL country 補成預設值）。
+   */
+  defaultCountry?: string | null;
+}
+
 const COALESCE_FIELDS = [
   'description', 'lat', 'lng', 'rating',
   'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
@@ -149,9 +167,26 @@ function buildCoalesceUpdate(data: FindOrCreatePoiData): { fills: string[]; vals
   return { fills, vals };
 }
 
+const INSERT_POI_SQL =
+  'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id';
+
+function bindInsertPoi(db: D1Database, data: FindOrCreatePoiData, defaultCountry: string | null): D1PreparedStatement {
+  // Migration 0045: dropped maps col. 0054: price. 0051: lifecycle 三欄（一般 caller 不帶 → 預設）。
+  return db.prepare(INSERT_POI_SQL).bind(
+    data.type, data.name, data.description ?? null, data.hours ?? null,
+    data.rating ?? null, data.category ?? null,
+    data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
+    data.address ?? null, data.phone ?? null, data.email ?? null,
+    data.website ?? null, data.country ?? defaultCountry, data.price ?? null,
+    data.place_id ?? null,
+    data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
+  );
+}
+
 export async function findOrCreatePoi(
   db: D1Database,
   data: FindOrCreatePoiData,
+  opts: ResolvePoiOptions,
 ): Promise<number> {
   // Try exact match first (dedup key = name + type)
   const existing = await db.prepare(
@@ -159,7 +194,8 @@ export async function findOrCreatePoi(
   ).bind(data.name, data.type).first<{ id: number }>();
 
   if (existing) {
-    // COALESCE update: only fill NULL fields, never overwrite existing values
+    if (opts.policy === 'keep') return existing.id;
+    // fill-null: only fill NULL fields, never overwrite existing values
     const { fills, vals } = buildCoalesceUpdate(data);
     if (fills.length > 0) {
       await db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
@@ -169,24 +205,10 @@ export async function findOrCreatePoi(
   }
 
   // Not found → INSERT (INSERT OR IGNORE for race-safety with UNIQUE index)
-  // Migration 0045: dropped maps col (use mapsUrl helper).
-  // Migration 0054: added price col.
-  // Migration 0051: status/status_reason/status_checked_at — re-point clone 帶入；
-  // 一般 caller 不帶 → 落回 column 預設（'active' / NULL / NULL）。
-  const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
-  ).bind(
-    data.type, data.name, data.description ?? null, data.hours ?? null,
-    data.rating ?? null, data.category ?? null,
-    data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
-    data.address ?? null, data.phone ?? null, data.email ?? null,
-    data.website ?? null, data.country ?? 'JP', data.price ?? null,
-    data.place_id ?? null,
-    data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
-  ).first<{ id: number }>();
+  const result = await bindInsertPoi(db, data, opts.defaultCountry === undefined ? 'JP' : opts.defaultCountry).first<{ id: number }>();
 
   // INSERT OR IGNORE returns null if concurrent insert won the race
-  if (result) return result.id;
+  if (result) { opts.createdPoiIds?.push(result.id); return result.id; }
 
   const reFetch = await db.prepare(
     'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
@@ -202,6 +224,7 @@ export async function findOrCreatePoi(
 export async function batchFindOrCreatePois(
   db: D1Database,
   items: FindOrCreatePoiData[],
+  opts: ResolvePoiOptions,
 ): Promise<number[]> {
   if (items.length === 0) return [];
 
@@ -233,8 +256,8 @@ export async function batchFindOrCreatePois(
     }
   }
 
-  // Step 2: Batch COALESCE updates for existing POIs
-  if (toUpdate.length > 0) {
+  // Step 2: Batch COALESCE updates for existing POIs（policy=keep 時跳過）
+  if (opts.policy === 'fill-null' && toUpdate.length > 0) {
     const updateStmts: D1PreparedStatement[] = [];
     for (const { idx, id } of toUpdate) {
       const { fills, vals } = buildCoalesceUpdate(uniqueItems[idx]!.data);
@@ -250,21 +273,7 @@ export async function batchFindOrCreatePois(
 
   // Step 3: Batch INSERT OR IGNORE for missing POIs
   if (toInsert.length > 0) {
-    const insertStmts = toInsert.map((idx) => {
-      const data = uniqueItems[idx]!.data;
-      // 與 findOrCreatePoi 的 INSERT 保持 column parity（migration 0051 lifecycle 三欄）。
-      return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, lat, lng, source, address, phone, email, website, country, price, place_id, status, status_reason, status_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
-      ).bind(
-        data.type, data.name, data.description ?? null, data.hours ?? null,
-        data.rating ?? null, data.category ?? null,
-        data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
-        data.address ?? null, data.phone ?? null, data.email ?? null,
-        data.website ?? null, data.country ?? 'JP', data.price ?? null,
-        data.place_id ?? null,
-        data.status ?? 'active', data.status_reason ?? null, data.status_checked_at ?? null,
-      );
-    });
+    const insertStmts = toInsert.map((idx) => bindInsertPoi(db, uniqueItems[idx]!.data, opts.defaultCountry === undefined ? 'JP' : opts.defaultCountry));
     const insertResults = await db.batch(insertStmts);
 
     // Collect IDs; race-collisions (INSERT OR IGNORE) return empty results
@@ -273,6 +282,7 @@ export async function batchFindOrCreatePois(
       const rows = insertResults[i]!.results as { id: number }[];
       if (rows.length > 0) {
         uniqueItems[toInsert[i]!]!.poiId = rows[0]!.id;
+        opts.createdPoiIds?.push(rows[0]!.id);
       } else {
         reFetchIndices.push(toInsert[i]!);
       }

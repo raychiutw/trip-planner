@@ -93,19 +93,14 @@ const SCOPED_STYLES = `
 }
 `;
 
-const SCOPE_DESCRIPTIONS: Record<string, string> = {
-  openid: '識別您的身分（唯一 ID）',
-  profile: '基本個人資料（名稱、頭像）',
-  email: '您的電子郵件地址',
-  offline_access: '即使您離線也可存取（refresh token）',
-  'trips:read': '讀取您的行程資料',
-  'trips:write': '建立 / 修改您的行程',
+const SCOPE_DETAILS: Record<string, { name: string; description: string }> = {
+  openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
+  profile: { name: '基本資料', description: '基本個人資料（名稱、頭像）' },
+  email: { name: '電子郵件', description: '您的電子郵件地址' },
+  offline_access: { name: '離線存取', description: '即使您離線也可存取（refresh token）' },
+  'trips:read': { name: '查看行程', description: '讀取您的行程資料' },
+  'trips:write': { name: '修改行程', description: '建立 / 修改您的行程' },
 };
-
-// v2.33.46 round 7a security audit: scope allowlist — 未知 scope (`scope=admin`
-// 等) 仍 render 給 user click Allow 培養忽略警告的行為。allowlist 外 scope
-// 顯紅色「未知範圍」 chip 並不附說明。
-const KNOWN_SCOPES = new Set(Object.keys(SCOPE_DESCRIPTIONS));
 
 // v2.33.46 round 7a: redirect_uri 客戶端基本驗證 (defense in depth — server
 // 是 source of truth)。拒 javascript: / data: / file: 等 dangerous scheme。
@@ -134,17 +129,18 @@ export default function ConsentPage() {
   const scope = searchParams.get('scope') ?? '';
   const redirectUri = searchParams.get('redirect_uri') ?? '';
   const state = searchParams.get('state') ?? '';
-  const responseType = searchParams.get('response_type') ?? 'code';
+  const responseType = searchParams.get('response_type') ?? '';
   const codeChallenge = searchParams.get('code_challenge') ?? '';
   const codeChallengeMethod = searchParams.get('code_challenge_method') ?? '';
   const requestedScopes = scope.split(/\s+/).filter(Boolean);
 
-  const [clientInfo, setClientInfo] = useState<ClientAppInfo | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ id: string; info: ClientAppInfo } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // deps 若 invalid→valid 轉換，清掉上一輪 latch 的 error（否則 `if (error) return` 卡住）。
     setError(null);
+    setClientInfo(null);
     if (!clientId) {
       // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
       setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
@@ -156,25 +152,25 @@ export default function ConsentPage() {
       setError('授權連結的 redirect_uri 不合法（必須 https:// 或 http://）。請聯繫應用程式提供者。');
       return;
     }
-    // 未驗證保底：backend 查不到 / 非 active client（404）時顯此警告，避免把 URL ?client_id=
-    // 原文當可信 app_name 顯——attacker 可構 `?client_id=Tripline%20官方登入` 騙 user click
-    // Allow（v2.33.46 audit）。
-    const unverified: ClientAppInfo = {
-      app_name: `未知應用程式 (client_id=${clientId})`,
-      app_description: '此應用程式的詳細資訊尚未經過 Tripline 驗證。',
-      app_logo_url: null,
-      homepage_url: null,
-    };
     // Phase 2：從 /api/oauth/client-info 取已註冊 active client 的公開品牌（app_name/logo/…）。
-    // 非 2xx（未知/停用 client）→ 保留 unverified 保底顯示。
+    // 只有取得已註冊 active client 的名稱，才顯示授權動作。
     let cancelled = false;
     fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`)
-      .then((res) => (res.ok ? (res.json() as Promise<ClientAppInfo>) : null))
-      .then((info) => {
-        if (!cancelled) setClientInfo(info ?? unverified);
+      .then(async (res) => {
+        if (!res.ok) {
+          if (!cancelled) setError(res.status === 404
+            ? '找不到可授權的應用程式，請從應用程式重新發起授權。'
+            : '無法確認應用程式資訊，請稍後再試。');
+          return;
+        }
+        const info = await res.json() as ClientAppInfo;
+        if (!cancelled) {
+          if (typeof info.app_name === 'string' && info.app_name.trim()) setClientInfo({ id: clientId, info });
+          else setError('無法確認應用程式資訊，請稍後再試。');
+        }
       })
       .catch(() => {
-        if (!cancelled) setClientInfo(unverified);
+        if (!cancelled) setError('無法確認應用程式資訊，請稍後再試。');
       });
     return () => {
       cancelled = true;
@@ -192,7 +188,7 @@ export default function ConsentPage() {
     );
   }
 
-  if (!clientInfo) {
+  if (!clientInfo || clientInfo.id !== clientId) {
     return (
       <main className="tp-consent-shell" data-testid="consent-page">
         <style>{SCOPED_STYLES}</style>
@@ -208,13 +204,13 @@ export default function ConsentPage() {
         <div className="tp-consent-header">
           <div className="tp-consent-eyebrow">授權請求</div>
           <h1 className="tp-consent-title">
-            <span className="tp-consent-app-name">{clientInfo.app_name}</span>
+            <span className="tp-consent-app-name">{clientInfo.info.app_name}</span>
             <br />
             想要存取您的帳號
           </h1>
         </div>
 
-        <div className="tp-consent-scopes" data-testid="consent-scopes">
+        <div className="tp-consent-scopes" role="group" aria-label="要求以下權限" data-testid="consent-scopes">
           {requestedScopes.length === 0 ? (
             <div>無 scope 請求</div>
           ) : (
@@ -222,21 +218,21 @@ export default function ConsentPage() {
             // 字串長度 cap 64 char 避免破壞 layout。
             requestedScopes.map((sRaw) => {
               const s = sRaw.slice(0, 64);
-              const known = KNOWN_SCOPES.has(s);
+              const details = SCOPE_DETAILS[s];
               return (
                 <div
                   key={s}
-                  className={`tp-consent-scope-row${known ? '' : ' unknown'}`}
+                  className={`tp-consent-scope-row${details ? '' : ' unknown'}`}
                   data-testid={`consent-scope-${s}`}
-                  data-unknown={known ? undefined : 'true'}
+                  data-unknown={details ? undefined : 'true'}
                 >
                   <svg className="tp-consent-scope-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
                   </svg>
                   <span>
-                    <strong>{s}</strong>
-                    {known ? (
-                      SCOPE_DESCRIPTIONS[s] && <> — {SCOPE_DESCRIPTIONS[s]}</>
+                    <strong>{details?.name ?? s}</strong>
+                    {details ? (
+                      <> — {details.description}</>
                     ) : (
                       <> — <span className="tp-consent-scope-warning">⚠ 未知範圍 — 請勿授權</span></>
                     )}
@@ -263,7 +259,7 @@ export default function ConsentPage() {
               data-testid="consent-deny"
               style={{ width: '100%' }}
             >
-              拒絕
+              拒絕授權
             </button>
           </form>
           <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
@@ -281,7 +277,7 @@ export default function ConsentPage() {
               data-testid="consent-allow"
               style={{ width: '100%' }}
             >
-              同意
+              同意授權
             </button>
           </form>
         </div>

@@ -240,6 +240,9 @@ p.sec-d{font-size:13px;line-height:1.7;opacity:.72;max-width:74ch;margin-bottom:
   box-shadow:0 0 0 4px var(--accent-dim);}
 .stop-c:hover ~ * .node,.row:hover .node{border-color:var(--fg-3);}
 /* 飯店不是「第幾站」，是這天路線的起訖錨點（DESIGN.md:190）→ 給床 icon 不給號碼 */
+/* ⚠️ 已被 v2.57.86 推翻（2026-08-05）：飯店改為納入當日連續 stop 編號，不以住宿 icon
+   取代序號。本檔是 2026-07-17 的 sign-off 快照，刻意保留原樣不改寫；現行規範以
+   DESIGN.md「Grid（.tp-rail-item）」那條為準。 */
 .row.is-hotel .node{border-color:var(--accent);color:var(--accent);}
 .row.is-hotel .node svg{width:13px;height:13px;}
 

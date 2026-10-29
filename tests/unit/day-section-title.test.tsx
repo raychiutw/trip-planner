@@ -29,8 +29,6 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary({ date: '2026-07-30', dayOfWeek: '四' })}
-        tripStart="2026-07-26"
-        tripEnd="2026-07-31"
       />,
     );
     expect(document.querySelector('.tp-hero-title')?.textContent).toBe('2026-07-30（四）');
@@ -42,8 +40,6 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary()}
-        tripStart="2026-07-26"
-        tripEnd="2026-07-31"
       />,
     );
     expect(document.querySelector('.tp-hero-title')?.textContent).toBe('Day 3');
@@ -55,8 +51,6 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary({ date: '2026-07-30', dayOfWeek: '四' })}
-        tripStart="2026-07-26"
-        tripEnd="2026-07-31"
       />,
     );
     expect(document.querySelector('.tp-hero-chip')?.textContent).toBe('DAY 03');
@@ -68,8 +62,6 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
         dayNum={3}
         day={makeDay()}
         daySummary={makeSummary({ label: '美瑛', date: '2026-07-30', dayOfWeek: '四' })}
-        tripStart="2026-07-26"
-        tripEnd="2026-07-31"
       />,
     );
     expect(document.querySelectorAll('.tp-hero-chip-muted').length).toBe(0);

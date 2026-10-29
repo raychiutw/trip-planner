@@ -265,6 +265,11 @@ export function parseAndValidateImport(raw: unknown): ImportResult {
   if (hasDangerousKey(raw)) return { ok: false, error: '匯入內容含不允許的欄位' };
 
   const rawDays = arr(raw.days);
+  for (const field of ['weather', 'weather_json'] as const) {
+    const hasLegacyField = Object.prototype.hasOwnProperty.call(raw, field)
+      || rawDays.some((day) => isObj(day) && Object.prototype.hasOwnProperty.call(day, field));
+    if (hasLegacyField) return { ok: false, error: `${field} 已移除` };
+  }
   if (rawDays.length > MAX_DAYS) return { ok: false, error: `天數超過上限（${MAX_DAYS}）` };
   if (arr(raw.segments).length > MAX_SEGMENTS) return { ok: false, error: `交通段超過上限（${MAX_SEGMENTS}）` };
 

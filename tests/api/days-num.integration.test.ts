@@ -124,6 +124,26 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
   });
 
+  it.each(['weather', 'weather_json'])('舊天氣欄位 %s → 400，不得靜默忽略', async (field) => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+        date: '2026-04-01',
+        dayOfWeek: '三',
+        label: 'Day 1',
+        timeline: [],
+        [field]: { label: '那霸' },
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-dn', num: '1' },
+    });
+
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(400);
+    const data = await resp.json() as { error?: { detail?: string } };
+    expect(data.error?.detail ?? '').toContain(`${field} 已移除`);
+  });
+
   it('只要帶舊 restaurants entry 欄位就拒絕，避免 runtime fallback', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {

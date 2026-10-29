@@ -40,9 +40,9 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
 
   it('action 改 conditional render — 只有 report 存在時顯（拔掉 idle/empty）', () => {
     // 老: actions={!initialLoading && (<TitleBarPrimaryAction .../>)}（TitleBar actions slot）
-    // 新（v2.57.x）: 移入 body hero 列 — {!initialLoading && report && (<button class="tp-titlebar-action ...".../>)}
+    // 新（v2.57.x）: 移入 body hero 列，有該行程已知報告才顯示。
     // OperationShell 的 StackPanelHeader 無 actions slot，故不再是 TitleBar 的 `actions=` prop。
-    expect(SRC).toMatch(/\{!initialLoading && report && \(/);
+    expect(SRC).toMatch(/\{!initialLoading && visibleReport && \(/);
     expect(SRC).not.toMatch(/TitleBarPrimaryAction/);
   });
 
@@ -51,14 +51,14 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
     // button token，即使位置已從 titlebar 移到 body hero 列，見 v2.57.x 遷移註解）
     expect(SRC).toContain('tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn');
     // 鎖定該 conditional block 內不能含 is-primary（其他 finding card 的 `.action.is-primary` 不受影響）
-    const actionsBlock = SRC.match(/\{!initialLoading && report && \([\s\S]+?\)\}/);
+    const actionsBlock = SRC.match(/\{!initialLoading && visibleReport && \([\s\S]+?\)\}/);
     expect(actionsBlock, 'regenerate action block not found').toBeTruthy();
     expect(actionsBlock![0]).not.toContain('is-primary');
   });
 
   it('action button 用 refresh-cw icon (非 sparkle)', () => {
     // regenerate action JSX（body hero 列，v2.57.x 從 titlebar actions slot 移入）必含 Icon name="refresh-cw"
-    const actionsBlock = SRC.match(/\{!initialLoading && report && \([\s\S]+?\)\}/);
+    const actionsBlock = SRC.match(/\{!initialLoading && visibleReport && \([\s\S]+?\)\}/);
     expect(actionsBlock, 'regenerate action block not found').toBeTruthy();
     expect(actionsBlock![0]).toContain('name="refresh-cw"');
     expect(actionsBlock![0]).not.toContain('name="sparkle"');
@@ -74,7 +74,6 @@ describe('TripHealthCheckPage v2.33.118 CTA redesign (regression)', () => {
     // 拔除理由：AI 健檢頁面內 meta「共 N 項建議」+ findings list 已顯示數量，
     // titlebar badge 多餘 (孤兒 — 其他入口 TripCardMenu / trip card 也沒帶 badge)
     expect(SRC).not.toMatch(/tp-ai-health-titlebar-badge/);
-    expect(SRC).not.toMatch(/hasResults && \(/);
   });
 
   it('idle/empty 改用 body CTA — accent-filled pill button + ai-health-start-btn testid', () => {

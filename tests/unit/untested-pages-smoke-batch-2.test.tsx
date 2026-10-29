@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { NewTripProvider } from '../../src/contexts/NewTripContext';
 import { ActiveTripProvider } from '../../src/contexts/ActiveTripContext';
 
@@ -133,16 +133,14 @@ describe('Round 23 — AddEntryPage smoke', () => {
 describe('Round 23 — AddCustomStopPage smoke', () => {
   it('mount on /trip/:id/add-custom-stop (mobile-only route, just smoke)', async () => {
     const { default: AddCustomStopPage } = await import('../../src/pages/AddCustomStopPage');
+    const router = createMemoryRouter([
+      {
+        path: '/trip/:tripId/add-custom-stop',
+        element: <ActiveTripProvider><NewTripProvider><AddCustomStopPage /></NewTripProvider></ActiveTripProvider>,
+      },
+    ], { initialEntries: ['/trip/test/add-custom-stop'] });
     const { container } = render(
-      <MemoryRouter initialEntries={['/trip/test/add-custom-stop']}>
-        <ActiveTripProvider>
-          <NewTripProvider>
-            <Routes>
-              <Route path="/trip/:tripId/add-custom-stop" element={<AddCustomStopPage />} />
-            </Routes>
-          </NewTripProvider>
-        </ActiveTripProvider>
-      </MemoryRouter>,
+      <RouterProvider router={router} />,
     );
     expect(container).toBeTruthy();
   });

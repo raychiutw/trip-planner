@@ -5,7 +5,7 @@
  * 5 個 section 共用：auth check + SELECT * / INSERT / UPDATE / DELETE / reorder。
  * 抽出來避免 5 個 file 各寫一次。
  */
-import { hasPermission, hasWritePermission, requireAuth } from '../../../_auth';
+import { hasPermission, requireAuth, requireTripWrite } from '../../../_auth';
 import { logAudit, computeDiff } from '../../../_audit';
 import { AppError } from '../../../_errors';
 import {
@@ -147,9 +147,7 @@ export async function createNotesRow(
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
   validateEnums(table, body);
@@ -212,9 +210,7 @@ export async function updateNotesRow(
   const id = parseIntParam(params.rowId as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'rowId 必須是正整數');
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   // 驗證 row 屬於該 trip（防越權）+ 抓 oldRow 給 audit diff
   const oldRow = await env.DB
@@ -325,9 +321,7 @@ export async function deleteNotesRow(
   const id = parseIntParam(params.rowId as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'rowId 必須是正整數');
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   const oldRow = await env.DB
     .prepare(`SELECT * FROM ${table} WHERE id = ?`)
@@ -416,9 +410,7 @@ export async function reorderNotesRows(
   const auth = requireAuth(context);
   const tripId = params.id as string;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   const body = await parseJsonBody<{ items?: Array<{ id?: number; sortOrder?: number }> }>(context.request);
   const items = Array.isArray(body.items) ? body.items : [];

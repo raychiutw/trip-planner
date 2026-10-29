@@ -36,17 +36,16 @@ On-ramps（匯入主線）：
 
 **我可自主呼叫的 9 個**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `resolving-merge-conflicts` · `grilling`
 
-它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**（2026-07-25 實測誤判過）。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
+它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
 
 ## Hard Rules
 
-- **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再是強制第一步，需要它的 orchestration 時才用。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
+- **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再支援，請勿呼叫。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
-- Web browse: Chrome MCP (`mcp__claude-in-chrome__*`) 或 `/browse` 皆可（owner 2026-07-23 解除 /browse-only 限制）。
-- Post-ship retroactive OpenSpec archive if PR didn't propose first。⚠️ `openspec/specs/` 底下多數檔案的首行是 `## ADDED/MODIFIED Requirements` —— 那是 change delta 被直接放進 `specs/` 當成持續有效的規格，讀之前先確認它是規格還是某次變更的差異檔。
-- ~~Mockup-first hard gate~~ —— **已退役 2026-07-23**，Apple HIG 成上位 SoT。`/tp-claude-design` 仍可用於探索視覺方案，但不是 gate。
+- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
+- **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。
 
 ## Layout
 
@@ -66,7 +65,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-**Apple HIG 是 UI/UX SoT**（iOS 手機 / macOS 桌機：IA、互動、色彩、材質、a11y）。`DESIGN.md` 為衍生、須對齊 HIG；code 不符＝bug，衝突以 HIG 為準（先討論再改 `DESIGN.md`）。**品牌保留例外**：terracotta 受控 tint / Inter web font / timeline editorial no-glass —— HIG 允許，不對齊。合規計畫（spec + 16 W-tickets）見 `docs/plans/apple-hig-compliance/`（**W0–W15 全 2026-07-24 ship 收官**，交付狀態見 `tickets.md`）。此 effort 不使用 mockup 流程。
+此產品是 Web/PWA：網頁無障礙驗收依 WCAG 2.2；Apple HIG 是 iOS/mobile、macOS/desktop 互動的設計參考；`DESIGN.md` 與 owner 核准 mockup 記錄本專案品牌、版面和較高目標。原生 pt 不直接當 CSS px 規範。來源、數值與例外見 [`DESIGN.md`「Web 設計驗收與來源」](DESIGN.md#web-設計驗收與來源)；衝突先討論，不自行覆寫 owner 決策。terracotta tint、Inter web font、timeline editorial no-glass 繼續保留。`docs/plans/apple-hig-compliance/` 的 W0–W15 已收官；其 mockup 豁免不延伸到新 layout，新 layout 依 `AGENTS.md` 的 prototype gate。
 
 ## Skill Routing
 
@@ -103,8 +102,8 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | 已變更程式碼的簡化 | `/simplify` |
 | 專案自訂 commit 前檢查 | `/tp-code-verify` |
 
-Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
+Prod: https://trip-planner-dby.pages.dev/
 
 ## Agent skills
 

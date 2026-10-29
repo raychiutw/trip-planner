@@ -4,8 +4,7 @@
  * 驗證 5 個 security HIGH/MED fix 的 wiring (source-grep + behavior):
  *  1. SessionsPage logout 從 <a href> GET 改 POST button
  *  2. EditEntryPage reservationUrl 套 escUrl + rel="noopener noreferrer"
- *  3. ConsentPage app_name 不直接 reflect client_id（防 spoofing）
- *  4. ConsentPage 未知 scope 顯警告
+ *  3. ConsentPage redirect_uri client-side guard（app identity / scope 警告改由 consent-page.test.tsx 測行為）
  *  5. ChatPage markdown=true 只給 role='assistant'
  */
 import { describe, it, expect } from 'vitest';
@@ -44,21 +43,7 @@ describe('v2.33.46 round 7a — EditEntryPage reservationUrl XSS guard', () => {
   });
 });
 
-describe('v2.33.46 round 7a — ConsentPage app_name spoofing fix', () => {
-  it('app_name 不直接 = clientId (顯「未知應用程式」warning)', () => {
-    // app_name: clientId 模式被改寫成 "未知應用程式 (client_id=..."
-    expect(CONSENT_SRC).toMatch(/未知應用程式.*client_id=/);
-    expect(CONSENT_SRC).not.toMatch(/app_name:\s*clientId\s*,/);
-  });
-
-  it('KNOWN_SCOPES allowlist 存在', () => {
-    expect(CONSENT_SRC).toMatch(/KNOWN_SCOPES\s*=\s*new Set\(Object\.keys\(SCOPE_DESCRIPTIONS\)\)/);
-  });
-
-  it('未知 scope render warning 警告字串', () => {
-    expect(CONSENT_SRC).toMatch(/未知範圍 — 請勿授權/);
-  });
-
+describe('v2.33.46 round 7a — ConsentPage redirect guard', () => {
   it('redirect_uri client-side validation', () => {
     expect(CONSENT_SRC).toMatch(/function isPlausibleRedirectUri/);
     expect(CONSENT_SRC).toMatch(/url\.protocol === ['"]https:['"]/);

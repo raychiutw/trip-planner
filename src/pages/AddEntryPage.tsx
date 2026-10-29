@@ -13,7 +13,7 @@
  * 已在 ChangePoiPage 完整實作，重複會 drift。User feedback「相同的增加景點的方式」
  * 同樣指向 reuse ChangePoiPage。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
@@ -21,7 +21,8 @@ import Icon from '../components/shared/Icon';
 import { TripSelect } from '../components/TripSelect';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { apiFetch } from '../lib/apiClient';
+import { useTripMeta } from '../hooks/useTripRead';
+import { useAddToTripTarget } from '../hooks/useAddToTripTarget';
 
 interface DayApiRow {
   id: number;
@@ -124,7 +125,7 @@ const SCOPED_STYLES = `
   border: 1.5px solid var(--color-accent);
   border-radius: var(--radius-full);
   background: var(--color-background);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font: inherit;
   font-size: var(--font-size-callout);
   font-weight: 700;
@@ -141,9 +142,11 @@ const SCOPED_STYLES = `
 .tp-add-entry-section {
   margin-bottom: 24px;
   padding: 16px 18px;
-  background: var(--color-secondary);
+  /* #1423：不用 opacity 做「未啟用」外觀 —— 它把 muted 文字的對比一併稀釋到 2.5–2.9。
+   * 背景改成與頁面底色的**不透明**混合（60% secondary），視覺上等同原本 opacity .6 對底色的淡化，
+   * 文字維持完整的 muted 對比（muted 對 background／secondary 都已 ≥ 4.5，混色必然落在兩者之間）。 */
+  background: color-mix(in srgb, var(--color-secondary) 60%, var(--color-background));
   border-radius: var(--radius-md);
-  opacity: 0.6;
 }
 .tp-add-entry-section h3 {
   margin: 0 0 8px;
@@ -181,42 +184,18 @@ export default function AddEntryPage() {
   );
 
   const dayNumParam = searchParams.get('day');
-  const dayNumRaw = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
+  const dayNumRaw = dayNumParam ? Number(dayNumParam) : NaN;
 
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-  const [tripMeta, setTripMeta] = useState<TripMetaApi | null>(null);
+  const { status: dayStatus, days: allDays, dayNum, retry: retryDays } = useAddToTripTarget<DayApiRow>(
+    auth.user ? tripId ?? '' : '',
+    Number.isInteger(dayNumRaw) ? dayNumRaw : undefined,
+  );
+  // 失敗就維持 null，畫面用 fallback 標籤。
+  const tripMeta = useTripMeta<TripMetaApi>(tripId, !!auth.user).data;
 
+  // Keep the URL on a day confirmed to belong to this trip.
   useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const [days, meta] = await Promise.all([
-          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`),
-          apiFetch<TripMetaApi>(`/trips/${encodeURIComponent(tripId)}`),
-        ]);
-        if (cancelled) return;
-        setAllDays(days ?? []);
-        setTripMeta(meta ?? null);
-      } catch {
-        // silent — render with fallback labels
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
-
-  // 預設 day = URL ?day=N → fallback 第一天
-  const dayNum = useMemo(() => {
-    if (Number.isFinite(dayNumRaw)) return dayNumRaw;
-    if (allDays && allDays.length > 0) return allDays[0]!.dayNum;
-    return NaN;
-  }, [dayNumRaw, allDays]);
-
-  // URL 與 state 對齊 — 若沒帶 ?day 而 allDays 載入後選了第一天，
-  // replaceState URL 讓 link / refresh 行為一致
-  useEffect(() => {
-    if (!Number.isFinite(dayNum)) return;
-    if (Number.isFinite(dayNumRaw)) return;
+    if (dayNum === null || dayNumRaw === dayNum) return;
     const sp = new URLSearchParams(searchParams);
     sp.set('day', String(dayNum));
     setSearchParams(sp, { replace: true });
@@ -230,7 +209,7 @@ export default function AddEntryPage() {
   }, [dayNum, searchParams, setSearchParams]);
 
   const openPicker = useCallback((tab: 'search' | 'favorites' | 'custom') => {
-    if (!tripId || !Number.isFinite(dayNum)) return;
+    if (!tripId || dayNum === null) return;
     // 用 entryId=0 sentinel 標記「new entry mode」— ChangePoiPage 看到
     // mode=new 會走 POST /entries 而不是 PUT /poi-id。
     // #1162：本頁自己就是操作面板，push 進「選來源」等於再深一層 → 必須帶 depth，
@@ -269,10 +248,10 @@ export default function AddEntryPage() {
             {/* Day dropdown — fallback to first day if URL missing ?day */}
             <div className="tp-add-entry-daypicker">
               <span className="tp-add-entry-daypicker-label">DAY</span>
-              {allDays && allDays.length > 0 ? (
+              {dayStatus === 'ready' && allDays.length > 0 && dayNum !== null ? (
                 <div data-testid="add-entry-daypicker" style={{ flex: 1 }}>
                   <TripSelect<number>
-                    value={Number.isFinite(dayNum) ? dayNum : (allDays[0]?.dayNum ?? 0)}
+                    value={dayNum}
                     onChange={handlePickDay}
                     ariaLabel="選擇加入哪天"
                     options={allDays.map((d) => ({
@@ -281,6 +260,12 @@ export default function AddEntryPage() {
                     }))}
                   />
                 </div>
+              ) : dayStatus === 'error' ? (
+                <span role="alert" style={{ color: 'var(--color-destructive)' }}>
+                  日期載入失敗，請重試 <button type="button" onClick={retryDays}>重試</button>
+                </span>
+              ) : dayStatus === 'ready' ? (
+                <span style={{ color: 'var(--color-muted)' }}>該行程沒有天數</span>
               ) : (
                 <span style={{ color: 'var(--color-muted)' }}>載入中…</span>
               )}
@@ -303,7 +288,7 @@ export default function AddEntryPage() {
                   className="tp-add-entry-poi-button"
                   onClick={() => openPicker('search')}
                   data-testid="add-entry-pick-search"
-                  disabled={!Number.isFinite(dayNum)}
+                  disabled={dayNum === null}
                 >
                   <Icon name="search" />
                   搜尋
@@ -313,7 +298,7 @@ export default function AddEntryPage() {
                   className="tp-add-entry-poi-button"
                   onClick={() => openPicker('favorites')}
                   data-testid="add-entry-pick-favorites"
-                  disabled={!Number.isFinite(dayNum)}
+                  disabled={dayNum === null}
                 >
                   <Icon name="heart" />
                   收藏
@@ -323,7 +308,7 @@ export default function AddEntryPage() {
                   className="tp-add-entry-poi-button"
                   onClick={() => openPicker('custom')}
                   data-testid="add-entry-pick-custom"
-                  disabled={!Number.isFinite(dayNum)}
+                  disabled={dayNum === null}
                 >
                   <Icon name="plus" />
                   自訂

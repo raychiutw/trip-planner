@@ -20,10 +20,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
+import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { apiFetchRaw } from '../../lib/apiClient';
-import { ApiError } from '../../lib/errors';
-import { EVENT } from '../../lib/events';
+import { saveSegment } from '../../lib/segmentMutations';
 import { useAutosave } from '../../hooks/useAutosave';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 import {
@@ -254,41 +254,24 @@ export default function TravelPillDialog({
   const isOverridden = selectedMethod.auto && selectedKey === initialKey && currentSource === 'manual';
 
   const autosave = useAutosave<SegmentPatchBody>({
+    scopeKey: `${tripId}:${segmentId ?? `${fromEntryId}-${toEntryId}`}`,
     initialVersion: currentVersion,
     debounceMs: 600,
     save: async (body, expectedVersion) => {
-      // segmentId 省略 = create 模式：POST /segments 帶 from/to entry id（後端 upsert）。
-      // 既有 segment → PATCH /segments/:id 帶 expectedVersion（OCC）。
-      const isCreate = segmentId == null;
-      const payload: Record<string, unknown> = { ...body };
-      if (isCreate) {
-        payload.from_entry_id = fromEntryId;
-        payload.to_entry_id = toEntryId;
-      } else if (typeof expectedVersion === 'number') {
-        payload.expectedVersion = expectedVersion;
-      }
-      const res = await apiFetchRaw(
-        isCreate
-          ? `/trips/${encodeURIComponent(tripId)}/segments`
-          : `/trips/${encodeURIComponent(tripId)}/segments/${segmentId}`,
-        { method: isCreate ? 'POST' : 'PATCH', body: JSON.stringify(payload) },
-      );
-      if (!res.ok) throw await ApiError.fromResponse(res);
-      const updated = await res.json() as { id?: number; mode?: TravelMode; min?: number | null; version?: number };
+      const updated = await saveSegment(tripId, { segmentId, fromEntryId, toEntryId }, body, expectedVersion);
       onSaved?.({
         mode: (updated.mode ?? body.mode) as TravelMode,
         min: typeof updated.min === 'number' ? updated.min : null,
       });
-      window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId, segmentId: segmentId ?? updated.id } }));
-      return updated as Record<string, unknown>;
+      return updated;
     },
     onStale: async () => {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`);
       if (!res.ok) throw new Error('Failed to refresh segments');
-      const list = await res.json() as Array<{ id: number; version: number; from_entry_id: number; to_entry_id: number }>;
+      const list = await res.json() as Array<{ id: number; version: number; fromEntryId: number; toEntryId: number }>;
       const found = segmentId != null
         ? list.find((s) => s.id === segmentId)
-        : list.find((s) => s.from_entry_id === fromEntryId && s.to_entry_id === toEntryId);
+        : list.find((s) => s.fromEntryId === fromEntryId && s.toEntryId === toEntryId);
       if (!found) throw new Error('Segment not found after refresh');
       return found.version;
     },
@@ -336,8 +319,23 @@ export default function TravelPillDialog({
     submit(selectedMethod.mode, selectedMethod.submode, undefined);
   }, [selectedMethod, submit]);
 
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const leaveAttemptRef = useRef(0);
+  useEffect(() => () => { leaveAttemptRef.current++; }, []);
   const handleClose = useCallback(() => {
-    void autosave.flush().finally(onClose);
+    const attempt = ++leaveAttemptRef.current;
+    setLeaveBusy(true);
+    let timer: ReturnType<typeof setTimeout>;
+    void Promise.race([
+      autosave.flush().catch(() => false),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), 1200); }),
+    ]).then((saved) => {
+      if (attempt !== leaveAttemptRef.current) return;
+      setLeaveBusy(false);
+      if (saved && !autosave.hasUnsaved()) onClose();
+      else setLeaveOpen(true);
+    }).finally(() => clearTimeout(timer));
   }, [autosave, onClose]);
 
   // #1161：接共用 sheet 引擎。本元件宣告 aria-modal="true" 卻是手刻覆蓋層，Tab 會跑出
@@ -528,6 +526,18 @@ export default function TravelPillDialog({
           </div>
         </div>
       </div>
+      <ConfirmModal
+        open={leaveOpen}
+        title="交通方式尚未儲存"
+        message="儲存失敗或等待逾時。可留在原處、重試儲存或放棄變更。"
+        confirmLabel="放棄變更"
+        cancelLabel="繼續編輯"
+        busy={leaveBusy}
+        onConfirm={() => { leaveAttemptRef.current++; autosave.cancel(); onClose(); }}
+        onCancel={() => { leaveAttemptRef.current++; setLeaveOpen(false); }}
+      >
+        <button type="button" disabled={leaveBusy} onClick={handleClose}>重試儲存</button>
+      </ConfirmModal>
     </>,
     document.body,
   );

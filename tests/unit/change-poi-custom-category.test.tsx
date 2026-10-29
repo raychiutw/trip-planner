@@ -18,7 +18,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 
 // 攔截送出 payload
 const rawCalls: Array<{ path: string; opts?: RequestInit }> = [];
@@ -69,16 +69,23 @@ vi.mock('../../src/hooks/useCurrentUser', () => ({
 
 // custom tab 上 usePoiSearch 是 idle（enabled:false）；stub 讓 test hermetic。
 vi.mock('../../src/hooks/usePoiSearch', () => ({
-  usePoiSearch: () => ({ results: [], searching: false }),
+  usePoiSearch: () => ({ state: { status: 'idle', results: [], error: null }, retry: vi.fn() }),
 }));
 
 import ChangePoiPage from '../../src/pages/ChangePoiPage';
 
 function renderCustomTab(entry = '/c/trip123/5?tab=custom') {
+  function ChangeRoute() {
+    const navigate = useNavigate();
+    return <>
+      <button type="button" onClick={() => navigate('/c/trip123/5?mode=alternate&tab=custom')}>切換備選意圖</button>
+      <ChangePoiPage />
+    </>;
+  }
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
-        <Route path="/c/:tripId/:entryId" element={<ChangePoiPage />} />
+        <Route path="/c/:tripId/:entryId" element={<ChangeRoute />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -89,6 +96,17 @@ beforeEach(() => {
 });
 
 describe('ChangePoiPage custom tab — CategoryPicker 驅動儲存的 poi type (v2.50.0 stale-dep regression)', () => {
+  it('切換意圖後自訂表單不能沿用舊地點直接提交', async () => {
+    renderCustomTab();
+    await screen.findByTestId('change-poi-custom-category-restaurant');
+    fireEvent.change(screen.getByTestId('change-poi-custom-title'), { target: { value: '舊地點' } });
+    fireEvent.click(screen.getByTestId('mock-pick-coord'));
+    expect(screen.getByTestId('change-poi-submit')).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: '切換備選意圖' }));
+    await waitFor(() => expect(screen.getByTestId('change-poi-submit')).toBeDisabled());
+    expect((screen.getByTestId('change-poi-custom-title') as HTMLInputElement).value).toBe('');
+  });
+
   it('選的分類要同時反映在 picker 與送出的 payload', async () => {
     renderCustomTab();
 

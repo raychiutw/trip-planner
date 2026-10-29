@@ -13,13 +13,14 @@
  * Source-grep lock：detail.isExpanding 區分 + panToCoord 接 zoom field + TpMap flyTo path。
  */
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const read = (rel: string) => readFileSync(join(__dirname, '../..', rel), 'utf8');
 
 describe('v2.31.87 #5+#6: map zoom on TimelineRail expand/collapse', () => {
-  const railSrc = read('src/components/trip/TimelineRail.tsx');
+  const railSrc = readTimelineRailSources();
   const tripMapRailSrc = read('src/components/trip/TripMapRail.tsx');
   const tpMapSrc = read('src/components/trip/TpMap.tsx');
   // v2.33.57 round 11: panToCoord effect 拆到 src/hooks/useMapViewport.ts

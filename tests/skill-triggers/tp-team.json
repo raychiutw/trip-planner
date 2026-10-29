@@ -1,5 +1,5 @@
 [
-  {"query": "TripPage 要加一個顯示天氣的功能", "should_trigger": true},
+{"query": "TripPage 要加一個顯示匯率的功能", "should_trigger": true},
   {"query": "useTrip hook 有個 race condition bug，頁面偶爾白屏", "should_trigger": true},
   {"query": "refactor Timeline component 把 infoBox 邏輯拆出來", "should_trigger": true},
   {"query": "API handler 的 permission check 有問題，companion 可以刪 trip", "should_trigger": true},

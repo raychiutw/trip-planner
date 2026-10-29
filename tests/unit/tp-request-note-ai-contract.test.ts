@@ -32,22 +32,26 @@ describe('tp-request 行程筆記 AI contract', () => {
  * 只是因為收屍是懶惰觸發（只在有人 PATCH 時才跑）才沒把它們全殺光；撞上就被殺，
  * 而且 applyNotesGenerationCompletion 對已 timed_out 的 job 直接丟棄後續回報。
  *
- * 這跟 ADR-0007 的牆鐘是同一條推論：**逾時必須大於 ORPHAN_MAX_AGE_MS（90 分鐘）**，
+ * 這跟 ADR-0007 的牆鐘是同一條推論：**逾時必須大於 contained `claude -p` 一個 tick 的最壞上限（PRINT_MAX_ROUNDS × PRINT_RUN_TIMEOUT_MS = 90 分鐘）**，
  * 否則就是在殺一個還活著、還在工作的 session —— 完全是 #237 的形狀。
  */
 describe('筆記 AI 逾時必須大於 session 壽命', () => {
   const GENERATE_SRC = readFileSync(
     'functions/api/trips/[id]/notes/[type]/generate.ts', 'utf-8',
   );
-  const API_SERVER_SRC = readFileSync('scripts/tripline-api-server.ts', 'utf-8');
+  const WORKER_SRC = readFileSync('scripts/lib/request-worker.ts', 'utf-8');
+  const PRINT_RUN_SRC = readFileSync('scripts/lib/print-run.ts', 'utf-8');
 
-  it('INSERT 用的逾時 > ORPHAN_MAX_AGE_MS（90 分鐘）', () => {
+  it('INSERT 用的逾時 > 一個 tick 內 contained claude -p 的最壞執行時間', () => {
     const m = GENERATE_SRC.match(/datetime\('now',\s*'\+(\d+) minutes'\)/);
     expect(m, 'generate.ts 找不到 timeout_at 的 datetime 運算式').not.toBeNull();
     const minutes = Number(m![1]);
-    // api-server 的 orphan cap 是 90 分鐘 —— 在那之前 session 都還可能在正常工作
-    expect(API_SERVER_SRC).toContain('ORPHAN_MAX_AGE_MS = 90 * 60 * 1000');
-    expect(minutes).toBeGreaterThan(90);
+    const rounds = Number(WORKER_SRC.match(/PRINT_MAX_ROUNDS = (\d+)/)?.[1]);
+    const runMin = Number(PRINT_RUN_SRC.match(/PRINT_RUN_TIMEOUT_MS = (\d+) \* 60 \* 1000/)?.[1]);
+    expect(rounds).toBeGreaterThan(0);
+    expect(runMin).toBeGreaterThan(0);
+    // 最壞情況：每輪都跑滿單輪上限 —— 在那之前 session 都還可能在正常工作，job 不能先被判逾時
+    expect(minutes).toBeGreaterThan(rounds * runMin);
   });
 
   /*

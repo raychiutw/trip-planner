@@ -83,6 +83,24 @@ function payloadWith(suffix: string, timeline: unknown[]) {
 }
 
 describe('POST /api/trips/import — entry note round-trip（master poi note）', () => {
+  it('舊 weather_json 欄位回傳 400，不得靜默忽略', async () => {
+    const base = payloadWith('legacy-weather', []);
+    const payload = { ...base, days: [{ ...base.days[0], weather_json: {} }] };
+    const ctx = mockContext({
+      request: new Request('https://test.com/api/trips/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+      env,
+      auth: mockAuth({ email: USER_EMAIL }),
+    });
+
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    await expect(resp.json()).resolves.toMatchObject({ error: { detail: 'weather_json 已移除' } });
+  });
+
   it('entry-level note → master poi（master 自己沒帶 note 時繼承）', async () => {
     const tripId = await runImport(
       payloadWith('inherit', [
@@ -96,6 +114,9 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     const rows = await entryPoiNotesByMasterName(tripId, '暖暮拉麵 inherit');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ sort_order: 1, note: '整體備註：記得帶現金' });
+    // #1258：匯入走 entry intake 批次入口 → 每筆 entry 有 audit_log
+    const au = await db.prepare("SELECT COUNT(*) AS c FROM audit_log WHERE trip_id = ? AND table_name = 'trip_entries' AND action = 'insert'").bind(tripId).first<{ c: number }>();
+    expect(au?.c).toBe(1);
   });
 
   it('master poi 自己的 note 優先，不被 entry-level note 覆蓋', async () => {
@@ -187,5 +208,18 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
     const rows = await entryPoiNotesByMasterName(tripId, '早餐店 schema');
     expect(rows).toHaveLength(1);
     expect(rows[0]!.note).toBe('x');
+  });
+});
+
+describe('匯入撞既有 POI 的 policy（#1258：fill-null）', () => {
+  it('既有 POI address NULL → 匯入補上；rating 已有值 → 不覆蓋', async () => {
+    const existing = await db.prepare("INSERT INTO pois (type, name, address, rating) VALUES ('restaurant', 'Policy 匯入食堂', NULL, 4.5) RETURNING id").first<{ id: number }>();
+    await runImport(
+      payloadWith('policy', [
+        { sortOrder: 1, stopPois: [{ sortOrder: 1, name: 'Policy 匯入食堂', type: 'restaurant', address: '匯入補的地址', rating: 1 }] },
+      ]),
+    );
+    const row = await db.prepare('SELECT address, rating FROM pois WHERE id = ?').bind(existing!.id).first<{ address: string | null; rating: number }>();
+    expect(row).toEqual({ address: '匯入補的地址', rating: 4.5 });
   });
 });

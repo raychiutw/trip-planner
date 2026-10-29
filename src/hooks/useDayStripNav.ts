@@ -50,6 +50,30 @@ export function useDayStripNav<K>({ keys, activeKey, onPick, testId }: UseDayStr
     firstMountRef.current = false;
   }, [activeKey]);
 
+  // 捲動提示（#1445 F9）：strip 內容比容器寬時，在還能捲的那一側標 data-fade-start / data-fade-end，
+  // CSS 據此加邊緣漸層遮罩。不然第 5 天被截掉、使用者不知道右邊還有東西。
+  // 直接寫 DOM dataset 而不是 React state：捲動中每個 frame 都會更新，不值得重渲染。
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const update = () => {
+      const max = nav.scrollWidth - nav.clientWidth;
+      nav.dataset.fadeStart = max > 2 && nav.scrollLeft > 2 ? 'true' : 'false';
+      nav.dataset.fadeEnd = max > 2 && nav.scrollLeft < max - 2 ? 'true' : 'false';
+    };
+    update();
+    nav.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    // tab 數量／字級改變也會改 scrollWidth；jsdom 沒有 ResizeObserver 時略過。
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(nav);
+    return () => {
+      nav.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      ro?.disconnect();
+    };
+  }, [keys.length]);
+
   function handleKeyDown(e: ReactKeyboardEvent<HTMLElement>) {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const { keys, onPick, testId } = latest.current;

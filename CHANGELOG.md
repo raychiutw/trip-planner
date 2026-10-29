@@ -3,11 +3,326 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.83] - 2026-07-29
+## [2.57.113] - 2026-10-29
 
 ### Fixed
-- **AI 生成筆記不會再做到一半被判定失敗** —— 原本 10 分鐘沒完成就當逾時，但實測較大的行程本來就要跑十幾分鐘到一小時以上，導致約四成的生成明明還在跑卻被中止、結果被丟棄。放寬到系統實際允許的工作時間。
-- 生成中的提示改成「通常 2–15 分鐘，行程較大時可能更久」（原本寫 3–7 分鐘，跟實際差太多，容易讓人以為卡住而重按）。
+- **行程筆記 AI 生成不再 10 分鐘就被判逾時**：筆記 job 的逾時由 10 分鐘改為 100 分鐘（必須大於 contained `claude -p` 一個 tick 的最壞 90 分鐘），原本在 session 仍正常工作時就被標 `timed_out`（prod 實測約 41% 陣亡率，完成的 job 有跑到 101 分鐘的）。等待文案改為「通常 2–15 分鐘，行程較大時可能更久」，避免使用者誤以為卡住而重按。
+
+### For contributors
+- 由舊 PR #1224 更新而來：`_noteAi.ts` 的收屍結構已被 master 重構，這裡只同步逾時訊息為 100 分鐘；`tp-request-note-ai-contract` 的守衛由「> ORPHAN_MAX_AGE_MS」改為由 `PRINT_MAX_ROUNDS × PRINT_RUN_TIMEOUT_MS` 推算（已 mutation 驗證：改成 +80 分鐘轉紅）。
+- migration 0091 的欄位 DEFAULT 仍是 +10 分鐘，刻意不改（見測試內註解）。
+
+## [2.57.112] - 2026-10-29
+
+### Changed
+- **AI 聊天的兜底輪詢由 10 分鐘改為 5 分鐘**：即時觸發失敗（例如 Cloudflare 回 530）時，請求最多等 5 分鐘就會被 api-server 撿起（原本最多 10 分鐘）；告警文案裡過時的「15min」一併改成 5min。
+
+### Fixed
+- **AI 執行 log 的脫敏補強**：輸出超過上限被截斷時，先整段脫敏再丟掉結尾 4KB，token 若剛好跨在截斷點上不會再把前半截寫進 log；log 上限改以 bytes 計（原本以字元計，中文最多會到約 3MB）。
+
+### For contributors
+- 更正 2.57.111 的一句話：「失敗時聊天仍沒有明確失敗提示」不正確——聊天頁本來就會對 `failed` 請求顯示失敗訊息（`conversation.ts` 的 `terminationText`），已查證無需新增 UI。
+- 已知取捨：若某請求在 `started:false`（佈置／spawn 例外）下每輪都沒開始，重試頻率隨兜底變為 5 分鐘一次。
+- 本輪 review 在最後一個純註解 commit（`requests.ts` 的 5min 註解）之前完成，該 commit 之後未重跑 review。
+
+## [2.57.111] - 2026-10-29
+
+### Fixed
+- **AI 聊天的第二則訊息不再卡住**：以前 AI 處理完一則訊息後，同一行程接著送的訊息要等 90 分鐘孤兒上限才被收掉並標為逾時。現在每則請求用獨立的 `claude -p` 處理，跑完即結束，同一輪內新到的請求會接著處理（單次最多 3 輪），沒處理到的會明確標為失敗而不是空等。
+- **舊路徑漏掉的暫存目錄**：api-server 啟動時清掉上一代遺留的 contained run 目錄與殘留 process（上線時一次清掉 39 個，目錄內含該次請求的短效 token）。
+
+### Changed
+- 行程相關請求（`/tp-request`）一律走 `claude -p`，不再開 tmux REPL；`/tp-daily-check` 仍走原 tmux 路徑。無 feature flag。
+- 單輪上限 30 分鐘、150 turns；逾時先 SIGTERM（sudo 會轉送）、10 秒後 SIGKILL，並保證收屍與清目錄。
+
+### For contributors
+- 新增 `scripts/lib/print-run.ts`（`superviseRun`）、`scripts/lib/print-run-sweep.ts`（啟動清掃）；`request-worker` 的 `runContainedPrint` 為必要依賴，移除 `createContainedSession`／`watchContainedSession`。
+- `scripts/` 不在 repo tsconfig 內，新增 `print-run-types.test.ts` 以 `tsc --strict` 守門。
+- 已知限制見 `scripts/tp-request-contained/README.md`「已知限制」；ADR-0007 補 2026-10-27 addendum。另有兩個 Low：原始輸出超過 2MB 時 redaction 對跨界 token 前綴無效、log 截斷以字元計非 bytes。
+- 失敗時聊天仍沒有明確失敗提示（獨立缺口，未處理）。
+
+## [2.57.110] - 2026-10-29
+
+### Fixed
+- **每日健檢不再把「使用者自己取消的請求」報成警告**：在聊天按「停止等待」取消的請求，10/28、10/29 連兩天被列成未完成請求（#285、#288）。現在 15 分鐘內就取消的不再列入；等滿 15 分鐘才放棄的照樣報，因為那通常代表 AI 沒回（10/27 #285 就是這種情況）。只認「已失敗且標記取消」的請求，還在排隊或處理中的請求一律照報。
+
+### For contributors
+- 新增 `tests/unit/daily-check-request-errors.test.ts`：用 in-memory SQLite 跑真實 SQL，涵蓋很快取消、久等取消、open/processing 掛 cancelled、`terminal_reason` 為 NULL 與其他終結原因；每個條件都以 mutation 驗證過會轉紅。
+- 已知限制：取消後若該請求再被 PATCH（例如 worker 遲到完成），`updated_at` 會往後推，很快取消的請求可能重新被報出（多報方向，與修正前行為相同）；要精確需另存取消時間。
+
+## [2.57.109] - 2026-10-26
+
+### Fixed
+- **手機上點標題的行程下拉不再被切掉**：390px 寬時選單左側有 50px 在畫面外、360px 寬有 80px，行程名稱讀不全。現在選單一律夾在視窗內（含手機 200% 縮放的 195px）。
+- **共編設定頁底部的「角色」選項不再被底部分頁列蓋住**：新增成員時要選的共編／檢視，原本落在浮動 tab bar 底下而且捲不出來。行程列表與收藏頁捲到底時，最後一張卡也不再被蓋住。
+- **文字對比**：「登入裝置」頁的「已連結的應用」連結原本是瀏覽器預設藍，手動選深色時幾乎看不見；地圖 marker 的編號、行前須知的急難電話（110／119）在淺深色下都補到 4.5:1 以上。
+- **鍵盤**：行程上的「編輯起訖時間」視窗現在可以按 Esc 關閉（並存檔）；桌機右欄開著時，一次 Esc 只關這個視窗，不會連整個面板一起關掉。
+- **大字型與 200% 縮放**：頁面標題、標題列行程名、地圖卡片的字原本是固定像素，調大系統字級時標題不動、內文變大；現在會等比放大（100% 下尺寸不變）。手機 200% 縮放時底部分頁列不再比畫面寬而切掉聊天與收藏。
+- **手機操作**：地圖的日期分頁、聊天送出鈕、收藏篩選與帳號「編輯名稱」的點擊範圍都擴到 44px（外觀不變）；日期分頁溢出時邊緣有漸層提示還能橫向捲動，鍵盤聚焦時漸層會取消以免吃掉焦點環；收藏頁的「地區」「類型」兩排篩選各加了列標籤。
+- **地圖頁**：底部景點卡不再每張各做一層模糊（原本 38 層，現在個位數），深色下日期分頁條改為近乎不透明，標籤不再被亮色圖磚干擾。
+- **其他**：每個頁面現在恰好一個 h1（共編、筆記、健檢原本沒有）；手動選深色時瀏覽器原生控制項（勾選框、連結）也跟著變深；建立應用頁移除與底部重複的頂部「建立」鈕。
+
+### For contributors
+- 新增 `tests/e2e/design-review-guard.spec.js`：一份頁面清單 × 195／360／390／1440 寬 × 淺色／深色／手動深色，斷言浮層在視窗內、內容不被浮動 tab bar 蓋住、axe 對比與連結辨識、Esc 關閉並還焦、大字型標題等比放大、tab bar 寬度、點擊區 ≥44px、Day tab 捲動提示、地圖玻璃層數、h1 數量。每條斷言都先對修復前的程式碼轉紅（浮層出界 x=-50、角色列被蓋 32px、連結 1.63:1、標題 ×1.00⋯⋯）；e2e mock 補了共編成員、收藏、車程段與行程筆記資料。
+- 新增單元測試：`map-marker-text-contrast`（10 色 marker 編號對比）、`map-marker-size`、`entry-time-chip-escape`（Esc 只存一次、IME／長按／其他浮層讓位）；`operation-shell` 補 `defaultPrevented` 讓位。`mockup-typography-compliance`、`pr2-mobile-scale`、`mobile-type-scale` 的 source-grep 守衛改為接受 rem 等值（手機 root 17px，24px 寫成 24/17 rem）。
+- 標題類字級手機等值修正集中在 `css/tokens.css` 檔尾一個 media 區塊（px÷17）；marker 字級以 `--marker-font-size` 變數引用。
+- 已知但未處理（審查判斷為視覺層級、非功能錯誤）：Day tab 遮罩會一併裁掉玻璃膠囊的外陰影；marker 加寬時 `border-radius: 50%` 會變橢圓（既有單元測試鎖 50%）；`body:not(.dark) { color-scheme: light }` 在系統深色 + auto 模式首次繪製前原生控制項短暫偏淺；視窗縮放且行程下拉 right 值不變時不重算夾限。探索頁無圖封面佔位（F20）需先走 prototype 簽核，未做。
+- `map-bottom-tabs.spec.js`「switching a bottom day tab」本身會偶發失敗（改動前後失敗率相同），與本次無關。
+- 新增 `docs/research/apple-hig-2026-10-26.md`（Apple HIG 一手來源研究；關鍵數值採用前請對照瀏覽器渲染頁面）。
+
+## [2.57.108] - 2026-10-24
+
+### Fixed
+- **funnel-guard 不再空轉 heal**：`guard.sh` 把 tailscale CLI 寫死成 `/opt/homebrew/bin/tailscale`，這台機器改用 Tailscale.app 之後該路徑不存在，L1 檢查永遠失敗，從 2026-10-22 23:07 起每 5 秒重複「drift 偵測 → heal」超過 23 小時（funnel 本身一直是通的，只是 guard 看不到）。現在依序尋找 brew 版、`/usr/local/bin` 的 wrapper、App 內執行檔；`install.sh` 的預檢與 README 同步。
+
+## [2.57.107] - 2026-10-23
+
+### Security
+- **修補 `npm audit` 回報的 13 個套件漏洞，升級後為 0 個**：`dompurify`（critical，匯出 PDF 用）、`vite` 與 `wrangler`（只影響開發環境）、`undici`、`sharp`、`source-map-js`、`concurrently`。`serve` 沒有任何地方在用，連同它帶進來的 `compression` 漏洞一併移除。
+
+### Changed
+- 所有依賴升到各自最新穩定版：React 19.3.1、Vite 8.3.5、wrangler 4.152.0、Vitest 5、jsdom 30、marked 18、vite-plugin-pwa 2、dotenv 18、concurrently 10、jest-dom 7、TypeScript 6.0（只剩 TypeScript 7 暫緩，原因是 `typescript-eslint` 尚未支援）。
+- 新增 `.nvmrc` 與 `engines`，Node 需 22.12 以上（22、24 或 26；不支援 25）；`lighthouse.yml` 同步改用 Node 22。
+- AI 聊天等訊息改用 marked 18 轉成 HTML，跨行硬換行後的前導空白與少數邊界案例的輸出略有不同；輸出仍一律經過 sanitizer。
+
+### Fixed
+- 升級 axe-core 4.14 後新啟用的 WCAG 2.5.3（可見文字須包含在無障礙名稱內）檢查抓到四處不符，一併修正：下拉選單（排序方式等）的無障礙名稱現在包含目前選到的值；桌機側欄的帳號卡改由可見名稱加「帳號設定」組成；「登出其他裝置」按鈕的名稱與畫面文字一致（完整說明仍在 tooltip）；匯入進行中與行前須知的三個 AI 生成按鈕在「生成中…」狀態時，名稱也與畫面文字一致。
+- 升級後 `ajv` 被換成 6.x，造成 `npm ls` 報 invalid（workbox-build 需要 8.x）；補上 `ajv@^8` 開發相依讓 workbox 用 8、eslint 維持自己的 6。
+- Sentry 升到 11 後預設會忽略 `beforeSendTransaction`，會讓 HeadlessChrome / localhost 的 pageload 雜訊重新進 Sentry；改為明確設定 `traceLifecycle: 'static'` 保留原本的過濾。
+
+### For contributors
+- 移除沒有任何 import 的 `@vitest/runner`、`@vitest/snapshot`（Vitest 5 起不再發佈）；`tsconfig.json` 移除已棄用的 `baseUrl`，改為顯式 `types: ["google.maps"]`。
+- 新增 `tests/unit/sentry-trace-lifecycle.test.ts` 守衛 `traceLifecycle: 'static'`（已用 mutation 驗證會轉紅）。
+- 新增 `docs/research/` 兩份依賴研究筆記；Sentry 11 讓 crash-free rate 口徑改變（`crashed` 改記為 `unhandled`、session 改以頁面為單位），`docs/monitoring/sentry-alerts.md` Alert 4 已加註記，升版上線後需觀察數日再重訂門檻。
+
+## [2.57.106] - 2026-10-18
+
+### Changed
+- **README 改成產品介紹**：GitHub 首頁現在說明 Tripline 能做什麼（三件出發前最常做的事、排行程、行前準備、和旅伴一起、隨時隨地），附 11 張以範例行程拍攝的桌機、手機與深色模式截圖；技術架構與版本細節不再寫在 README。
+- README 的每一項功能說法都對照現行程式寫成：拿掉舊 README 裡不存在的出發倒數、Naver 地圖與離線瀏覽，下載格式寫實為 PDF 與 JSON，景點評分與營業時間註明視景點資料而定；新增的大眾運輸估時、匯入 Tripline 匯出的 JSON、地圖與時間軸互動、AI 聊天改行程等說明都依實際行為撰寫。
+
+### For contributors
+- 新增 `tests/unit/readme-product.test.ts`：README 的本地連結與圖片都必須存在，`docs/readme/` 不能有未被引用的截圖。
+- `round-18-docs-refresh.test.ts` 退役 README 技術描述的斷言（README 已無技術段落）；ARCHITECTURE 的同類斷言保留。
+- 新增 `tests/unit/version-sync.test.ts`：`VERSION` 必須是 x.y.z，且等於 `package.json` 與 `package-lock.json`（兩處）的 version；手改或只改一半的發版會在 CI 變紅。
+
+## [2.57.105] - 2026-10-11
+
+### Fixed
+- 測試：`entry-visible-synchronization` 偶發在 CI 變紅（「切換行程後拖曳儲存完成，不在新行程顯示舊操作的提示」，`expected [] to have a length of 1`）。這支測試走真實的拖曳與多段讀寫協調，runner 吃緊時 `waitFor`／`findBy` 預設的 1 秒不夠；把這支測試的非同步等待上限放寬到 5 秒，只放寬「等多久」，斷言不變，等不到仍會失敗。這個修法未證明「為什麼這批變更之後才開始浮現」，只證明在 CPU 加壓下修前 4 次紅 2 次、修後 8 次全過。
+
+## [2.57.104] - 2026-10-10
+
+### Changed
+- **行程讀取收成 Trip read module**（`src/hooks/useTripRead.ts`）：`ChangePoiPage`、`AddStopPage`、`AddCustomStopPage`、`AddEntryPage`、`EditEntryPage` 各自抄一份「`let cancelled` → `apiFetch` → `setState` → catch 退成空值」去讀 `/trips/:id`（5 份）與 `/trips/:id/days`（4 份），現在都走 `useTripMeta`／`useTripDays`／`useTripDestinations`。換行程時舊回應晚到不會蓋掉新的、載入中不殘留上一個行程的資料、卸載後不更新狀態，只寫在這一處。
+- 目的地維持三態：載入中 `null`（避免地圖選點器用東京預設位置 mount 後被鎖死）、讀取失敗 `[]`、有資料回清單；共用的空陣列已凍結，避免被就地修改後汙染所有頁面。
+- 停用後再啟用同一個讀取（例如登入狀態短暫變化）時，先回「載入中」，不再先吐出上一輪的資料。
+
+### Fixed
+- 隱含行為差異（請 owner 知悉）：`AddCustomStopPage` 切換天數 chip 不再重新抓一次 `/days?all=1` 與 `/trips/:id`（原本依賴 `dayNum`），改為每個行程只抓一次、由快取的 timeline 推導當天資料；這個頁面建立景點後就導走，頁面存活期間 timeline 不會被別處改動。
+
+### Added
+- 測試：hook 行為（成功／非陣列／失敗／網路錯誤、結果綁定 path、換行程競態、停用再啟用、`useTripDays` 的 enabled 與 `all`、目的地三態）與結構守門（頁面不得再自己裸讀這兩個 endpoint；`EditEntryPage` 只允許恰好 1 處命令式重抓）。拿掉 path 綁定、停用清除、`cancelled`，或在 `EditEntryPage` 多加一個裸讀取，各自轉紅。
+
+## [2.57.103] - 2026-10-10
+
+### Changed
+- **行程層級的變更收成 Trip mutations module**（`src/lib/tripMutations.ts`）：封存／取消封存、刪除行程、刪除某一天原本在 `TripsListPage` 與 `EditTripPage` 各抄一份「fetch → 檢查 ok → 組錯誤訊息 → 發 `tripUpdated`」，現在都走 `archiveTrip`／`unarchiveTrip`／`deleteTrip`／`deleteDay`，回傳 `ok` 或 `message`，不丟錯。使用者看到的錯誤文字（403／404／其他各對應哪一句）與 HTTP 動詞、路徑編碼都與修改前相同。
+- 刪除某一天時，後端已刪除成功但回應內容不是合法 JSON，原本會誤報「刪除天數失敗」；現在算成功（受影響的 entry 數記 0）。
+- `tripUpdated` 在刪除某一天時改為 HTTP 成功後立刻發出（原本是重新讀取天數之後）；監聽它的只有行程清單重新同步，與天數資料無關，不影響畫面正確性。
+
+### Added
+- 測試：模組層（方法／路徑／錯誤訊息對照／網路例外／成功才發事件／壞 JSON）、頁面層（刪除 403／404／500 顯示對應訊息且對話框保留可重試、刪除成功提示與卡片消失、歸檔失敗顯示訊息）、結構守門（`src/` 內不得再直接打封存或刪除行程／天數的 endpoint）。頁面層用把 `TripsListPage` 改壞（失敗仍顯示成功、失敗時關對話框、歸檔失敗不提示）驗證，各自轉紅。
+
+### Notes
+- `EditTripPage` 的新增／插入／平移天數與行程 PUT 仍是各自 `apiFetchRaw` 加手動發事件，尚未收進這個 module，列為後續。
+
+## [2.57.102] - 2026-10-10
+
+### Changed
+- **daily-check 的 D1 來源改用行為測試守門**：原本三個測試（audit 異常、hygiene 欄位切換、npm audit 逾時）是 grep `scripts/daily-check.js` 的原始碼，換個寫法同義就紅、語意壞了字串還在卻綠。換成 `daily-check-sources-sql.test.ts`：用真實 migration schema 的 Miniflare D1，從既有的注入點（`createCheckSources({ queryD1, execSync })`）實際執行它送出的 SQL，並斷言輸出。
+  - 守的行為：使用者／trip 的 mutation 門檻（200／100，剛好等於門檻不算）、`trips`／`users` 的 delete 超過 10 次為 critical 且優先於 warning、只有 delete 算 critical、24 小時窗口兩側（23 小時前算、25 小時前不算，warning 與 critical 兩條查詢都綁）、`system` trip 與無 user id（service token）的排除、`LIMIT 10`、hygiene 查詢在現行 schema 上能執行（不會 no such column）、npm audit 的 timeout ≥ 180 秒。
+  - 所有斷言都對 `daily-check.js` 做過 mutation（改運算子、拿掉過濾條件、縮放窗口、對調分類順序、改 LIMIT、timeout 改 60 秒），各自轉紅；`daily-check.js` 本身沒有任何改動。
+
+## [2.57.101] - 2026-10-10
+
+### Changed
+- **`.env.local` 只剩一份 parser**：原本 5 份各自實作（`lib/load-env.js`、api-server 內嵌、`_lib/cron-shared`、`provision-admin-cli-client`、`tripline-job.sh`），逐行解析對跨多行的單引號值（`GOOGLE_CLOUD_SA_KEY` 的 private_key）都是錯的，只讀到第一行。現在全部走 `lib/load-env.js` 的 `parseEnv`（`dotenv.parse`）。用你實際的 `.env.local` 比對過，新舊解析結果唯一的差異就是 `GOOGLE_CLOUD_SA_KEY`：舊的只讀到 164 字元，新的讀到完整 2321 字元。
+- **Telegram 只剩一條 JS 送出路徑**（`lib/telegram.js` 的 `sendTelegram`），`daily-report` 與 cron 告警共用；token 優先序統一為 `TELEGRAM_BOT_HOME_TOKEN > TELEGRAM_BOT_TOKEN > TELEGRAM_BOT_FETCI_TOKEN`，chat id 必須是數字。`daily-report` 以前的順序是 BOT 在 HOME 前面，且 HTTP 失敗也印「alert sent」，現在會如實回報失敗；你的 `.env.local` 沒有 `TELEGRAM_BOT_TOKEN`，實際使用的 bot 不變。
+- **腳本的 repo 根目錄由腳本位置推導**，不再寫死 `/Users/ray/...`：`tripline-job.sh`、`log-rotate.sh`、funnel-guard 的送出路徑，搬到別的 checkout 也能跑。`loadCronEnv` 原本依賴 `process.cwd()`，從別的目錄執行會靜默拿到空憑證，現在讀 `REPO_ROOT`。
+- `dotenv` 從 devDependencies 移到 dependencies（api-server 在 launchd 下啟動就需要它）。
+
+### Added
+- 測試：`.env.local` parser（含未加引號 `#` 的行內註解語意、`REPO_ROOT`）、`sendTelegram` 全部失敗原因、`alertTelegram` 的去重與靜默失敗、腳本根目錄隨 checkout 搬家（zsh 實際執行）、`load-env.mjs` 對含 `$(...)`／反引號／引號／反斜線／分號的值 eval 後原樣還原且不執行，funnel-guard 自我檢查新增 [11]。這些都做過 mutation 驗證。
+
+### Notes
+- `.env.local` 裡**未加引號且含 `#`** 的值會被當成行內註解截斷（dotenv 語意），這類值請加引號；目前的檔案沒有受影響的值。
+
+## [2.57.100] - 2026-10-10
+
+### Changed
+- **毛玻璃面收成單一 module（`.tp-glass`）**：側欄、堆疊面板標題列、Google 景點卡、地圖景點卡、InfoSheet、首頁導覽列、聊天輸入列這 8 處原本各自抄一份「半透明底 + 模糊 + 降級」的寫法，現在只有 `css/tokens.css` 的 `.tp-glass` 一份，每個地方只給兩個參數（`--glass-alpha`、`--glass-filter`）。一般模式下的計算值逐項比對過，與修改前完全相同；「降低透明度」「提高對比」兩個系統設定改由同一個 media query 降級，新增玻璃面時不會再因為漏寫降級而在這兩個設定下維持半透明（#1422 的根因）。
+- InfoSheet 深色模式那條 `background` 規則一直被 inline style 蓋掉，是死碼，已移除。
+
+### Added
+- 守門測試：`.tp-glass` 只定義一次且不成對寫 `-webkit-`（否則 lightningcss 去重後 Chromium 失效）；降級 token 只定義一處、media query 必須同時含降低透明度與提高對比；沒有人再手寫裸的 `backdrop-filter`；7 個玻璃面各自斷言 class 與 alpha／filter 參數（錨定在宣告上）；`.tp-glass` 排在 `.tp-map-entry-card` 之後。這些都做過 mutation 驗證。
+
+## [2.57.99] - 2026-10-10
+
+### Changed
+- **行程寫入權限只剩一個 gate（Trip access module）**：18 個 API handler 各自內嵌的「有沒有寫入權限」檢查，加上 `shares` 兩支的私有複本，全部改走 `requireTripWrite`。對外行為不變（同樣的 401／403／404 順序與狀態碼），之後要改寫入規則只改一處。
+- 已發布行程對匿名讀者全公開這個設計寫成 ADR-0008：行程本體（含每個景點的訂位與備註）公開，私人資料請放在筆記區塊（航班、住宿、訂位表、行前、緊急聯絡人，預設不公開，由分享連結逐項開放）。
+
+### Added
+- 守門測試：不准再長出內嵌的寫入檢查（含 `Promise.all` 形式的已知清單，新增或移除都要明確更新）；匿名可讀的表格（trips／trip_days／trip_entries／pois）新增欄位時，必須當下決定要不要公開；匿名讀取已發布行程的特徵測試（未發布則 403）。
+- API 測試：陌生人與 viewer 對 requests、entries、segments、notes maintenance／exclusions、shares 的寫入一律 403。
+
+### Fixed
+- AI 健檢「空行程 guard 必須在權限檢查之後」的順序測試改認 `requireTripWrite`。
+
+## [2.57.98] - 2026-10-09
+
+### Fixed
+- **Tailscale 登出時 funnel-guard 空轉 13 小時（#1421）**：Tailscale 登出（NeedsLogin）後 guard 把它當一般 drift，每 10 秒重試 heal、共 4608 次，告警還說成「funnel 指令失敗」。現在偵測到 `NeedsLogin` 會跳過 heal，改發獨立的 `needs_login` 告警（附可直接複製的 `tailscale up` 指令，保留原本的 `--accept-routes` 與 `--hostname`）；`NeedsMachineAuth` 另發 `needs_machine_auth`，指向 admin console 核准。退出碼為 0，避免 launchd 的 `KeepAlive` 每 10 秒重啟；偵測不依賴 tailscale 的結束碼；所有 tailscale 呼叫都加 20 秒逾時，tailscaled 卡住時 guard 不再永遠掛住。
+- **「降低透明度」「提高對比」沒有真的降級毛玻璃（#1422）**：`body` 宣告的 `--tabbar-*` 蓋掉了 `:root` 的覆寫，開啟系統設定後側欄、標題列、地圖卡、聊天輸入列、探索篩選、InfoSheet 仍然半透明加模糊。改成統一的 `--glass-reduce-*` token，降級時一律不透明、無模糊；一般模式的計算值逐項比對過，與修改前完全相同。
+- **多頁淺色／深色對比不足（#1423）**：AlertPanel 錯誤文字、行程備註失敗狀態、新增景點的按鈕與預覽區、探索頁的載入更多與到底提示、收藏頁評分與計數、驗證 email 頁按鈕、登入頁註腳、分享／列印頁的主按鈕與 hero 漸層、深色 sheet 內的次要文字與刪除色（高對比下取加強階）等，全部改用 DESIGN.md 規定的文字 token，移除用 opacity 壓淡的做法。
+- **手機標題列切換器被硬切、`/add-to-trip` 錯誤狀態沒樣式、時間 chip 小於 24px（#1424）**。
+
+### Added
+- e2e：`glass-degrade.spec.js`（24 頁以 CDP 模擬降低透明度／提高對比，檢查毛玻璃真的降級）、`a11y-axe.spec.js` 擴到全頁面淺色＋深色（例外清單必須附理由）、`titlebar-switcher-and-error-state.spec.js`。
+- unit：WCAG 對比 helper 與列印頁、深色 sheet 的對比守門；`no-opacity-on-secondary-text` 改為資料驅動。
+- funnel-guard 測試涵蓋 NeedsLogin／NeedsMachineAuth、告警送出失敗、逾時、errexit 下的行為，關鍵路徑都做過 mutation 驗證。
+
+### Changed
+- 以下是一般模式下肉眼可見的變化，供 owner 確認：驗證 email 與分享頁按鈕改用 accent 實心＋對應前景色（深色模式為近黑字）；AlertPanel 錯誤文字改為中性色、僅邊框與圖示保留紅色；分享頁 hero 漸層加深；新增景點預覽區底色改為不透明混色；已連結應用頁深色計數膠囊；探索頁載入更多與到底提示的色彩。
+
+## [2.57.97] - 2026-10-01
+
+### Fixed
+- 匯出、列印行程 PDF 會用到的 HTML 清理元件 dompurify 從 3.4.15 升到 3.4.16，修掉 1 個 low 等級弱點（GHSA-p98j-92pf-mc4p）：`IN_PLACE` 模式搭配會移除元素的 afterSanitize hook 時，被移除那一塊裡的事件處理器仍然有效。Tripline 沒有直接呼叫 dompurify，也沒用到這個模式，實際可觸及面很小；升級後每日健康報告的 production 相依弱點回到 0。用同一支探針分別打 3.4.15 與 3.4.16 驗證過：舊版會重現，新版已被中和。
+
+### Changed
+- `package.json` 的 `overrides` 把 dompurify 下限從 `^3.4.10` 升到 `^3.4.16`，沿用 #962 的做法把下限釘在修補版。之後若有人把舊的 lockfile 條目合併回來，`npm ci` 會直接報錯（`lock file's dompurify@3.4.15 does not satisfy dompurify@3.4.16`），不會靜默裝回有弱點的版本。
+
+## [2.57.96] - 2026-09-30
+
+### Fixed
+- 寄送驗證信、重設密碼信、邀請信的郵件元件 nodemailer 從 9.1.1 升到 10.0.12，修掉 2 個 moderate 等級弱點：不同寄信連線之間會共用 TLS 主機名稱快取（GHSA-6vj9-mwq6-2f5v），以及巢狀收件人陣列可繞過深度限制造成當機（GHSA-8vvx-rff5-p5rq）。9.x 沒有修補版，只能升到 10.x；寄信用法不變，升級後已對 Gmail SMTP 實際驗證登入成功。每日健康報告的 production 相依弱點回到 0。
+
+### Changed
+- 移除不再需要的 `@types/nodemailer`：nodemailer 10 自帶型別宣告。
+
+### For contributors
+- 新增一個直接用真實 nodemailer 組信的契約測試。原本的郵件測試全部 mock 掉寄信元件，dependabot 自動合併的 nodemailer patch/minor 若改壞寄信參數或信件內容，CI 抓不到；這個測試不連 SMTP，所以 SMTP 連線、STARTTLS、登入仍不在測試範圍內。
+- merge 後 mac mini 的 api-server 要先 `npm ci` 再 `launchctl kickstart -k gui/$(id -u)/com.tripline.api-server`，執行中的程序才會載入 10.0.12；不重啟就還在用有弱點的 9.1.1。
+
+## [2.57.95] - 2026-09-29
+
+### Fixed
+- 打開行程頁時，側欄、帳號圓圈和頁面本身不再各自向伺服器查一次登入身分。原本一次載入最多同時送出 5 個一模一樣的查詢（Sentry 7755796462），現在同一批畫面只查 1 次；之後才載入的頁面區塊仍會再查一次。手動重新整理帳號資料時一定拿到最新結果，不會撿到剛好還在路上的舊查詢。
+- 查詢合併後，登出前送出、登出後才回來的身分查詢不會把「已登出」蓋回「已登入」，登出後回首頁不會又被轉回行程列表。查詢失敗時，所有畫面都視為未登入，並清掉殘留的登入提示。
+
+### Changed
+- 補測試鎖住：同批畫面只查一次、其中一個畫面提前關閉不影響其他畫面、重新整理不會拿到舊結果、登出後才回來的舊回應不覆寫登出狀態、查詢失敗時清掉登入提示；並修正兩個不管實作對錯都會通過的測試與過時的測試說明。
+
+## [2.57.94] - 2026-09-26
+
+### Fixed
+- 每日健康報告不再把前一天已回報過的 Google Maps 用量查詢失敗，隔天又升級成 critical 再報一次。這類失敗是每日檢查自己查用量時遇到 Google 上游逾時造成的，當天已以 warning 回報；因為每天同一時間執行、統計區間剛好重疊，同一筆錯誤會被算兩次。9/26 的 critical 告警就是 9/25 那一筆。用量查詢若持續失敗，仍會每天以 warning 出現在報告中；其他 API 錯誤照常上報。
+- 排除條件只比對那一則固定錯誤訊息；並新增檢查，錯誤代碼、訊息或 API 紀錄的組字格式任一改動，都會讓測試失敗，而不是讓排除靜默失效或誤排除其他錯誤。
+
+## [2.57.93] - 2026-09-25
+
+### Fixed
+- AI 旅伴規劃行程時，不再因為照著過時的 API 說明而連續送錯請求：新增行程點要帶景點名稱 `name`（不是 `title`、也沒有巢狀 `poi`），修改行程點只能改時間、描述、排序與日期，新建景點要先補 Google 地點 ID 才能自動補資料。9/24 一次規劃請求因此多打了 12 筆失敗呼叫，還留下名為「午餐」「晚餐」的佔位景點。
+
+## [2.57.92] - 2026-09-24
+
+### Fixed
+- 首頁插畫恢復顯示：hero 的四個停留點、「每天的路線一眼看完」的兩條路線、「出發前先健檢」的進度條，自 v2.57.0 起因顏色變數沒有定義而整片隱形，現在淺色、深色都正常上色。
+- 另外 5 處樣式引用了不存在的變數，改用既有 token：收藏加入行程的錯誤訊息恢復紅色底框、聊天「跳到最新」按鈕有實心底色、編輯行程點的備選標籤有底色，下拉更新失敗提示與協作頁標題的字級正確套用。
+- 行程列印模式的「離開」按鈕重新套用最上層圖層：它引用的 z-index 變數在 v2.31.71 清理未使用 token 時被誤刪，按鈕可能被其他元素蓋住。
+
+### Changed
+- 新增檢查：樣式引用的變數沒有定義時，`npm test`（原始碼）與 e2e（build 後瀏覽器實際載入的樣式）都會失敗，同類問題不會再靜默上線。設計規範補記首頁插畫色的使用範圍；聊天「跳到最新」按鈕移除手機版重複的樣式規則（外觀不變）。
+
+## [2.57.91] - 2026-09-22
+
+### Fixed
+- 手機閱讀聊天歷史時，「跳到最新訊息」按鈕跟隨輸入區定位，不再遮住送出按鈕；保留載入舊訊息時的閱讀位置與回到最新訊息行為。
+
+## [2.57.90] - 2026-09-21
+
+### Fixed
+- 請求取消、拒絕或逾時後，健檢與筆記都會完成收尾；暫時失敗可重試，舊請求不會覆寫新一輪結果。
+- 整日重寫會完整提交景點、備選、住宿、停車與版本；寫入中途失敗時保留原本的一天。切換行程或快速搬移、複製景點時，較晚回來的舊資料不再覆蓋目前畫面。
+- 主聊天頁與行程內聊天共用請求狀態。停止等待、SSE 中斷、歷史載入與晚到回覆會保留同一則訊息，送出失敗可重試，載入舊訊息保持閱讀位置。
+- AI worker 啟動失敗、工作消失或逾時時會正確收尾；確認 session 已停止後才終結請求，避免仍在執行的工作被提前標成失敗。
+- OAuth 授權交換與 refresh 輪替只發出完整 token pair；錯誤 client、PKCE 或 scope 不會消耗或撤銷合法授權，並行重用也不會重新建立已撤銷的 family。
+- 維運 JSON、HTML 與訊息摘要明確區分健康、零資料及未完成。保留部分查詢的成功證據，納入 route health 異常，查詢失敗時不再顯示假的零用量；npm audit 仍保留 180 秒 timeout。
+
+### Changed
+- 請求收尾、整日寫入、對話、worker、OAuth 與維運結果各由單一模組持有完整流程，既有入口與授權範圍保持相容。
+
+## [2.57.89] - 2026-09-18
+
+### Fixed
+- **每日健康檢查不會再因 npm audit 慢而誤報 critical** —— registry 弱點查詢實測單次要約 50 秒，原本 60 秒逾時貼邊跑，9/4 與 9/18 兩次假警報；放寬到 180 秒，真的連不上仍會明確報錯。
+
+### Changed
+- 相依套件安全更新：nodemailer 9.0.4 → 9.1.1（4 個 high 弱點：收件網域驗證繞過、addressparser DoS 等）、browserslist / brace-expansion / dompurify / baseline-browser-mapping patch 升級；production 相依現為 0 弱點。dev-only 的 undici 弱點需 miniflare breaking 升級，本次不動。
+
+### For contributors
+- 新增 `tests/unit/daily-check-npm-audit-timeout.test.ts` 守衛 timeout ≥ 180000（剝註解後抓值，mutation 改回 60000 轉紅）。
+
+## [2.57.88] - 2026-09-05
+
+### Fixed
+- **從收藏加入行程時，收藏上的備註不會再默默消失** —— 以前六條建立景點的路徑各寫各的，只有這條漏了備註欄位；現在所有入口（單筆新增、收藏加入、複製、分享 clone、匯入、整日重寫）都走同一段「建立景點」程式，備註、排序、版本號、稽核紀錄一次到位。
+- **刪除或搬移景點後不再留下「待更新」的空車程** —— 車程重算與畫面同步以前散在十四個地方各自呼叫，漏一步就出現幽靈段；現在集中在一個地方，跨天搬移會同時重算來源日與目標日，收藏加入行程這條也補上了原本缺少的重算。
+- **匯入或 clone 分享行程時，若撞到已存在的地點，只會補上空白欄位、不會覆蓋既有資料**（owner 拍板）。
+- **整日重寫在景點很多時不會再砍掉舊資料卻只建一半** —— 舊景點刪除與新景點寫入回到同一批原子執行，超過上限會整批失敗而不是留下截斷的一天。
+
+### Changed
+- 分享 clone 與匯入建立的每個景點現在都有稽核紀錄，行程回滾功能可以涵蓋它們。
+- 建立景點的六條路徑統一寫入稽核內容格式（一律含正選 POI 與排序位置）。
+- AI 聊天請求的處理流程（挑請求、換 token、避免重複啟動、逾時收屍）與收屍看門狗行為不變，但改為可用假時鐘與假 tmux 測試，ADR-0007「兩層收屍時鐘必須錯開」第一次有測試把關。
+
+### For contributors
+- 新增三個深 module 並寫進 `CONTEXT.md`：後端 **entry intake**（`functions/api/_entryWrite.ts`：`createEntry` / `createEntriesBatch`）、前端 **entry 變更**（`src/lib/entryMutations.ts`：動詞回 Result、emit 與車程重算收進 module）、**request worker**（`scripts/lib/request-worker.ts`：api-server 決策接受 fetch / tmux / clock 注入）。
+- 兩個語意相斥的 POI resolver 合併為單一 `findOrCreatePoi`，`keep` / `fill-null` 與 `defaultCountry` 是明確參數，不再靠選函式決定會不會動到共用 master。
+- `TimelineRail` 拆成 `RailRow` / `EntryTimeChip` / `RailRowMenu` / `StopPoiChoiceCard` + `TimelineRail.styles.ts`，行為與 testid 不變。
+- 退掉 24 處 readFileSync 讀原始碼的守衛測試，改由走 interface 的 miniflare / vitest 測試取代；「只有 entry intake 可以 INSERT trip_entries / trip_entry_pois」與「頁面不得直打 entries endpoint」改由 eslint 規則與呼叫點掃描守門（`npm run lint` 現在含 `functions/`）。
+- 每張票至少一次 mutation 轉紅並記在 commit 訊息；/ship 稽核後補的修正：`country` 預設回歸、整日重寫原子性、`copy` 多一次查詢、audit 可 `waitUntil`。
+- merge 後 api-server 需 kickstart 才吃到 request worker。
+
+## [2.57.87] - 2026-09-02
+
+### Fixed
+- **對外通道的健康檢查不再因為單一入口節點抖動就亂重設** —— Tailscale 會為對外網址發布多個入口節點，真正連線的一方（雲端觸發、瀏覽器）在第一個節點不通時會自動改走下一個。但健康檢查固定只探測其中第一個，那個節點一有延遲就判定整條通道壞掉並執行重設 —— 而重設當下通道才是真的短暫斷線。2026-09-01 單日累積 159 次誤判、38 次重設（其中 36 次重設後仍判定失敗）與 20 則通知。現在改成逐一探測每個入口節點，任一可通就算正常，全部不通才當作真的故障處理。
+
+### Changed
+- 健康檢查在「部分入口節點不通但服務仍可連」時會記下降級狀態，單一節點的長期劣化因此能被追蹤 —— 先前只探第一個節點，另一個節點的狀況完全不會出現在紀錄裡。
+- 入口節點清單會先去除重複再逐一檢查，避免重複的 DNS 記錄讓單輪檢查時間成倍拉長、把警報拖過排程間隔。
+
+### For contributors
+- `funnel-guard` 的註解與 README 同步到多節點探測的新行為（舊敘述停留在「只取第一個位址」），並補上實測的時間預算公式與觸發上限。
+
+## [2.57.86] - 2026-08-05
+
+### Fixed
+- **飯店在時間軸上有編號了** —— 先前住宿會顯示床鋪圖示取代序號，導致同一天的停留點編號跳號（例如 1、床、2），不容易對照第幾站。現在飯店和其他停留點共用連續編號。
+
+## [2.57.85] - 2026-08-03
+
+### Removed
+- **完整移除天氣預報** —— 行程頁不再顯示或載入天氣資料，每日 Hero 後直接接續時間軸；同時移除天氣骨架、第三方請求與預連線、專用程式、公開文案、隱私聲明及現行規格與技能中的天氣契約。
+
+### Changed
+- Day 更新與行程匯入收到舊版 `weather` 或 `weather_json` 欄位時，現在明確回傳 HTTP 400，不再靜默忽略。
+
+### For contributors
+- 專案 agent 文件對齊 Matt Pocock 官方技能流程：釐清、規格、拆票、實作、審查，再銜接本專案發布流程。
 
 ## [2.57.82] - 2026-07-29
 

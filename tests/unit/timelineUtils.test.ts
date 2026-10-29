@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readTimelineRailSources } from './__helpers__/railSources';
 import fs from 'fs';
 import path from 'path';
 
@@ -287,26 +288,17 @@ describe('F002 source-match: TimelineEvent.tsx 不含本地 parseTimeRange 定�
 
 describe('F002 source-match: TimelineRail.tsx 不含本地函式定義', () => {
   it('TimelineRail.tsx 不含 "function parseTimeRange"', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const src = readTimelineRailSources();
     expect(src).not.toContain('function parseTimeRange');
   });
 
   it('TimelineRail.tsx 不含本地 "function formatDuration"', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const src = readTimelineRailSources();
     expect(src).not.toContain('function formatDuration');
   });
 
   it('TimelineRail.tsx 不含本地 "function deriveTypeMeta"', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const src = readTimelineRailSources();
     expect(src).not.toContain('function deriveTypeMeta');
   });
 });
@@ -317,18 +309,12 @@ describe('F002 source-match: TimelineRail.tsx 不含本地函式定義', () => {
 
 describe('F003 source-match: TimelineRail.tsx JSDoc 不含過時字串', () => {
   it('TimelineRail.tsx 不含 "mobile-only"', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const src = readTimelineRailSources();
     expect(src).not.toContain('mobile-only');
   });
 
   it('TimelineRail.tsx 不含 "design_mobile.jsx"', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
-      'utf8',
-    );
+    const src = readTimelineRailSources();
     expect(src).not.toContain('design_mobile.jsx');
   });
 });

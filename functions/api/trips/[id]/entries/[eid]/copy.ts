@@ -21,7 +21,7 @@
  *   7. Return new entry row
  */
 
-import { logAudit } from '../../../../_audit';
+import { createEntriesBatch } from '../../../../_entryWrite';
 import { hasWritePermission, verifyEntryBelongsToTrip, requireAuth} from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { parseTime } from '../../../../_time';
@@ -116,76 +116,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // INSERT new entry — copy 所有 source 欄位除了 id、day_id、sort_order、time/poi_id/travel_*
   // migration 0078: trip_entries.note DROPPED — 不再 copy entry-level note。per-POI 備註
   // 隨下方 trip_entry_pois batch（含 row.note）一起複製，master + 每個 alternate 的 note 保留。
-  let newRow;
-  try {
-    newRow = await db
-      .prepare(
-        `INSERT INTO trip_entries
-          (day_id, sort_order, start_time, end_time, description, source, entry_pois_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         RETURNING *`,
-      )
-      .bind(
-        targetDayId,
-        sortOrder,
-        copyStartTime,
-        copyEndTime,
-        source.description,
-        source.source,
-        sourceStopPois.length > 0 ? 1 : 0,
-      )
-      .first() as Record<string, unknown> | null;
-  } catch (err) {
-    console.error('[copy.ts] INSERT trip_entries failed', { eid, targetDayId, err });
-    throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
-  }
-  if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
-
-  const newEid = newRow.id as number;
-
-  // v2.33.55 round 5d residual: trip_entry_pois batch 失敗 → compensating DELETE on
-  // newRow，避免 entry 存在但無 stop POI 的 inconsistent state（master orphan +
-  // copied alternates 都掉）。D1 沒 cross-statement transaction，best-effort 補救。
-  if (sourceStopPois.length > 0) {
-    const now = new Date().toISOString();
-    try {
-      await db.batch(sourceStopPois.map((row) =>
-        db
-          .prepare(
-            `INSERT INTO trip_entry_pois
-               (entry_id, poi_id, sort_order, description, note, reservation, reservation_url, added_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(
-            newEid,
-            row.poi_id,
-            row.sort_order,
-            row.description,
-            row.note,
-            row.reservation,
-            row.reservation_url,
-            now,
-            now,
-          ),
-      ));
-    } catch (err) {
-      console.error('[copy.ts] trip_entry_pois batch failed, compensating delete', { newEid, err });
-      await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(newEid).run();
-      throw new AppError('SYS_DB_ERROR', 'entry 複製失敗，請稍後重試');
-    }
-  }
-
-  // Contextual trip_pois (hotel/shopping) are not copied by this endpoint; entry
-  // stop choices are copied from trip_entry_pois above.
-
-  await logAudit(db, {
-    tripId: id,
-    tableName: 'trip_entries',
-    recordId: newEid,
-    action: 'insert',
-    changedBy,
-    diffJson: JSON.stringify({ copiedFromEntryId: eid, targetDayId, sortOrder }),
+  // #1258 entry intake 批次入口：entry + 正選/備選（含各自 note/reservation）+ version +
+  // audit + 補償 DELETE 全在 createEntriesBatch。複製沿用來源的 poi_id 不 resolve。
+  let newRow: Record<string, unknown> | undefined;
+  await createEntriesBatch(db, [{
+    dayId: targetDayId,
+    sortOrder,
+    startTime: copyStartTime,
+    endTime: copyEndTime,
+    description: source.description as string | null,
+    source: source.source as string | null,
+    pois: sourceStopPois.map((row) => ({
+      poiId: row.poi_id,
+      description: row.description,
+      note: row.note,
+      reservation: row.reservation,
+      reservationUrl: row.reservation_url,
+    })),
+  }], {
+    audit: { tripId: id, changedBy, diff: { copiedFromEntryId: eid, targetDayId } },
+    onEntryId: (_id, _idx, row) => { newRow = row; },
   });
+  if (!newRow) throw new AppError('DATA_SAVE_FAILED', '複製 entry 失敗');
 
   return json(newRow);
 };

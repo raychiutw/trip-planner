@@ -40,11 +40,11 @@ afterEach(() => {
 describe('LoginPage form', () => {
   it('renders email + password + submit + signup link (Google hidden until probe confirms)', () => {
     renderAt();
-    expect(screen.getByTestId('login-email')).toBeTruthy();
-    expect(screen.getByTestId('login-password')).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: '電子郵件' }).getAttribute('autocomplete')).toBe('email');
+    expect(screen.getByLabelText('密碼', { exact: true }).getAttribute('autocomplete')).toBe('current-password');
     expect(screen.getByTestId('login-submit')).toBeTruthy();
     expect(screen.getByTestId('login-signup-link')).toBeTruthy();
-    expect(screen.getByTestId('login-forgot-link')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '忘記密碼？' })).toBeTruthy();
     // Google button is gated on /api/public-config probe (not stubbed here, so absent)
     expect(screen.queryByTestId('login-google')).toBeNull();
   });
@@ -137,12 +137,12 @@ describe('LoginPage form', () => {
 
   it('?verified=1 → success banner', () => {
     renderAt('verified=1');
-    expect(screen.getByTestId('login-banner-verified')).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('驗證成功');
   });
 
   it('?verify_error=expired → warning banner', () => {
     renderAt('verify_error=expired');
-    expect(screen.getByTestId('login-banner-verify-error').textContent).toContain('過期');
+    expect(screen.getByRole('alert').textContent).toContain('過期');
   });
 
   it('shows defensive warning when failure count ≥ 4', () => {
@@ -184,6 +184,7 @@ describe('LoginPage lockout', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(screen.queryByTestId('login-page-locked')).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: '登入嘗試太多次' }));
     expect(screen.getByTestId('login-locked-countdown').textContent).toBe('30:00');
     expect(screen.getByTestId('login-locked-reset')).toBeTruthy();
   });
@@ -277,7 +278,7 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     expect(acceptCall).toBeFalsy();
   });
 
-  it('login OK but accept fails: still redirects to /trips with toast hint (graceful)', async () => {
+  it('login OK but accept fails: returns to the original invitation for its result', async () => {
     stubByRoute([
       { match: /\/api\/public-config/, status: 200, body: {} },
       { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
@@ -295,6 +296,21 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
     fireEvent.click(screen.getByTestId('login-submit'));
 
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/invite?token=expired-tok'));
+  });
+
+  it('Google login returns to the same invitation for manual acceptance', async () => {
+    stubByRoute([{ match: /\/api\/public-config/, status: 200, body: { providers: { google: true } } }]);
+    vi.useRealTimers();
+    renderAt('invitation=google-tok');
+    await waitFor(() => screen.getByTestId('login-google'));
+    expect((screen.getByTestId('login-google') as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/api/oauth/login/google?redirect_after_login=%2Finvite%3Ftoken%3Dgoogle-tok');
+  });
+
+  it('signup link preserves the invitation context', () => {
+    renderAt('invitation=invite-tok');
+    expect((screen.getByTestId('login-signup-link') as HTMLAnchorElement).getAttribute('href'))
+      .toBe('/signup?invitation=invite-tok');
   });
 });

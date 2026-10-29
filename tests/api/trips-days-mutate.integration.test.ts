@@ -188,6 +188,22 @@ describe('POST /api/trips/:id/days — validation', () => {
 });
 
 describe('DELETE /api/trips/:id/days/:num — middle day cascade (v2.33.1: preserve dates)', () => {
+  it('後續編號寫入失敗時刪除及 entries 一起回滾', async () => {
+    await seedTrip(db, { id: 'del-rollback', days: 3 });
+    const d2Id = await getDayId(db, 'del-rollback', 2);
+    await seedEntry(db, d2Id, { sortOrder: 0 });
+    await db.prepare(`CREATE TRIGGER reject_day_renumber BEFORE UPDATE OF day_num ON trip_days
+      WHEN NEW.trip_id = 'del-rollback' BEGIN SELECT RAISE(FAIL, 'blocked renumber'); END`).run();
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/del-rollback/days/2', 'DELETE'),
+      env, auth: mockAuth(), params: { id: 'del-rollback', num: '2' },
+    });
+    await expect(callHandler(onRequestDelete, ctx)).rejects.toThrow('blocked renumber');
+    const { results } = await db.prepare('SELECT day_num FROM trip_days WHERE trip_id = ? ORDER BY day_num')
+      .bind('del-rollback').all<{ day_num: number }>();
+    expect(results.map((day) => day.day_num)).toEqual([1, 2, 3]);
+    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(d2Id).first<{ n: number }>())?.n).toBe(1);
+  });
   it('刪除中間天，cascade entries + 後續 day_num 上移；dates 保留（會留 gap）', async () => {
     await seedTrip(db, { id: 'del-mid', days: 5 });
     const d3Id = await getDayId(db, 'del-mid', 3);

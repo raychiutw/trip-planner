@@ -10,7 +10,7 @@ Commit 前程式碼品質驗證。驗證命名規範 + React Best Practices + Co
 
 ## 驗證規則來源
 
-規則範疇定義在 `openspec/config.yaml` 的 `commit_gate.checks`，以下為各規則實作檔案：
+規則範疇由本 skill 的驗證項目定義，以下為各規則實作檔案：
 
 - 命名規範：`../references/naming-rules.md`
 - 程式碼標準：`../references/coding-standards.md`
@@ -30,7 +30,7 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js
 *.html       index.html  manage/index.html  admin/index.html（根目錄）
 ```
 
-**排除**：`node_modules/`、`.wrangler/`、`.playwright-mcp/`、`openspec/`、`.claude/`、`.gemini/`、`package*.json`、`wrangler.toml`、`migrations/*.sql`、`scripts/*.ps1`、`scripts/*.sh`、`tests/e2e/api-mocks.js`（mock 資料）
+**排除**：`node_modules/`、`.wrangler/`、`.playwright-mcp/`、`.claude/`、`.gemini/`、`package*.json`、`wrangler.toml`、`migrations/*.sql`、`scripts/*.ps1`、`scripts/*.sh`、`tests/e2e/api-mocks.js`（mock 資料）
 
 ## 步驟
 

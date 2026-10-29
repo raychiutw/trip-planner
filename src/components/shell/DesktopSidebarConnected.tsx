@@ -1,9 +1,8 @@
 /**
  * DesktopSidebarConnected — auto-fetch current user + 我的行程清單（rev2）。
  *
- * Connected variant：useCurrentUser 填 `user`、useMyTrips 填 `trips`，active
- * trip 由 URL 推導（/trips?selected=<id> 或 /trip/:id）——不依賴 ActiveTripContext
- * provider，sidebar 在任何頁面都安全。
+ * Connected variant：useCurrentUser 填 `user`、useTripSelection 填 `trips` 與
+ * ActiveTripContext 偏好；明確 URL（/trips?selected=<id> 或 /trip/:id）優先標示。
  *
  * Pure <DesktopSidebar/>（prop-driven）保留給測試 / explicit override。
  *
@@ -14,14 +13,14 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import DesktopSidebar, { type DesktopSidebarProps, type SidebarUser } from './DesktopSidebar';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { useMyTrips } from '../../hooks/useMyTrips';
+import { useTripSelection } from '../../hooks/useMyTrips';
 
-export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'activeTripId'>;
+export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'tripsStatus' | 'activeTripId'>;
 
 export default function DesktopSidebarConnected(props: DesktopSidebarConnectedProps) {
   const { user } = useCurrentUser();
   const { pathname, search } = useLocation();
-  const { trips } = useMyTrips(!!user);
+  const { trips, status: tripsStatus, activeTripId: preferredTripId } = useTripSelection(user?.id, { fallback: false });
 
   const sidebarUser = useMemo<SidebarUser | null | undefined>(() => {
     if (user === undefined) return undefined;
@@ -37,8 +36,8 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     const sel = new URLSearchParams(search).get('selected');
     if (sel) return sel;
     const m = pathname.match(/^\/trip\/([^/]+)/);
-    return m ? m[1] : null;
-  }, [pathname, search]);
+    return m ? m[1] : preferredTripId;
+  }, [pathname, search, preferredTripId]);
 
-  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} activeTripId={activeTripId} />;
+  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
 }

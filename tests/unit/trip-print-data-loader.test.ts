@@ -109,14 +109,12 @@ describe('loadTripPrintData — real ?all=1 shape', () => {
     expect(d.notes.flights).toHaveLength(1);
   });
 
-  it('survives a notes 404 (non-fatal → empty notes)', async () => {
+  it('rejects a notes failure rather than presenting partial output as complete', async () => {
     mockApi.mockImplementation((path: string) => {
       if (path.endsWith('/notes')) return Promise.reject(new Error('404'));
       if (path.includes('/days')) return Promise.resolve(RAW_DAYS);
       return Promise.resolve(META);
     });
-    const d = await loadTripPrintData('t1');
-    expect(d.notes.flights).toEqual([]);
-    expect(d.days[0]!.timeline[0]!.title).toBe('那霸機場');
+    await expect(loadTripPrintData('t1')).rejects.toThrow('404');
   });
 });

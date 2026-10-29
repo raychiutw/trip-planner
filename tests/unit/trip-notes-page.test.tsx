@@ -189,9 +189,12 @@ describe('TripNotesPage — shell', () => {
   });
 
   it('PR24 — 「住宿」AI button disabled when 0 lodgings (no hotels to base on)', async () => {
-    apiFetchMock.mockResolvedValue({
+    const notes = {
       flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [],
-    });
+    };
+    apiFetchMock.mockImplementation((path: string) => path.endsWith('/notes/ai-state')
+      ? Promise.resolve({ jobs: ['tips', 'lodging-tips', 'emergency'].map((docType) => ({ docType, status: 'idle', generation: 0 })) })
+      : Promise.resolve(notes));
     renderPage();
     await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
@@ -200,23 +203,26 @@ describe('TripNotesPage — shell', () => {
     expect(lodgingBtn.hasAttribute('disabled')).toBe(true);
     expect(lodgingBtn.getAttribute('title')).toContain('需要先填寫住宿');
     // 「一般」AI button (tips) should remain enabled even with 0 lodgings
-    expect(screen.getByTestId('trip-notes-ai-btn-pretrip').hasAttribute('disabled')).toBe(false);
+    await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip').hasAttribute('disabled')).toBe(false));
   });
 
   it('PR24 — 「住宿」AI button enabled when ≥1 lodging exists', async () => {
-    apiFetchMock.mockResolvedValue({
+    const notes = {
       flights: [],
       lodgings: [{ id: 1, sortOrder: 0, name: 'Test Hotel', address: '', checkInAt: '', checkOutAt: '', bookingNo: '', phone: '', note: '', version: 0 }],
       reservations: [],
       pretripNotes: [],
       emergencyContacts: [],
-    });
+    };
+    apiFetchMock.mockImplementation((path: string) => path.endsWith('/notes/ai-state')
+      ? Promise.resolve({ jobs: ['tips', 'lodging-tips', 'emergency'].map((docType) => ({ docType, status: 'idle', generation: 0 })) })
+      : Promise.resolve(notes));
     renderPage();
     await waitFor(() => expect(screen.getByTestId('trip-notes-section-head-pretrip')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('trip-notes-section-head-pretrip'));
     await waitFor(() => expect(screen.getByTestId('trip-notes-ai-btn-pretrip-lodging')).toBeInTheDocument());
     const lodgingBtn = screen.getByTestId('trip-notes-ai-btn-pretrip-lodging');
-    expect(lodgingBtn.hasAttribute('disabled')).toBe(false);
+    await waitFor(() => expect(lodgingBtn.hasAttribute('disabled')).toBe(false));
     expect(lodgingBtn.getAttribute('title')).toContain('基於行程飯店');
   });
 

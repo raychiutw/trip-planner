@@ -234,7 +234,7 @@ V2 cutover：拔掉 mode/intent matrix。LLM 直接依 message 語意判斷該�
    d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
    e. 依修改類型選擇 API（**限白名單內操作**）— 端點見 tp-shared/references.md「行程修改共用步驟」
       > ⚠️ 所有寫入 API 呼叫須帶 `X-Request-Scope: companion` header
-      > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但旅伴要求排入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再用 `POST /entries/{eid}/alternates`（或 legacy `/trip-pois`）掛 POI。**禁止將 POI 塞到不相關的 entry 下。**
+      > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但旅伴要求排入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `name` = master POI 名稱，扁平 body，無 `title`；`name` 填真實店名/景點名，不要填「午餐」「晚餐」這類佔位字），取得 `eid`；其他候選再用 `POST /entries/{eid}/alternates`（或 legacy `/trip-pois`）掛。**禁止將 POI 塞到不相關的 entry 下。**
       > ⚠️ **POI 語意歸屬檢查（鐵律）**：修改前必須確認 POI 所掛的 entry title 語意正確。早餐 POI 必須掛在「早餐」entry 下，不得掛在「出發」「景點」等不相關 entry。若發現 POI 掛錯 entry，須先建立正確 entry 再搬移 POI。僅確認 sort_order 不夠，必須同時確認 entry 歸屬。
    f. **location 座標（鐵律）**：新增或替換景點/餐廳時，用 Google Maps 查 lat/lng，PATCH entry 的 location。規則見 tp-shared/references.md §1b
    f2. **travel 重算（鐵律，v2.24.0+）**：結構動完（插入/移除/替換 entry 或 sort_order=0 餐廳變動）後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day={受影響天}` 讓 backend 跑 1km gate + Google Routes 寫 segments。**不手動算 travel**。規則見 tp-shared/references.md §4

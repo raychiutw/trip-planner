@@ -73,7 +73,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   } else if ('name' in body || 'lat' in body || 'lng' in body) {
     // find-or-create from search payload
     const poiData = normalizeFindOrCreatePoiPayload(body);
-    newPoiId = await findOrCreatePoi(db, poiData);
+    newPoiId = await findOrCreatePoi(db, poiData, { policy: 'fill-null' });
   } else {
     throw new AppError('DATA_VALIDATION', '須提供 poiId 或 { name, lat, lng }');
   }

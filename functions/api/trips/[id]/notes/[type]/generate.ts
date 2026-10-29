@@ -22,14 +22,14 @@
  * trip_emergency_contacts。
  */
 
-import { hasWritePermission, requireAuth } from '../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import {
-  expireNoteAiJobs,
   isNoteAiDocType,
   type NoteAiDocType,
 } from '../../../../_noteAi';
 import { json } from '../../../../_utils';
+import { expireNoteAiJobs } from '../../../../_requestTermination';
 import { recordEmailEvent } from '../../../../_audit';
 import type { Env } from '../../../../_types';
 
@@ -103,9 +103,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
   const docType = type;
 
-  if (!(await hasWritePermission(env.DB, auth, tripId))) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(env.DB, auth, tripId);
 
   await expireNoteAiJobs(env.DB, tripId, docType);
 
@@ -158,7 +156,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .prepare(
         `INSERT INTO trip_note_ai_jobs
            (request_id, trip_id, doc_type, generation, status, timeout_at)
-         -- 100 分鐘：必須 > api-server 的 ORPHAN_MAX_AGE_MS（90 分鐘），在那之前
+         -- 100 分鐘：必須 > contained claude -p 一個 tick 的最壞上限（3 輪 × 30 分鐘 = 90 分鐘），在那之前
          -- session 都還可能在正常工作。原本是 10 分鐘 —— prod 實測 41% 陣亡率
          -- （10 完成 vs 7 逾時），而 completed 的裡面有跑滿 101 分鐘的，代表工作
          -- 真的會那麼久。同 ADR-0007 牆鐘的推論：不在 session 死前放棄。

@@ -208,14 +208,14 @@ describe('ConfirmModal — 關閉後焦點回到觸發元素（#1160）', () => 
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
-  it('觸發元素在對話框開啟期間被移除 → 不 throw、也不亂搶焦點', async () => {
+  it('觸發元素在對話框開啟期間被移除 → 焦點回到所在的 main', async () => {
     // 真實情境：刪除流程關掉對話框時，觸發它的那一列已經連帶消失。
     function Vanishing({ open, withTrigger }: { open: boolean; withTrigger: boolean }) {
       return (
-        <>
+        <main>
           {withTrigger && <button type="button" data-testid="trigger">開啟</button>}
           <ConfirmModal open={open} title="t" message="m" onConfirm={() => {}} onCancel={() => {}} />
-        </>
+        </main>
       );
     }
     const { rerender } = render(<Vanishing open={false} withTrigger />);
@@ -224,5 +224,6 @@ describe('ConfirmModal — 關閉後焦點回到觸發元素（#1160）', () => 
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '取消' })));
     // 觸發元素與對話框同時消失
     expect(() => rerender(<Vanishing open={false} withTrigger={false} />)).not.toThrow();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('main')));
   });
 });

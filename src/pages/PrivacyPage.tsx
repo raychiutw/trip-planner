@@ -39,6 +39,7 @@
  */
 import TitleBar from '../components/shell/TitleBar';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useSearchParams } from 'react-router-dom';
 
 /**
  * 與 `functions/api/oauth/signup.ts` 的 `PRIVACY_POLICY_VERSION` 對應。
@@ -51,11 +52,19 @@ const POLICY_VERSION = '2026-07-20';
 const CONTACT_EMAIL = 'lean.lean@gmail.com';
 
 export default function PrivacyPage() {
-  // 固定回首頁而非 history back（v2.33.139 規範）。這頁的入口五花八門 ——
-  // 註冊頁、帳號頁、Flutter、Google Play Console 的外部連結 —— history back
-  // 的落點不可預測，外部 referrer 甚至會把人送回站外。已登入者到 `/` 會被
-  // LandingPage 導回 /trips，兩種身分都有合理落點。
-  const handleBack = useNavigateBack('/');
+  // 只接受本產品的明確來源；外部 deep link 一律回首頁，不走不可預測的 history back。
+  const [searchParams] = useSearchParams();
+  const from = searchParams.get('from');
+  const returnPath = from === 'signup' ? '/signup' : from === 'login' ? '/login' : '/';
+  const navigateBack = useNavigateBack(returnPath);
+  function handleBack() {
+    if (from === 'signup' || from === 'login') {
+      // 認證表單在原分頁：關閉政策分頁可保留尚未送出的欄位。
+      window.close();
+      if (window.closed) return;
+    }
+    navigateBack();
+  }
 
   return (
     <>
@@ -68,7 +77,7 @@ export default function PrivacyPage() {
       />
 
       <main className="tp-pp" data-testid="privacy-page">
-        <h1 className="tp-pp-h1">隱私權政策</h1>
+        <h1 className="tp-pp-h1" aria-hidden="true">隱私權政策</h1>
         <p className="tp-pp-meta">版本 {POLICY_VERSION}．適用於 Tripline 網站與行動應用程式</p>
 
         <section className="tp-pp-key">
@@ -94,7 +103,7 @@ export default function PrivacyPage() {
         <ul>
           <li>讓你登入、保存並同步你的行程。</li>
           <li>讓旅伴共同編輯同一份行程。</li>
-          <li>提供地圖、路線、天氣等功能。</li>
+          <li>提供地圖與路線等功能。</li>
           <li>維持服務安全（擋暴力登入、濫用與異常流量）與排查錯誤。</li>
         </ul>
         <p>我們不會用你的行程內容做行銷，也不會提供給廣告商。</p>
@@ -104,7 +113,6 @@ export default function PrivacyPage() {
         <ul>
           <li><b>雲端託管與資料庫服務</b>——存放你的帳號與行程資料，並提供網站流量統計。</li>
           <li><b>地圖與地理資訊服務</b>——你搜尋地點或檢視地圖時，查詢內容與相關位置會送往該服務以取得結果。</li>
-          <li><b>天氣資訊服務</b>——查詢天氣時送出行程地點的座標與日期。</li>
           <li><b>錯誤回報服務</b>——發生錯誤時送出錯誤訊息、當下的網址與瀏覽器環境資訊，供我們排除問題。</li>
           <li>
             <b>電子郵件寄送服務</b>——用於寄出驗證信、密碼重設信與共編邀請信。
@@ -259,5 +267,6 @@ const PRIVACY_STYLES = `
 .tp-pp a {
   color: var(--color-accent-text);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 `;

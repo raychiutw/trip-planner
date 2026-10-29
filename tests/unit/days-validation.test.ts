@@ -96,12 +96,23 @@ describe('validateDayBody — 全部正確', () => {
     expect(result.error).toBeUndefined();
   });
 
-  it('含額外欄位（weather、hotel、timeline）也通過驗證', () => {
+  it.each(['weather', 'weather_json'])('舊天氣欄位 %s → 400', (field) => {
     const result = validateDayBody({
       date: '2026-07-05',
       dayOfWeek: '日',
       label: '南部一日',
-      weather: { label: '那霸', icon: 'sunny' },
+      [field]: { label: '那霸' },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(400);
+    expect(result.error).toContain(`${field} 已移除`);
+  });
+
+  it('其他現行欄位（hotel、timeline）仍通過驗證', () => {
+    const result = validateDayBody({
+      date: '2026-07-05',
+      dayOfWeek: '日',
+      label: '南部一日',
       hotel: { name: '縣民ビーチホテル', checkout: '11:00' },
       timeline: [],
     });

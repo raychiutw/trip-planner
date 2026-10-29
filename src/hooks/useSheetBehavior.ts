@@ -69,6 +69,11 @@ function isTopSheet(id: symbol): boolean {
   return openSheets.length > 0 && openSheets[openSheets.length - 1] === id;
 }
 
+function connectedTrigger(ref?: React.RefObject<HTMLElement | null>): HTMLElement | null {
+  // The opener may be replaced while the sheet is open; use the latest ref at close.
+  return ref?.current?.isConnected ? ref.current : null;
+}
+
 /**
  * 是否有任何 engine sheet/modal 開啟中（ConfirmModal / InfoSheet / AiConsent 等只在開啟時
  * 註冊）。給 OperationShell 桌機 Escape 判斷「內層有 modal 開著就別關整個 panel」——比掃 DOM
@@ -107,6 +112,7 @@ export function useSheetBehavior(
   const panelRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
+  const fallbackFocusRef = useRef<HTMLElement | null>(null);
   const idRef = useRef<symbol>(Symbol('sheet'));
 
   /* 1. Open-sheet registry (top-most tracking for nested Escape) */
@@ -120,7 +126,7 @@ export function useSheetBehavior(
   /* 2. Body scroll lock — modal surfaces only (non-modal desktop panel stays unlocked) */
   useBodyScrollLock(isOpen && modal);
 
-  /* 3. Focus management on open/close
+  /* 3. Focus management on open/close/unmount
    *
    * #1160：焦點還原改成**預設行為**，不再要求呼叫方明確開啟。
    *
@@ -138,26 +144,51 @@ export function useSheetBehavior(
    * 快照改為無條件記錄：成本是一次 `document.activeElement` 讀取，而只在需要時才用。
    */
   useEffect(() => {
-    if (isOpen) {
-      previousFocusRef.current = document.activeElement;
-      requestAnimationFrame(() => {
-        (initialFocusRef?.current ?? panelRef.current)?.focus();
-      });
-    } else {
-      // triggerRef 明確指名時優先（它比快照可靠：有些觸發元件關閉後會重繪）。
-      if (!restorePreviousFocus && triggerRef?.current) {
-        triggerRef.current.focus();
-      } else if (previousFocusRef.current instanceof HTMLElement) {
-        // `instanceof HTMLElement` 同時擋掉三種情況：null（沒開過）、非 HTML 元素、
-        // 以及**已從 DOM 移除的元素**（刪除流程關閉對話框時，觸發它的那一列常一起消失
-        // —— 對 detached 元素呼叫 focus() 不會 throw，但會把焦點掉到 body，
-        // 與什麼都不做同樣糟；isConnected 檢查讓它安靜跳過，由瀏覽器保留當前焦點）。
-        if (previousFocusRef.current.isConnected) {
-          previousFocusRef.current.focus();
+    if (!isOpen) return;
+    previousFocusRef.current = document.activeElement;
+    fallbackFocusRef.current = previousFocusRef.current instanceof HTMLElement
+      ? previousFocusRef.current.closest<HTMLElement>('main, [role="main"], aside, [role="complementary"], [role="dialog"]')
+      : null;
+    const frame = requestAnimationFrame(() => {
+      if (isTopSheet(idRef.current)) (initialFocusRef?.current ?? panelRef.current)?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      // Also runs when a route removes an open sheet without an open=false render.
+      const target = (!restorePreviousFocus && connectedTrigger(triggerRef)) || previousFocusRef.current;
+      if (target instanceof HTMLElement && target.isConnected) {
+        target.focus();
+      } else if (target instanceof HTMLElement) {
+        const fallback = fallbackFocusRef.current;
+        const focusFallback = () => {
+          if (fallback?.isConnected && document.activeElement === document.body) {
+            if (!fallback.hasAttribute('tabindex')) fallback.tabIndex = -1;
+            fallback.focus();
+          }
+        };
+        // A route may remove the opener and mount its replacement only after userinfo loads.
+        // Observe a stable ID when one exists; otherwise return to the surviving landmark.
+        const id = target.id;
+        const replacement = id ? document.getElementById(id) : null;
+        if (replacement instanceof HTMLElement) {
+          replacement.focus();
+        } else if (id) {
+          const observer = new MutationObserver(() => {
+            const next = document.getElementById(id);
+            if (!(next instanceof HTMLElement)) return;
+            observer.disconnect();
+            window.clearTimeout(timeout);
+            if (document.activeElement === document.body) next.focus();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+          const timeout = window.setTimeout(() => { observer.disconnect(); focusFallback(); }, 5000);
+        } else {
+          focusFallback();
         }
       }
       previousFocusRef.current = null;
-    }
+      fallbackFocusRef.current = null;
+    };
   }, [isOpen, restorePreviousFocus, triggerRef, initialFocusRef]);
 
   /* 4. Escape — top-most sheet only, skip IME composition, honor canDismiss (busy lock) */

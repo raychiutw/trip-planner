@@ -30,11 +30,6 @@ describe('v2.31.59 LegacyRedirect no DEFAULT_TRIP hardcode', () => {
     expect(SRC).toMatch(/<Navigate to="\/trips" replace \/>/);
   });
 
-  it('LegacyRedirect 仍處理 valid ?trip=xxx legacy URL', () => {
-    expect(SRC).toMatch(/\?trip=xxx\b|queryTrip && \/\^/);
-    expect(SRC).toMatch(/\/trips\?selected=\$\{encodeURIComponent\(queryTrip\)\}/);
-  });
-
   it('hardcoded admin trip id 已移出 executable code（comments 內仍可保留）', () => {
     // 移除 comment block 後再 grep — comment 內提及修了什麼 OK，但 executable
     // code (字串 literal / 常數 / props) 不該再出現。

@@ -2,7 +2,8 @@
 # tripline-job.sh — 15 分鐘排程：卡住偵測 + 遺漏處理
 set -eo pipefail
 
-PROJECT_DIR="/Users/ray/Projects/trip-planner"
+# 由腳本自己的位置推導（scripts/ 的上一層），不寫死絕對路徑。
+PROJECT_DIR="${0:A:h:h}"
 LOG_DIR="$PROJECT_DIR/scripts/logs/tp-request"
 LOG_FILE="$LOG_DIR/tripline-job-$(date +%Y-%m-%d).log"
 STALE_THRESHOLD_MIN=20  # > Claude 15 min timeout，避免 race
@@ -17,26 +18,15 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 # Log rotation: 7 天
 find "$LOG_DIR" -name "tripline-job-*.log" -mtime +7 -delete 2>/dev/null || true
 
-# Load env
-# v2.33.49 round 8a: strip 外層 quote (lib/load-env.js parser 行為一致)
-# 之前 `TRIPLINE_API_SECRET="foo"` 被原樣 export 為 `"foo"` (含 quote)
-# → curl `Authorization: Bearer "foo"` 401。
+# Load env — 與其他腳本共用同一個 .env.local parser（scripts/lib/load-env.js 的 parseEnv，
+# 由 load-env.mjs 輸出成 `export KEY=$'...'`）。取代原本的逐行 bash 迴圈：它不認得跨多行的值，
+# 引號與 key 驗證也得自己再寫一份。stdout 只有 export 行（可直接 eval），診斷走 stderr → log。
 if [ -f "$PROJECT_DIR/.env.local" ]; then
-  while IFS= read -r line; do
-    [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-    key="${line%%=*}"
-    value="${line#*=}"
-    [[ -z "$key" ]] && continue
-    # Strip surrounding double or single quotes
-    if [[ "$value" =~ ^\".*\"$ ]]; then value="${value:1:${#value}-2}"; fi
-    if [[ "$value" =~ ^\'.*\'$ ]]; then value="${value:1:${#value}-2}"; fi
-    # Validate key 不含 shell metacharacter (defense in depth)
-    if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-      log "skip malformed key in .env.local: ${key:0:40}"
-      continue
-    fi
-    export "$key=$value"
-  done < "$PROJECT_DIR/.env.local"
+  _env_exports=$(node "$PROJECT_DIR/scripts/lib/load-env.mjs" "$PROJECT_DIR/.env.local" 2>>"$LOG_FILE") || {
+    log "load-env.mjs 失敗，環境變數未載入（node／dotenv 可用嗎？）"
+    exit 1
+  }
+  eval "$_env_exports"
 fi
 
 log "--- Job 啟動 ---"

@@ -5,7 +5,7 @@
  * scrollTop/scrollHeight 的 fake element 模擬 DOM。apiFetch 全 mock。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
 import { useRef } from 'react';
 
 const apiFetchMock = vi.fn();
@@ -14,6 +14,7 @@ vi.mock('../../src/lib/apiClient', () => ({
 }));
 
 import { useChatPagination } from '../../src/hooks/useChatPagination';
+import { mergeLatestConversation, rowToMessages as realRowToMessages } from '../../src/lib/conversation';
 
 interface RawRequestRow {
   id: number;
@@ -88,6 +89,12 @@ function useHarness({ activeTripId, initialMessages = [], body, isInflight, onRe
     messages: messagesState.current,
     setMessages,
     rowToMessages,
+    mergeLatestMessages: (previous, latest) => {
+      const incoming = new Map(latest.map((message) => [message.id, message]));
+      const known = new Set(previous.map((message) => message.id));
+      return [...previous.map((message) => incoming.get(message.id) ?? message),
+        ...latest.filter((message) => !known.has(message.id))];
+    },
     isInflightStatus: isInflight,
     onInitialResume: onResume,
   });
@@ -272,5 +279,75 @@ describe('useChatPagination — loadOlder', () => {
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(result.current.result.loadError).toBeNull();
+  });
+});
+
+describe('useChatPagination — latest edge', () => {
+  it('箭頭尊重減少動態效果設定', () => {
+    const body = document.createElement('div');
+    Object.defineProperty(body, 'scrollHeight', { value: 1000 });
+    body.scrollTo = vi.fn();
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    try {
+      const { result } = renderHook(() => useHarness({ activeTripId: null, body }));
+      act(() => { result.current.result.scrollToBottom(); });
+      expect(body.scrollTo).toHaveBeenCalledWith({ top: 1000, behavior: 'instant' });
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('81px 顯示箭頭，回到 80px 只刷新一次且保留舊訊息', async () => {
+    const body = document.createElement('div');
+    Object.defineProperty(body, 'scrollHeight', { value: 1000, configurable: true });
+    Object.defineProperty(body, 'clientHeight', { value: 500, configurable: true });
+    body.scrollTop = 500;
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(5)], hasMore: true });
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(6), makeRow(5, { reply: 'updated reply' })], hasMore: true });
+    const { result } = renderHook(() => useHarness({ activeTripId: 'trip-A', body }));
+    await waitFor(() => expect(result.current.getMessages().length).toBe(2));
+    await act(async () => { body.scrollTop = 419; fireEvent.scroll(body); });
+    expect(result.current.result.isAtBottom).toBe(false);
+    await act(async () => { body.scrollTop = 420; fireEvent.scroll(body); fireEvent.scroll(body); });
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(2));
+    expect(result.current.result.isAtBottom).toBe(true);
+    expect(result.current.getMessages().map((message) => message.id)).toEqual([10, 11, 12, 13]);
+    expect(result.current.getMessages().find((message) => message.id === 11)?.text).toBe('updated reply');
+    fireEvent.scroll(body);
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('同 request 更新完成回覆時保留泡泡 ID 與已載入歷史', () => {
+    const older = realRowToMessages(makeRow(1));
+    const pending = realRowToMessages(makeRow(5, { status: 'processing', reply: null }));
+    const previous = [...older, ...pending.map((message) => ({ ...message, id: `mounted-${message.id}` }))];
+    const latest = [...realRowToMessages(makeRow(5, { reply: 'updated reply' })), ...realRowToMessages(makeRow(6))];
+    const merged = mergeLatestConversation(previous, latest);
+    expect(merged).toHaveLength(6);
+    expect(merged[0]).toEqual(older[0]);
+    expect(merged[1]).toEqual(older[1]);
+    expect(merged[3]).toMatchObject({ id: 'mounted-11', text: 'updated reply' });
+    expect(merged[3].pendingRequestId).toBeUndefined();
+  });
+
+  it('切換行程後舊刷新回應不得污染新對話', async () => {
+    const body = document.createElement('div');
+    Object.defineProperty(body, 'scrollHeight', { value: 1000 });
+    Object.defineProperty(body, 'clientHeight', { value: 500 });
+    body.scrollTop = 500;
+    let resolveOld: (value: unknown) => void = () => {};
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(1)], hasMore: false });
+    apiFetchMock.mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; }));
+    apiFetchMock.mockResolvedValueOnce({ items: [makeRow(99)], hasMore: false });
+    const { result, rerender } = renderHook(({ activeTripId }) => useHarness({ activeTripId, body }),
+      { initialProps: { activeTripId: 'trip-A' as string | null } });
+    await waitFor(() => expect(result.current.getMessages().map((message) => message.id)).toEqual([2, 3]));
+    await act(async () => { body.scrollTop = 419; fireEvent.scroll(body); });
+    await act(async () => { body.scrollTop = 420; fireEvent.scroll(body); });
+    rerender({ activeTripId: 'trip-B' });
+    await waitFor(() => expect(result.current.getMessages().map((message) => message.id)).toEqual([198, 199]));
+    await act(async () => { resolveOld({ items: [makeRow(10)], hasMore: false }); });
+    expect(result.current.getMessages().map((message) => message.id)).toEqual([198, 199]);
   });
 });

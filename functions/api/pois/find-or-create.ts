@@ -37,7 +37,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     place_id: typeof body.place_id === 'string' ? body.place_id : null,
   };
 
-  const poiId = await findOrCreatePoi(context.env.DB, data);
+  const poiId = await findOrCreatePoi(context.env.DB, data, { policy: 'fill-null' });
 
   // Field name `id` 是 POI table PK 的 canonical alias — 對 frontend caller
   // (ExplorePage createResp.id) 直接 consume，避免 nested `poi.id` ↔ tripId 風格

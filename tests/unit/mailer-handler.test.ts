@@ -235,4 +235,26 @@ describe('makeMailHandler', () => {
       expect(sendMail).toHaveBeenCalledOnce();
     });
   });
+
+  // Value: protects=handler 送出的 sendMail 參數被真實 nodemailer 接受並組成 MIME; fails_when=nodemailer 升級改變 sendMail 參數或 MIME 組信行為; why_new=其餘案例全 mock transporter; seam=none
+  // dependabot 會自動合併 patch/minor，上面 mock 的案例抓不到 nodemailer 本身改壞。
+  // ponytail: streamTransport 只組信不連 SMTP，SMTP 連線 / STARTTLS / 登入路徑不在此測；要測得起本地 fake SMTP server。
+  it('builds a real MIME message through actual nodemailer (dependency contract)', async () => {
+    const nodemailer = (await import('nodemailer')).default;
+    const transporter = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const handler = makeMailHandler({
+      verifyAuth: () => true,
+      transporter: () => transporter,
+      emailFrom: 'Tripline <noreply@example.com>',
+    });
+    const sendMail = vi.spyOn(transporter, 'sendMail');
+    const res = await handler(makeReq({ to: 'user@example.com', subject: '驗證信', html: '<p>hi</p>', text: 'hi' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    const mime = String(((await sendMail.mock.results[0].value) as { message: Buffer }).message);
+    expect(mime).toMatch(/^To: user@example\.com$/m);
+    expect(mime).toMatch(/^From: Tripline <noreply@example\.com>$/m);
+    expect(mime).toContain('Subject: =?UTF-8?');
+    expect(mime).toContain('<p>hi</p>');
+  });
 });

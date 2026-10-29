@@ -32,8 +32,7 @@ vi.mock('../../src/hooks/useNavigateBack', () => ({
 }));
 vi.mock('../../src/hooks/usePoiSearch', () => ({
   usePoiSearch: () => ({
-    query: '', setQuery: vi.fn(), results: [], loading: false, error: null,
-    search: vi.fn(), reset: vi.fn(), hasSearched: false,
+    state: { status: 'idle', results: [], error: null }, retry: vi.fn(),
   }),
 }));
 vi.mock('../../src/components/shell/AppShell', () => ({

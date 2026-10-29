@@ -23,11 +23,12 @@ import clsx from 'clsx';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { useRequestSSE } from '../hooks/useRequestSSE';
+import { useConversation } from '../hooks/useConversation';
+import { useTripSelection } from '../hooks/useMyTrips';
+import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
-import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
-import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { LS_KEY_TRIP_PREF, LS_PREFIX } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -37,41 +38,6 @@ import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
 import MarkdownText from '../components/shared/MarkdownText';
-
-interface TripSummary {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
-}
-
-interface ChatMessage {
-  id: number | string;
-  /** Section 4.8 (terracotta-ui-parity-polish)：'day-divider' 是 synthetic
-   *  separator message，由 buildMessagesWithDividers 注入跨日邊界。 */
-  role: 'user' | 'assistant' | 'day-divider';
-  text: string;
-  /** When set, this assistant bubble is the placeholder waiting for SSE completion. */
-  pendingRequestId?: number | null;
-  /** When true, render text as markdown (assistant replies). */
-  markdown?: boolean;
-  /** When true, mark message as failed (red border). */
-  failed?: boolean;
-  /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
-   *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
-  terminated?: boolean;
-  /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
-   *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
-   *  optimistic message (will fill on next reload from API)。 */
-  createdAt?: string | null;
-  /** 2026-04-29:multi-user trip 共編 chat,user message 真正 sender(從 tp-request
-   * `submittedBy` email 來)。Render bubble meta 時 split email local-part 當
-   * displayName(避免歷史訊息全標當前登入者)。 */
-  submittedBy?: string | null;
-  /** 2026-05-07：sender 的 users.display_name（後端 LEFT JOIN）給 avatar /
-   *  sender label 顯示「帳號名稱」第一字母。null → fallback email local part。 */
-  submittedByDisplayName?: string | null;
-}
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -108,45 +74,6 @@ export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[
   return out;
 }
 
-// Pagination 邏輯抽到 useChatPagination hook。CHAT_PAGE_SIZE 與 LOAD_OLDER_THRESHOLD_PX
-// 從 hook 模組讀取以保持單一來源。
-
-interface RawRequestRow {
-  id: number;
-  tripId: string;
-  mode?: string;
-  message?: string | null;
-  reply?: string | null;
-  status: 'open' | 'processing' | 'completed' | 'failed';
-  submittedBy?: string | null;
-  /** 2026-05-07：submitter 帳號 display_name（API LEFT JOIN users）給 chat
-   *  avatar/sender label 顯示「帳號名稱」第一字母。null = users 表無對應。 */
-  submittedByDisplayName?: string | null;
-  processedBy?: string | null;
-  /** ADR-0007：為什麼終結。cancelled=使用者停止等待、timed_out=收屍、
-   *  needs_consent=未授權被 park、error=處理失敗。 */
-  terminalReason?: string | null;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
-
-/**
- * ADR-0007 的終結文案。取消**不會**叫停 worker（entries/days 走 owner 身份 token），
- * 所以「已停止等待」必須誠實講出行程仍可能被改，不能寫成「已中止」。
- */
-const TERMINATION_TEXT = {
-  cancelled: '已停止等待。AI 若仍在處理，完成後的回報還是會出現在這裡，行程也可能已被更動。',
-  timed_out: 'AI 一直沒有回應，已自動停止。可以重新送出這則訊息。',
-  needs_consent: '需要行程擁有者授權 AI 才能處理。授權後重新送出即可。',
-} as const;
-const TERMINATION_FALLBACK = 'AI 處理失敗，請換個說法或稍後再試。';
-
-function terminationText(reason: unknown): string {
-  if (typeof reason !== 'string') return TERMINATION_FALLBACK;
-  // 'error' 沒有專屬文案 —— 它就是通用失敗，落 fallback。
-  return TERMINATION_TEXT[reason as keyof typeof TERMINATION_TEXT] ?? TERMINATION_FALLBACK;
-}
-
 /** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
  *  跨日加 MM/DD prefix。tabular-nums 字體穩定 alignment。 */
 function formatChatTime(iso: string): string {
@@ -176,68 +103,6 @@ export function isGarbledMessage(text: string): boolean {
   return false;
 }
 
-/** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
-function rowToMessages(row: RawRequestRow): ChatMessage[] {
-  const out: ChatMessage[] = [];
-  const baseId = row.id * 2;
-  // 2026-04-29 design-review F-004:API 實際回 camelCase(`createdAt` / `updatedAt`)
-  // 因此型別與 access 改齊;原 snake_case 拿不到 timestamp,bubble meta 渲染條件
-  // 永不為真。user message 用 createdAt(送出時點),assistant reply 用 updatedAt
-  // (AI 完成時點),fallback 互換。
-  const userTs = row.createdAt ?? row.updatedAt ?? null;
-  const assistantTs = row.updatedAt ?? row.createdAt ?? null;
-  if (row.message) {
-    // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
-    // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
-    // 完整 prompt 仍存 trip_requests.message → api-server 拿到完整 text 送 Claude。
-    // v2.34.38 prod audit fix: trip-notes feature 3 個新 AI prefix 也是 long system
-    //   prompt（JSON schema + 5-8 維度），同樣 raw 顯示 → 套同 pattern substitution。
-    const displayText = row.message.startsWith('[AI 健檢]')
-      ? '已觸發 AI 行程健檢'
-      : row.message.startsWith('[行程筆記-lodging-tips]')
-      ? '已觸發 AI 行程筆記生成（住宿在地建議）'
-      : row.message.startsWith('[行程筆記-tips]')
-      ? '已觸發 AI 行程筆記生成（行前須知）'
-      : row.message.startsWith('[行程筆記-emergency]')
-      ? '已觸發 AI 行程筆記生成（緊急聯絡）'
-      : row.message;
-    out.push({
-      id: baseId,
-      role: 'user',
-      text: displayText,
-      createdAt: userTs,
-      submittedBy: row.submittedBy ?? null,
-      submittedByDisplayName: row.submittedByDisplayName ?? null,
-    });
-  }
-  if (row.status === 'completed' && row.reply) {
-    out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
-  } else if (row.status === 'failed') {
-    // reply 優先（後端 park 的指引、或 ADR-0007 的「遲到完成」回報都寫在這格）；
-    // 沒有 reply 才用 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
-    const wasCancelled = row.terminalReason === 'cancelled';
-    out.push({
-      id: baseId + 1,
-      role: 'assistant',
-      text: row.reply?.trim() || terminationText(row.terminalReason),
-      // 使用者自己停的是中性態；超時／錯誤／未授權才是 destructive。
-      terminated: wasCancelled,
-      failed: !wasCancelled,
-      createdAt: assistantTs,
-    });
-  } else {
-    // open / processing — still inflight from a prior session
-    out.push({
-      id: baseId + 1,
-      role: 'assistant',
-      text: '思考中…',
-      pendingRequestId: row.id,
-      createdAt: assistantTs,
-    });
-  }
-  return out;
-}
-
 const SCOPED_STYLES = `
 .tp-chat-shell {
   height: 100%;
@@ -261,10 +126,33 @@ const SCOPED_STYLES = `
   padding: 20px 24px;
   display: flex; flex-direction: column; gap: 12px;
 }
+.tp-chat-history-status {
+  position: sticky; top: 0; z-index: 2;
+  height: 0; flex: 0 0 0; margin-bottom: -12px;
+  display: flex; justify-content: center;
+}
+.tp-chat-history-status > span,
+.tp-chat-history-status > button {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border: 1px solid var(--color-border);
+  border-radius: 999px; background: var(--color-background);
+  color: var(--color-foreground); font: inherit;
+  font-size: var(--font-size-footnote);
+}
+.tp-chat-history-status > button { cursor: pointer; }
+.tp-chat-history-status > button:focus-visible {
+  outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
+}
+.tp-chat-spinner {
+  width: 16px; height: 16px; border: 2px solid var(--color-border);
+  border-top-color: var(--color-foreground); border-radius: 50%;
+  animation: tp-chat-spin 0.7s linear infinite;
+}
+@keyframes tp-chat-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tp-chat-spinner { animation: none; } }
 @media (max-width: 760px) { .tp-chat-body { padding: 16px; } }
 
-/* Load error banner — sticky-top inside chat body, 出現在 401/network/loadOlder
- * 失敗時。Retry button 重觸 loadOlder; hook 內 ERROR_BACKOFF_MS gate 防 storm。 */
+/* Initial history load error stays visible while messages sent during the outage remain mounted. */
 .tp-chat-load-error {
   position: sticky; top: 0; z-index: 1;
   display: flex; gap: 12px; align-items: center; justify-content: space-between;
@@ -492,38 +380,37 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   outline-offset: 2px;
 }
 
-/* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
-   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
+/* 跳到最新：聊天欄置中、composer 之上。只在 user 捲離底部時渲染。
+   以 composer 為定位容器，跟隨輸入區高度與鍵盤位移，避免壓到送出按鈕。 */
 .tp-chat-jump-latest {
   position: absolute;
-  inset-inline-end: 20px;
-  inset-block-end: calc(76px + env(safe-area-inset-bottom));
+  inset-inline-start: 50%;
+  inset-block-end: calc(100% + 12px);
   z-index: 4;
-  inline-size: 36px;
-  block-size: 36px;
+  inline-size: 44px;
+  block-size: 44px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--color-background);
   color: var(--color-foreground);
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  transform: translateX(-50%);
   display: grid;
   place-items: center;
 }
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
+.tp-chat-jump-latest:hover { background: var(--color-hover); }
 .tp-chat-jump-latest:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+.tp-chat-jump-latest:disabled { cursor: default; }
 
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--color-background) 92%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  --glass-alpha: 92%; --glass-filter: blur(14px);   /* recipe：tokens.css 的 .tp-glass */
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
   /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
@@ -532,32 +419,6 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   transition: transform var(--transition-duration-fast, 150ms) ease-out;
 }
 @media (max-width: 760px) {
-  /* 跳到最新：浮在訊息區右下、composer 之上。只在 user 捲離底部時渲染。
-   位置用 composer 高度當基準避免壓到輸入框；HIG 的圓形浮動控制項語彙。 */
-.tp-chat-jump-latest {
-  position: absolute;
-  inset-inline-end: 20px;
-  inset-block-end: calc(76px + env(safe-area-inset-bottom));
-  z-index: 4;
-  inline-size: 36px;
-  block-size: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-foreground);
-  font-size: 17px;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
-  display: grid;
-  place-items: center;
-}
-.tp-chat-jump-latest:hover { background: var(--color-surface-hover, var(--color-surface)); }
-.tp-chat-jump-latest:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
 .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 }
 .tp-chat-input {
@@ -583,6 +444,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .tp-chat-send {
+  position: relative;
   border: none; cursor: pointer;
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
@@ -593,6 +455,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   flex-shrink: 0;
   transition: background 150ms;
 }
+.tp-chat-send::before { content: ''; position: absolute; inset: -2px; } /* #1445 F4：視覺 40px，點擊區 44px */
 .tp-chat-send:hover:not(:disabled) {
   background: var(--color-accent-deep);
 }
@@ -632,53 +495,58 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const { user } = useCurrentUser();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
-  const { activeTripId, setActiveTrip } = useActiveTrip();
+  const [linkTripId, setLinkTripId] = useState(() => searchParams.get('tripId'));
+  const { trips, status: tripsStatus, activeTripId, setActiveTrip } = useTripSelection(user?.id, {
+    explicitTripId: lockTripId ?? linkTripId,
+  });
   const setActiveTripId = setActiveTrip;
-
-  // v2.31.86 embedded mode：lockTripId given → 強制 active trip 對齊 prop，
-  // 避免 user 進 TripSheet chat tab 後 active trip context 不一致。
   useEffect(() => {
-    if (lockTripId && lockTripId !== activeTripId) {
-      setActiveTripId(lockTripId);
-    }
-  }, [lockTripId, activeTripId, setActiveTripId]);
+    const target = searchParams.get('tripId');
+    if (target) setLinkTripId(target);
+  }, [searchParams]);
+  useEffect(() => {
+    if (!linkTripId || lockTripId) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === `${LS_PREFIX}${LS_KEY_TRIP_PREF}`) setLinkTripId(null);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [linkTripId, lockTripId]);
   // #1140 item 10：useKeyboardInset 改由 app root（KeyboardInsetTracker）全站掛一次，
   // composer 讀全站 --kb-inset 上移即可，這裡不再各自掛（避免雙掛 cleanup 打架）。
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [input, setInput] = useState('');
-  // W6：聊天草稿依行程分開存（session-only ref；切換行程時存舊、載新，不讓半成品漏到別行程）。
-  const draftsRef = useRef<Record<string, string>>({});
+  // 草稿由行程 ID 擁有；自動 fallback、手動切換、明確連結都讀同一份 session-only 狀態。
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const input = activeTripId ? drafts[activeTripId] ?? '' : '';
+  const setInput = useCallback((value: string, tripId = activeTripId) => {
+    if (tripId) setDrafts((previous) => ({ ...previous, [tripId]: value }));
+  }, [activeTripId]);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
-  const [inflightId, setInflightId] = useState<number | null>(null);
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
   const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
   // 送出時被攔下的訊息（開著 sheet 時非 null）。授權後用它續送、取消則丟棄。
-  const [consentGate, setConsentGate] = useState<string | null>(null);
+  const [consentGate, setConsentGate] = useState<{ text: string; tripId: string } | null>(null);
+  const consentGateRef = useRef(consentGate);
+  const currentTripIdRef = useRef(activeTripId);
+  currentTripIdRef.current = activeTripId;
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  useEffect(() => {
+    consentGateRef.current = null;
+    setConsentGate(null);
+    setConsentBusy(false);
+    setConsentError(null);
+  }, [activeTripId]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
 
-  // Cursor pagination + scroll behavior 抽到 useChatPagination hook。
-  // Hook owns: 初次載入、scroll-to-top loadOlder、prepend scrollTop 補位、
-  // race guards (loadingOlderRef / activeTripIdRef)、auto-scroll 訊息類型判斷。
-  // hasMoreOlder + loadOlder 由 hook 內部 scroll listener 自動處理,caller 只用
-  // loadError 顯示 banner、retryLoadOlder 給按鈕點按。
-  const { loadError, retryLoadOlder, isAtBottom, scrollToBottom } = useChatPagination<RawRequestRow, ChatMessage>({
-    activeTripId,
-    bodyRef,
-    messages,
-    setMessages,
-    rowToMessages,
-    isInflightStatus: (row) => row.status === 'open' || row.status === 'processing',
-    onInitialResume: (resumeId) => setInflightId(resumeId),
-    setHistoryLoading,
-  });
+  const {
+    messages, sendMessage, inflightId, busy, historyLoading,
+    loadError, initialLoadError, retryLoadOlder, loadingOlder, latestRefreshing, latestError, retryLatest,
+    isAtBottom, scrollToBottom,
+    sseError, errorReason, elapsedMs, stopping, stopWaiting,
+  } = useConversation(activeTripId, bodyRef);
 
   // Deep-link prefill: /chat?tripId=...&prefill=... — DaySection 的「+ 加景點」
   // 入口會帶這兩個 param 過來，讓 user 落地就看到準備好的請求草稿。撐到 active
@@ -688,12 +556,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     const prefill = searchParams.get('prefill');
     const targetTripId = searchParams.get('tripId');
     if (!prefill && !targetTripId) return;
-    if (targetTripId && trips) {
-      const valid = trips.some((t) => t.tripId === targetTripId);
-      if (valid) setActiveTripId(targetTripId);
-    }
+    if (prefill && !targetTripId && !activeTripId) return;
     if (prefill) {
-      setInput(prefill);
+      setInput(prefill, targetTripId ?? activeTripId);
       // 等 textarea mount 後 focus + cursor 移到尾端
       setTimeout(() => {
         const el = inputRef.current;
@@ -708,52 +573,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     next.delete('prefill');
     next.delete('tripId');
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trips]);
-
-  // Subscribe to SSE for inflight request id; flips status to 'completed' / 'failed'.
-  // v2.31.6: useRequestSSE 改成 polling-always-on + SSE optimization；errorReason
-  // 區分 'auth_expired' / 'sse_failed' / 'network'；elapsedMs 給 UI 顯示等待時間。
-  const { status, error: sseError, errorReason, elapsedMs } = useRequestSSE(inflightId);
-
-  // ADR-0007「停止等待」：只終結 request、放開 composer，不追殺 mac mini 上的 worker。
-  // 一送出就在，不看時鐘 —— elapsedMs 每次 mount 重新計時，拿它當出現條件會讓重整後
-  // 的殭屍再等 3 分鐘才給得出出口，而重整正是使用者卡住時的第一反應。
-  const [stopping, setStopping] = useState(false);
-  const stopWaiting = useCallback(async () => {
-    if (!inflightId || stopping) return;
-    const id = inflightId;
-    setStopping(true);
-    let stopped = true;
-    try {
-      await apiFetch(`/requests/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'failed', terminalReason: 'cancelled' }),
-      });
-    } catch {
-      // 標不掉也要讓使用者脫身（composer 被 inflight 鎖死，這是唯一出口），
-      // 但文案不能假裝成功 —— 伺服器沒確認就是沒確認，100 分鐘牆鐘會兜底。
-      stopped = false;
-    }
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.pendingRequestId === id
-          ? {
-              ...m,
-              text: stopped
-                ? TERMINATION_TEXT.cancelled
-                : '已在這裡停止等待，但伺服器沒有確認 —— AI 可能仍在處理。',
-              pendingRequestId: null,
-              // 停成功 = 中性；沒停成功才是真的出事，走 destructive。
-              terminated: stopped,
-              failed: !stopped,
-            }
-          : m,
-      ),
-    );
-    setInflightId(null);
-    setStopping(false);
-  }, [inflightId, stopping]);
+  }, [searchParams, setSearchParams, activeTripId, setInput]);
 
   // v2.33.47 round 7b LOW: memoize buildMessagesWithDividers — 之前每 keystroke
   // 都 O(n) walk messages list。1000-msg trip 在打字時明顯卡。
@@ -761,44 +581,18 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     () => buildMessagesWithDividers(messages),
     [messages],
   );
-
-  // v2.33.47 round 7b: activeTripId 改用 ref 抓 latest value — 之前 useEffect
-  // 內讀 activeTripId 但 dep 是 [] (intentional, mount-only)；strict-mode
-  // double-mount 時第二 pass 還抓 initial closure，可能 clobber 已 persisted 的
-  // ActiveTripContext 值。
-  const activeTripIdRef = useRef(activeTripId);
-  useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
-
-  // Load trips list (mine + meta) once on mount.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        // 2026-07-21：改為單抓 /my-trips。原本是雙抓 —— /my-trips 只拿「我有權限
-        // 的 id 集合」，name/title/countries 這些**要顯示的資料**卻來自
-        // /trips?all=1。而 all=1 需要 ops:trips:read service-token scope，
-        // 一般使用者拿不到，會靜默降級成只回 published 行程；既有行程改為不公開
-        // 後名稱就全沒了，畫面只剩 tripId（owner 2026-07-21 回報）。
-        // /my-trips 本身就帶 name/title/countries/totalDays/startDate/endDate，
-        // 第二支 API 從一開始就是多餘的。
-        const myTrips = await apiFetch<TripSummary[]>('/my-trips');
-        if (cancelled) return;
-        setTrips(myTrips);
-
-        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
-        // fallback 第一個可見 trip。v2.33.47: 讀 ref 而非 closure capture。
-        const pref = activeTripIdRef.current;
-        const valid = pref && myTrips.some((t) => t.tripId === pref) ? pref : (myTrips[0]?.tripId ?? null);
-        setActiveTripId(valid);
-      } catch {
-        // silent — empty state will guide user
-      }
-    }
-    void load();
-    return () => { cancelled = true; };
-    // setActiveTripId 是 context setter（穩定）；effect 讀 activeTripIdRef.current
-    // 而非 activeTripId，故維持 mount-only 不需要把 activeTripId 列入。
-  }, [setActiveTripId]);
+  const liveRequestRef = useRef<{ tripId: string; id: number } | null>(null);
+  if (liveRequestRef.current?.tripId !== activeTripId || (busy && !inflightId)) liveRequestRef.current = null;
+  if (activeTripId && inflightId) liveRequestRef.current = { tripId: activeTripId, id: inflightId };
+  const liveTerminal = !busy && liveRequestRef.current
+    ? messages.find((message) => message.role === 'assistant' && message.requestId === liveRequestRef.current?.id && !message.pendingRequestId)
+    : null;
+  const terminalAnnouncement = liveTerminal
+    ? liveTerminal.stopUnconfirmed ? '停止等待未確認，AI 可能仍在處理'
+      : liveTerminal.terminated ? '已停止等待'
+      : liveTerminal.failed ? 'AI 處理失敗'
+        : 'AI 已完成'
+    : '';
 
   // Close trip menu on outside click
   useEffect(() => {
@@ -820,110 +614,10 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
   }, [input]);
 
-  // React to SSE status: when inflight request completes, fetch reply + replace
-  // pending bubble. On 'failed' (or transient SSE error after request landed),
-  // mark the bubble as failed.
-  useEffect(() => {
-    if (!inflightId) return;
-
-    if (status === 'completed') {
-      let cancelled = false;
-      (async () => {
-        try {
-          const row = await apiFetch<{ reply?: string | null; status?: string }>(`/requests/${inflightId}`);
-          if (cancelled) return;
-          const reply = (row.reply ?? '').trim() || '（沒有回覆內容）';
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.pendingRequestId === inflightId
-                ? { ...m, text: reply, pendingRequestId: null, markdown: true }
-                : m,
-            ),
-          );
-        } catch {
-          if (cancelled) return;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.pendingRequestId === inflightId
-                ? { ...m, text: '無法取得 AI 回覆，請稍後再試。', pendingRequestId: null, failed: true }
-                : m,
-            ),
-          );
-        } finally {
-          if (!cancelled) setInflightId(null);
-        }
-      })();
-      return () => { cancelled = true; };
-    }
-
-    if (status === 'failed') {
-      let cancelled = false;
-      (async () => {
-        // 後端 park（如 no_consent 未授權）會把 user-facing 指引寫進 reply。優先顯示它，
-        // 否則像「重送並點授權」的 NEEDS_CONSENT_REPLY 要 reload 才看得到，live session 只剩通用訊息。
-        // 沒有 reply 才用 ADR-0007 的 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
-        let text = TERMINATION_FALLBACK;
-        try {
-          const row = await apiFetch<{ reply?: string | null; terminalReason?: string | null }>(`/requests/${inflightId}`);
-          const reply = (row.reply ?? '').trim();
-          text = reply || terminationText(row.terminalReason);
-        } catch { /* 落用通用訊息 */ }
-        if (cancelled) return;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.pendingRequestId === inflightId
-              ? { ...m, text, pendingRequestId: null, failed: true, markdown: true }
-              : m,
-          ),
-        );
-        setInflightId(null);
-      })();
-      return () => { cancelled = true; };
-    }
-  }, [status, inflightId]);
-
   const doSend = useCallback(async (text: string) => {
-    if (!activeTripId) return;
-
-    const now = Date.now();
     setInput('');
-
-    // Optimistic: user bubble + assistant typing placeholder
-    // 2026-04-29 fix:user message 之前用 `timestamp: now`(數字)+ `as unknown as
-    // ChatMessage` cast 跳 type check,實際 ChatMessage interface 要 `createdAt`
-    // ISO string。bug 導致 production 看不到 user 訊息時間戳記(meta render 條件
-    // `{m.createdAt && ...}` 永不為真)。改用 createdAt + ISO 8601。
-    setMessages((prev) => [
-      ...prev,
-      { id: now, role: 'user', text, createdAt: new Date(now).toISOString(), submittedBy: user?.email ?? null, submittedByDisplayName: user?.displayName ?? null },
-      { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
-    ]);
-
-    try {
-      // mode rip-out (migration 0048): tp-request skill auto-classifies intent.
-      const row = await apiFetch<{ id: number }>('/requests', {
-        method: 'POST',
-        body: JSON.stringify({ tripId: activeTripId, message: text }),
-      });
-      // Bind placeholder bubble to the real request id so the SSE effect can
-      // replace it once Mac Mini fills the reply.
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.pendingRequestId === -1 ? { ...m, pendingRequestId: row.id } : m,
-        ),
-      );
-      setInflightId(row.id);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '網路錯誤';
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.pendingRequestId === -1
-            ? { ...m, text: `送出失敗：${msg}`, pendingRequestId: null, failed: true }
-            : m,
-        ),
-      );
-    }
-  }, [activeTripId, user]);
+    await sendMessage(text, user);
+  }, [sendMessage, user, setInput]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
@@ -934,7 +628,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
     if (aiAuthorized === false) {
-      setConsentGate(text);
+      const pending = { text, tripId: activeTripId };
+      consentGateRef.current = pending;
+      setConsentGate(pending);
+      setConsentBusy(false);
+      setConsentError(null);
       return;
     }
     void doSend(text);
@@ -942,21 +640,25 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
   const authorizeAndSend = useCallback(async () => {
-    if (!consentGate) return;
+    const pending = consentGateRef.current;
+    if (!pending) return;
     setConsentBusy(true);
     setConsentError(null);
     try {
       await apiFetch('/account/ai-authorization', { method: 'POST' });
       setAiAuthorized(true);
-      const pending = consentGate;
+      if (consentGateRef.current !== pending || currentTripIdRef.current !== pending.tripId) return;
+      consentGateRef.current = null;
       setConsentGate(null);
-      void doSend(pending);
-    } catch {
-      setConsentError('授權失敗，請稍後再試。');
-    } finally {
       setConsentBusy(false);
+      void doSend(pending.text);
+    } catch {
+      if (consentGateRef.current === pending) {
+        setConsentError('授權失敗，請稍後再試。');
+        setConsentBusy(false);
+      }
     }
-  }, [consentGate, doSend]);
+  }, [doSend]);
 
   // 載入 owner 對 AI 的授權狀態（一次）。讀取失敗 fail-closed 成 false（＝送出時跳授權 sheet）：
   // 維持 null 會讓未授權 owner 送出→後端 park→提示「重送並在跳窗授權」，但 sheet 只在 false 才開、
@@ -973,10 +675,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
-    // W6：切換前存舊行程草稿、切換後載新行程草稿（session-only；跨 reload 持久化留給 W8 composer 契約）。
-    if (activeTripId) draftsRef.current[activeTripId] = input;
+    setLinkTripId(null);
     setActiveTripId(tripId);
-    setInput(draftsRef.current[tripId] ?? '');
     setTripMenuOpen(false);
   }
 
@@ -986,13 +686,13 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
       e.preventDefault();
       void send(input);
     }
   }
 
-  const composerDisabled = !activeTripId || !!inflightId;
+  const composerDisabled = !activeTripId || busy;
 
   const main = (
     <div className="tp-chat-shell" data-testid="chat-page" data-embedded={embedded ? 'true' : undefined}>
@@ -1012,7 +712,14 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       />}
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
-        {loadError && activeTripId && (
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{terminalAnnouncement}</div>
+        {activeTripId && (loadingOlder || (loadError && !initialLoadError)) && (
+          <div className="tp-chat-history-status" data-testid="chat-history-status">
+            {loadingOlder ? <span role="status" aria-label="載入較早訊息…"><span className="tp-chat-spinner" aria-hidden="true" />載入較早訊息…</span>
+              : <button type="button" onClick={retryLoadOlder} aria-label="無法載入較早訊息，重試">無法載入較早訊息・重試</button>}
+          </div>
+        )}
+        {loadError && initialLoadError && activeTripId && (
           <div className="tp-chat-load-error" role="alert" data-testid="chat-load-error">
             <span className="tp-chat-load-error-text">載入訊息失敗</span>
             <button
@@ -1025,7 +732,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
             </button>
           </div>
         )}
-        {!activeTripId && trips !== null && trips.length === 0 && (
+        {!activeTripId && tripsStatus === 'ready' && trips?.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>還沒有行程可以聊</h2>
@@ -1034,8 +741,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           </div>
         )}
 
-        {!activeTripId && trips === null && (
-          <div className="tp-chat-empty"><p>載入中…</p></div>
+        {!activeTripId && tripsStatus !== 'ready' && (
+          <div className="tp-chat-empty"><p>{tripsStatus === 'error' ? '載入行程失敗，請稍後再試' : '載入中…'}</p></div>
         )}
 
         {activeTripId && historyLoading && messages.length === 0 && (
@@ -1200,25 +907,33 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
       </div>
 
-      {/* 捲到底箭頭：只在 user 捲離底部時出現。auto-scroll 已改成「停在底部才拉」，
-          這是他回到最新的路。aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
-      {activeTripId && !isAtBottom && (
-        <button
-          type="button"
-          className="tp-chat-jump-latest"
-          data-testid="chat-jump-to-latest"
-          onClick={scrollToBottom}
-          aria-label="跳到最新訊息"
-          title="跳到最新訊息"
-        >
-          <span aria-hidden="true">↓</span>
-        </button>
-      )}
-
       <form
-        className="tp-chat-composer"
+        className="tp-chat-composer tp-glass"
         onSubmit={(e) => { e.preventDefault(); void send(input); }}
       >
+        {/* 捲到底箭頭跟隨 composer 定位；只在 user 捲離底部時出現。
+            aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
+        {activeTripId && latestRefreshing && (
+          <div className="tp-chat-jump-latest" role="status" aria-live="polite" aria-label="正在更新最新訊息" data-testid="chat-latest-refreshing">
+            <span className="tp-chat-spinner" aria-hidden="true" /><span className="sr-only">正在更新最新訊息</span>
+          </div>
+        )}
+        {activeTripId && !latestRefreshing && latestError && (
+          <button type="button" className="tp-chat-jump-latest" onClick={retryLatest}
+            aria-label="更新最新訊息失敗，重試" data-testid="chat-latest-retry">↻</button>
+        )}
+        {activeTripId && !latestRefreshing && !latestError && !isAtBottom && (
+          <button
+            type="button"
+            className="tp-chat-jump-latest"
+            data-testid="chat-jump-to-latest"
+            onClick={scrollToBottom}
+            aria-label="回到最新訊息"
+            title="回到最新訊息"
+          >
+            <span aria-hidden="true">↓</span>
+          </button>
+        )}
         <label htmlFor="chat-input" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
           輸入訊息
         </label>
@@ -1251,11 +966,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
       <AiConsentSheet
         open={consentGate !== null}
-        message={consentGate ?? ''}
+        message={consentGate?.text ?? ''}
         busy={consentBusy}
         error={consentError}
         onAuthorizeAndSend={authorizeAndSend}
-        onCancel={() => { setConsentGate(null); setConsentError(null); }}
+        onCancel={() => { consentGateRef.current = null; setConsentGate(null); setConsentError(null); }}
       />
     </div>
   );

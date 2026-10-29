@@ -39,6 +39,12 @@ describe('PrivacyPage — 基本結構', () => {
     expect(screen.getAllByText(/隱私權政策/).length).toBeGreaterThan(0);
   });
 
+  it('長文只有一個可辨識的主標題，章節依序為次標題', () => {
+    renderPage();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: '聯絡我們', level: 2 })).toBeVisible();
+  });
+
   it('標示政策版本 —— 與 signup 記錄的 PRIVACY_POLICY_VERSION 對得起來', async () => {
     const { readFileSync } = await import('fs');
     const { resolve } = await import('path');
@@ -83,7 +89,7 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
     // 對照來源：public/_headers 的 CSP connect-src/img-src（瀏覽器實際連線對象）
     // 加上 functions/api 的 server 端連外。
     const text = pageText();
-    for (const category of ['託管', '地圖', '天氣', '錯誤回報', '郵件', '維運']) {
+    for (const category of ['託管', '地圖', '錯誤回報', '郵件', '維運']) {
       expect(text, `未揭露接收方類別「${category}」`).toContain(category);
     }
   });

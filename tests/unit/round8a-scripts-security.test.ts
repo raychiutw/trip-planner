@@ -17,6 +17,11 @@ const API_SERVER_SRC = readFileSync(
   path.resolve(__dirname, '../../scripts/tripline-api-server.ts'),
   'utf-8',
 );
+// #1264：allowlist / peek / mint 決策搬進 request worker module，這幾條 lock 跟著搬。
+const WORKER_SRC = readFileSync(
+  path.resolve(__dirname, '../../scripts/lib/request-worker.ts'),
+  'utf8',
+);
 const JOB_SH_SRC = readFileSync(
   path.resolve(__dirname, '../../scripts/tripline-job.sh'),
   'utf-8',
@@ -40,25 +45,20 @@ const TELEGRAM_SH_SRC = readFileSync(
 
 describe('v2.33.49 round 8a — api-server skillCommand allowlist', () => {
   it('ALLOWED_SKILLS Set 含 /tp-request + /tp-daily-check', () => {
-    expect(API_SERVER_SRC).toMatch(/ALLOWED_SKILLS\s*=\s*new Set\(\[['"]\/tp-request['"],\s*['"]\/tp-daily-check['"]/);
+    expect(WORKER_SRC).toMatch(/ALLOWED_SKILLS\s*=\s*new Set\(\[['"]\/tp-request['"],\s*['"]\/tp-daily-check['"]/);
   });
 
-  it('assertAllowedSkill 在 sessionPrefixForSkill / spawnTmuxRequest / processLoop 都 gate', () => {
-    expect(API_SERVER_SRC).toMatch(/function assertAllowedSkill/);
-    expect(API_SERVER_SRC.match(/assertAllowedSkill\(/g)?.length).toBeGreaterThanOrEqual(3);
+  it('assertAllowedSkill 在 sessionPrefixForSkill / tick 都 gate（module）', () => {
+    expect(WORKER_SRC).toMatch(/export function assertAllowedSkill/);
+    expect(WORKER_SRC).toMatch(/function sessionPrefixForSkill[\s\S]{0,120}assertAllowedSkill\(skillCommand\)/);
+    expect(WORKER_SRC).toMatch(/async function tick\([\s\S]{0,160}assertAllowedSkill\(skillCommand\)/);
   });
 });
 
 describe('v2.33.49 round 8a — tripline-job.sh env hardening', () => {
-  it('quote strip wrapper present (both double + single)', () => {
-    expect(JOB_SH_SRC).toContain('${value:1:${#value}-2}');
-    // Check both arms exist
-    expect(JOB_SH_SRC).toContain('^\\".*\\"$');
-    expect(JOB_SH_SRC).toContain("^\\'.*\\'$");
-  });
-
-  it('key validate against shell-safe regex', () => {
-    expect(JOB_SH_SRC).toContain('[A-Za-z_][A-Za-z0-9_]*');
+  it('.env.local 走共用 parser（去引號與 key 驗證由 load-env.js 的 parseEnv 負責，見 env-local-parse.test.ts）', () => {
+    expect(JOB_SH_SRC).toContain('scripts/lib/load-env.mjs');
+    expect(JOB_SH_SRC).not.toMatch(/while IFS= read -r line/);
   });
 
   it('API server unreachable → exit 1 (不 mask outage)', () => {
@@ -81,18 +81,7 @@ describe('v2.33.49 round 8a — get-tripline-token.js shared parser', () => {
   });
 });
 
-describe('v2.33.49 round 8a — _lib/cron-shared.ts quote-strip', () => {
-  it('支援 double + single quote strip', () => {
-    // 用 substring contain 更穩
-    expect(CRON_SHARED_SRC).toContain("val.startsWith('\"')");
-    expect(CRON_SHARED_SRC).toContain("val.startsWith(\"'\")");
-    expect(CRON_SHARED_SRC).toContain('val.slice(1, -1)');
-  });
-
-  it('key 過濾 shell-safe regex', () => {
-    expect(CRON_SHARED_SRC).toContain('[A-Za-z_][A-Za-z0-9_]*');
-  });
-});
+// cron-shared 的 .env 解析已改走 lib/load-env.js 的 parseEnv；去引號／驗 key 的行為見 env-local-parse.test.ts。
 
 describe('token 端點 null-safe parse（2026-07-13 prod null-body 事故）', () => {
   // 2026-07-12 prod /api/oauth/token 短暫回「非-2xx + 字面 `null` body」。舊
@@ -113,19 +102,20 @@ describe('token 端點 null-safe parse（2026-07-13 prod null-body 事故）', (
     expect(CRON_SHARED_SRC).not.toContain('res.json().catch(() => ({}))');
   });
 
-  it('tripline-api-server.ts mint-restricted: 完整 null-safe idiom (含 ?? {})', () => {
-    expect(API_SERVER_SRC).toContain('res.json().catch(() => null)) ?? {}');
+  it('request-worker.ts mint-restricted: 完整 null-safe idiom (含 ?? {})', () => {
+    expect(WORKER_SRC).toContain('res.json().catch(() => null)) ?? {}');
   });
 
   it('tripline-api-server.ts peekPendingRequest: null-safe json()（同事故類別，防 data.items 爆 null）', () => {
     // /api/requests 回 null/非-JSON body → data.items 爆 TypeError（fail-closed 但同 2026-07-12 事故類別）。
+    expect(WORKER_SRC).not.toContain('const data = (await res.json()) as');
     expect(API_SERVER_SRC).not.toContain('const data = (await res.json()) as');
   });
 
   it('token mint 三處都用 typeof-string 驗證 access_token（防 Bearer [object Object]）', () => {
     expect(TOKEN_HELPER_SRC).toContain("typeof json.access_token !== 'string'");
     expect(CRON_SHARED_SRC).toContain("typeof json.access_token !== 'string'");
-    expect(API_SERVER_SRC).toContain("typeof data.access_token !== 'string'");
+    expect(WORKER_SRC).toContain("typeof data.access_token !== 'string'");
   });
 
   it('cron-shared makeApiClient: 200 空/非-JSON body → fail loud（不回 null as T）', () => {

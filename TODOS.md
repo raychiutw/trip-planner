@@ -23,8 +23,7 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 **永遠**看不到，axe 也只在該狀態被觸發時才掃得到。
 
 現有實例：`InfoSheet.tsx:261`（`hover:text-accent hover:bg-accent-bg`，實測 2.77:1，
-連非文字的 3:1 都不到）、`HourlyWeather.tsx:121/158/205`（`hover:text-accent hover:bg-hover`，
-3.27:1）。
+連非文字的 3:1 都不到）。
 
 要嘛把 `--color-accent` 排除在生成 `text-*` utility 的 token 之外（改名成只給填色用），
 要嘛接受這條路徑靠人工守。這是策略決定，不是純實作。v2.57.50 / #1156 稽核發現。
@@ -53,12 +52,6 @@ CSS 字串裡，`tests/unit/trips-list-accent-text.test.ts` 這類掃 template l
 
 migration 0093 已把 backup 43 + suggestions 24 = 67 筆搬進 `trip_pretrip_notes`。**0094（DROP 兩張表）刻意還沒套** —— 依 DROP 部署規則是「code 先上線、DROP 後套」，而且要先讓 owner 在筆記頁確認 67 筆看得到。確認後執行 `wrangler d1 migrations apply trip-planner-db --remote --env production`。⚠️ 那 67 筆是 `origin=ai / managed_by=ai / ai_source=general-tips`（owner 決定不擋未來生成），所以**下次按「一般」AI 生成會被整批取代**；想留哪筆就在 App 裡編輯它一次（翻成 human 即受保護）。
 
-### request 收屍 — 牆鐘那層繞過完成 hook，linked 報告會停在 pending
-
-**Priority**: P3（罕見路徑；pre-existing，非 v2.57.77 引入）
-
-`reapIfStale`（`functions/api/_requestTermination.ts`）直接 UPDATE `trip_requests`、不經 `PATCH /requests/:id`，所以 `applyHealthCheckCompletion` / `applyNotesGenerationCompletion` 不會跑 —— 被 100 分鐘牆鐘收掉的健檢／筆記請求，其 `trip_health_reports` 會停在 `pending`（前端一直轉）。**不是 v2.57.77 引入的迴歸**：在此之前 request 根本永遠停在 `processing`，那些表一樣卡著。第一層（api-server 就地收屍）走 PATCH、hook 照跑，所以只有「mac mini 死透 100 分鐘」才踩得到。根本解是抽出 `mint-restricted.ts:127` 已經記下的共用 `failRequest` helper，讓三個終結入口（PATCH hook / mint-restricted park / 牆鐘）走同一段 linked-table 連動。見 ADR-0007 的 Consequences。
-
 ### 測試套件 — D1 建置成本迫使 unit 限流 2 worker（根本解：共用已 migrate 快照）
 
 **Priority**: P3（開發體驗；不影響使用者）
@@ -66,7 +59,7 @@ migration 0093 已把 backup 43 + suggestions 24 = 67 筆搬進 `trip_pretrip_no
 v2.57.15 把 `npm test` 限成 `--maxWorkers=2`，因為每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會有測試撞 timeout（實測預設並行度 1 failed，maxWorkers=2 全綠且**還略快** 289.87s vs 294.70s）。這是權宜：測試檔繼續長，2 worker 遲早也會撞牆，而現在整套要跑 ~290 秒。根本解是共用一份已 migrate 的 D1 快照（建一次、各 worker 複製），讓並行度重新可用。沒調高 `hookTimeout` —— 那等於把訊號關掉。
 
 **2026-07-29 實測：已經開始間歇性撞牆。** migration 加到 93 支後，本機全跑兩次有一次紅 —— 6 個 suite 掛在 `createTestDb()` 的 `beforeAll`，錯誤是 `Hook timed out in 30000ms`（config 寫 `hookTimeout: 60000`，但 vitest 對 `describe` 內的 `beforeAll` 實際套的是 `testTimeout: 30000`）。13 支 unit 測試各要建一次 Miniflare + 全套 migration，兩個 worker 各建一份。第二次全跑 489 檔全綠，所以是浮動不是迴歸 —— 但**每加一支 migration 就更靠近臨界**，下一次可能就變成 CI 間歇紅。根本解仍是共用已 migrate 的 D1 快照。
-### CSS — 8 個 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
+### CSS — 4 處 component 的 SCOPED_STYLES 仍手寫 `-webkit-backdrop-filter`（同一顆雷，目前未爆）
 
 **Priority**: P3（目前無害，但會在搬家時炸掉）
 
@@ -74,11 +67,20 @@ v2.57.14 修掉了 `css/tokens.css` 裡的 5 處：成對寫 `backdrop-filter` +
 `-webkit-backdrop-filter` 時，lightningcss 去重會**留下 `-webkit-` 那條**，Chrome
 computed 變成 `none` —— 整組手寫玻璃在 Chrome 上從來沒生效過。
 
-component 的 `SCOPED_STYLES` 是 runtime 注入的 `<style>`，不經建置器，所以這 8 個檔案
-（DesktopSidebar / GlobalBottomNav / StackPanelHeader / GooglePoiCard / _tripFormStyles /
-ChatPage / LandingPage / MapPage）目前是好的 —— 但它們是**意外正確**，不是寫得比較對。
+**v2.57.100：** 玻璃面已收成 `.tp-glass`（只寫標準屬性），StackPanelHeader / GooglePoiCard / ChatPage / LandingPage
+不再手寫。剩下 4 處：DesktopSidebar（`--tabbar-filter` 那條）/ GlobalBottomNav / `_tripFormStyles` sticky 操作列 /
+MapPage `.map-page-empty-card`；後兩者連降級 token 都還沒走 `.tp-glass`，一併遷移最划算。
+
+component 的 `SCOPED_STYLES` 是 runtime 注入的 `<style>`，不經建置器，所以這幾個檔案目前是好的 —— 但它們是**意外正確**，不是寫得比較對。
 任何一段被抽進 `tokens.css`（或未來 component styles 被納入建置）就會立刻複製這個 bug。
 
 專案 browserslist 是 `last 2 Chrome versions`，本來就不需要手寫前綴。清掉即可，
 只是要一個一個確認沒有依賴舊 Safari 的地方。
 
+## Completed
+
+### request 收屍 — 共用健檢與筆記收尾
+
+**Completed:** 2026-09-21（v2.57.90，#1283、#1284）
+
+PATCH、mint-restricted 拒絕、100 分鐘 reap 與筆記期限都走共用終結政策；健檢／筆記收尾可分別重試，保留第一個終止原因，並保護後續生成不被舊請求覆寫。真 D1 與實際 request 入口測試已覆蓋自動終結及重試。

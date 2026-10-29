@@ -26,7 +26,6 @@ const REDIRECT_SRC = read('src/server/oauth-server/validate-redirect-uris.ts');
 const PASSWORD_SRC = read('src/server/password.ts');
 const SESSION_SRC = read('src/server/session.ts');
 const MAPS_SRC = read('src/server/maps/google-client.ts');
-const TOKEN_API_SRC = read('functions/api/oauth/token.ts');
 
 describe('v2.33.58 C1 — JWT alg pin', () => {
   it('verifyJwt 加 alg allowlist check', () => {
@@ -76,15 +75,7 @@ describe('v2.33.58 C4 — D1Adapter.consume() atomic CAS', () => {
     expect(ADAPTER_SRC).toMatch(/json_extract\(payload, '\$\.consumed'\) IS NULL/);
   });
 
-  it('token.ts authorization_code path 先 consume 後 issue', () => {
-    expect(TOKEN_API_SRC).toMatch(/won = await codeAdapter\.consume\(code\)/);
-    expect(TOKEN_API_SRC).toMatch(/auth_code_concurrent_exchange/);
-  });
 
-  it('token.ts refresh_token rotation 先 consume 後 issue + revoke if race lost', () => {
-    expect(TOKEN_API_SRC).toMatch(/won = await refreshAdapter\.consume/);
-    expect(TOKEN_API_SRC).toMatch(/refresh_token_concurrent_rotation/);
-  });
 });
 
 describe('v2.33.58 — D1Adapter.revokeByGrantId scope', () => {

@@ -7,7 +7,7 @@
  * 這裡只 cover list page (loading / empty / render / error / navigate)。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 // Bypass V2 auth gate — page is rendered as if user is logged in
@@ -61,6 +61,27 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText(/尚未建立任何應用/)).toBeTruthy();
   });
 
+  it('empty registry keeps a keyboard-focusable path to creating the first app', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/developer/apps']}>
+        <Routes>
+          <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+          <Route path="/developer/apps/new" element={<div data-testid="new-page-stub">NEW PAGE</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const create = await screen.findByTestId('dev-apps-empty-cta');
+    create.focus();
+    expect(document.activeElement).toBe(create);
+    fireEvent.click(create);
+    await waitFor(() => expect(screen.getByTestId('new-page-stub')).toBeTruthy());
+  });
+
   it('renders apps list with status pill', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }),
@@ -72,6 +93,83 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText('Trip Buddy')).toBeTruthy();
     expect(screen.getByText('tp_abc')).toBeTruthy();
     expect(screen.getByText('使用中')).toBeTruthy();
+  });
+
+  it('shows every long redirect URI and copies the selected URI without exposing a secret', async () => {
+    const firstUri = 'https://example.com/a/very/long/path/to/the/oauth/callback/endpoint/for/tripline';
+    const secondUri = 'https://accounts.example.com/integrations/tripline/another/long/callback/path';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [{
+        ...SAMPLE_APP,
+        app_name: 'A very long developer application name for a travel integration with many words and no clear short form',
+        redirect_uris: [firstUri, secondUri],
+        client_secret: 'tps-never-render-this',
+      }] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const app = await screen.findByTestId('dev-apps-row-tp_abc');
+    expect(app.textContent).toContain('A very long developer application name');
+    expect(app.textContent).toContain(firstUri);
+    expect(app.textContent).toContain(secondUri);
+    expect(app.textContent).not.toContain('tps-never-render-this');
+    const copyButtons = Array.from(app.querySelectorAll('button')).filter((button) => button.getAttribute('aria-label')?.includes('複製重新導向 URI'));
+    expect(copyButtons).toHaveLength(2);
+    copyButtons[1].focus();
+    expect(document.activeElement).toBe(copyButtons[1]);
+    fireEvent.click(copyButtons[1]);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(secondUri));
+  });
+
+  it('keeps URI visible and reports clipboard failure without claiming success', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('permission denied'));
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const app = await screen.findByTestId('dev-apps-row-tp_abc');
+    fireEvent.click(screen.getByRole('button', { name: /複製重新導向 URI 1，Trip Buddy（tp_abc）/ }));
+    await waitFor(() => expect(app.textContent).toContain('複製失敗'));
+    expect(app.textContent).toContain('https://example.com/cb');
+    expect(app.textContent).not.toContain('已複製');
+  });
+
+  it('distinguishes copy controls by app and clears stale copy feedback after refetch', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    const updated = { ...SAMPLE_APP, redirect_uris: ['https://example.com/new-callback'] };
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP, { ...SAMPLE_APP, client_id: 'tp_other', app_name: 'Other App' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [updated, { ...SAMPLE_APP, client_id: 'tp_other', app_name: 'Other App' }] }), { status: 200 })));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    const originalCopy = await screen.findByRole('button', { name: /複製重新導向 URI 1，Trip Buddy（tp_abc）/ });
+    expect(screen.getByRole('button', { name: /複製重新導向 URI 1，Other App（tp_other）/ })).toBeTruthy();
+    fireEvent.click(originalCopy);
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).toContain('已複製'));
+    act(() => window.dispatchEvent(new CustomEvent('tp-developer-app-created')));
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).toContain('https://example.com/new-callback'));
+    expect(screen.getByTestId('dev-apps-row-tp_abc').textContent).not.toContain('已複製');
+  });
+
+  it('does not expose a secret even if an API payload includes one', async () => {
+    const secret = 'tps-sensitive-secret-value';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ apps: [{ ...SAMPLE_APP, client_secret: secret, client_secret_hash: 'private-hash' }] }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+    expect(document.body.textContent).not.toContain(secret);
+    expect(document.body.textContent).not.toContain('private-hash');
   });
 
   it('「建立新應用」 button → navigate 到 /developer/apps/new (不再 mount modal)', async () => {
@@ -89,6 +187,7 @@ describe('DeveloperAppsPage', () => {
       </MemoryRouter>
     );
     await waitFor(() => expect(screen.queryByTestId('dev-apps-empty')).toBeTruthy());
+    expect(screen.getByRole('button', { name: '建立新應用' }).getAttribute('title')).toBe('建立新應用');
     fireEvent.click(screen.getByTestId('dev-apps-new'));
     // 1) modal 不再 mount
     expect(screen.queryByTestId('dev-apps-create-modal')).toBeNull();
@@ -113,11 +212,122 @@ describe('DeveloperAppsPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('GET fail → error banner', async () => {
+  it('an older list response cannot erase an app loaded after a create event', async () => {
+    let resolveInitial!: (response: Response) => void;
+    const initial = new Promise<Response>((resolve) => { resolveInitial = resolve; });
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(initial)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    expect(screen.getByTestId('dev-apps-loading')).toBeTruthy();
+    act(() => window.dispatchEvent(new CustomEvent('tp-developer-app-created')));
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+
+    await act(async () => { resolveInitial(new Response(JSON.stringify({ apps: [] }), { status: 200 })); await initial; });
+    expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy();
+    expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
+  });
+
+  it('GET fail → content PageErrorState with retry and back', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('net')));
     vi.useRealTimers();
 
     render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-error')).toBeTruthy());
+    const error = await screen.findByTestId('dev-apps-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.closest('[data-testid="dev-apps-content"]')).toBeTruthy();
+    expect(error.querySelector('button')?.textContent).toBe('重試');
+    expect(screen.getByRole('button', { name: '返回帳號' })).toBeTruthy();
+  });
+
+  it('500 後可用原 TitleBar action 重試，成功後顯示真實列表', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'SYS_ERROR', message: 'failed' } }), { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    await screen.findByTestId('dev-apps-error');
+    const retry = screen.getByRole('button', { name: '重新載入應用列表' });
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+    expect(screen.queryByTestId('dev-apps-error')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('內容重試將焦點移到穩定的 TitleBar action，連按不會意外前往建立表單', async () => {
+    let resolveRetry!: (response: Response) => void;
+    const retryResponse = new Promise<Response>((resolve) => { resolveRetry = resolve; });
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'SYS_ERROR', message: 'failed' } }), { status: 500 }))
+      .mockReturnValueOnce(retryResponse));
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/developer/apps']}>
+        <Routes>
+          <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+          <Route path="/developer/apps/new" element={<div data-testid="new-page-stub">NEW PAGE</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const error = await screen.findByTestId('dev-apps-error');
+    const retry = error.querySelector('button')!;
+    retry.focus();
+    fireEvent.click(retry);
+    const busyAction = screen.getByRole('button', { name: '載入中…' });
+    expect(document.activeElement).toBe(busyAction);
+    fireEvent.click(busyAction);
+    expect(screen.queryByTestId('new-page-stub')).toBeNull();
+
+    await act(async () => { resolveRetry(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 })); await retryResponse; });
+    await waitFor(() => expect(screen.getByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '建立新應用' }));
+  });
+
+  it('403 明確告知無權並提供返回帳號，不引導建立應用', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: { code: 'AUTH_FORBIDDEN', message: 'forbidden' } }), { status: 403 },
+    )));
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/developer/apps']}>
+        <Routes>
+          <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+          <Route path="/account" element={<div data-testid="account-stub">ACCOUNT</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const error = await screen.findByTestId('dev-apps-error');
+    expect(error.textContent).toMatch(/沒有權限/);
+    expect(error.closest('[data-testid="dev-apps-content"]')).toBeNull();
+    expect(error.compareDocumentPosition(screen.getByTestId('dev-apps-content')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('dev-apps-empty')).toBeNull();
+    expect(screen.queryByRole('button', { name: '建立新應用' })).toBeNull();
+    expect(screen.getByTestId('titlebar').querySelectorAll('button')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('titlebar').querySelector('button')!);
+    await waitFor(() => expect(screen.getByTestId('account-stub')).toBeTruthy());
+  });
+
+  it('列表載入後若權限被撤銷，舊列表不留在無權畫面', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 'AUTH_FORBIDDEN', message: 'forbidden' } }), { status: 403 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
+    await screen.findByTestId('dev-apps-row-tp_abc');
+    act(() => window.dispatchEvent(new CustomEvent('tp-developer-app-created')));
+    await screen.findByTestId('dev-apps-error');
+
+    expect(screen.queryByTestId('dev-apps-row-tp_abc')).toBeNull();
+    expect(screen.getByTestId('dev-apps-error').textContent).toMatch(/沒有權限/);
   });
 });

@@ -59,7 +59,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     rating: body.rating as number, category: body.category as string,
     lat: body.lat as number, lng: body.lng as number, source: 'ai',
     price: body.price as string,
-  });
+  }, { policy: 'fill-null' });
 
   // v2.29.0: 全 type 統一寫 trip_entry_pois（sort_order = max+1 = alternate）。
   // sort_order subquery atomic with INSERT 縮 race window — concurrent POST 同 entry
