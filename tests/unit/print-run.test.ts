@@ -120,7 +120,7 @@ describe('superviseRun（claude -p 一輪的計時與收尾）', () => {
   });
 
   it('輸出：原始收集有上限；脫敏後再截斷到 logMaxBytes（切點不會把 token 切成脫敏抓不到的半截）', async () => {
-    const { child, logs, result } = setup({ rawMaxBytes: 40, logMaxBytes: 12 });
+    const { child, logs, result } = setup({ rawMaxBytes: 40, logMaxBytes: 12, rawTailMarginBytes: 0 });
     child.stdout.emit('data', Buffer.from('a'.repeat(10) + 'SECRET' + 'b'.repeat(40)));
     child.stdout.emit('data', Buffer.from('this chunk is dropped'));
     child.emit('close', 0);
@@ -128,6 +128,34 @@ describe('superviseRun（claude -p 一輪的計時與收尾）', () => {
     // 脫敏在截斷之前：SECRET 先變 <redacted>（不是被切成 SEC）
     expect(logs[0]).toBe('aaaaaaaaaa<r');
     expect(logs[0]!.length).toBe(12);
+  });
+
+  it('原始收集被截斷時，結尾留一段安全邊界不寫進 log（token 跨在截斷點上，脫敏抓不到前半截）', async () => {
+    const { child, logs, result } = setup({ rawMaxBytes: 10, logMaxBytes: 1000, rawTailMarginBytes: 8 });
+    child.stdout.emit('data', Buffer.from('aaaaaaaaaaaaSEC'));
+    child.stdout.emit('data', Buffer.from('RET dropped'));
+    child.emit('close', 0);
+    await result;
+    expect(logs[0]).not.toContain('SEC');
+    expect(logs[0]).toBe('aaaaaaa');
+  });
+
+  it('安全邊界要在脫敏之後才丟：切點落在完整 token 中間時，不能留下脫敏抓不到的半截', async () => {
+    const { child, logs, result } = setup({ rawMaxBytes: 10, logMaxBytes: 1000, rawTailMarginBytes: 4 });
+    child.stdout.emit('data', Buffer.from('aaaaSECRETbb'));
+    child.stdout.emit('data', Buffer.from('dropped'));
+    child.emit('close', 0);
+    await result;
+    expect(logs[0]).not.toContain('SEC');
+    expect(logs[0]).toBe('aaaa<redacte');
+  });
+
+  it('logMaxBytes 以 bytes 計，不是字元數（中文一字 3 bytes）', async () => {
+    const { child, logs, result } = setup({ logMaxBytes: 30 });
+    child.stdout.emit('data', Buffer.from('字'.repeat(100)));
+    child.emit('close', 0);
+    await result;
+    expect(Buffer.byteLength(logs[0]!)).toBeLessThanOrEqual(30);
   });
 
   it('寫 log 失敗不影響結果（best-effort）', async () => {

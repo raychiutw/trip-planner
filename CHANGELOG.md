@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.112] - 2026-10-29
+
+### Changed
+- **AI 聊天的兜底輪詢由 10 分鐘改為 5 分鐘**：即時觸發失敗（例如 Cloudflare 回 530）時，請求最多等 5 分鐘就會被 api-server 撿起（原本最多 10 分鐘）；告警文案裡過時的「15min」一併改成 5min。
+
+### Fixed
+- **AI 執行 log 的脫敏補強**：輸出超過上限被截斷時，先整段脫敏再丟掉結尾 4KB，token 若剛好跨在截斷點上不會再把前半截寫進 log；log 上限改以 bytes 計（原本以字元計，中文最多會到約 3MB）。
+
+### For contributors
+- 更正 2.57.111 的一句話：「失敗時聊天仍沒有明確失敗提示」不正確——聊天頁本來就會對 `failed` 請求顯示失敗訊息（`conversation.ts` 的 `terminationText`），已查證無需新增 UI。
+- 已知取捨：若某請求在 `started:false`（佈置／spawn 例外）下每輪都沒開始，重試頻率隨兜底變為 5 分鐘一次。
+- 本輪 review 在最後一個純註解 commit（`requests.ts` 的 5min 註解）之前完成，該 commit 之後未重跑 review。
+
 ## [2.57.111] - 2026-10-29
 
 ### Fixed

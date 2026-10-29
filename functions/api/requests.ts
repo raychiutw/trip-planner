@@ -162,7 +162,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     console.error('[requests] logAudit failed (non-fatal):', auditErr);
   }
 
-  // Fire-and-forget: 觸發 Mac Mini API server 處理（cron 15min 兜底）
+  // Fire-and-forget: 觸發 Mac Mini API server 處理（cron 5min 兜底）
   // 2026-05-02 silent-fail fix: 失敗時 audit_log + Telegram alert，不再 silent catch{}
   // (D1 audit 顯示 7 天 zero source=api → 既有 catch{} 完全掩蓋了 fetch 失敗)
   context.waitUntil(
@@ -179,7 +179,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
         await alertAdminTelegram(
           env,
-          `即時觸發 config 缺失（cron 15min 兜底）: trip=${tripId}, request=${requestId} (TRIPLINE_API_URL not set)`,
+          `即時觸發 config 缺失（cron 5min 兜底）: trip=${tripId}, request=${requestId} (TRIPLINE_API_URL not set)`,
         );
         return;
       }
@@ -189,7 +189,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         // (DNS + TCP + TLS handshake from a CF colo first-touch / post-idle)
         // 偶爾 4-5s，3s 必 abort → Telegram 噪音 alert（如 request 210 2026-05-25
         // 15:57 UTC：實測 INSERT 到 mac mini 收到 /trigger 4.978s）。8s 涵蓋 99%
-        // cold path；request 仍由 10min cron 兜底保證最終一致性。
+        // cold path；request 仍由 5min cron 兜底保證最終一致性。
         const timer = setTimeout(() => ctrl.abort(), 8000);
         const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
           method: 'POST',
@@ -219,7 +219,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
         await alertAdminTelegram(
           env,
-          `即時觸發失敗（cron 15min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
+          `即時觸發失敗（cron 5min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
         );
       }
     })(),

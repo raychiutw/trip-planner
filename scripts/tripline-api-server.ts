@@ -619,8 +619,8 @@ function scheduleDailyScript(hour: number, minute: number, cmd: string, args: st
   }, delayMs);
 }
 
-// 10 分鐘 /tp-request 兜底（v2.31.5：30 min → 10 min，加快 CF Pages POST /trigger 失敗時的補救週期）
-const REQUEST_CRON_INTERVAL_MS = 10 * 60 * 1000;
+// 5 分鐘 /tp-request 兜底（v2.31.5：30 → 10 min；現改 5 min，CF Pages POST /trigger 失敗（如 530）時使用者最多等 5 分鐘）
+const REQUEST_CRON_INTERVAL_MS = 5 * 60 * 1000;
 setInterval(() => fireSchedule('/tp-request', 'request-handler'), REQUEST_CRON_INTERVAL_MS);
 log(`Scheduled request-handler (/tp-request) every ${REQUEST_CRON_INTERVAL_MS / 60000} min`);
 
