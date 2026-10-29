@@ -70,15 +70,26 @@ describe('0097 mobile OAuth callback migration', () => {
     await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?), ('AccountDeleteChallenge', 't-chal', ?, ?)")
       .bind(JSON.stringify({ client_id: 'tripline-mobile-dev', user_id: 'u', scopes: ['openid'], grantId: 'g' }), Number.MAX_SAFE_INTEGER,
         JSON.stringify({ clientId: 'tripline-mobile-uat', uid: 'u', grantId: 'g', status: 'pending' }), Number.MAX_SAFE_INTEGER).run();
+    const controlRows = [
+      ['AccessToken', 't-ctl-prod', JSON.stringify({ client_id: 'tripline-mobile', user_id: 'u', scopes: ['openid'], grantId: 'g' })],
+      ['AccessToken', 't-ctl-none', JSON.stringify({ user_id: 'u', scopes: [] })],
+    ] as const;
+    for (const [name, id, payload] of controlRows) {
+      await db.prepare('INSERT INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)').bind(name, id, payload, Number.MAX_SAFE_INTEGER).run();
+    }
     try {
       await setRedirects([...original, operatorUri]);
       await runSql(ROLLBACK);
+      // 不相干的列（正式 client 的 token、沒有 client 欄位的 token）必須還在：WHERE 被拿掉或 OR 變成恆真時這裡會紅
+      const kept = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id IN ('t-ctl-prod', 't-ctl-none')").first<{ n: number }>();
+      expect(kept?.n).toBe(2);
       expect(await redirectsOf('tripline-mobile')).toEqual(original.filter(u => u !== MOBILE_PROD_REDIRECT).concat(operatorUri));
       expect(await redirectsOf('tripline-mobile-uat')).toBeNull();
       expect(await redirectsOf('tripline-mobile-dev')).toBeNull();
       const left = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id IN ('t-dev', 't-chal')").first<{ n: number }>();
       expect(left?.n).toBe(0);
     } finally {
+      await db.prepare("DELETE FROM oauth_models WHERE id IN ('t-dev', 't-chal', 't-ctl-prod', 't-ctl-none')").run();
       await runSql(FORWARD); // forward 冪等：重放會重建兩個 client 與 callback（updated_at 等時間戳會更新，沒有任何測試依賴它們）
       await setRedirects(original);
       for (const r of shared) {

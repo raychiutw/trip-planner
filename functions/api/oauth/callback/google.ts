@@ -20,7 +20,8 @@
  *   6. 302 redirect to state.redirectAfterLogin
  *
  * 重新驗證分支（purpose=account-delete，state 帶 `reauth`）：`?code=` 可能缺（Google 回 `error=`）。
- *   步驟 4 之後驗證 auth_time 夠新且是同一個帳號；**不建立 session（跳過 5）**，
+ *   取得 id_token claims（步驟 3）後就分流：驗證 auth_time 夠新，並以唯讀查詢確認是同一個帳號；
+ *   **跳過 4（不更新 last_used_at、不建 user / identity）與 5（不建 session）**，
  *   只發瀏覽器 proof（grantDeleteReauth）或把 mobile challenge 轉成 verified；
  *   任何失敗走 reauthFailure（mobile → app link status=failed、瀏覽器 → /account?deleteReauth=failed）。
  */

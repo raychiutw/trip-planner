@@ -31,19 +31,21 @@ The mobile challenge status is tied to one attempt. A failed/expired/cancelled a
 | Endpoint | Status / code | When |
 |---|---|---|
 | `POST /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The account has no linked Google identity |
-| `POST` / `GET` / `DELETE /api/account/delete-reauth` | 401 `AUTH_REQUIRED` | No valid credential: no session cookie and no resolvable Bearer token |
-| `POST` / `GET` / `DELETE /api/account/delete-reauth` | 403 `PERM_DENIED` | A browser session cookie is present (it takes precedence over a Bearer header), or the Bearer token is not the environment's mobile OAuth client, is a service or trip-restricted token, or has no `grantId` / user |
+| `POST` / `GET` / `DELETE /api/account/delete-reauth` | 401 `AUTH_REQUIRED` | No valid credential: no valid (verifiable, non-revoked) session cookie and no resolvable Bearer token |
+| `POST` / `GET` / `DELETE /api/account/delete-reauth` | 403 `PERM_DENIED` | A valid browser session cookie is present (it takes precedence over a Bearer header), or the Bearer token is not the environment's mobile OAuth client, is a service or trip-restricted token, has no `grantId` / user, or the environment has no mobile contract |
 | `POST /api/account/delete-reauth` | 500 `SERVER_MISCONFIG` | `MOBILE_OAUTH_CALLBACK_URL` is missing, not HTTPS, or does not match the environment's registered redirect |
 | `GET` / `DELETE /api/account/delete-reauth` | 400 `DATA_VALIDATION` | `challenge_id` is missing |
 | `GET` / `DELETE /api/account/delete-reauth` | 404 | Unknown challenge, or it belongs to another user, grant or client |
 | `GET /api/account/delete-reauth` | 200 `{ "status": "expired", "expiresIn": 0 }` | The challenge lifetime has passed; otherwise `expiresIn` is omitted |
+| `GET /api/account/delete-reauth` | 404 | An expired challenge row may already have been swept; treat a 404 for a challenge you created yourself as expired, not as someone else's |
 | `DELETE /api/account/delete-reauth` | 409 `DATA_CONFLICT` | The challenge is `used` (even if expired), or is unexpired and `failed`, or changed state concurrently |
 | `DELETE /api/account/delete-reauth` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | The challenge has expired and is not `used`. Only an unexpired `cancelled` challenge answers idempotently (200 `{ "status": "cancelled" }`) |
-| `GET /api/oauth/login/google?purpose=account-delete` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | Challenge is not `pending`, is expired, or its client does not match the environment. A challenge can be started once; open `authorizeUrl` a single time |
+| `GET /api/oauth/login/google?purpose=account-delete` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | Unknown challenge, no mobile contract for this environment, challenge is not `pending` or is expired, its client does not match the environment, or it lost the `pending`→`started` race. A challenge can be started once; open `authorizeUrl` a single time |
 | `GET /api/oauth/login/google?purpose=account-delete` (browser) | 401 `AUTH_REQUIRED` | No session |
 | `GET /api/oauth/login/google?purpose=account-delete` (browser) | 400 `ACCOUNT_DELETE_REAUTH_UNAVAILABLE` | The account has no linked Google identity |
-| `DELETE /api/account` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | No usable proof: absent, expired, cancelled, mismatched, or already used |
-| `GET` / `DELETE /api/account` | 403 `PERM_DENIED` | A Bearer token that is not the environment's mobile OAuth client. Such a token no longer falls back to a cookie session on these two endpoints |
+| `DELETE /api/account` | 403 `ACCOUNT_DELETE_REAUTH_REQUIRED` | No usable proof: `challengeId` omitted or unknown, not yet `verified` (`pending` / `started` / `failed`), expired, cancelled, mismatched user / grant / client, or already used |
+| `GET` / `DELETE /api/account` | 401 `AUTH_REQUIRED` | No valid session cookie and the Bearer token cannot be resolved |
+| `GET` / `DELETE /api/account` | 403 `PERM_DENIED` | A Bearer header is present and either a valid session cookie also is (cookie wins), or the token is not the environment's mobile OAuth client, is a service or trip-restricted token, has no `grantId` / user, or the environment has no mobile contract. Such a token no longer falls back to a cookie session on these two endpoints |
 | `GET /api/oauth/callback/google` | 400 `OAUTH_PROVIDER_DENIED` | Google returned `error=` for a normal login (previously this surfaced as `OAUTH_MISSING_PARAMS`). For a re-authentication attempt a mobile challenge redirects to the app link with `status=failed`, and a browser session redirects to `/account?deleteReauth=failed` |
 
 ## Known limits before this contract is operational
