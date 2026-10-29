@@ -18,6 +18,11 @@
  *      b. If not: create user + auth_identities row
  *   5. issueSession(uid)
  *   6. 302 redirect to state.redirectAfterLogin
+ *
+ * 重新驗證分支（purpose=account-delete，state 帶 `reauth`）：`?code=` 可能缺（Google 回 `error=`）。
+ *   步驟 4 之後驗證 auth_time 夠新且是同一個帳號；**不建立 session（跳過 5）**，
+ *   只發瀏覽器 proof（grantDeleteReauth）或把 mobile challenge 轉成 verified；
+ *   任何失敗走 reauthFailure（mobile → app link status=failed、瀏覽器 → /account?deleteReauth=failed）。
  */
 import { D1Adapter, type AdapterPayload } from '../../../../src/server/oauth-d1-adapter';
 import { issueSession, requireSessionUser } from '../../_session';

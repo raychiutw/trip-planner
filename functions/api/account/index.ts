@@ -60,7 +60,9 @@ async function findLocalPasswordHash(env: Env, userId: string): Promise<string |
  * 確認對話框必須誠實顯示「按下去會發生什麼」。owner 決策是**行程一併刪除，含共編者的**，
  * 所以受影響的共編人數一定要先讓使用者看到 —— 這個數字前端算不出來，只能後端查。
  *
- * Response: { hasPassword, tripsOwned, collaboratorsAffected }
+ * Response: { hasPassword, reauthProvider, reauthenticated, tripsOwned, collaboratorsAffected }
+ *   - reauthProvider：純 OAuth 帳號需要重新驗證的 provider（目前只有 'google'），有密碼或無可用 provider 時為 null
+ *   - reauthenticated：只對瀏覽器 cookie flow 有意義；mobile Bearer 的證明在 challenge，這裡一律 false
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const actor = await requireAccountActor(context);

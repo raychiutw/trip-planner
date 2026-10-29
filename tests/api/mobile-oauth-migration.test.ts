@@ -64,20 +64,22 @@ describe('0097 mobile OAuth callback migration', () => {
     const original = (await redirectsOf('tripline-mobile'))!;
     const operatorUri = 'https://operator.example/cb';
     // 各測試檔共用同一份 D1：先保存會被 rollback 波及的既有 token 列，測完原樣放回
-    const shared = (await db.prepare("SELECT name, id, payload, expires_at FROM oauth_models WHERE json_extract(payload, '$.clientId') IN (?, ?)")
-      .bind(...NEW_CLIENTS).all<{ name: string; id: string; payload: string; expires_at: number }>()).results ?? [];
-    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?)")
-      .bind(JSON.stringify({ clientId: 'tripline-mobile-dev' }), Number.MAX_SAFE_INTEGER).run();
+    const shared = (await db.prepare("SELECT name, id, payload, expires_at FROM oauth_models WHERE json_extract(payload, '$.client_id') IN (?, ?) OR json_extract(payload, '$.clientId') IN (?, ?)")
+      .bind(...NEW_CLIENTS, ...NEW_CLIENTS).all<{ name: string; id: string; payload: string; expires_at: number }>()).results ?? [];
+    // 真實 token 的 payload 是 snake_case（見 oauth/token.ts），刪帳號 challenge 是 camelCase：兩種形狀都要被 rollback 撤銷
+    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?), ('AccountDeleteChallenge', 't-chal', ?, ?)")
+      .bind(JSON.stringify({ client_id: 'tripline-mobile-dev', user_id: 'u', scopes: ['openid'], grantId: 'g' }), Number.MAX_SAFE_INTEGER,
+        JSON.stringify({ clientId: 'tripline-mobile-uat', uid: 'u', grantId: 'g', status: 'pending' }), Number.MAX_SAFE_INTEGER).run();
     try {
       await setRedirects([...original, operatorUri]);
       await runSql(ROLLBACK);
       expect(await redirectsOf('tripline-mobile')).toEqual(original.filter(u => u !== MOBILE_PROD_REDIRECT).concat(operatorUri));
       expect(await redirectsOf('tripline-mobile-uat')).toBeNull();
       expect(await redirectsOf('tripline-mobile-dev')).toBeNull();
-      const left = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id = 't-dev'").first<{ n: number }>();
+      const left = await db.prepare("SELECT COUNT(*) AS n FROM oauth_models WHERE id IN ('t-dev', 't-chal')").first<{ n: number }>();
       expect(left?.n).toBe(0);
     } finally {
-      await runSql(FORWARD); // forward 冪等：重放即還原兩個 client 與 callback
+      await runSql(FORWARD); // forward 冪等：重放會重建兩個 client 與 callback（updated_at 等時間戳會更新，沒有任何測試依賴它們）
       await setRedirects(original);
       for (const r of shared) {
         await db.prepare('INSERT OR IGNORE INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)').bind(r.name, r.id, r.payload, r.expires_at).run();

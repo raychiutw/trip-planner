@@ -4,8 +4,10 @@
 -- 真要回到舊行為得連 code 一起 revert。
 -- 已簽發、綁定這兩個 client 的 token 會失去 client，一併撤銷。
 
+-- token / grant 的 payload 用 snake_case `client_id`，刪帳號 challenge 用 camelCase `clientId`，兩種都要比對。
 DELETE FROM oauth_models
-WHERE json_extract(payload, '$.clientId') IN ('tripline-mobile-uat', 'tripline-mobile-dev');
+WHERE json_extract(payload, '$.client_id') IN ('tripline-mobile-uat', 'tripline-mobile-dev')
+   OR json_extract(payload, '$.clientId') IN ('tripline-mobile-uat', 'tripline-mobile-dev');
 DELETE FROM client_apps WHERE client_id IN ('tripline-mobile-uat', 'tripline-mobile-dev');
 
 UPDATE client_apps
