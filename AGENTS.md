@@ -100,7 +100,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` and approved mockups to product styling. Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
+For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` to product styling (the old mockup files were removed). Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
 
 ## Skill Routing
 
