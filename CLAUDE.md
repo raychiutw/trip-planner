@@ -51,7 +51,7 @@ On-ramps（匯入主線）：
 
 `src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
-Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav（聊天/行程/地圖/收藏）+ 帳號 header 圓圈 → Account sheet（HIG，見 `docs/plans/apple-hig-compliance/`）。
+Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav（聊天/行程/地圖/收藏）+ 帳號 header 圓圈 → Account sheet（HIG）。
 
 ## Dev
 
@@ -65,7 +65,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-此產品是 Web/PWA：網頁無障礙驗收依 WCAG 2.2；Apple HIG 是 iOS/mobile、macOS/desktop 互動的設計參考；`DESIGN.md` 與 owner 核准 mockup 記錄本專案品牌、版面和較高目標。原生 pt 不直接當 CSS px 規範。來源、數值與例外見 [`DESIGN.md`「Web 設計驗收與來源」](DESIGN.md#web-設計驗收與來源)；衝突先討論，不自行覆寫 owner 決策。terracotta tint、Inter web font、timeline editorial no-glass 繼續保留。`docs/plans/apple-hig-compliance/` 的 W0–W15 已收官；其 mockup 豁免不延伸到新 layout，新 layout 依 `AGENTS.md` 的 prototype gate。
+此產品是 Web/PWA：網頁無障礙驗收依 WCAG 2.2；Apple HIG 是 iOS/mobile、macOS/desktop 互動的設計參考；`DESIGN.md` 與 owner 核准 mockup 記錄本專案品牌、版面和較高目標。原生 pt 不直接當 CSS px 規範。來源、數值與例外見 [`DESIGN.md`「Web 設計驗收與來源」](DESIGN.md#web-設計驗收與來源)；衝突先討論，不自行覆寫 owner 決策。terracotta tint、Inter web font、timeline editorial no-glass 繼續保留。Apple HIG 合規計畫 W0–W15 已收官；其 mockup 豁免不延伸到新 layout，新 layout 依 `AGENTS.md` 的 prototype gate。
 
 ## Skill Routing
 
