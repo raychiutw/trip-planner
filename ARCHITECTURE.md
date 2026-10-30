@@ -404,6 +404,8 @@ tests/
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
 | [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
+| [0009](docs/adr/0009-account-deletion-requires-fresh-google-reauth.md) | 刪除帳號需伺服器驗證的近期 Google 重新驗證，無法驗證就 fail-closed（⚠️ Google 是否回 `auth_time` 待驗證） |
+| [0010](docs/adr/0010-mobile-oauth-public-client-callback-contract.md) | Mobile OAuth 是 public client，callback 與 client 依環境精確綁定、用 HTTPS app link |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 

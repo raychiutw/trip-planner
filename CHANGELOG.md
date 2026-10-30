@@ -5,13 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.57.114] - 2026-10-30
 
-> ⚠️ **尚未達到可上線狀態**：後端與契約已完成並通過全部自動測試，但「Google 是否真的回傳 `auth_time`」尚未在真實環境驗證。若 Google 不回傳，純 Google 帳號的刪除會 fail-closed 而無法完成（舊的「只輸入 DELETE」路徑已移除）。見 `docs/api/mobile-oauth-account-delete.md` 的 Known limits。
+> ⚠️ **尚未達到可上線狀態**：後端與契約已完成並通過全部自動測試，但「Google 是否真的回傳 `auth_time`」尚未在真實環境驗證。若 Google 不回傳，純 Google 帳號的刪除會 fail-closed 而無法完成（舊的「只輸入 DELETE」路徑已移除）。見 ADR-0009 的 Consequences。
 
 ### Changed
 - **刪除帳號需要近期重新驗證身分**：純 Google 登入的帳號不能再只靠登入狀態加輸入 `DELETE` 刪除，必須先完成同一個 Google 帳號的重新驗證（最多 5 分鐘內、一次性）。有密碼的帳號維持原本的密碼確認。Web 帳號頁與 mobile app 共用同一套規則；取消、逾時、驗證到別的帳號都會保留帳號與行程。
 
 ### Added
-- **Mobile App 正式 OAuth callback 契約**：production／UAT／development 各自精確註冊 client 與 redirect（不開 wildcard、不跨環境），附 iOS／Android 的 app link 關聯檔；mobile 端以 grant 綁定的 challenge 完成刪除帳號（建立、查狀態、取消、刪除）。契約與錯誤碼見 `docs/api/mobile-oauth-account-delete.md`。
+- **Mobile App 正式 OAuth callback 契約**：production／UAT／development 各自精確註冊 client 與 redirect（不開 wildcard、不跨環境），附 iOS／Android 的 app link 關聯檔；mobile 端以 grant 綁定的 challenge 完成刪除帳號（建立、查狀態、取消、刪除）。決策與契約摘要見 ADR-0009、ADR-0010。
 - migration `0097_mobile_oauth_callbacks`（附 rollback）：只新增註冊，不覆蓋營運端自己登記的 redirect。**這是 additive migration，必須先套用到 production（與 staging）D1 再 merge。**
 
 ### Fixed
