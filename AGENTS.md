@@ -13,7 +13,7 @@ a small, settled, single-session change may proceed directly to `/implement`.
 
 1. **Clarify — `/grill-with-docs`**: for ambiguous work, ask one question at a
    time, answer repository facts by inspecting the code, and do not implement
-   until the user confirms shared understanding. Update `CONTEXT.md` only for
+   until the user confirms shared understanding. Update `GLOSSARY.md` only for
    settled domain vocabulary; create an ADR only for a hard-to-reverse,
    surprising decision with a real trade-off.
 2. **Specify — `/to-spec`**: for work that needs a durable spec, propose the fewest existing,

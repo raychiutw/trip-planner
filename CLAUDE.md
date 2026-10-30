@@ -13,7 +13,7 @@ grill-with-docs → [多 session? → to-spec → to-tickets →] implement → 
                                                           ↑ 內部驅動 tdd，收尾跑 code-review
 ```
 
-- **想法要磨** → `/grill-with-docs`（有 codebase、逐題逼問並留痕到 `CONTEXT.md` + ADR）
+- **想法要磨** → `/grill-with-docs`（有 codebase、逐題逼問並留痕到 `GLOSSARY.md` + ADR）
 - **答案要跑起來才知道** → `/handoff` 出去 → `/prototype` → `/handoff` 回來
 - **多 session 的 build** → `/to-spec` → `/to-tickets`（tracer-bullet 票 + blocking edges）→ 每票 `/implement`，**每票之間清 context**
 - **單 session 就做得完** → 直接 `/implement`
@@ -73,13 +73,13 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 
 | 情境 | 用 | 備註 |
 |---|---|---|
-| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 CONTEXT.md + ADR |
+| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 GLOSSARY.md + ADR |
 | 收斂成規格 → 拆票 | `/to-spec` → `/to-tickets` | |
 | 實作 | `/implement` | 內部跑 `/tdd`，收尾跑 `/code-review` |
 | 測試先行 | `/tdd` | 可自主呼叫 |
 | Code review | `/code-review` | 取代 `/review`；Standards + Spec 雙軸 |
 | Bug / 效能退化 | `/diagnosing-bugs` | 取代 `/investigate`；先建會變紅的指令 |
-| 詞彙 / ADR | `/domain-modeling` | CONTEXT.md 的維護者 |
+| 詞彙 / ADR | `/domain-modeling` | GLOSSARY.md 的維護者 |
 | Module 介面 / seam | `/codebase-design` | |
 | 設計問題要跑起來 | `/prototype` | throwaway，留答案刪 code |
 | 查資料 | `/research` | 背景 agent，產出有引用的 md |
@@ -117,4 +117,4 @@ Issues 走 GitHub Issues（`raychiutw/trip-planner`），用 `gh` CLI；`/wayfin
 
 ### Domain docs
 
-Single-context — 根目錄 [`CONTEXT.md`](CONTEXT.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.
+Single-context — 根目錄 [`GLOSSARY.md`](GLOSSARY.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.

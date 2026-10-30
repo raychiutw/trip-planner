@@ -18,4 +18,4 @@
 - 實測使用者客製率低，但 override 中間層的維運成本高（每個讀取路徑都要 COALESCE）——移除後讀取路徑單純化。
 - Trip-scoped 的自由文字改寫進 `trip_entries.note` 與 `trip_entry_pois.metadata`。
 - 住宿改掛 `trip_days.hotel_poi_id`（FK），不再用 `trip_pois` 的 context 欄位。
-- 詞彙後果見 `CONTEXT.md`：`trip_pois` 是**已退場**的名字。
+- 詞彙後果見 `GLOSSARY.md`：`trip_pois` 是**已退場**的名字。
