@@ -37,7 +37,7 @@ repository 的 mobile client seed 只有 `http://127.0.0.1:8765` loopback。它�
 
 ## Consequences
 
-- ⚠️ **callback 主機 `mobile-callback.trip-planner-dby.pages.dev` 是 `*.pages.dev` 的子網域，只可能是本專案（`trip-planner-dby`）的 branch alias**；repo 內沒有任何設定會建立它。誰能推送、force-reset 或刪除該 branch，就控制或癱瘓 production 與 UAT 的授權碼落點（批次清 stale branch 也會）；`public/.well-known/*` 只經由該 branch 的 build 到達。上線前要保護該 branch，或改用專屬自訂網域／主站路徑。
+- ⚠️ **callback 主機 `mobile-callback.trip-planner-dby.pages.dev` 是 `*.pages.dev` 的子網域，只可能是本專案（`trip-planner-dby`）的 branch alias**；repo 內沒有任何設定會建立它。誰能推送、force-reset 或刪除該 branch，就控制或癱瘓 production 與 UAT 的授權碼落點（批次清 stale branch 也會）；`public/.well-known/*` 只經由該 branch 的 build 到達。該 branch 已於 2026-10-31 設為禁止刪除與 force-push（對 admin 也生效）；它是舊 UAT branch、不隨 master 更新。改用主站路徑留到 web／api 拆分時一起做（見 issue #1462），因為拆分前 issuer 與 callback 會同網域，iOS Universal Link 行為沒有實機證據。
 - association 檔裡的 iOS Team ID 與 Android 憑證指紋**無法在 repo 內查證**；Android 必須是 Play App Signing 的簽章指紋，不是 upload key。沒有實機證據前不得宣稱正式支援。
 - 舊版 `tripline-mobile`（走 loopback redirect）無法再發起新的授權碼登入；refresh token 不受影響。
 - 本機 development 的 mobile client 只供 OAuth 授權碼流程；刪帳號 challenge 要求 HTTPS callback，在 loopback 契約下回 500 `SERVER_MISCONFIG`。
