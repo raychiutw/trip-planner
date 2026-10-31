@@ -45,6 +45,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { id, challenge, actor } = await ownedChallenge(context);
   if (challenge.status === 'used') throw new AppError('DATA_CONFLICT', '驗證已使用');
+  // failed 是終態：app 在 callback 回報失敗後常會再送一次取消收尾，視為冪等的清理，不回 409。
+  if (challenge.status === 'failed') return rawJson({ status: 'failed' });
   if (challenge.expired) throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED', '驗證已過期');
   if (challenge.status !== 'cancelled') {
     let cancelled = false;

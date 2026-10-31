@@ -203,6 +203,22 @@ describe('DELETE /api/account', () => {
     });
   });
 
+  it('同時帶有效的 session cookie 與 Bearer 標頭：以瀏覽器身分處理，不被導去 mobile 路徑', async () => {
+    // 共用 cookie 的 webview 或會自動加標頭的代理，可能讓請求同時帶兩者；middleware 以 cookie 優先認證，
+    // 這支 endpoint 也要看「實際認證出來的身分」而不是「有沒有 Authorization 標頭」。
+    const u = await seedUser('correct-horse-battery');
+    const { cookie } = await api.sessionFor(u.email, u.id);
+    const both = { cookie, headers: { Authorization: 'Bearer some-other-token' } };
+
+    const preview = await api.get('/api/account', both);
+    expect(preview.status).toBe(200);
+    expect(await preview.json()).toMatchObject({ hasPassword: true });
+
+    const deleted = await api.request('DELETE', '/api/account', { ...both, json: { password: 'correct-horse-battery' } });
+    expect(deleted.status).toBe(200);
+    expect(await userCount(u.id)).toBe(0);
+  });
+
   it('純 OAuth 帳號只輸入確認字串仍不能刪除', async () => {
     // Google 登入的使用者沒有 password_hash，不能要求他打密碼；只輸入確認字串也不夠，必須先完成近期的 Google 重新驗證。
     const u = await seedUser(); // 無密碼
@@ -257,6 +273,21 @@ describe('DELETE /api/account', () => {
         .bind(id, JSON.stringify({ user_id: userId, client_id: 'tripline-mobile', scopes: ['openid', 'profile'], grantId: `grant-${userId}-${grant}` }), Date.now() + 60000).run();
       return id;
     }
+
+    it('瀏覽器流程無法開始（沒登入、沒有 Google 身分）→ 導回 /account?deleteReauth=failed，不是一頁 JSON', async () => {
+      // 這是整頁導覽（window.location.href），回 JSON 會讓使用者停在一頁空白的 JSON 上、沒有路回 app。
+      const api2 = apiG();
+      const noSession = await api2.get(`${ORIGIN}/api/oauth/login/google?purpose=account-delete`);
+      expect(noSession.status).toBe(302);
+      expect(noSession.headers.get('Location')).toBe(`${ORIGIN}/account?deleteReauth=failed`);
+
+      const pwOnly = await seedUser('correct-horse-battery'); // 只有密碼身分，沒有 Google
+      const { cookie } = await api2.sessionFor(pwOnly.email, pwOnly.id);
+      const noGoogle = await api2.get(`${ORIGIN}/api/oauth/login/google?purpose=account-delete`, { cookie });
+      expect(noGoogle.status).toBe(302);
+      expect(noGoogle.headers.get('Location')).toBe(`${ORIGIN}/account?deleteReauth=failed`);
+      expect(await userCount(pwOnly.id), '開始失敗不得動到帳號').toBe(1);
+    });
 
     it('抹除批次失敗後可用同一個未過期的 Google 證明重試', async () => {
       const u = await seedGoogleUser();

@@ -129,6 +129,16 @@ describe('DELETE /api/account/delete-reauth：取消只能從未完成的狀態�
     expect(await userExists(u.id)).toBe(true);
   });
 
+  it('failed 的 challenge 取消 → 200（冪等的清理，不回錯），狀態仍是 failed', async () => {
+    // callback 把 challenge 標成 failed 後，app 通常會再送一次取消來收尾；這不該得到 409
+    const u = await seed();
+    const cid = await challengeIn(u, 'failed');
+    const res = await cancel(u, cid);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: 'failed' });
+    expect(await statusOf(cid)).toBe('failed');
+  });
+
   it('used 不能取消（DATA_CONFLICT），狀態不被改寫', async () => {
     const u = await seed();
     const cid = await challengeIn(u, 'used');

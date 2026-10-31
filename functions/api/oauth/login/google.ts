@@ -67,11 +67,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       reauth = { uid: challenge.uid, challengeId, grantId: challenge.grantId, clientId: challenge.clientId };
       redirectAfterLogin = mobileCallbackUrl(context.env).toString();
     } else {
-      const session = await requireSessionUser(context.request, context.env);
+      // 整頁導覽（window.location.href）：失敗要導回帳號頁，不能回一頁 JSON 讓使用者沒有路回 app。
+      // AccountPage 看到 ?deleteReauth=failed 會重開刪除對話框並顯示「身分驗證未完成」。
+      const backToAccount = () => Response.redirect(new URL('/account?deleteReauth=failed', url.origin), 302);
+      const session = await requireSessionUser(context.request, context.env).catch(() => null);
+      if (!session) return backToAccount();
       const sessionId = await deleteReauthSessionId(context.request);
       const identity = await context.env.DB.prepare("SELECT 1 FROM auth_identities WHERE user_id = ? AND provider = 'google'")
         .bind(session.uid).first();
-      if (!sessionId || !identity) return new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_UNAVAILABLE' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+      if (!sessionId || !identity) return backToAccount();
       reauth = { uid: session.uid, sessionId };
       redirectAfterLogin = '/account?deleteReauth=done';
     }

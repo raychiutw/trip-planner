@@ -74,11 +74,14 @@ export async function eraseUserAccount(db: D1Database, userId: string): Promise<
   const present = new Set((schema.results ?? []).map(row => row.name));
   const statements: D1PreparedStatement[] = [];
   const labels: string[] = [];
-  const add = (label: string, sql: string, ...binds: unknown[]) => {
-    if (!present.has(label === 'audit_log(anonymized)' ? 'audit_log' : label)) return;
+  // table：要檢查是否存在的表；label：回報用的名稱（同一張表可有多條語句，例如 audit_log 的匿名化）。
+  // 表名與 label 分開傳，以前用 label 字串特判，label 一改就會讓該語句被當成「表不存在」而悄悄跳過刪除。
+  const addFor = (table: string, label: string, sql: string, ...binds: unknown[]) => {
+    if (!present.has(table)) return;
     labels.push(label);
     statements.push(db.prepare(sql).bind(...binds));
   };
+  const add = (table: string, sql: string, ...binds: unknown[]) => addFor(table, table, sql, ...binds);
 
   if (present.has('trip_days')) {
     add('trip_entries', `DELETE FROM trip_entries WHERE day_id IN
@@ -91,7 +94,7 @@ export async function eraseUserAccount(db: D1Database, userId: string): Promise<
     add(table, `DELETE FROM ${table} WHERE trip_id IN (SELECT id FROM trips WHERE owner_user_id = ?)`, userId);
   }
   add('trips', 'DELETE FROM trips WHERE owner_user_id = ?', userId);
-  add('audit_log(anonymized)', `UPDATE audit_log
+  addFor('audit_log', 'audit_log(anonymized)', `UPDATE audit_log
     SET changed_by = ?, changed_by_user_id = NULL, diff_json = NULL, snapshot = NULL
     WHERE changed_by_user_id = ?`, `${ERASURE_ANON_PREFIX}${userId}`, userId);
   for (const table of USER_ORPHAN_TABLES) add(table, `DELETE FROM ${table} WHERE user_id = ?`, userId);

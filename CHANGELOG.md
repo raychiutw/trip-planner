@@ -7,9 +7,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 > ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。
 
-### Fixed
-- **已刪除帳號的舊登入還能繼續使用**：帳號刪除會把該使用者的登入裝置紀錄整列抹除，但驗證 session 時只在「找到紀錄且已撤銷」才拒絕，找不到就放行，所以刪除前拿到的 cookie 仍會以已刪除使用者的身分通過驗證，直到 30 天到期。現在 session 帶有裝置識別卻找不到紀錄時一律視為已撤銷。沒有裝置識別的舊版 session 不受影響。這是在 staging 預覽站實際跑一次帳號刪除才發現的，單元測試沒抓到。
-
 ### Changed
 - **刪除帳號需要近期重新驗證身分**：純 Google 登入的帳號不能再只靠登入狀態加輸入 `DELETE` 刪除，必須先完成同一個 Google 帳號的重新驗證（最多 5 分鐘內、一次性）。有密碼的帳號維持原本的密碼確認。Web 帳號頁與 mobile app 共用同一套規則；取消、逾時、驗證到別的帳號都會保留帳號與行程。
 
@@ -18,15 +15,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - migration `0097_mobile_oauth_callbacks`（附 rollback）：只新增註冊，不覆蓋營運端自己登記的 redirect。**這是 additive migration，必須先套用到 production（與 staging）D1 再 merge。**
 
 ### Fixed
+- **已刪除帳號的舊登入還能繼續使用**：帳號刪除會把該使用者的登入裝置紀錄整列抹除，但驗證 session 時只在「找到紀錄且已撤銷」才拒絕，找不到就放行，所以刪除前拿到的 cookie 仍會以已刪除使用者的身分通過驗證，直到 30 天到期。現在 session 帶有裝置識別卻找不到紀錄時一律視為已撤銷。沒有裝置識別的舊版 session 不受影響。這是在 staging 預覽站實際跑一次帳號刪除才發現的，單元測試沒抓到。
 - 刪除帳號的抹除改為單一 D1 batch：失敗會整批回滾，帳號保持完整、同一份驗證可重試（原本逐表刪除可能留下刪到一半的狀態）。
 - 開始驗證時若暫存 state 寫入失敗，challenge 會還原成可重試，不必等 5 分鐘過期。
+- 取消一個已經 `failed` 的 mobile challenge 不再回 409：app 在 callback 回報失敗後送取消收尾，視為冪等的清理，回 200 且狀態仍是 `failed`。
+- 同時帶有效的 session cookie 與 `Authorization: Bearer` 標頭時，刪除帳號的預覽與刪除改依「實際認證出來的身分」判斷，不再依標頭有無把已登入的瀏覽器使用者導去 mobile 路徑而被拒。
+- 瀏覽器的 Google 重新驗證無法開始（沒登入、沒有 Google 身分）時，導回 `/account?deleteReauth=failed`，不再讓整頁導覽停在一頁 JSON 上。
+- 抹除的內部 helper 把「表名」與「回報名稱」分開傳，原本靠字串特判，名稱一改就會讓該語句被當成「表不存在」而悄悄跳過刪除。
 
 ### For contributors
 - 由 UAT PR #1351／#1352 移植到目前 master（原 PR #1415，migration 由 0095 改號為 0097）。Refs #1347、#1349。
 - 新增守門測試：challenge 狀態矩陣（非 verified／過期／別人的／client 不符、並行只有一個成功、抹除失敗後還原、取消後 callback 重放不能復活）、migration 冪等與 rollback（含真實 snake_case token 形狀）、`.well-known` 與 `_headers`。每個守門都做過 mutation 驗證。
 - Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
-- 已知且刻意不在本 PR 處理：其他裝置的 session cookie 在刪帳號後仍有效（既有行為，`session_devices` 是刪除而非撤銷）、刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
-- 上線前必做：（1）日後啟用 Google 登入前，實測 Google 是否回傳 `auth_time`（目前休眠，不阻擋本次）；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 的 0097 已於 2026-10-31 套用；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
+- 已知且刻意不在本 PR 處理：刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
+- 上線前必做：（1）日後啟用 Google 登入前，實測 Google 是否回傳 `auth_time`（目前休眠，不阻擋本次）；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 的 0097 已於 2026-10-31 套用；（5）受控帳號刪除 smoke：密碼帳號的完整刪除已於 2026-10-31 在 staging 預覽站跑過（12 項全過）；Google 重新驗證的真實往返（拒絕、逾時、重放、跨帳號／grant）目前只有 mock 測試覆蓋，要啟用 Google 登入後才能實測。
 
 ## [2.57.118] - 2026-10-31
 
