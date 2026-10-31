@@ -1,19 +1,23 @@
 /**
  * Integration test — GET /api/trips/:id/segments
+ * 走 HTTP 邊界（tests/api/http.ts），認證用真實 bearer token，不直接呼叫 handler。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip, getDayId, callHandler, seedEntry } from './helpers';
-import { onRequestGet } from '../../functions/api/trips/[id]/segments/index';
+import { mockEnv, seedTrip, getDayId, seedEntry } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
+let api: Api;
 let entry1: number, entry2: number, entry3: number;
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   // published: 0 — v2.33.41 published trips allow anonymous read; test
   // 401/403 cases require non-published trip。
   await seedTrip(db, { id: 'trip-seg-get', published: 0 });
@@ -35,17 +39,14 @@ beforeAll(async () => {
   ).bind('trip-seg-get', entry2, entry3, now, now).run();
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTrips(db, ['trip-seg-get', 'trip-empty-seg'], []);
+  await disposeMiniflare();
+});
 
 describe('GET /api/trips/:id/segments', () => {
   it('回 array of segments by day order → 200', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-seg-get/segments', { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-seg-get' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await api.get('https://test.com/api/trips/trip-seg-get/segments', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     // json() helper deepCamel: snake_case → camelCase
     const body = await resp.json() as Array<{ mode: string; min: number; distanceM: number; fromEntryId: number; toEntryId: number }>;
@@ -58,33 +59,18 @@ describe('GET /api/trips/:id/segments', () => {
   });
 
   it('未認證 → 403（v2.33.41 requireTripReadAccess 對 anon + 非 published 統一回 PERM_DENIED）', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-seg-get/segments', { method: 'GET' }),
-      env,
-      params: { id: 'trip-seg-get' },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
+    const resp = await api.get('https://test.com/api/trips/trip-seg-get/segments');
+    expect(resp.status).toBe(403);
   });
 
   it('沒權限 → 403', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-seg-get/segments', { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'other@test.com' }),
-      params: { id: 'trip-seg-get' },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
+    const resp = await api.get('https://test.com/api/trips/trip-seg-get/segments', { as: 'other@test.com' });
+    expect(resp.status).toBe(403);
   });
 
   it('trip 無 segment → 200 + []', async () => {
     await seedTrip(db, { id: 'trip-empty-seg', published: 0 });
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-empty-seg/segments', { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-empty-seg' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await api.get('https://test.com/api/trips/trip-empty-seg/segments', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     expect(await resp.json()).toEqual([]);
   });
