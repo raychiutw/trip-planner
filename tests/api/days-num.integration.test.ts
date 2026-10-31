@@ -313,6 +313,31 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(row.poi_id).toBe(newPoi.id);
   });
 
+  // 轉 HTTP 邊界時 mutation 發現的缺口（拿掉 poi-id 的寫入權限檢查，原測試仍全綠），補上
+  it('Phase 2: PUT /entries/:eid/poi-id 非行程成員 → 403，master 不變', async () => {
+    const dayId = await getDayId(db, 'trip-dn', 3);
+    const entry = await db.prepare(
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
+    const before = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    const target = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'Stranger-Target-POI') RETURNING id",
+    ).first() as { id: number };
+
+    const resp = await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, {
+      as: 'days-num-stranger@test.com',
+      json: { poiId: target.id },
+    });
+    expect(resp.status).toBe(403);
+    const after = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    expect(after!.poi_id).toBe(before!.poi_id);
+    await db.prepare('DELETE FROM pois WHERE id = ?').bind(target.id).run(); // 共用 D1，清掉自己建的 POI
+  });
+
   it('Phase 2: PUT /entries/:eid/poi-id 拒絕不存在的 poiId → 404', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
