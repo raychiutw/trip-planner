@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.114] - 2026-10-30
+## [2.57.117] - 2026-10-31
 
 > ⚠️ **尚未達到可上線狀態**：後端與契約已完成並通過全部自動測試，但「Google 是否真的回傳 `auth_time`」尚未在真實環境驗證。若 Google 不回傳，純 Google 帳號的刪除會 fail-closed 而無法完成（舊的「只輸入 DELETE」路徑已移除）。見 ADR-0009 的 Consequences。
 
@@ -24,6 +24,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
 - 已知且刻意不在本 PR 處理：其他裝置的 session cookie 在刪帳號後仍有效（既有行為，`session_devices` 是刪除而非撤銷）、刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
 - 上線前必做：（1）UAT 實測 Google 是否回傳 `auth_time`，否則需決定其他新鮮度證明；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 套用 0097；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
+
+## [2.57.116] - 2026-10-31
+
+### Changed
+- **CLAUDE.md、AGENTS.md 不再引用已刪的 mockup 檔**：Design SoT 段改為「以 `DESIGN.md` 為準」。Mockup-first gate 不變（仍是 `/prototype` 產出加 owner sign-off，不依賴 repo 內的檔案）。
+
+### For contributors
+- 純文字變更，沒有跑 gstack 的 specialist／adversarial review army；只驗證了三個提到 CLAUDE.md／AGENTS.md 的 unit 測試。
+
+## [2.57.115] - 2026-10-30
+
+### Removed
+- **`docs/` 只保留 matt 工作流需要的文件**：刪除 design-sessions（mockup 與截圖）、code-review 輪次紀錄、plans、research、runbooks、perf、monitoring、artifacts、api、backend-tasks、archive 與舊 session retro，共 213 個檔。留下 `docs/adr/`、`docs/agents/`，以及功能性資產 `docs/demo/demo-trip.json`（demo seed 與測試用）和 `docs/readme/`（README 截圖）。這些文件都還在 git history 可查。
+
+### For contributors
+- 移除只測「文件內容」的測試（uptime-monitor 文件、code-review README、archive、mockup HTML）；CLAUDE.md、AGENTS.md 拿掉指向已刪文件的連結。
+- 刻意沒動：DESIGN.md 內對 mockup 的 sign-off 引用，以及 src／migrations 註解裡的 mockup 路徑（現在指向已不存在的檔案，屬歷史出處）。
+- 本輪沒有跑 gstack 的 specialist／adversarial review army（純刪除加兩處指令檔連結），驗證靠 typecheck、lint、unit 4718、API 1302 與 CI。
 
 ## [2.57.113] - 2026-10-29
 

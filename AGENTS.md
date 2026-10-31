@@ -13,7 +13,7 @@ a small, settled, single-session change may proceed directly to `/implement`.
 
 1. **Clarify — `/grill-with-docs`**: for ambiguous work, ask one question at a
    time, answer repository facts by inspecting the code, and do not implement
-   until the user confirms shared understanding. Update `CONTEXT.md` only for
+   until the user confirms shared understanding. Update `GLOSSARY.md` only for
    settled domain vocabulary; create an ADR only for a hard-to-reverse,
    surprising decision with a real trade-off.
 2. **Specify — `/to-spec`**: for work that needs a durable spec, propose the fewest existing,
@@ -50,7 +50,6 @@ Official upstream references:
 [`to-tickets`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/to-tickets.md#L13-L42),
 [`implement`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/implement.md#L13-L29), and
 [`code-review`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/code-review.md#L13-L31).
-Detailed comparison: [`docs/research/2026-08-03-matt-pocock-skills-workflow.md`](docs/research/2026-08-03-matt-pocock-skills-workflow.md).
 
 When multiple skill frameworks could apply and the user has not named one, use this priority:
 
@@ -101,7 +100,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` and approved mockups to product styling. Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
+For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` to product styling (the old mockup files were removed). Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
 
 ## Skill Routing
 

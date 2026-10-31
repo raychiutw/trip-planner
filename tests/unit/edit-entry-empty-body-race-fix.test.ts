@@ -22,10 +22,6 @@ const EDIT = readFileSync(
   join(__dirname, '../../src/pages/EditEntryPage.tsx'),
   'utf8',
 );
-const MOCKUP = readFileSync(
-  join(__dirname, '../../docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html'),
-  'utf8',
-);
 
 describe('PR12 (A): empty body race guard', () => {
   it('entry body push 前先檢 Object.keys(body).length > 0', () => {
@@ -66,13 +62,5 @@ describe('PR12 (B) / PR14 / PR18: EditEntryPage handleSave 失敗走 toast', () 
 
   it('validation InlineError 保留（form-level user 知道哪個欄位錯）', () => {
     expect(EDIT).toMatch(/data-testid="edit-entry-validation"/);
-  });
-});
-
-describe('mockup spec source of truth', () => {
-  it('mockup 含 「儲存失敗 → 重試 + toast error」spec line', () => {
-    expect(MOCKUP).toMatch(/儲存失敗/);
-    expect(MOCKUP).toMatch(/重試/);
-    expect(MOCKUP).toMatch(/toast error/);
   });
 });

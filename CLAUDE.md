@@ -13,11 +13,12 @@ grill-with-docs → [多 session? → to-spec → to-tickets →] implement → 
                                                           ↑ 內部驅動 tdd，收尾跑 code-review
 ```
 
-- **想法要磨** → `/grill-with-docs`（有 codebase、逐題逼問並留痕到 `CONTEXT.md` + ADR）
+- **想法要磨** → `/grill-with-docs`（有 codebase、逐題逼問並留痕到 `GLOSSARY.md` + ADR）
 - **答案要跑起來才知道** → `/handoff` 出去 → `/prototype` → `/handoff` 回來
 - **多 session 的 build** → `/to-spec` → `/to-tickets`（tracer-bullet 票 + blocking edges）→ 每票 `/implement`，**每票之間清 context**
 - **單 session 就做得完** → 直接 `/implement`
-- **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）
+- **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）；整份 spec 一次做完可用 `/implement-spec`（並行 subagent + 整合分支）
+- **PR 與回顧**：開 PR 時 `/pr` 規範 PR 內文形狀（我可自主呼叫；與 `/ship` 的 PR 內文並用時，以 `/ship` 的稽核欄位為準）；build 結束後 `/retro` 回頭檢視環境該怎麼改（只能 owner 打）
 - **出貨**：matt 沒有發版流程 → `/ship`（bump VERSION + CHANGELOG + PR）→ `/land-and-deploy` → `/canary`
 
 Context 衛生：步驟 1–3 保持在**同一個不中斷的 context window**，`/to-tickets` 前不要 compact/clear。接近 smart zone（~120k tokens）就 `/handoff` 換新 session，別在退化的狀態硬撐。
@@ -30,11 +31,13 @@ On-ramps（匯入主線）：
 
 ## ⚠️ Matt skill 的呼叫限制
 
-**13 個 matt skill 有 `disable-model-invocation: true` —— 我不能自主呼叫，只能 owner 打 `/name`。** 主線骨幹全在這裡面，所以**我沒辦法自己起頭**：
+**多數 matt skill 有 `disable-model-invocation: true`（v1.3.2 實測 24 個）—— 我不能自主呼叫，只能 owner 打 `/name`。** 主線骨幹全在這裡面，所以**我沒辦法自己起頭**。本專案用到的：
 
-`ask-matt` · `grill-with-docs` · `to-spec` · `to-tickets` · `implement` · `triage` · `wayfinder` · `improve-codebase-architecture` · `handoff` · `grill-me` · `teach` · `setup-matt-pocock-skills` · `writing-great-skills`
+`ask-matt` · `grill-with-docs` · `grill-me` · `to-spec` · `to-tickets` · `implement` · `implement-spec` · `triage` · `wayfinder` · `improve-codebase-architecture` · `handoff` · `retro` · `setup-matt-pocock-skills` · `teach`
 
-**我可自主呼叫的 9 個**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `resolving-merge-conflicts` · `grilling`
+**我可自主呼叫的**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `grilling` · `pr` · `wizard` · `writing-for-agents`
+
+（v1.3.1 起 `resolving-merge-conflicts` 已移除；領域文件改名為 `GLOSSARY.md`／`GLOSSARY-MAP.md`。）
 
 它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
 
@@ -51,7 +54,7 @@ On-ramps（匯入主線）：
 
 `src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
-Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav（聊天/行程/地圖/收藏）+ 帳號 header 圓圈 → Account sheet（HIG，見 `docs/plans/apple-hig-compliance/`）。
+Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav（聊天/行程/地圖/收藏）+ 帳號 header 圓圈 → Account sheet（HIG）。
 
 ## Dev
 
@@ -65,7 +68,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-此產品是 Web/PWA：網頁無障礙驗收依 WCAG 2.2；Apple HIG 是 iOS/mobile、macOS/desktop 互動的設計參考；`DESIGN.md` 與 owner 核准 mockup 記錄本專案品牌、版面和較高目標。原生 pt 不直接當 CSS px 規範。來源、數值與例外見 [`DESIGN.md`「Web 設計驗收與來源」](DESIGN.md#web-設計驗收與來源)；衝突先討論，不自行覆寫 owner 決策。terracotta tint、Inter web font、timeline editorial no-glass 繼續保留。`docs/plans/apple-hig-compliance/` 的 W0–W15 已收官；其 mockup 豁免不延伸到新 layout，新 layout 依 `AGENTS.md` 的 prototype gate。
+此產品是 Web/PWA：網頁無障礙驗收依 WCAG 2.2；Apple HIG 是 iOS/mobile、macOS/desktop 互動的設計參考；`DESIGN.md` 記錄本專案品牌、版面和較高目標（舊 mockup 檔已移除，owner 決策以 DESIGN.md 為準）。原生 pt 不直接當 CSS px 規範。來源、數值與例外見 [`DESIGN.md`「Web 設計驗收與來源」](DESIGN.md#web-設計驗收與來源)；衝突先討論，不自行覆寫 owner 決策。terracotta tint、Inter web font、timeline editorial no-glass 繼續保留。Apple HIG 合規計畫 W0–W15 已收官；其豁免不延伸到新 layout，新 layout 依 `AGENTS.md` 的 prototype gate。
 
 ## Skill Routing
 
@@ -73,17 +76,16 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 
 | 情境 | 用 | 備註 |
 |---|---|---|
-| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 CONTEXT.md + ADR |
+| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 GLOSSARY.md + ADR |
 | 收斂成規格 → 拆票 | `/to-spec` → `/to-tickets` | |
 | 實作 | `/implement` | 內部跑 `/tdd`，收尾跑 `/code-review` |
 | 測試先行 | `/tdd` | 可自主呼叫 |
 | Code review | `/code-review` | 取代 `/review`；Standards + Spec 雙軸 |
 | Bug / 效能退化 | `/diagnosing-bugs` | 取代 `/investigate`；先建會變紅的指令 |
-| 詞彙 / ADR | `/domain-modeling` | CONTEXT.md 的維護者 |
+| 詞彙 / ADR | `/domain-modeling` | GLOSSARY.md 的維護者 |
 | Module 介面 / seam | `/codebase-design` | |
 | 設計問題要跑起來 | `/prototype` | throwaway，留答案刪 code |
 | 查資料 | `/research` | 背景 agent，產出有引用的 md |
-| Merge 衝突 | `/resolving-merge-conflicts` | |
 | Codebase 保養 | `/improve-codebase-architecture` | 產 deepening opportunities |
 | 跨 session | `/handoff` | 對話快滿或要分岔時 |
 
@@ -117,4 +119,4 @@ Issues 走 GitHub Issues（`raychiutw/trip-planner`），用 `gh` CLI；`/wayfin
 
 ### Domain docs
 
-Single-context — 根目錄 [`CONTEXT.md`](CONTEXT.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.
+Single-context — 根目錄 [`GLOSSARY.md`](GLOSSARY.md)（領域詞彙 + 已退場名字）+ [`docs/adr/`](docs/adr/)（架構決策，`ARCHITECTURE.md` 只留索引）。探索程式碼前先讀。See `docs/agents/domain.md`.

@@ -16,7 +16,6 @@ const CONTRIBUTING = read('CONTRIBUTING.md');
 const AGENTS = read('AGENTS.md');
 const GEMINI = read('GEMINI.md');
 const SPEC = read('SPEC.md');
-const CR_README = read('docs/code-review/README.md');
 
 // v2.33.68 #1（README 不得出現 OSM/ORS 舊描述）已退役：README 改為產品介紹，不再有技術段落，連結與截圖契約改由 readme-product.test.ts 守。
 describe('v2.33.68 #2 — ARCHITECTURE.md V2 OAuth + Google Maps refresh', () => {
@@ -89,32 +88,5 @@ describe('v2.33.68 #6 — SPEC.md mark SUPERSEDED', () => {
   it('Status SUPERSEDED + 不要 follow warning', () => {
     expect(SPEC).toMatch(/SUPERSEDED/);
     expect(SPEC).toMatch(/不要 follow 本檔做 implementation/);
-  });
-});
-
-describe('v2.33.68 #7 — docs/code-review/README.md 完整 + PR 號 backfill', () => {
-  it('Round 13 PR URL 修 typo (planner → trip-planner)', () => {
-    expect(CR_README).toMatch(/raychiutw\/trip-planner\/pull\/739/);
-    expect(CR_README).not.toMatch(/raychiutw\/planner\/pull\/739/);
-  });
-
-  it('Round 14b/14c/14d/15a/15b/16/17 都 listed + 有 PR #', () => {
-    expect(CR_README).toMatch(/\| 14b \|.*#741/);
-    expect(CR_README).toMatch(/\| 14c \|.*#742/);
-    expect(CR_README).toMatch(/\| 14d \|.*#743/);
-    expect(CR_README).toMatch(/\| 15a \|.*#744/);
-    expect(CR_README).toMatch(/\| 15b \|.*#745/);
-    expect(CR_README).toMatch(/\| 16 \|.*#746/);
-    expect(CR_README).toMatch(/\| 17 \|.*#755/);
-  });
-});
-
-describe('v2.33.68 #8 — optimization-report 移到 docs/archive', () => {
-  it('docs/archive/optimization-report-2026-03-22.md exists', () => {
-    expect(exists('docs/archive/optimization-report-2026-03-22.md')).toBe(true);
-  });
-
-  it('root optimization-report 不再存在', () => {
-    expect(exists('optimization-report-2026-03-22.md')).toBe(false);
   });
 });

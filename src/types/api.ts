@@ -197,7 +197,7 @@ export interface AuthData {
  * Valid request status values — 對齊 migration 0049 的 D1 CHECK constraint。
  *
  * 曾長期漂移：帶著 v2.21.3 就退場的 `received`、缺了 `failed`（而 `failed` 是
- * 後端唯一的失敗終態）。CONTEXT.md 的「已退場的名字」是權威。
+ * 後端唯一的失敗終態）。GLOSSARY.md 的「已退場的名字」是權威。
  */
 export type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
 
