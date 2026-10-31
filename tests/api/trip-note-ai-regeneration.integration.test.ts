@@ -304,6 +304,48 @@ describe('AI 重新生成套用', () => {
     expect(old?.content).toBe('必須保留');
   });
 
+  it('同一份回覆內同主題重複的項目只留第一筆，其餘計入略過', async () => {
+    const tripId = await freshTrip();
+    const { requestId, jobId } = await createJob(tripId, 'tips');
+
+    await complete(requestId, JSON.stringify([
+      { title: '當地貨幣', content: '第一筆內容', section: '貨幣' },
+      { title: '當地貨幣', content: '重複的第二筆', section: '貨幣' },
+    ]));
+
+    const rows = await db.prepare(
+      'SELECT title, content FROM trip_pretrip_notes WHERE trip_id = ?',
+    ).bind(tripId).all();
+    expect(rows.results).toEqual([{ title: '當地貨幣', content: '第一筆內容' }]);
+    expect(await db.prepare(
+      'SELECT inserted_count, suppressed_count FROM trip_note_ai_jobs WHERE id = ?',
+    ).bind(jobId).first()).toEqual({ inserted_count: 1, suppressed_count: 1 });
+  });
+
+  it('emergency：人工維護的聯絡人不會被重新生成刪掉，AI 維護的舊聯絡人會被替換', async () => {
+    const tripId = await freshTrip();
+    await db.prepare(
+      `INSERT INTO trip_emergency_contacts
+         (trip_id, sort_order, name, phone, kind, ai_generated, origin, managed_by, semantic_key)
+       VALUES (?, 0, '人工確認警察', '110', 'police', 1, 'ai', 'human', NULL),
+              (?, 1, '舊醫院', '119', 'medical', 1, 'ai', 'ai', 'emergency:medical')`,
+    ).bind(tripId, tripId).run();
+    const { requestId } = await createJob(tripId, 'emergency');
+
+    await complete(requestId, JSON.stringify([
+      { name: '新大使館', phone: '+81000', kind: 'embassy', relationship: '協助' },
+    ]));
+
+    const rows = await db.prepare(
+      'SELECT name, managed_by FROM trip_emergency_contacts WHERE trip_id = ? ORDER BY name',
+    ).bind(tripId).all();
+    expect(rows.results).toEqual(expect.arrayContaining([
+      { name: '人工確認警察', managed_by: 'human' },
+      { name: '新大使館', managed_by: 'ai' },
+    ]));
+    expect(rows.results).toHaveLength(2);
+  });
+
   it('timed_out job 的遲到 callback 不可套用內容', async () => {
     const tripId = await freshTrip();
     const { requestId, jobId } = await createJob(tripId, 'emergency');
@@ -544,13 +586,18 @@ describe('權限與版本檢查（補強既有行為的守門）', () => {
     })).status).toBe(403);
     expect((await stranger('POST', `/api/trips/${tripId}/notes/pretrip`, { title: '入侵', content: 'x' })).status).toBe(403);
     expect((await stranger('DELETE', `/api/trips/${tripId}/notes/emergency/${contact!.id}`)).status).toBe(403);
+    const exclusion = await db.prepare(
+      `INSERT INTO trip_note_ai_exclusions (trip_id, doc_type, semantic_key, label)
+       VALUES (?, 'emergency', 'emergency:police', '日本警察') RETURNING id`,
+    ).bind(tripId).first<{ id: number }>();
+    expect((await stranger('DELETE', `/api/trips/${tripId}/notes/emergency/exclusions/${exclusion!.id}`)).status).toBe(403);
 
     // 被擋下的請求不得改動資料
     expect(await db.prepare('SELECT managed_by, version FROM trip_pretrip_notes WHERE id = ?').bind(aiRow!.id).first())
       .toEqual({ managed_by: 'ai', version: aiRow!.version });
     expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_pretrip_notes WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(1);
     expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_emergency_contacts WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(1);
-    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_note_ai_exclusions WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(0);
+    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_note_ai_exclusions WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(1);
   });
 
   it('未帶 token 讀 AI state 回 401', async () => {
