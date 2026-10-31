@@ -1,42 +1,39 @@
+/**
+ * 行程筆記 AI 重新生成：走 HTTP 邊界（PATCH /api/requests/:id 的完成 hook、筆記維護／排除／AI state）。
+ * 認證一律經 middleware 的真實 bearer token（companion service token／行程 owner）。
+ * 共用 D1：行程、email、request 都用 `s14-ai` 專屬前綴，afterAll 清掉自己的資料。
+ */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { onRequestPatch as patchRequest } from '../../functions/api/requests/[id]/index';
-import { onRequestGet as getAiState } from '../../functions/api/trips/[id]/notes/ai-state';
-import { onRequestDelete as restoreExclusion } from '../../functions/api/trips/[id]/notes/[type]/exclusions/[exclusionId]';
-import { onRequestGet as getExclusions } from '../../functions/api/trips/[id]/notes/[type]/exclusions/index';
-import { onRequestPatch as patchMaintenance } from '../../functions/api/trips/[id]/notes/[section]/[rowId]/maintenance';
-import { onRequestPost as createPretrip } from '../../functions/api/trips/[id]/notes/pretrip';
-import {
-  onRequestDelete as deletePretrip,
-  onRequestPatch as patchPretrip,
-} from '../../functions/api/trips/[id]/notes/pretrip/[rowId]';
 import type { Env } from '../../functions/api/_types';
-import {
-  callHandler,
-  jsonRequest,
-  mockAuth,
-  mockContext,
-  mockEnv,
-  mockServiceAuth,
-  seedTrip,
-  seedUser,
-} from './helpers';
+import { createApi, type Api } from './http';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { cleanupNotes } from './cleanup-notes';
+import { serviceTokenFor } from './service-token';
 import { createTestDb, disposeMiniflare } from './setup';
 
+const PREFIX = 's14-ai';
 let db: D1Database;
 let env: Env;
-const ownerEmail = 'owner@note-ai.test';
+let api: Api;
+let serviceToken: string;
+const ownerEmail = `${PREFIX}-owner@note-ai.test`;
 let sequence = 0;
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   await seedUser(db, ownerEmail);
+  serviceToken = await serviceTokenFor(db, { clientId: 's14-cli', scopes: ['companion'] });
 }, 90000);
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupNotes(db, PREFIX);
+  await disposeMiniflare();
+});
 
 async function freshTrip() {
-  const tripId = `trip-note-ai-${++sequence}`;
+  const tripId = `${PREFIX}-trip-${++sequence}`;
   await seedTrip(db, { id: tripId, owner: ownerEmail });
   return tripId;
 }
@@ -58,31 +55,38 @@ async function createJob(tripId: string, docType: 'lodging-tips' | 'tips' | 'eme
   return { requestId: request!.id, jobId: job!.id };
 }
 
-async function complete(requestId: number, reply: string) {
-  return callHandler(patchRequest, mockContext({
-    request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', {
-      status: 'completed',
-      reply,
-    }),
-    env,
-    auth: mockServiceAuth(),
-    params: { id: String(requestId) },
-  }));
+/** 以 companion service token 回報 request 完成（Claude CLI 的身分）。`target` 可換成注入了競態的 api。 */
+function complete(requestId: number, reply: string, target: Api = api) {
+  return target.request('PATCH', `/api/requests/${requestId}`, {
+    bearer: serviceToken,
+    json: { status: 'completed', reply },
+  });
 }
 
-function ownerContext(
-  handler: PagesFunction<Env>,
-  tripId: string,
-  method: string,
-  body: unknown,
-  params: Record<string, string>,
-) {
-  return callHandler(handler, mockContext({
-    request: jsonRequest(`https://test/api/trips/${tripId}/notes/test`, method, body),
-    env,
-    auth: mockAuth({ email: ownerEmail }),
-    params: { id: tripId, ...params },
-  }));
+/** 注入競態：第一次 `batch` 之前先執行 `race`，模擬套用前同時發生的人工維護。 */
+function apiWithBatchRace(race: () => Promise<void>): Api {
+  let injected = false;
+  const raceDb = new Proxy(db, {
+    get(target, property) {
+      if (property === 'batch') {
+        return async (statements: D1PreparedStatement[]) => {
+          if (!injected) {
+            injected = true;
+            await race();
+          }
+          return target.batch(statements);
+        };
+      }
+      const value = Reflect.get(target, property);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as D1Database;
+  return createApi({ env: { ...env, DB: raceDb } });
+}
+
+/** 以行程 owner 的身分呼叫。`target` 換成注入競態的 api 時，token 必須先由正常的 api 簽出。 */
+async function owner(method: string, path: string, json?: unknown, target: Api = api) {
+  return target.request(method, path, { bearer: await api.tokenFor(ownerEmail), json });
 }
 
 describe('AI 重新生成套用', () => {
@@ -194,42 +198,21 @@ describe('AI 重新生成套用', () => {
        RETURNING id`,
     ).bind(tripId).first<{ id: number }>();
     const { requestId, jobId } = await createJob(tripId, 'tips');
-    let injected = false;
-    const raceDb = new Proxy(db, {
-      get(target, property) {
-        if (property === 'batch') {
-          return async (statements: D1PreparedStatement[]) => {
-            if (!injected) {
-              injected = true;
-              await target.prepare(
-                `UPDATE trip_pretrip_notes SET managed_by = 'human' WHERE id = ?`,
-              ).bind(row!.id).run();
-              await target.prepare(
-                `INSERT INTO trip_note_ai_exclusions
-                   (trip_id, doc_type, semantic_key, label)
-                 VALUES (?, 'tips', 'tips:electricity', '插座')`,
-              ).bind(tripId).run();
-            }
-            return target.batch(statements);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === 'function' ? value.bind(target) : value;
-      },
-    }) as D1Database;
+    const raced = apiWithBatchRace(async () => {
+      await db.prepare(
+        `UPDATE trip_pretrip_notes SET managed_by = 'human' WHERE id = ?`,
+      ).bind(row!.id).run();
+      await db.prepare(
+        `INSERT INTO trip_note_ai_exclusions
+           (trip_id, doc_type, semantic_key, label)
+         VALUES (?, 'tips', 'tips:electricity', '插座')`,
+      ).bind(tripId).run();
+    });
 
-    await callHandler(patchRequest, mockContext({
-      request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', {
-        status: 'completed',
-        reply: JSON.stringify([
-          { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
-          { title: '插座規格', content: 'AI 新內容', section: '插座' },
-        ]),
-      }),
-      env: { ...env, DB: raceDb },
-      auth: mockServiceAuth(),
-      params: { id: String(requestId) },
-    }));
+    await complete(requestId, JSON.stringify([
+      { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
+      { title: '插座規格', content: 'AI 新內容', section: '插座' },
+    ]), raced);
 
     const rows = await db.prepare(
       `SELECT title, managed_by FROM trip_pretrip_notes WHERE trip_id = ?`,
@@ -258,36 +241,15 @@ describe('AI 重新生成套用', () => {
        RETURNING id`,
     ).bind(tripId).first<{ id: number }>();
     const { requestId } = await createJob(tripId, 'tips');
-    let injected = false;
-    const raceDb = new Proxy(db, {
-      get(target, property) {
-        if (property === 'batch') {
-          return async (statements: D1PreparedStatement[]) => {
-            if (!injected) {
-              injected = true;
-              await target.prepare(
-                `UPDATE trip_pretrip_notes SET managed_by = 'ai' WHERE id = ?`,
-              ).bind(row!.id).run();
-            }
-            return target.batch(statements);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === 'function' ? value.bind(target) : value;
-      },
-    }) as D1Database;
+    const raced = apiWithBatchRace(async () => {
+      await db.prepare(
+        `UPDATE trip_pretrip_notes SET managed_by = 'ai' WHERE id = ?`,
+      ).bind(row!.id).run();
+    });
 
-    await callHandler(patchRequest, mockContext({
-      request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', {
-        status: 'completed',
-        reply: JSON.stringify([
-          { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
-        ]),
-      }),
-      env: { ...env, DB: raceDb },
-      auth: mockServiceAuth(),
-      params: { id: String(requestId) },
-    }));
+    await complete(requestId, JSON.stringify([
+      { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
+    ]), raced);
 
     expect(await db.prepare(
       `SELECT title, managed_by FROM trip_pretrip_notes WHERE id = ?`,
@@ -297,38 +259,17 @@ describe('AI 重新生成套用', () => {
   it('套用前新增人工同主題時，batch guard 不會再插入 AI 重複項目', async () => {
     const tripId = await freshTrip();
     const { requestId, jobId } = await createJob(tripId, 'tips');
-    let injected = false;
-    const raceDb = new Proxy(db, {
-      get(target, property) {
-        if (property === 'batch') {
-          return async (statements: D1PreparedStatement[]) => {
-            if (!injected) {
-              injected = true;
-              await target.prepare(
-                `INSERT INTO trip_pretrip_notes
-                   (trip_id, title, content, origin, managed_by, semantic_key)
-                 VALUES (?, '人工貨幣提醒', '人工內容', 'human', 'human', 'currency')`,
-              ).bind(tripId).run();
-            }
-            return target.batch(statements);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === 'function' ? value.bind(target) : value;
-      },
-    }) as D1Database;
+    const raced = apiWithBatchRace(async () => {
+      await db.prepare(
+        `INSERT INTO trip_pretrip_notes
+           (trip_id, title, content, origin, managed_by, semantic_key)
+         VALUES (?, '人工貨幣提醒', '人工內容', 'human', 'human', 'currency')`,
+      ).bind(tripId).run();
+    });
 
-    await callHandler(patchRequest, mockContext({
-      request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', {
-        status: 'completed',
-        reply: JSON.stringify([
-          { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
-        ]),
-      }),
-      env: { ...env, DB: raceDb },
-      auth: mockServiceAuth(),
-      params: { id: String(requestId) },
-    }));
+    await complete(requestId, JSON.stringify([
+      { title: '當地貨幣', content: 'AI 新內容', section: '貨幣' },
+    ]), raced);
 
     const rows = await db.prepare(
       `SELECT title, origin FROM trip_pretrip_notes WHERE trip_id = ?`,
@@ -390,10 +331,10 @@ describe('AI 重新生成套用', () => {
 describe('人工維護、排除與恢復', () => {
   it('人工新增與編輯會維護主題鍵，供生成中的 DB guard 去重', async () => {
     const tripId = await freshTrip();
-    const created = await ownerContext(createPretrip, tripId, 'POST', {
+    const created = await owner('POST', `/api/trips/${tripId}/notes/pretrip`, {
       title: '貨幣與付款',
       content: '人工內容',
-    }, {});
+    });
     expect(await created.json()).toMatchObject({
       origin: 'human',
       semanticKey: 'currency',
@@ -403,10 +344,10 @@ describe('人工維護、排除與恢復', () => {
     const row = await db.prepare(
       `SELECT id FROM trip_pretrip_notes WHERE trip_id = ?`,
     ).bind(tripId).first<{ id: number }>();
-    const edited = await ownerContext(patchPretrip, tripId, 'PATCH', {
+    const edited = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${row!.id}`, {
       title: '插座規格',
       expectedVersion: 0,
-    }, { rowId: String(row!.id) });
+    });
     expect(await edited.json()).toMatchObject({
       origin: 'human',
       semanticKey: 'electricity',
@@ -427,37 +368,37 @@ describe('人工維護、排除與恢復', () => {
        VALUES (?, '人工提醒', '內容') RETURNING id, version`,
     ).bind(tripId).first<{ id: number; version: number }>();
 
-    const markedHuman = await ownerContext(patchMaintenance, tripId, 'PATCH', {
+    const markedHuman = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${aiRow!.id}/maintenance`, {
       managedBy: 'human',
       expectedVersion: aiRow!.version,
-    }, { section: 'pretrip', rowId: String(aiRow!.id) });
+    });
     expect(await markedHuman.json()).toMatchObject({
       origin: 'ai',
       managedBy: 'human',
       semanticKey: 'tips:ai提醒',
     });
 
-    const edited = await ownerContext(patchPretrip, tripId, 'PATCH', {
+    const edited = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${aiRow!.id}`, {
       title: '插座規格',
       expectedVersion: 1,
-    }, { rowId: String(aiRow!.id) });
+    });
     expect(await edited.json()).toMatchObject({
       origin: 'ai',
       managedBy: 'human',
       semanticKey: 'tips:electricity',
     });
 
-    const returned = await ownerContext(patchMaintenance, tripId, 'PATCH', {
+    const returned = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${aiRow!.id}/maintenance`, {
       managedBy: 'ai',
       expectedVersion: 2,
-    }, { section: 'pretrip', rowId: String(aiRow!.id) });
+    });
     expect(returned.status).toBe(200);
     expect(await returned.json()).toMatchObject({ origin: 'ai', managedBy: 'ai' });
 
-    const rejected = await ownerContext(patchMaintenance, tripId, 'PATCH', {
+    const rejected = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${humanRow!.id}/maintenance`, {
       managedBy: 'ai',
       expectedVersion: humanRow!.version,
-    }, { section: 'pretrip', rowId: String(humanRow!.id) });
+    });
     expect(rejected.status).toBe(409);
     expect((await rejected.json() as any).error.code).toBe('NOTES_AI_NOT_REASSIGNABLE');
   });
@@ -470,18 +411,10 @@ describe('人工維護、排除與恢復', () => {
        VALUES (?, '日本警察', '110', 'police', 1, 'ai', 'ai', 'emergency:police')
        RETURNING id`,
     ).bind(tripId).first<{ id: number }>();
-    const deleted = await ownerContext(
-      (await import('../../functions/api/trips/[id]/notes/emergency/[rowId]')).onRequestDelete,
-      tripId,
-      'DELETE',
-      undefined,
-      { rowId: String(row!.id) },
-    );
+    const deleted = await owner('DELETE', `/api/trips/${tripId}/notes/emergency/${row!.id}`);
     expect(await deleted.json()).toMatchObject({ ok: true, excluded: true });
 
-    const listed = await ownerContext(getExclusions, tripId, 'GET', undefined, {
-      type: 'emergency',
-    });
+    const listed = await owner('GET', `/api/trips/${tripId}/notes/emergency/exclusions`);
     const listBody = await listed.json() as any;
     expect(listBody.items).toHaveLength(1);
     expect(listBody.items[0]).toMatchObject({
@@ -507,10 +440,7 @@ describe('人工維護、排除與恢復', () => {
       duplicate_excluded_count: 1,
     });
 
-    const restored = await ownerContext(restoreExclusion, tripId, 'DELETE', undefined, {
-      type: 'emergency',
-      exclusionId: String(listBody.items[0].id),
-    });
+    const restored = await owner('DELETE', `/api/trips/${tripId}/notes/emergency/exclusions/${listBody.items[0].id}`);
     expect(restored.status).toBe(200);
     const remaining = await db.prepare(
       'SELECT COUNT(*) AS n FROM trip_note_ai_exclusions WHERE trip_id = ?',
@@ -541,40 +471,16 @@ describe('人工維護、排除與恢復', () => {
          (trip_id, title, content, ai_generated, ai_source, origin, managed_by, semantic_key)
        VALUES (?, '人工維護貨幣', '不可刪除', 1, 'general-tips', 'ai', 'human', 'tips:currency')`,
     ).bind(tripId).run();
-    let injected = false;
-    const raceDb = new Proxy(db, {
-      get(target, property) {
-        if (property === 'batch') {
-          return async (statements: D1PreparedStatement[]) => {
-            if (!injected) {
-              injected = true;
-              await target.prepare('DELETE FROM trip_pretrip_notes WHERE id = ?')
-                .bind(old!.id)
-                .run();
-              await target.prepare(
-                `INSERT INTO trip_pretrip_notes
-                   (trip_id, title, content, ai_generated, ai_source, origin, managed_by, semantic_key)
-                 VALUES (?, '當地貨幣', '新內容', 1, 'general-tips', 'ai', 'ai', 'tips:currency')`,
-              ).bind(tripId).run();
-            }
-            return target.batch(statements);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === 'function' ? value.bind(target) : value;
-      },
-    }) as D1Database;
+    const raced = apiWithBatchRace(async () => {
+      await db.prepare('DELETE FROM trip_pretrip_notes WHERE id = ?').bind(old!.id).run();
+      await db.prepare(
+        `INSERT INTO trip_pretrip_notes
+           (trip_id, title, content, ai_generated, ai_source, origin, managed_by, semantic_key)
+         VALUES (?, '當地貨幣', '新內容', 1, 'general-tips', 'ai', 'ai', 'tips:currency')`,
+      ).bind(tripId).run();
+    });
 
-    const deleted = await callHandler(deletePretrip, mockContext({
-      request: jsonRequest(
-        `https://test/api/trips/${tripId}/notes/pretrip/${old!.id}`,
-        'DELETE',
-        undefined,
-      ),
-      env: { ...env, DB: raceDb },
-      auth: mockAuth({ email: ownerEmail }),
-      params: { id: tripId, rowId: String(old!.id) },
-    }));
+    const deleted = await owner('DELETE', `/api/trips/${tripId}/notes/pretrip/${old!.id}`, undefined, raced);
 
     expect(await deleted.json()).toMatchObject({ ok: true, excluded: true });
     expect(await db.prepare(
@@ -597,7 +503,7 @@ describe('GET AI state', () => {
        VALUES (?, 'tips', 'tips:currency', '貨幣')`,
     ).bind(tripId).run();
 
-    const response = await ownerContext(getAiState, tripId, 'GET', undefined, {});
+    const response = await owner('GET', `/api/trips/${tripId}/notes/ai-state`);
     expect(response.status).toBe(200);
     const body = await response.json() as any;
     expect(body.jobs).toHaveLength(3);
