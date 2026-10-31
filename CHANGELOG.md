@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.118] - 2026-10-31
+
+### Fixed
+- **未登入的被邀請者看得到邀請預覽了**：`InvitePage` 對還沒登入的人顯示「註冊並加入」「登入並加入」，但後端的邀請預覽（`GET /api/invitations?token=…`）一直回 401，新使用者只會看到「邀請連結無效」。現在帶 token 的預覽對匿名開放（回 200 或 410），列出 pending 邀請的 `?tripId=` 分支仍需登入，同時帶兩者視為後者。已登入的被邀請者本來就不受影響。
+
+### For contributors
+- 先寫會變紅的 HTTP 邊界測試（匿名＋無效 token → 410、匿名＋有效 token → 200 且不含 token／hash、匿名＋token＋tripId → 401），再改 middleware。Mutation：整段放行拿掉會轉紅；把放行範圍放寬到 tripId、不要求 token、改成路徑前綴、放行所有方法，測試**不會**轉紅——因為 handler 自己對 tripId 分支也 `requireAuth`，且 `invitations/` 底下沒有其他 GET 路由，這幾個是 defense-in-depth 的等價變異。
+- 沒有跑 gstack 的 specialist／adversarial review army；驗證靠 6 個相關 API 測試檔（89 個）、invite-page 單元測試與 typecheck。
+- 預覽公開後沒有加 rate limit；token 以 HMAC 比對，但預覽回應會帶邀請者與被邀請者的 email，這是既有設計，沒有改。
+
 ## [2.57.116] - 2026-10-31
 
 ### Changed
