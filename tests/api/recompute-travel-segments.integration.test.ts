@@ -36,6 +36,7 @@ vi.mock('../../functions/api/_maps_lock', () => ({
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, seedTrip, getDayId, seedEntry, seedPoi } from './helpers';
 import { createApi, type Api } from './http';
+import { computeRoute } from '../../src/server/maps/google-client';
 import { cleanupTrips } from './cleanup-trips';
 import type { Env } from '../../functions/api/_types';
 
@@ -131,6 +132,43 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     ).bind(e1, e2).first<{ mode: string; min: number; distance_m: number }>();
     expect(seg!.mode).toBe('walking');
     expect(seg!.distance_m).toBeLessThan(1000);
+  });
+
+  // 競態守衛：recompute 讀完既有 segment 之後、寫入之前，使用者把該段手動鎖定。
+  // 以 Google 呼叫（vi.mock）當作插入點，在計算途中改寫真實 D1，驗證最終不覆蓋手動值。
+  it('競態：計算途中該段被手動鎖定（既有列）→ 不覆蓋 manual 值', async () => {
+    const { e1, e2 } = await setupTripWithEntries('trip-rec-race-upd');
+    const now = Date.now();
+    await db.prepare(
+      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'driving', 100, 99999, 'google', ?, ?)`,
+    ).bind('trip-rec-race-upd', e1, e2, now - 10000, now - 10000).run();
+    vi.mocked(computeRoute).mockImplementationOnce(async () => {
+      await db.prepare(`UPDATE trip_segments SET source='manual', min=999 WHERE from_entry_id=? AND to_entry_id=?`).bind(e1, e2).run();
+      return { polyline: 'mock', distance_meters: 500, duration_seconds: 360 };
+    });
+
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-race-upd/recompute-travel?day=all', { as: 'user@test.com' });
+    expect(resp.status).toBe(200);
+    const seg = await db.prepare('SELECT source, "min" FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ source: string; min: number }>();
+    expect(seg).toMatchObject({ source: 'manual', min: 999 });
+  });
+
+  it('競態：計算途中該段被手動建立（原本不存在）→ upsert 不覆蓋 manual 值', async () => {
+    const { e1, e2 } = await setupTripWithEntries('trip-rec-race-ins');
+    vi.mocked(computeRoute).mockImplementationOnce(async () => {
+      const t = Date.now();
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'transit', 999, NULL, 'manual', ?, ?)`,
+      ).bind('trip-rec-race-ins', e1, e2, t, t).run();
+      return { polyline: 'mock', distance_meters: 500, duration_seconds: 360 };
+    });
+
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-race-ins/recompute-travel?day=all', { as: 'user@test.com' });
+    expect(resp.status).toBe(200);
+    const seg = await db.prepare('SELECT mode, source, "min" FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ mode: string; source: string; min: number }>();
+    expect(seg).toMatchObject({ mode: 'transit', source: 'manual', min: 999 });
   });
 
   it('entry reorder 後清掉同日非相鄰 stale segments，只留下目前 pair', async () => {
@@ -396,7 +434,12 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
         `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
          VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, NULL, ?, ?, 1)`,
       ).bind('trip-rec-sp', e1, e2, now, now).run();
-      expect((await recompute('trip-rec-sp')).status).toBe(200);
+      const res = await recompute('trip-rec-sp');
+      expect(res.status).toBe(200);
+      // mutation 驗證補強：SQL 的 no_travel guard 也會擋寫入，只看資料列分不出前置跳過有沒有生效；
+      // 回應的 pairsSkippedTransit 是外部可見的訊號（被跳過的 pair 要被計為 skipped，不是 computed）
+      const summary = await res.json() as { pairsSkippedTransit: number };
+      expect(summary.pairsSkippedTransit).toBe(1);
       const seg = await db.prepare(
         'SELECT "min", distance_m, no_travel FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
       ).bind(e1, e2).first<{ min: number | null; distance_m: number | null; no_travel: number | null }>();
