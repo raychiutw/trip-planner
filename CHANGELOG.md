@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.116] - 2026-10-31
+
+### Changed
+- **CLAUDE.md、AGENTS.md 不再引用已刪的 mockup 檔**：Design SoT 段改為「以 `DESIGN.md` 為準」。Mockup-first gate 不變（仍是 `/prototype` 產出加 owner sign-off，不依賴 repo 內的檔案）。
+
+### For contributors
+- 純文字變更，沒有跑 gstack 的 specialist／adversarial review army；只驗證了三個提到 CLAUDE.md／AGENTS.md 的 unit 測試。
+
 ## [2.57.115] - 2026-10-30
 
 ### Removed
