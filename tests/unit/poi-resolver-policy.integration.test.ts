@@ -5,7 +5,7 @@
  * 走 interface 驗行為，取代 trip-import-wiring 內對 resolvePoi 的 source-grep。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestDb, disposeMiniflare } from './setup';
+import { createTestDb, disposeMiniflare } from '../api/setup';
 import { findOrCreatePoi, batchFindOrCreatePois, normalizeFindOrCreatePoiPayload } from '../../functions/api/_poi';
 
 let db: D1Database;

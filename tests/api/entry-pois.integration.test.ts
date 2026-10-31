@@ -9,9 +9,8 @@
  *   - PATCH /api/trips/:id/entries/:eid/alternates/reorder  (reorder)
  *   - segments stale marking after master swap
  *
- * 例外：describe「syncEntryMaster …」與「Cascade behavior」不是 handler 測試
- * （前者直接呼叫 functions/api/_entry_pois 的內部函式，後者直接對 D1 下 DELETE 驗 FK），
- * 保留原樣，交給 #1503（module 測試）處理。
+ * 不是 handler 測試的部分（直接呼叫 _entry_pois 的 syncEntryMaster、直接對 D1 驗 FK cascade）
+ * 在 tests/unit/entry-pois-module.test.ts。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
@@ -393,29 +392,6 @@ describe('PATCH /alternates/reorder', () => {
     });
     const resp = await call('PATCH', entryPath(entryId, '/alternates/reorder'), { order: [altPoiIds[0], altPoiIds[0]] });
     expect(resp.status).toBe(422);
-  });
-});
-
-// 直接對 D1 下 DELETE 驗 FK cascade：不是 handler 測試，保留交給 #1503
-describe('Cascade behavior', () => {
-  it('DELETE entry → ON DELETE CASCADE 清掉所有 trip_entry_pois', async () => {
-    const { entryId } = await seedEntryWithMaster({
-      poiName: 'Cascade-Master',
-      altPoiNames: ['Cascade-A', 'Cascade-B'],
-    });
-    const before = await db
-      .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ?')
-      .bind(entryId)
-      .first<{ c: number }>();
-    expect(before!.c).toBe(3);
-
-    await db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(entryId).run();
-
-    const after = await db
-      .prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ?')
-      .bind(entryId)
-      .first<{ c: number }>();
-    expect(after!.c).toBe(0);
   });
 });
 
@@ -1049,130 +1025,6 @@ describe('Round 5 — entry_pois_version isolated from unrelated entry edits (cr
     });
 
     expect(await readVersion(entryId)).toBe(v0);
-  });
-});
-
-// 以下三個 describe 直接呼叫 functions/api/_entry_pois 的 syncEntryMaster（內部函式，不是 handler），
-// 不硬轉成 HTTP；保留原樣交給 #1503（module 測試）處理。只調整 trip id 前綴與 POI 追蹤以便共用 D1 清理。
-
-// migration 0078 — syncEntryMaster 可選 note 參數（給 entry-create 路徑把 entry-level note
-// 寫進新 master 的 per-POI note）。只作用於 INSERT(new master) 分支；既有呼叫端不傳 → 維持現狀。
-describe('migration 0078 — syncEntryMaster optional note 參數', () => {
-  it('INSERT 新 master 時帶 note → 寫進 trip_entry_pois.note', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-m78-sync-note-insert', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poi = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-INS', 'attraction') RETURNING id").first<{ id: number }>());
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
-
-    await syncEntryMaster(db, entry!.id, poi.id, '整體備註注入 master');
-
-    const row = await db.prepare('SELECT note, sort_order FROM trip_entry_pois WHERE entry_id = ?').bind(entry!.id).first<{ note: string | null; sort_order: number }>();
-    expect(row!.sort_order).toBe(1);
-    expect(row!.note).toBe('整體備註注入 master');
-  });
-
-  it('不傳 note（既有呼叫端）→ master.note 維持 NULL（向後相容）', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-m78-sync-note-omit', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poi = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-OMIT', 'attraction') RETURNING id").first<{ id: number }>());
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
-
-    await syncEntryMaster(db, entry!.id, poi.id);
-
-    const row = await db.prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ note: string | null }>();
-    expect(row!.note).toBeNull();
-  });
-
-  it('note 為 null 顯式傳入 → master.note NULL（不炸）', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-m78-sync-note-null', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poi = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('M78-NULL', 'attraction') RETURNING id").first<{ id: number }>());
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
-
-    await syncEntryMaster(db, entry!.id, poi.id, null);
-
-    const row = await db.prepare('SELECT note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ note: string | null }>();
-    expect(row!.note).toBeNull();
-  });
-});
-
-// Round 9 — syncEntryMaster INSERT + naked UPDATE 各自 bump entry_pois_version 的 regression。
-// Round 7 修了這兩條 path 加 bump，但既有 syncEntryMaster test 只走 setMaster collision route。
-describe('Round 9 — syncEntryMaster INSERT/naked UPDATE bump entry_pois_version', () => {
-  it('INSERT path (entry 沒 trip_entry_pois row) → bump version', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-r9-sync-insert', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poi = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-INS-POI', 'attraction') RETURNING id").first<{ id: number }>());
-    // 故意建 entry 後不 INSERT trip_entry_pois，模擬 entry-create 中間狀態
-    // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time 寫 schedule。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '10:00') RETURNING id").bind(dayId).first<{ id: number }>();
-    const v0 = await readVersion(entry!.id);
-
-    await syncEntryMaster(db, entry!.id, poi.id);
-
-    expect(await readVersion(entry!.id)).toBe(v0 + 1);
-    const row = await db.prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ?').bind(entry!.id).first<{ poi_id: number; sort_order: number }>();
-    expect(row!.sort_order).toBe(1);
-    expect(row!.poi_id).toBe(poi.id);
-  });
-
-  it('naked UPDATE path (master 已存在 + new poiId 不是 alternate) → bump version', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-r9-sync-update', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poiOld = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-OldMaster', 'attraction') RETURNING id").first<{ id: number }>());
-    const poiNew = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NewMaster', 'attraction') RETURNING id").first<{ id: number }>());
-    // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time + trip_entry_pois 寫 master。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '11:00') RETURNING id").bind(dayId).first<{ id: number }>();
-    await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poiOld.id).run();
-    const v0 = await readVersion(entry!.id);
-
-    await syncEntryMaster(db, entry!.id, poiNew.id);
-
-    expect(await readVersion(entry!.id)).toBe(v0 + 1);
-    const row = await db.prepare('SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1').bind(entry!.id).first<{ poi_id: number }>();
-    expect(row!.poi_id).toBe(poiNew.id);
-  });
-
-  it('no-op path (poiId 跟既有 master 相同) → 不 bump version', async () => {
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    const trip = await seedTrip(db, { id: 's9-ep-r9-sync-noop', owner: OWNER });
-    const dayId = await getDayId(db, trip.id, 1);
-    const poi = track(await db.prepare("INSERT INTO pois (name, type) VALUES ('R9-NoOp', 'attraction') RETURNING id").first<{ id: number }>());
-    // v2.29.0: trip_entries.{time, poi_id} DROPPED. 用 start_time + trip_entry_pois 寫 master。
-    const entry = await db.prepare("INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, 1, '12:00') RETURNING id").bind(dayId).first<{ id: number }>();
-    await db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(entry!.id, poi.id).run();
-    const v0 = await readVersion(entry!.id);
-
-    await syncEntryMaster(db, entry!.id, poi.id);
-
-    expect(await readVersion(entry!.id)).toBe(v0); // unchanged
-  });
-});
-
-describe('Round 4 — syncEntryMaster routes UNIQUE collision to setMaster (adv-C4 fix)', () => {
-  it('syncEntryMaster when poiId is already alternate → master↔alt swap (not UNIQUE 500)', async () => {
-    const { entryId, masterPoiId, altPoiIds } = await seedEntryWithMaster({
-      poiName: 'C4-Master',
-      altPoiNames: ['C4-Alt'],
-    });
-    // Simulate a PUT /days/:num flow: caller wants to make C4-Alt the master for this entry
-    // (previously this would crash with UNIQUE(entry_id, poi_id) because C4-Alt was already an alternate).
-    const { syncEntryMaster } = await import('../../functions/api/_entry_pois');
-    await syncEntryMaster(db, entryId, altPoiIds[0]!);
-
-    // Verify the swap happened: C4-Alt is now master (sort_order=1), C4-Master is alternate
-    const rows = await db
-      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
-      .bind(entryId)
-      .all<{ poi_id: number; sort_order: number }>();
-    expect(rows.results.length).toBe(2);
-    expect(rows.results[0]).toMatchObject({ poi_id: altPoiIds[0], sort_order: 1 });
-    expect(rows.results[1]!.poi_id).toBe(masterPoiId);
   });
 });
 
