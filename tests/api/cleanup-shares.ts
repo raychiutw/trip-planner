@@ -8,6 +8,8 @@ import { cleanupTrips } from './cleanup-trips';
  */
 export async function cleanupS15(db: D1Database, ips: string[] = []): Promise<void> {
   const userLike = 'test-user-s15-%';
+  // 行程數上限測試會批次塞入大量只有 trips 列的行程，先整批刪掉，避免逐筆清理太慢
+  await db.prepare('DELETE FROM trips WHERE id LIKE ?').bind('s15-cap-%').run();
   const owned = await db
     .prepare('SELECT id FROM trips WHERE id LIKE ? OR owner_user_id LIKE ?')
     .bind('s15-%', userLike)
