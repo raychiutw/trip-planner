@@ -56,4 +56,24 @@ describe('PUT /api/trips/:id/days/:num → entry intake 批次入口', () => {
     const day = await db.prepare('SELECT version FROM trip_days WHERE id = ?').bind(dayId).first<{ version: number }>();
     expect(day!.version).toBe(1);
   });
+
+  it('正選自己沒 note → 繼承 entry 層級 note；備選維持各自 note', async () => {
+    const dayId = await getDayId(db, tripId, 1);
+    const resp = await api.request('PUT', `/api/trips/${tripId}/days/1`, { as: owner, json: {
+      date: '2026-09-05', dayOfWeek: '六', label: 'D1',
+      timeline: [
+        { time: '09:00', note: '繼承用備註', stopPois: [
+          { name: 'PUT 繼承正選', type: 'restaurant' },
+          { name: 'PUT 繼承備選', type: 'restaurant', note: '備選自己的備註' },
+        ] },
+      ],
+    } });
+    expect(resp.status).toBe(200);
+    const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ?').bind(dayId).first<{ id: number }>();
+    const pois = await db.prepare('SELECT p.name, tep.sort_order, tep.note FROM trip_entry_pois tep JOIN pois p ON p.id = tep.poi_id WHERE tep.entry_id = ? ORDER BY tep.sort_order').bind(entry!.id).all<{ name: string; sort_order: number; note: string | null }>();
+    expect(pois.results).toEqual([
+      { name: 'PUT 繼承正選', sort_order: 1, note: '繼承用備註' },
+      { name: 'PUT 繼承備選', sort_order: 2, note: '備選自己的備註' },
+    ]);
+  });
 });

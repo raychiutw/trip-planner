@@ -11,6 +11,7 @@ let db: D1Database;
 let api: Api;
 let entryId: number;
 const OWNER = 'entries-owner@test.com';
+const STRANGER = 'entries-stranger@test.com';
 // 匿名的瀏覽器寫入請求會帶 Origin；沒帶會先被 CSRF 檢查擋成 403，到不了 handler 的 401
 const BROWSER_ORIGIN = 'https://trip-planner-dby.pages.dev';
 const tripIds: string[] = [];
@@ -135,6 +136,26 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     expect((await patchEntry('s8-entries-e', entryId, { title: '' })).status).toBe(400);
   });
 
+  it('無 trip 寫入權限 → 403，entry 不被改', async () => {
+    const before = await readTimes(entryId);
+    const resp = await api.request('PATCH', `/api/trips/s8-entries-e/entries/${entryId}`, {
+      as: STRANGER,
+      json: { description: '陌生人改的' },
+    });
+    expect(resp.status).toBe(403);
+    const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string | null }>();
+    expect(row!.description).not.toBe('陌生人改的');
+    expect(await readTimes(entryId)).toEqual(before);
+  });
+
+  it('entry 不屬於路徑上的 trip → 404，entry 不被改', async () => {
+    await seed({ id: 's8-entries-other' });
+    const resp = await patchEntry('s8-entries-other', entryId, { description: '跨 trip 改的' });
+    expect(resp.status).toBe(404);
+    const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string | null }>();
+    expect(row!.description).not.toBe('跨 trip 改的');
+  });
+
   it('未認證 → 401', async () => {
     const resp = await api.request('PATCH', `/api/trips/s8-entries-e/entries/${entryId}`, {
       json: { title: 'x' },
@@ -209,5 +230,27 @@ describe('DELETE /api/trips/:id/entries/:eid', () => {
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first();
     expect(row).toBeNull();
+  });
+  it('無 trip 寫入權限 → 403，entry 仍在', async () => {
+    const dayId = await getDayId(db, 's8-entries-e', 2);
+    const eid = await seedEntry(db, dayId);
+    const resp = await api.request('DELETE', `/api/trips/s8-entries-e/entries/${eid}`, {
+      as: STRANGER,
+      headers: { Origin: BROWSER_ORIGIN },
+    });
+    expect(resp.status).toBe(403);
+    expect(await db.prepare('SELECT id FROM trip_entries WHERE id = ?').bind(eid).first()).not.toBeNull();
+  });
+
+  it('entry 不屬於路徑上的 trip → 404，entry 仍在', async () => {
+    const dayId = await getDayId(db, 's8-entries-e', 2);
+    const eid = await seedEntry(db, dayId);
+    await seed({ id: 's8-entries-other' });
+    const resp = await api.request('DELETE', `/api/trips/s8-entries-other/entries/${eid}`, {
+      as: OWNER,
+      headers: { Origin: BROWSER_ORIGIN },
+    });
+    expect(resp.status).toBe(404);
+    expect(await db.prepare('SELECT id FROM trip_entries WHERE id = ?').bind(eid).first()).not.toBeNull();
   });
 });

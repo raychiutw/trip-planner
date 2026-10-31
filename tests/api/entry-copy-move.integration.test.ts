@@ -111,6 +111,22 @@ describe('POST /api/trips/:id/entries/:eid/copy — Item 2', () => {
     expect((await copy(entryDay1Id, { targetDayId: otherDayId })).status).toBe(403);
   });
 
+  it('無 trip 寫入權限 → 403，不產生新 entry', async () => {
+    const countBefore = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(day2Id).first<{ n: number }>())!.n;
+    expect((await copy(entryDay1Id, { targetDayId: day2Id }, 'entry-copy-move-stranger@test.com')).status).toBe(403);
+    const countAfter = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(day2Id).first<{ n: number }>())!.n;
+    expect(countAfter).toBe(countBefore);
+  });
+
+  it('entry 不屬於路徑上的 trip → 404，不產生新 entry', async () => {
+    const otherDayId = await getDayId(db, 's8-cm-other', 1);
+    const otherEntry = await seedEntry(db, otherDayId);
+    const countBefore = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(day2Id).first<{ n: number }>())!.n;
+    expect((await copy(otherEntry, { targetDayId: day2Id })).status).toBe(404);
+    const countAfter = (await db.prepare('SELECT COUNT(*) AS n FROM trip_entries WHERE day_id = ?').bind(day2Id).first<{ n: number }>())!.n;
+    expect(countAfter).toBe(countBefore);
+  });
+
   it('targetDayId 不存在 → 404', async () => {
     expect((await copy(entryDay1Id, { targetDayId: 99999 })).status).toBe(404);
   });
