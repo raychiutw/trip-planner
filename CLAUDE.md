@@ -17,7 +17,8 @@ grill-with-docs → [多 session? → to-spec → to-tickets →] implement → 
 - **答案要跑起來才知道** → `/handoff` 出去 → `/prototype` → `/handoff` 回來
 - **多 session 的 build** → `/to-spec` → `/to-tickets`（tracer-bullet 票 + blocking edges）→ 每票 `/implement`，**每票之間清 context**
 - **單 session 就做得完** → 直接 `/implement`
-- **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）
+- **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）；整份 spec 一次做完可用 `/implement-spec`（並行 subagent + 整合分支）
+- **PR 與回顧**：開 PR 時 `/pr` 規範 PR 內文形狀（我可自主呼叫；與 `/ship` 的 PR 內文並用時，以 `/ship` 的稽核欄位為準）；build 結束後 `/retro` 回頭檢視環境該怎麼改（只能 owner 打）
 - **出貨**：matt 沒有發版流程 → `/ship`（bump VERSION + CHANGELOG + PR）→ `/land-and-deploy` → `/canary`
 
 Context 衛生：步驟 1–3 保持在**同一個不中斷的 context window**，`/to-tickets` 前不要 compact/clear。接近 smart zone（~120k tokens）就 `/handoff` 換新 session，別在退化的狀態硬撐。
@@ -30,11 +31,13 @@ On-ramps（匯入主線）：
 
 ## ⚠️ Matt skill 的呼叫限制
 
-**13 個 matt skill 有 `disable-model-invocation: true` —— 我不能自主呼叫，只能 owner 打 `/name`。** 主線骨幹全在這裡面，所以**我沒辦法自己起頭**：
+**多數 matt skill 有 `disable-model-invocation: true`（v1.3.2 實測 24 個）—— 我不能自主呼叫，只能 owner 打 `/name`。** 主線骨幹全在這裡面，所以**我沒辦法自己起頭**。本專案用到的：
 
-`ask-matt` · `grill-with-docs` · `to-spec` · `to-tickets` · `implement` · `triage` · `wayfinder` · `improve-codebase-architecture` · `handoff` · `grill-me` · `teach` · `setup-matt-pocock-skills` · `writing-great-skills`
+`ask-matt` · `grill-with-docs` · `grill-me` · `to-spec` · `to-tickets` · `implement` · `implement-spec` · `triage` · `wayfinder` · `improve-codebase-architecture` · `handoff` · `retro` · `setup-matt-pocock-skills` · `teach`
 
-**我可自主呼叫的 9 個**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `resolving-merge-conflicts` · `grilling`
+**我可自主呼叫的**：`tdd` · `code-review` · `diagnosing-bugs` · `domain-modeling` · `codebase-design` · `prototype` · `research` · `grilling` · `pr` · `wizard` · `writing-for-agents`
+
+（v1.3.1 起 `resolving-merge-conflicts` 已移除；領域文件改名為 `GLOSSARY.md`／`GLOSSARY-MAP.md`。）
 
 它們不會出現在 session 的 available-skills 清單裡 —— **那份清單不能拿來判斷有沒有安裝**。要確認裝了什麼就去看 `~/.claude/plugins/cache/mattpocock/mattpocock-skills/*/skills/`。
 
@@ -83,7 +86,6 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | Module 介面 / seam | `/codebase-design` | |
 | 設計問題要跑起來 | `/prototype` | throwaway，留答案刪 code |
 | 查資料 | `/research` | 背景 agent，產出有引用的 md |
-| Merge 衝突 | `/resolving-merge-conflicts` | |
 | Codebase 保養 | `/improve-codebase-architecture` | 產 deepening opportunities |
 | 跨 session | `/handoff` | 對話快滿或要分岔時 |
 

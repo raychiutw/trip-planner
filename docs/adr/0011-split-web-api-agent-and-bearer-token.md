@@ -25,7 +25,7 @@ web 與 api（Pages Functions）現在是同一個 Pages 專案、同一個網�
 
 **順序：** #1458（帳號刪除加 mobile OAuth）先在現有 repo 收尾並 merge，只做到現有網域可運作；issuer 與 redirect URI 在拆分時才改。
 
-**安全範圍（納入）：** 供應鏈與 CI/CD（Actions 釘 SHA、最小權限、Dependabot 與 audit、secret scanning、CodeQL、branch protection、部署 token 限縮）；執行期防護（嚴格 CORS 白名單、rate limit 與 WAF、zod 輸入驗證、security headers）；認證與 token（短效、rotation、token 與 ticket 不進 log）；稽核與偵測（認證失敗、權限拒絕、重放寫 audit log 並告警）。
+**「完整安全性」的範圍**是四類：供應鏈與 CI/CD、執行期防護、認證與 token、稽核與偵測；細項留給 spec。
 
 ## Considered Options
 

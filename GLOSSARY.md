@@ -180,16 +180,16 @@ _Avoid_: 「**POI tab**」—— 歧義（曾同時被拿來指 Day tab 與收�
 
 ## 三個專案與角色（2026-10-31 grill 釘，拆分進行中）
 
-三個角色各自一個 GitHub 專案。決策與殘留風險見 [ADR-0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md)。
+三個角色各自一個專案。決策與殘留風險見 [ADR-0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md)。
 
 | 詞 | 意思 |
 |---|---|
-| **web** | 瀏覽器端 SPA。專案 `trip-planner`，部署與 CI/CD 維持原樣。是 OAuth public client，不持有任何後端憑證。 |
-| **api** | 對外的 HTTP 後端。專案 `trip-planner-api`，獨立部署，擁有資料庫 schema（migration）與對外契約。 |
-| **agent** | 跑在 Mac mini 上的 AI 代理、寄信與排程服務。專案 `trip-planner-agent`。_Avoid_：「api-server」（會跟 api 混淆）、「本機 api」 |
-| **舊入口** | 拆分前就存在、綁同一個資料庫的舊後端部署。凍結，只收安全修補；存在期間 migration 只能加不能刪。_Avoid_：「備援」（它不是自動備援） |
-| **對照組** | 整合測試用的基準：舊入口的程式碼綁消毒過的 staging 資料副本。新 api 的行為必須與它一致才算通過。 |
-| **一次性 ticket** | 讓瀏覽器開即時推送連線用的臨時憑證：30 秒內有效、只能用一次、綁定單一 request。 |
+| **web** | 使用者在瀏覽器操作的前端，專案 `trip-planner`。不持有任何後端憑證。 |
+| **api** | 對外提供資料與行為的後端，專案 `trip-planner-api`。擁有資料庫結構與對外契約。 |
+| **agent** | 替請求執行 AI 工作、寄信與排程的常駐服務，專案 `trip-planner-agent`。_Avoid_：「api-server」「本機 api」（會跟 api 混淆） |
+| **舊入口** | 拆分前就存在、仍連同一份資料的舊後端。凍結，只收安全修補。_Avoid_：「備援」（它不會自動接手） |
+| **對照組** | 整合測試用的行為基準：舊入口的程式碼搭配消毒過的資料副本。新 api 必須與它一致才算通過。 |
+| **一次性 ticket** | 讓瀏覽器開即時推送連線的臨時憑證，只對單一 request 有效，用過即失效。 |
 
 ## 已退場的名字 — 不要再用
 
