@@ -3,32 +3,41 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, mockAuth, seedTrip, callHandler, jsonRequest } from './helpers';
-import { onRequestPost } from '../../functions/api/trips/[id]/days/shift';
-import type { Env } from '../../functions/api/_types';
+import { mockEnv, seedTrip } from './helpers';
+import { createApi, type Api } from './http';
 
 let db: D1Database;
-let env: Env;
+let api: Api;
+const OWNER = 'shift-owner@test.com';
+// 匿名的瀏覽器寫入請求會帶 Origin；沒帶會先被 CSRF 檢查擋成 403，到不了 handler 的 401
+const BROWSER_ORIGIN = 'https://trip-planner-dby.pages.dev';
+const tripIds: string[] = [];
+/** 建立行程並記下 id，afterAll 清掉（共用 D1）。 */
+const seed = async (opts: { id: string; days?: number; owner?: string }) => {
+  tripIds.push(opts.id);
+  return seedTrip(db, { owner: OWNER, ...opts });
+};
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
+  api = createApi({ env: mockEnv(db) });
 });
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  // 共用 D1：只清自己建立的行程（days / entries 等子表走 FK cascade，permissions 要手動清）
+  for (const id of tripIds) {
+    await db.prepare('DELETE FROM trip_permissions WHERE trip_id = ?').bind(id).run(); // 無 FK cascade
+    await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
+});
 
 describe('POST /api/trips/:id/days/shift', () => {
   it('5 天 trip shift 全變 + day_of_week 重算', async () => {
-    await seedTrip(db, { id: 'shift-trip', days: 5 });
+    await seed({ id: 'shift-trip', days: 5 });
     // Original: 4/1 - 4/5 (5 days)
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-trip/days/shift', 'POST', {
+    const resp = await api.request('POST', '/api/trips/shift-trip/days/shift', { as: 'shift-owner@test.com', json: {
         startDate: '2026-08-15',
-      }),
-      env,
-      auth: mockAuth(),
-      params: { id: 'shift-trip' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+      } });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { ok: boolean; newStartDate: string; newEndDate: string; daysShifted: number };
     expect(body.ok).toBe(true);
@@ -47,7 +56,7 @@ describe('POST /api/trips/:id/days/shift', () => {
   });
 
   it('gap preservation — 中間 day 已刪後，shift 仍保留 gap', async () => {
-    await seedTrip(db, { id: 'shift-gap', days: 4 });
+    await seed({ id: 'shift-gap', days: 4 });
     // Original: 4/1, 4/2, 4/3, 4/4
     // Manually create gap: skip day_num=2's date sequence
     await db.prepare('UPDATE trip_days SET date = ? WHERE trip_id = ? AND day_num = 3')
@@ -56,15 +65,9 @@ describe('POST /api/trips/:id/days/shift', () => {
       .bind('2026-04-06', 'shift-gap').run();
     // Now: Day1=4/1, Day2=4/2, Day3=4/5 (gap 4/3, 4/4), Day4=4/6
 
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-gap/days/shift', 'POST', {
+    const resp = await api.request('POST', '/api/trips/shift-gap/days/shift', { as: 'shift-owner@test.com', json: {
         startDate: '2026-06-10',
-      }),
-      env,
-      auth: mockAuth(),
-      params: { id: 'shift-gap' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+      } });
     expect(resp.status).toBe(200);
     const { results } = await db
       .prepare('SELECT day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
@@ -81,55 +84,32 @@ describe('POST /api/trips/:id/days/shift', () => {
   });
 
   it('startDate 同舊 Day 1 → no-op delta=0', async () => {
-    await seedTrip(db, { id: 'shift-noop', days: 2 });
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-noop/days/shift', 'POST', {
+    await seed({ id: 'shift-noop', days: 2 });
+    const resp = await api.request('POST', '/api/trips/shift-noop/days/shift', { as: 'shift-owner@test.com', json: {
         startDate: '2026-04-01',
-      }),
-      env,
-      auth: mockAuth(),
-      params: { id: 'shift-noop' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+      } });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { daysShifted: number };
     expect(body.daysShifted).toBe(0);
   });
 
   it('Invalid date 格式 → 400', async () => {
-    await seedTrip(db, { id: 'shift-bad', days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-bad/days/shift', 'POST', {
+    await seed({ id: 'shift-bad', days: 1 });
+    const resp = await api.request('POST', '/api/trips/shift-bad/days/shift', { as: 'shift-owner@test.com', json: {
         startDate: 'not-a-date',
-      }),
-      env,
-      auth: mockAuth(),
-      params: { id: 'shift-bad' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+      } });
     expect(resp.status).toBe(400);
   });
 
   it('未登入 → 401', async () => {
-    await seedTrip(db, { id: 'shift-auth', days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-auth/days/shift', 'POST', { startDate: '2026-05-01' }),
-      env,
-      params: { id: 'shift-auth' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    await seed({ id: 'shift-auth', days: 1 });
+    const resp = await api.request('POST', '/api/trips/shift-auth/days/shift', { headers: { Origin: BROWSER_ORIGIN }, json: { startDate: '2026-05-01' } });
     expect(resp.status).toBe(401);
   });
 
   it('非 owner → 403', async () => {
-    await seedTrip(db, { id: 'shift-perm', days: 1, owner: 'owner@test.com' });
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/shift-perm/days/shift', 'POST', { startDate: '2026-05-01' }),
-      env,
-      auth: mockAuth({ email: 'other@test.com' }),
-      params: { id: 'shift-perm' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    await seed({ id: 'shift-perm', days: 1, owner: 'owner@test.com' });
+    const resp = await api.request('POST', '/api/trips/shift-perm/days/shift', { as: 'other@test.com', json: { startDate: '2026-05-01' } });
     expect(resp.status).toBe(403);
   });
 });

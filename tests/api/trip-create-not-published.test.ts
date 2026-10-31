@@ -13,43 +13,36 @@
  * 使用者不會預期「建立行程」等於「發佈行程」。預設改為不公開，要公開得明確選擇。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { onRequestPost, onRequestGet } from '../../functions/api/trips';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
 
-const USER_ID = 'privacy-default-user';
+// 走 HTTP 邊界（tests/api/http.ts）；共用 D1，結束時清掉自己建立的行程（以專屬 owner 找出）。
+const EMAIL = 'pd@example.com';
 
 describe('POST /api/trips — 預設不公開', () => {
   let db: D1Database;
+  let api: Api;
 
   beforeAll(async () => {
     db = await createTestDb();
-    await db.prepare('INSERT INTO users (id, email, display_name) VALUES (?,?,?)')
-      .bind(USER_ID, 'pd@example.com', 'PD').run();
+    api = createApi({ env: mockEnv(db) });
   }, 30000);
 
-  afterAll(async () => { await disposeMiniflare(); });
+  afterAll(async () => {
+    const owned = await db.prepare('SELECT t.id FROM trips t JOIN users u ON u.id = t.owner_user_id WHERE u.email = ?')
+      .bind(EMAIL).all<{ id: string }>();
+    await cleanupTrips(db, owned.results.map((r) => r.id));
+    await disposeMiniflare();
+  });
 
-  function ctx(body: unknown) {
-    return {
-      request: new Request('https://x.com/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-      env: mockEnv(db),
-      params: {} as never,
-      data: { auth: { userId: USER_ID, isServiceToken: false } },
-      next: () => Promise.resolve(new Response()),
-      waitUntil: () => undefined,
-      passThroughOnException: () => undefined,
-    } as unknown as Parameters<typeof onRequestPost>[0];
-  }
+  const create = (body: unknown) => api.request('POST', '/api/trips', { as: EMAIL, json: body });
 
   const base = { name: '東京', startDate: '2026-09-01', endDate: '2026-09-02' };
 
   it('沒指定 published → 存成 0', async () => {
-    const res = await onRequestPost(ctx(base));
+    const res = await create(base);
     const { tripId } = (await res.json()) as { tripId: string };
     const row = await db.prepare('SELECT published FROM trips WHERE id = ?')
       .bind(tripId).first<{ published: number }>();
@@ -57,25 +50,15 @@ describe('POST /api/trips — 預設不公開', () => {
   });
 
   it('新建的行程不會出現在未登入的公開清單', async () => {
-    const res = await onRequestPost(ctx({ ...base, name: '不該外流的行程' }));
+    const res = await create({ ...base, name: '不該外流的行程' });
     const { tripId } = (await res.json()) as { tripId: string };
 
-    const anonCtx = {
-      request: new Request('https://x.com/api/trips'),
-      env: mockEnv(db),
-      params: {} as never,
-      data: {},
-      next: () => Promise.resolve(new Response()),
-      waitUntil: () => undefined,
-      passThroughOnException: () => undefined,
-    } as unknown as Parameters<typeof onRequestGet>[0];
-
-    const listed = (await (await onRequestGet(anonCtx)).json()) as Array<{ tripId: string }>;
+    const listed = (await (await api.get('/api/trips')).json()) as Array<{ tripId: string }>;
     expect(listed.some((t) => t.tripId === tripId), '新行程外洩到匿名可讀的公開清單').toBe(false);
   });
 
   it('明確指定 published: 1 仍可公開 —— 改的是預設，不是拿掉功能', async () => {
-    const res = await onRequestPost(ctx({ ...base, published: 1 }));
+    const res = await create({ ...base, published: 1 });
     const { tripId } = (await res.json()) as { tripId: string };
     const row = await db.prepare('SELECT published FROM trips WHERE id = ?')
       .bind(tripId).first<{ published: number }>();

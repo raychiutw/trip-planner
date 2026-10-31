@@ -1,12 +1,12 @@
 /**
- * issueIdToken unit test — iss 必須與 discovery 的 issuer 完全相同
+ * issueIdToken unit test — iss 的組成與 issuer 的信任錨點
+ *（iss 與 discovery 實際回應的比對在 tests/api/oidc-issuer.test.ts，走 HTTP 邊界）
  *
  * 先前 `issueIdToken` 沒有任何測試，drift 因此無人察覺：discovery 宣告
  * `<origin>/api/oauth`，實作卻簽 `<origin>`（無後綴）。
  */
 import { describe, it, expect, vi } from 'vitest';
 import { issueIdToken } from '../../functions/api/oauth/_id_token';
-import { onRequestGet as openidConfigHandler } from '../../functions/api/oauth/.well-known/openid-configuration';
 import { getPublicOrigin, getOidcIssuer, CANONICAL_PROD_ORIGIN } from '../../functions/api/_utils';
 import type { Env } from '../../functions/api/_types';
 
@@ -54,34 +54,7 @@ function decodeClaims(jwt: string): Record<string, unknown> {
   return JSON.parse(atob(normalised)) as Record<string, unknown>;
 }
 
-/** discovery handler 的 context（與 oidc-discovery.test.ts 同形）。 */
-function makeDiscoveryContext(url: string): Parameters<typeof openidConfigHandler>[0] {
-  return {
-    request: new Request(url),
-    env: {} as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof openidConfigHandler>[0];
-}
-
 describe('issueIdToken — iss claim', () => {
-  it('iss 與 discovery 的 issuer 逐字相同（OIDC Core 3.1.3.7 #2）', async () => {
-    // 這是本次修復的核心：兩邊必須是同一個字串，client 才驗得過。
-    const url = 'https://trip-planner-dby.pages.dev/api/oauth/token';
-    const env = await makeEnv();
-
-    const jwt = await issueIdToken(env, new Request(url, { method: 'POST' }), 'mobile', 'u1', ['openid']);
-    const discovery = await openidConfigHandler(
-      makeDiscoveryContext('https://trip-planner-dby.pages.dev/api/oauth/.well-known/openid-configuration'),
-    );
-    const { issuer } = (await discovery.json()) as { issuer: string };
-
-    expect(decodeClaims(jwt!).iss).toBe(issuer);
-  });
-
   it('iss 帶 /api/oauth 後綴 —— discovery doc 就掛在該路徑下（OIDC Discovery §4）', async () => {
     const env = await makeEnv();
     const jwt = await issueIdToken(
@@ -160,20 +133,5 @@ describe('getPublicOrigin / getOidcIssuer — production trust anchor (v2.55.86)
     expect(getOidcIssuer({ ENVIRONMENT: 'production' }, spoofed)).toBe(
       `${CANONICAL_PROD_ORIGIN}/api/oauth`,
     );
-  });
-
-  it('discovery handler 在 prod + spoofed Host → issuer 不被 Host 汙染', async () => {
-    const ctx = {
-      request: new Request('https://evil.example.com/api/oauth/.well-known/openid-configuration'),
-      env: { ENVIRONMENT: 'production' } as unknown as never,
-      params: {} as unknown as never,
-      data: {} as unknown as never,
-      next: () => Promise.resolve(new Response()),
-      waitUntil: () => undefined,
-      passThroughOnException: () => undefined,
-    } as unknown as Parameters<typeof openidConfigHandler>[0];
-    const res = await openidConfigHandler(ctx);
-    const { issuer } = (await res.json()) as { issuer: string };
-    expect(issuer).toBe(`${CANONICAL_PROD_ORIGIN}/api/oauth`);
   });
 });

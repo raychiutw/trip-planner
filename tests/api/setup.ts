@@ -4,9 +4,35 @@
  */
 import { Miniflare } from 'miniflare';
 import * as fs from 'node:fs';
+import { createRequire } from 'node:module';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
+
+/**
+ * 讓測試用 D1 的 HTTP 連線可以複用。
+ *
+ * Miniflare 的 DispatchFetchDispatcher 對每個送往 workerd 的請求都設 `reset: true`（Connection: close），
+ * 每個 D1 語句因此各開一條 TCP 連線。整套約 2 萬條語句，macOS 的暫時埠（約 1.6 萬個、TIME_WAIT 約 30 秒）
+ * 會被用光，隨機出現 EADDRNOTAVAIL（fetch failed）。乾淨 master 連跑 5 次：34～90 條失敗；套用後 5/5 全綠。
+ * 這個行程裡的 undici Pool 只服務 Miniflare，所以只在這裡關掉；用 Miniflare 解析 undici 以確保是同一份模組。
+ * 用 Symbol 防止 isolate:false 下被重複包裝。
+ */
+const PATCHED = Symbol.for('tripline.test.pool-keep-alive');
+{
+  const { Pool } = createRequire(createRequire(import.meta.url).resolve('miniflare'))('undici') as {
+    Pool: { prototype: { dispatch: (opts: { reset?: boolean }, handler: unknown) => boolean } & Record<symbol, unknown> };
+  };
+  if (!Pool.prototype[PATCHED]) {
+    const dispatch = Pool.prototype.dispatch;
+    Pool.prototype.dispatch = function (this: unknown, opts, handler) {
+      if (opts?.reset) opts.reset = false;
+      return dispatch.call(this, opts, handler);
+    };
+    Pool.prototype[PATCHED] = true;
+  }
+}
 
 // 快取 migration SQL（整個 test run 不變）
 let _migrationFiles: string[] | null = null;
@@ -78,16 +104,36 @@ async function hasMigratedSchema(db: D1Database): Promise<boolean> {
 /**
  * 取得共用 D1 database（lazy init + migration 只跑一次）
  */
+/**
+ * 對照組模式（拆分 T6）：CONTROL_GROUP_DIR 指向 `node scripts/control-group/build.ts` 的產物時，
+ * 測試改跑在「消毒過的 staging 資料副本」上，而不是空的 D1。只連本機這份消毒副本，
+ * 不會連任何遠端資料庫（Miniflare 全程在本機）。測試會寫入，所以每個 process 用暫存複製，原件不動。
+ */
+function controlGroupPersist(): string | null {
+  const dir = process.env.CONTROL_GROUP_DIR;
+  if (!dir) return null;
+  const source = path.join(path.resolve(dir), 'd1');
+  if (!fs.existsSync(source)) {
+    throw new Error(`CONTROL_GROUP_DIR=${dir} 底下沒有 d1/；先跑 node scripts/control-group/build.ts`);
+  }
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'control-group-'));
+  fs.cpSync(source, copy, { recursive: true });
+  process.on('exit', () => fs.rmSync(copy, { recursive: true, force: true }));
+  return copy;
+}
+
 export async function createTestDb(): Promise<D1Database> {
   if (!_cache.__tp_mf) {
+    const persist = controlGroupPersist();
     _cache.__tp_mf = new Miniflare({
       modules: true,
       script: 'export default { fetch() { return new Response("ok"); } }',
       // Vitest's forks pool can re-evaluate this module in separate workers.
       // Give each process an isolated in-memory D1 id so migrations never race
       // against a DB created by another worker.
-      d1Databases: { DB: `tripline-test-${process.pid}` },
-      d1Persist: false,
+      // 對照組模式的資料庫 id 固定為 control-group（與 build 時一致，才找得到同一個 sqlite 檔）。
+      d1Databases: { DB: persist ? 'control-group' : `tripline-test-${process.pid}` },
+      d1Persist: persist ?? false,
     });
   }
   if (!_cache.__tp_db) {

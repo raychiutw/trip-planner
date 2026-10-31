@@ -1,288 +1,170 @@
 /**
- * POST /api/invitations/accept — V2 共編邀請接受流程
+ * POST /api/invitations/accept — V2 共編邀請接受流程（走 HTTP 邊界，tests/api/http.ts）
  *
- * 需 session（getSessionUser）+ user.email 必須 match invited_email（防 phishing：
+ * 需 session（真實 session cookie，經 middleware）+ user.email 必須 match invited_email（防 phishing：
  * 別人不能接走不屬於自己的邀請）+ atomic INSERT trip_permissions + UPDATE accepted_at。
+ * 原本用 vi.doMock 換掉 _session 與手寫 mock DB；現在全部讀寫真實 D1，不再需要 module mock。
+ *
+ * 共用 D1：email／trip 一律用 `s15-` 前綴，結束時只清自己的資料。
  */
-/**
- * v2.33.83 Round 32: 改 scoped doMock + dynamic import 避免 module-level
- * `vi.mock` 在 `isolate: false` 下 spillover 至 session-helper.test.ts、
- * dev-apps*.test.ts、account-*.test.ts（這些檔 import 真實 _session 邏輯）。
- */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hashInvitationToken } from '../../src/server/invitation-token';
-import type { onRequestPost as OnRequestPost } from '../../functions/api/invitations/accept';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv, seedTrip, seedUser, userIdFor } from './helpers';
+import { createApi, type Api } from './http';
+import { INVITE_SECRET, seedInvitation } from './invitations-http';
+import { cleanupS15 } from './cleanup-shares';
 
-const TEST_SECRET = 'test-session-secret-32-chars-long';
+const owner = 's15-accept-owner@test.com';
+const tripId = 's15-accept-trip';
+let db: D1Database;
+let api: Api;
 
-interface MockEnv {
-  DB?: {
-    prepare: ReturnType<typeof vi.fn>;
-    batch?: ReturnType<typeof vi.fn>;
-  };
-  SESSION_SECRET?: string;
+async function accept(email: string | null, body: unknown): Promise<Response> {
+  if (email === null) {
+    // 沒有 session：瀏覽器同源送出（帶 Origin）才會走到認證檢查
+    return api.request('POST', '/api/invitations/accept', { json: body, headers: { Origin: 'https://trip-planner-dby.pages.dev' } });
+  }
+  const session = await api.sessionFor(email);
+  return api.request('POST', '/api/invitations/accept', { cookie: session.cookie, json: body });
 }
 
-function makeStmt(firstResult: unknown = null) {
-  const stmt = {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-  };
-  return stmt;
+async function errorCode(res: Response): Promise<string> {
+  return ((await res.json()) as { error: { code: string } }).error.code;
 }
 
-function makeContext(
-  body: unknown,
-  env: MockEnv,
-  sessionCookie?: string,
-): Parameters<typeof onRequestPost>[0] {
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (sessionCookie) headers['cookie'] = sessionCookie;
-  return {
-    request: new Request('https://x.com/api/invitations/accept', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    }),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestPost>[0];
+async function permissionRole(email: string): Promise<string | undefined> {
+  const row = await db.prepare('SELECT role FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+    .bind(tripId, userIdFor(email)).first<{ role: string }>();
+  return row?.role;
 }
 
-// Module-level mock refs — fresh fn per test via beforeEach reassign。
-// 不在 top level `vi.mock(...)`，改 beforeEach + `vi.doMock` 才能在
-// `isolate: false` 下避免污染其他 tests/api/* import 真實 _session 邏輯。
-let mockRequireSessionUser: ReturnType<typeof vi.fn>;
-let mockGetSessionUser: ReturnType<typeof vi.fn>;
-let onRequestPost: typeof OnRequestPost;
-
-let AppError: typeof import('../../functions/api/_errors').AppError;
-
-beforeEach(async () => {
-  vi.resetModules();
-  mockRequireSessionUser = vi.fn();
-  mockGetSessionUser = vi.fn();
-  // AppError 需 dynamic import — 因為 SUT 在 resetModules() 後重新 import
-  // _errors，其 instanceof check 用的是「重新 import 的 AppError class」，
-  // test 端必須用同 identity 才會被 SUT catch block 認出。
-  AppError = (await import('../../functions/api/_errors')).AppError;
-  // 部分 mock — 保留 _session 其他 exports（issueSession 等）為 real 實作，
-  // 因 isolate: false 下其他 file 仍會用到。
-  vi.doMock('../../functions/api/_session', async () => {
-    const actual = await vi.importActual<typeof import('../../functions/api/_session')>(
-      '../../functions/api/_session',
-    );
-    return {
-      ...actual,
-      requireSessionUser: mockRequireSessionUser,
-      getSessionUser: mockGetSessionUser,
-    };
-  });
-  // dynamic import AFTER doMock — SUT 取到 mocked _session
-  onRequestPost = (await import('../../functions/api/invitations/accept')).onRequestPost;
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-27T10:00:00Z'));
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET: INVITE_SECRET }) });
+  await cleanupS15(db);
+  await seedTrip(db, { id: tripId, owner });
 });
 
-afterEach(() => {
-  vi.doUnmock('../../functions/api/_session');
-  vi.useRealTimers();
+afterAll(async () => {
+  await cleanupS15(db);
+  await disposeMiniflare();
 });
-
 
 describe('POST /api/invitations/accept', () => {
   it('401 AUTH_REQUIRED when no session', async () => {
-    mockRequireSessionUser.mockRejectedValueOnce(
-      new AppError('AUTH_REQUIRED'),
-    );
-    const env: MockEnv = { DB: { prepare: vi.fn() }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+    const res = await accept(null, { token: 't' });
     expect(res.status).toBe(401);
   });
 
   it('400 INVITATION_TOKEN_MISSING when token body missing', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const env: MockEnv = { DB: { prepare: vi.fn() }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({}, env));
+    const res = await accept('s15-accept-missing@test.com', {});
     expect(res.status).toBe(400);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_TOKEN_MISSING');
+    expect(await errorCode(res)).toBe('INVITATION_TOKEN_MISSING');
   });
 
   it('410 INVITATION_INVALID when token_hash not found', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'me@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) return makeStmt(null);
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({ token: 'fake' }, env));
+    const res = await accept('s15-accept-invalid@test.com', { token: 's15-fake-token' });
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_INVALID');
+    expect(await errorCode(res)).toBe('INVITATION_INVALID');
   });
 
-  it('410 INVITATION_EXPIRED when expires_at < now', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'me@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'me@x.com',
-          expires_at: '2026-04-20T10:00:00Z', // expired
-          accepted_at: null,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+  it('410 INVITATION_EXPIRED when expires_at < now，且不授予權限', async () => {
+    const email = 's15-accept-expired@test.com';
+    await seedUser(db, email);
+    await seedInvitation(db, { tripId, token: 's15-expired-token', invitedEmail: email, invitedBy: owner, expiresAt: '2020-01-01T00:00:00Z' });
+    const res = await accept(email, { token: 's15-expired-token' });
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_EXPIRED');
+    expect(await errorCode(res)).toBe('INVITATION_EXPIRED');
+    expect(await permissionRole(email)).toBeUndefined();
   });
 
-  it('410 INVITATION_ACCEPTED when already accepted', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'me@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'me@x.com',
-          expires_at: '2026-05-04T10:00:00Z',
-          accepted_at: '2026-04-26T10:00:00Z',
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+  it('410 INVITATION_ACCEPTED when already accepted，且不重複授予權限', async () => {
+    const email = 's15-accept-done@test.com';
+    await seedUser(db, email);
+    await seedInvitation(db, { tripId, token: 's15-done-token', invitedEmail: email, invitedBy: owner, acceptedAt: '2026-04-26T10:00:00Z' });
+    const res = await accept(email, { token: 's15-done-token' });
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_ACCEPTED');
+    expect(await errorCode(res)).toBe('INVITATION_ACCEPTED');
+    expect(await permissionRole(email)).toBeUndefined();
   });
 
-  it('403 INVITATION_EMAIL_MISMATCH when session user.email != invited_email', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'wrongperson@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'real-invitee@x.com', // different
-          expires_at: '2026-05-04T10:00:00Z',
-          accepted_at: null,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+  it('403 INVITATION_EMAIL_MISMATCH when session user.email != invited_email，邀請保持 pending', async () => {
+    const wrong = 's15-accept-wrong@test.com';
+    await seedUser(db, wrong);
+    await seedInvitation(db, { tripId, token: 's15-mismatch-token', invitedEmail: 's15-accept-real-invitee@test.com', invitedBy: owner });
+    const res = await accept(wrong, { token: 's15-mismatch-token' });
     expect(res.status).toBe(403);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_EMAIL_MISMATCH');
+    expect(await errorCode(res)).toBe('INVITATION_EMAIL_MISMATCH');
+    expect(await permissionRole(wrong)).toBeUndefined();
+    const pending = await db.prepare('SELECT accepted_at FROM trip_invitations WHERE invited_email = ?')
+      .bind('s15-accept-real-invitee@test.com').first<{ accepted_at: string | null }>();
+    expect(pending?.accepted_at).toBeNull();
   });
 
-  it('200 happy path: INSERT trip_permissions + UPDATE accepted_at', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'me@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'me@x.com',
-          expires_at: '2026-05-04T10:00:00Z',
-          accepted_at: null,
-        });
-      }
-      if (sql.includes('SELECT title FROM trips')) {
-        return makeStmt({ title: '沖繩 5 日' });
-      }
-      return makeStmt();
-    });
-    const dbBatch = vi.fn().mockResolvedValue([
-      { meta: { changes: 1 } },
-      { meta: { changes: 1 } },
-    ]);
-    const env: MockEnv = {
-      DB: { prepare: dbPrepare, batch: dbBatch },
-      SESSION_SECRET: TEST_SECRET,
-    };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+  it('200 happy path: INSERT trip_permissions + UPDATE accepted_at + 稽核紀錄', async () => {
+    const email = 's15-accept-ok@test.com';
+    await seedUser(db, email);
+    await seedInvitation(db, { tripId, token: 's15-ok-token', invitedEmail: email, invitedBy: owner });
+    const res = await accept(email, { token: 's15-ok-token' });
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; tripId: string; tripTitle: string };
     expect(json.ok).toBe(true);
-    expect(json.tripId).toBe('trip-1');
-    expect(json.tripTitle).toBe('沖繩 5 日');
+    expect(json.tripId).toBe(tripId);
+    expect(json.tripTitle).toBe(`Test Trip ${tripId}`);
 
-    // Atomic batch — INSERT permission + UPDATE invitation in same batch
-    expect(dbBatch).toHaveBeenCalledTimes(1);
-    const batchArg = dbBatch.mock.calls[0][0] as unknown[];
-    expect(batchArg).toHaveLength(2);
+    // 權限與 accepted 狀態在同一個 batch 落地
+    expect(await permissionRole(email)).toBe('member');
+    const inv = await db.prepare('SELECT accepted_at, accepted_by FROM trip_invitations WHERE invited_email = ?')
+      .bind(email).first<{ accepted_at: string | null; accepted_by: string | null }>();
+    expect(inv?.accepted_at).toBeTruthy();
+    expect(inv?.accepted_by).toBe(userIdFor(email));
+    const audit = await db.prepare("SELECT diff_json FROM audit_log WHERE trip_id = ? AND table_name = 'trip_invitations' AND changed_by = ?")
+      .bind(tripId, email).first<{ diff_json: string }>();
+    expect(audit?.diff_json).toContain('accepted');
+
+    // 同一個 token 不能再用第二次，也不會重複出現權限列
+    const replay = await accept(email, { token: 's15-ok-token' });
+    expect(replay.status).toBe(410);
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM trip_permissions WHERE trip_id = ? AND user_id = ?').bind(tripId, userIdFor(email)).first<{ n: number }>();
+    expect(n?.n).toBe(1);
   });
 
-  it('queries DB with HMAC token_hash not raw token', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const inviteStmt = makeStmt(null);
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'me@x.com' });
-      }
-      if (sql.includes('FROM trip_invitations')) return inviteStmt;
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
+  it('DB 只存 HMAC(SESSION_SECRET, token)：raw token 當 token_hash 的列不能被接受；換 secret 也不能', async () => {
+    const email = 's15-accept-hmac@test.com';
+    await seedUser(db, email);
+    // 洩漏情境：DB 列的 token_hash 欄位直接存 raw token（或攻擊者拿 hash 當 token）
+    await db.prepare(`INSERT INTO trip_invitations (token_hash, trip_id, invited_email, role, invited_by, expires_at)
+      VALUES (?, ?, ?, 'member', ?, '2099-01-01T00:00:00Z')`)
+      .bind('s15-my-raw-xyz', tripId, email, userIdFor(owner)).run();
+    const raw = await accept(email, { token: 's15-my-raw-xyz' });
+    expect(raw.status).toBe(410);
+    expect(await errorCode(raw)).toBe('INVITATION_INVALID');
+    expect(await permissionRole(email)).toBeUndefined();
 
-    const rawToken = 'my-raw-xyz';
-    await onRequestPost(makeContext({ token: rawToken }, env));
-
-    const expectedHash = await hashInvitationToken(rawToken, TEST_SECRET);
-    expect(inviteStmt.bind).toHaveBeenCalledWith(expectedHash);
+    // 正確 token 對不同 SESSION_SECRET 的伺服器無效
+    const email2 = 's15-accept-hmac2@test.com';
+    await seedUser(db, email2);
+    await seedInvitation(db, { tripId, token: 's15-hmac-token', invitedEmail: email2, invitedBy: owner });
+    const otherApi = createApi({ env: mockEnv(db, { SESSION_SECRET: 'a-different-session-secret-32-chars' }) });
+    const session = await otherApi.sessionFor(email2);
+    const res = await otherApi.request('POST', '/api/invitations/accept', { cookie: session.cookie, json: { token: 's15-hmac-token' } });
+    expect(res.status).toBe(410);
+    expect(await permissionRole(email2)).toBeUndefined();
   });
 
   it('email match is case-insensitive (invited_email lowercase guaranteed by INSERT)', async () => {
-    mockRequireSessionUser.mockResolvedValueOnce({ uid: 'u-1' });
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id, email FROM users')) {
-        return makeStmt({ id: 'u-1', email: 'Me@X.com' }); // mixed case
-      }
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'me@x.com', // lowercase
-          expires_at: '2026-05-04T10:00:00Z',
-          accepted_at: null,
-        });
-      }
-      if (sql.includes('SELECT title FROM trips')) {
-        return makeStmt({ title: 'Trip' });
-      }
-      return makeStmt();
-    });
-    const dbBatch = vi.fn().mockResolvedValue([{ meta: { changes: 1 } }, { meta: { changes: 1 } }]);
-    const env: MockEnv = {
-      DB: { prepare: dbPrepare, batch: dbBatch },
-      SESSION_SECRET: TEST_SECRET,
-    };
-    const res = await onRequestPost(makeContext({ token: 't' }, env));
+    const mixed = 'S15-Accept-Case@Test.com';
+    await seedUser(db, mixed);
+    await seedInvitation(db, { tripId, token: 's15-case-token', invitedEmail: mixed.toLowerCase(), invitedBy: owner });
+    const res = await accept(mixed, { token: 's15-case-token' });
     expect(res.status).toBe(200);
+    expect(await permissionRole(mixed)).toBe('member');
+
+    // 反向：DB 內的 invited_email 是大小寫混合（舊資料），使用者 email 為小寫，同樣比對成功
+    const lower = 's15-accept-case2@test.com';
+    await seedUser(db, lower);
+    await seedInvitation(db, { tripId, token: 's15-case2-token', invitedEmail: 'S15-Accept-Case2@TEST.com', invitedBy: owner });
+    expect((await accept(lower, { token: 's15-case2-token' })).status).toBe(200);
+    expect(await permissionRole(lower)).toBe('member');
   });
 });

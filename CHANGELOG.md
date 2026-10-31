@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.117] - 2026-10-31
+## [2.57.119] - 2026-10-31
 
 > ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。
 
@@ -24,6 +24,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
 - 已知且刻意不在本 PR 處理：其他裝置的 session cookie 在刪帳號後仍有效（既有行為，`session_devices` 是刪除而非撤銷）、刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
 - 上線前必做：（1）日後啟用 Google 登入前，實測 Google 是否回傳 `auth_time`（目前休眠，不阻擋本次）；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 的 0097 已於 2026-10-31 套用；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
+
+## [2.57.118] - 2026-10-31
+
+### Fixed
+- **未登入的被邀請者看得到邀請預覽了**：`InvitePage` 對還沒登入的人顯示「註冊並加入」「登入並加入」，但後端的邀請預覽（`GET /api/invitations?token=…`）一直回 401，新使用者只會看到「邀請連結無效」。現在帶 token 的預覽對匿名開放（回 200 或 410），列出 pending 邀請的 `?tripId=` 分支仍需登入，同時帶兩者視為後者。已登入的被邀請者本來就不受影響。
+
+### For contributors
+- 先寫會變紅的 HTTP 邊界測試（匿名＋無效 token → 410、匿名＋有效 token → 200 且不含 token／hash、匿名＋token＋tripId → 401），再改 middleware。Mutation：整段放行拿掉會轉紅；把放行範圍放寬到 tripId、不要求 token、改成路徑前綴、放行所有方法，測試**不會**轉紅——因為 handler 自己對 tripId 分支也 `requireAuth`，且 `invitations/` 底下沒有其他 GET 路由，這幾個是 defense-in-depth 的等價變異。
+- 沒有跑 gstack 的 specialist／adversarial review army；驗證靠 6 個相關 API 測試檔（89 個）、invite-page 單元測試與 typecheck。
+- 預覽公開後沒有加 rate limit；token 以 HMAC 比對，但預覽回應會帶邀請者與被邀請者的 email，這是既有設計，沒有改。
 
 ## [2.57.116] - 2026-10-31
 

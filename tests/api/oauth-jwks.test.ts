@@ -1,23 +1,14 @@
 /**
- * /api/oauth/.well-known/jwks.json — V2-P5 JWKS endpoint
+ * /api/oauth/.well-known/jwks.json — V2-P5 JWKS endpoint（走 HTTP 邊界）
  */
 import { describe, it, expect } from 'vitest';
-import { onRequestGet } from '../../functions/api/oauth/.well-known/jwks.json';
+import { createApi } from './http';
+import type { Env } from '../../functions/api/_types';
 
-interface MockEnv {
-  OAUTH_SIGNING_PRIVATE_KEY?: string;
-}
+const JWKS = 'https://x.com/api/oauth/.well-known/jwks.json';
 
-function makeContext(env: MockEnv): Parameters<typeof onRequestGet>[0] {
-  return {
-    request: new Request('https://x.com/api/oauth/.well-known/jwks.json', { method: 'GET' }),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
+function get(env: Partial<Env>) {
+  return createApi({ env: env as Env }).get(JWKS);
 }
 
 async function generateTestPrivateKeyBase64(): Promise<string> {
@@ -40,20 +31,20 @@ async function generateTestPrivateKeyBase64(): Promise<string> {
 
 describe('GET /api/oauth/.well-known/jwks.json', () => {
   it('200 with empty keys when env unset', async () => {
-    const res = await onRequestGet(makeContext({}));
+    const res = await get({});
     expect(res.status).toBe(200);
     const json = await res.json() as { keys: unknown[] };
     expect(json.keys).toEqual([]);
   });
 
   it('1h cache-control', async () => {
-    const res = await onRequestGet(makeContext({}));
+    const res = await get({});
     expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
   });
 
   it('publishes RFC 7517 JWK when OAUTH_SIGNING_PRIVATE_KEY set', async () => {
     const key = await generateTestPrivateKeyBase64();
-    const res = await onRequestGet(makeContext({ OAUTH_SIGNING_PRIVATE_KEY: key }));
+    const res = await get({ OAUTH_SIGNING_PRIVATE_KEY: key });
     expect(res.status).toBe(200);
     const json = await res.json() as {
       keys: Array<{ kty: string; use: string; alg: string; kid: string; n: string; e: string }>;
@@ -70,7 +61,7 @@ describe('GET /api/oauth/.well-known/jwks.json', () => {
 
   it('does NOT leak private key components (d, p, q)', async () => {
     const key = await generateTestPrivateKeyBase64();
-    const res = await onRequestGet(makeContext({ OAUTH_SIGNING_PRIVATE_KEY: key }));
+    const res = await get({ OAUTH_SIGNING_PRIVATE_KEY: key });
     const json = await res.json() as { keys: Array<Record<string, unknown>> };
     const jwk = json.keys[0]!;
     expect(jwk.d).toBeUndefined();
@@ -82,7 +73,7 @@ describe('GET /api/oauth/.well-known/jwks.json', () => {
   });
 
   it('returns empty keys (not 500) when env value is malformed', async () => {
-    const res = await onRequestGet(makeContext({ OAUTH_SIGNING_PRIVATE_KEY: 'not-valid-base64!!!' }));
+    const res = await get({ OAUTH_SIGNING_PRIVATE_KEY: 'not-valid-base64!!!' });
     expect(res.status).toBe(200);
     const json = await res.json() as { keys: unknown[] };
     expect(json.keys).toEqual([]);

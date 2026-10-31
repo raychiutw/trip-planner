@@ -2,35 +2,6 @@
  * API Test Helpers — 共用 mock 建構工具
  */
 import type { Env, AuthData } from '../../functions/api/_types';
-import { AppError, errorResponse } from '../../functions/api/_errors';
-
-/**
- * 包裹 handler 呼叫 — 模擬 middleware 的 AppError catch 行為。
- * handler throw AppError → 轉為 Response（跟 production 行為一致）
- */
-export async function callHandler(
-  handler: (ctx: unknown) => Promise<Response>,
-  ctx: unknown,
-): Promise<Response> {
-  // V2 cutover (migration 0047): trips.owner_user_id / trip_permissions.user_id
-  // 必須有對應 users row。Auto-seed auth user before handler runs so callers
-  // who only do mockAuth({email}) don't have to remember seedUser.
-  const auth = (ctx as { data?: { auth?: AuthData } })?.data?.auth;
-  const env = (ctx as { env?: Env })?.env;
-  if (auth?.email && auth.userId && env?.DB) {
-    await env.DB
-      .prepare('INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)')
-      .bind(auth.userId, auth.email, auth.email.split('@')[0])
-      .run()
-      .catch(() => { /* best-effort; tests asserting users insert behavior can override */ });
-  }
-  try {
-    return await handler(ctx);
-  } catch (err) {
-    if (err instanceof AppError) return errorResponse(err);
-    throw err;
-  }
-}
 
 /** 建立 mock Env 物件 */
 export function mockEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
@@ -83,52 +54,6 @@ export function mockServiceAuth(overrides: Partial<AuthData> = {}): AuthData {
     scopes: overrides.scopes ?? ['companion'],
     ...overrides,
   };
-}
-
-/** 建立 mock EventContext（用於直接呼叫 handler） */
-export function mockContext(options: {
-  request: Request;
-  env: Env;
-  auth?: AuthData;
-  params?: Record<string, string>;
-}) {
-  const data: Record<string, unknown> = {};
-  if (options.auth) {
-    data.auth = options.auth;
-  }
-  const waitUntilPromises: Promise<unknown>[] = [];
-  return {
-    request: options.request,
-    env: options.env,
-    params: options.params || {},
-    data,
-    waitUntil: (p: Promise<unknown>) => { waitUntilPromises.push(p); },
-    passThroughOnException: () => {},
-    next: () => Promise.resolve(new Response('next')),
-    functionPath: '',
-    _waitUntilPromises: waitUntilPromises,
-  } as unknown as EventContext<Env, string, Record<string, unknown>>;
-}
-
-/** 建立帶 JSON body 的 Request */
-export function jsonRequest(
-  url: string,
-  method: string,
-  body?: unknown,
-  headers?: Record<string, string>,
-): Request {
-  const opts: RequestInit = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Origin': 'https://trip-planner-dby.pages.dev',
-      ...headers,
-    },
-  };
-  if (body !== undefined) {
-    opts.body = JSON.stringify(body);
-  }
-  return new Request(url, opts);
 }
 
 /** 插入測試行程 + 天 + 權限。

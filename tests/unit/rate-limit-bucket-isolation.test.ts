@@ -12,7 +12,7 @@
  * 設計理由（D16）：bucket 隔離避免 companion 攻擊耗光 user web quota。
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createTestDb, disposeMiniflare } from './setup';
+import { createTestDb, disposeMiniflare } from '../api/setup';
 import { bumpRateLimit, RATE_LIMITS } from '../../functions/api/_rate_limit';
 
 let db: D1Database;

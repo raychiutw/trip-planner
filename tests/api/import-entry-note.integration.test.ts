@@ -12,35 +12,30 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedUser, callHandler } from './helpers';
-import { onRequestPost } from '../../functions/api/trips/import';
-import type { Env } from '../../functions/api/_types';
+import { mockEnv, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupImportedTrips } from './cleanup-imported';
 
+// 走 HTTP 邊界（tests/api/http.ts）；共用 D1，結束時清掉匯入者建立的行程與 POI。
 let db: D1Database;
-let env: Env;
+let api: Api;
 
 const USER_EMAIL = 'importer@test.com';
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
+  api = createApi({ env: mockEnv(db) });
   await seedUser(db, USER_EMAIL);
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupImportedTrips(db, USER_EMAIL, ['% inherit', '% master-wins', '%alts', '% schema', 'Policy 匯入食堂']);
+  await disposeMiniflare();
+});
 
 /** 跑 import handler，回傳新建 tripId（已斷言 201）。 */
 async function runImport(payload: unknown): Promise<string> {
-  const ctx = mockContext({
-    request: new Request('https://test.com/api/trips/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }),
-    env,
-    auth: mockAuth({ email: USER_EMAIL }),
-  });
-  const resp = await callHandler(onRequestPost, ctx);
+  const resp = await api.request('POST', '/api/trips/import', { as: USER_EMAIL, json: payload });
   const body = (await resp.json()) as { ok?: boolean; tripId?: string; error?: { message?: string } };
   expect(resp.status, `import 應 201，實得 ${resp.status}：${JSON.stringify(body)}`).toBe(201);
   expect(body.ok).toBe(true);
@@ -86,17 +81,7 @@ describe('POST /api/trips/import — entry note round-trip（master poi note）'
   it('舊 weather_json 欄位回傳 400，不得靜默忽略', async () => {
     const base = payloadWith('legacy-weather', []);
     const payload = { ...base, days: [{ ...base.days[0], weather_json: {} }] };
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }),
-      env,
-      auth: mockAuth({ email: USER_EMAIL }),
-    });
-
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', '/api/trips/import', { as: USER_EMAIL, json: payload });
     expect(resp.status).toBe(400);
     await expect(resp.json()).resolves.toMatchObject({ error: { detail: 'weather_json 已移除' } });
   });

@@ -3,8 +3,8 @@
  * 重試 → 重複 entry）。獨立檔案以免 vi.mock 外溢到其他 integration 測試。
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { createTestDb, disposeMiniflare } from './setup';
-import { seedUser, seedTrip, seedPoi, getDayId } from './helpers';
+import { createTestDb, disposeMiniflare } from '../api/setup';
+import { seedUser, seedTrip, seedPoi, getDayId } from '../api/helpers';
 
 vi.mock('../../functions/api/_entry_sort', () => ({
   resortDayByArrival: vi.fn(async () => { throw new Error('resort boom'); }),

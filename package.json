@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.57.117",
+  "version": "2.57.119",
   "engines": {
     "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
@@ -19,6 +19,8 @@
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
     "test": "vitest run --maxWorkers=2",
     "test:api": "vitest run --config vitest.config.api.mts",
+    "control-group:build": "node scripts/control-group/build.ts",
+    "test:control-group": "CONTROL_GROUP_DIR=.control-group vitest run --config vitest.config.api.mts",
     "test:all": "npm test && npm run test:api",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

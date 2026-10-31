@@ -1,12 +1,12 @@
 /**
  * Regression locks for the v2.44.x audit high-severity bug-fix batch.
  *
- * Behavioral where cheap (rate-limit 429 enforcement, cache datetime format);
- * source-level for the rest (each lock pins the exact fix so it can't silently
- * regress). One block per finding.
+ * Behavioral where cheap (cache datetime format; /api/route 的 429 enforcement 在
+ * tests/api/route-audit-fixes.integration.test.ts 走 HTTP)；source-level for the rest
+ * (each lock pins the exact fix so it can't silently regress). One block per finding.
  */
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,53 +14,9 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
-// ---- Rate-limit enforcement: /api/route returns 429 when bucket exhausted ----
-const mockBump = vi.fn(async () => ({ ok: true, count: 1 }));
-vi.mock('../../functions/api/_rate_limit', () => ({
-  bumpRateLimit: (...a: unknown[]) => mockBump(...a),
-  clientIp: () => '9.9.9.9',
-  RATE_LIMITS: {
-    ROUTE_PER_IP: { maxAttempts: 100, windowMs: 1, lockoutMs: 1 },
-    POI_SEARCH_PER_IP: { maxAttempts: 200, windowMs: 1, lockoutMs: 1 },
-    REPORTS_PER_IP: { maxAttempts: 200, windowMs: 1, lockoutMs: 1 },
-  },
-}));
-vi.mock('../../functions/api/_maps_lock', () => ({ assertGoogleAvailable: vi.fn(async () => undefined) }));
-const mockComputeRoute = vi.fn();
-vi.mock('../../src/server/maps/google-client', () => ({ computeRoute: (...a: unknown[]) => mockComputeRoute(...a) }));
-
-import { onRequestGet } from '../../functions/api/route';
-
-function routeCtx(): any {
-  return {
-    request: new Request('http://localhost/api/route?from=139.7,35.6&to=139.8,35.7'),
-    env: { DB: {}, GOOGLE_MAPS_API_KEY: 'k' },
-  };
-}
-
-beforeEach(() => {
-  mockBump.mockReset();
-  mockBump.mockResolvedValue({ ok: true, count: 1 });
-  mockComputeRoute.mockReset();
-  mockComputeRoute.mockResolvedValue({ polyline: '_p~iF~ps|U', distanceMeters: 100, durationSeconds: 60 });
-});
-
 describe('rate-limit enforcement (regression: bumpRateLimit result was discarded)', () => {
-  it('GET /api/route returns 429 + Retry-After when locked, and never calls computeRoute', async () => {
-    mockBump.mockResolvedValueOnce({ ok: false, retryAfter: 3600, count: 101 });
-    const res: Response = await onRequestGet(routeCtx());
-    expect(res.status).toBe(429);
-    expect(res.headers.get('Retry-After')).toBe('3600');
-    const body = await res.json();
-    expect(body.error.code).toBe('RATE_LIMITED');
-    expect(mockComputeRoute).not.toHaveBeenCalled();
-  });
-
-  it('GET /api/route proceeds to computeRoute when not locked', async () => {
-    await onRequestGet(routeCtx());
-    expect(mockComputeRoute).toHaveBeenCalledOnce();
-  });
-
+  // /api/route 的 429 / 放行行為已改走 HTTP 邊界：
+  // tests/api/route-audit-fixes.integration.test.ts
   it('poi-search and reports also capture + enforce the bumpRateLimit result', () => {
     for (const f of ['functions/api/poi-search.ts', 'functions/api/reports.ts', 'functions/api/route.ts']) {
       const src = read(f);
