@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 > ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。
 
+### Fixed
+- **已刪除帳號的舊登入還能繼續使用**：帳號刪除會把該使用者的登入裝置紀錄整列抹除，但驗證 session 時只在「找到紀錄且已撤銷」才拒絕，找不到就放行，所以刪除前拿到的 cookie 仍會以已刪除使用者的身分通過驗證，直到 30 天到期。現在 session 帶有裝置識別卻找不到紀錄時一律視為已撤銷。沒有裝置識別的舊版 session 不受影響。這是在 staging 預覽站實際跑一次帳號刪除才發現的，單元測試沒抓到。
+
 ### Changed
 - **刪除帳號需要近期重新驗證身分**：純 Google 登入的帳號不能再只靠登入狀態加輸入 `DELETE` 刪除，必須先完成同一個 Google 帳號的重新驗證（最多 5 分鐘內、一次性）。有密碼的帳號維持原本的密碼確認。Web 帳號頁與 mobile app 共用同一套規則；取消、逾時、驗證到別的帳號都會保留帳號與行程。
 
