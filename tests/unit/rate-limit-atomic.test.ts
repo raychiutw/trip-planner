@@ -10,7 +10,7 @@
  * DO UPDATE 則由 SQLite 序列化 bump，count 必為 100。
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createTestDb, disposeMiniflare } from './setup';
+import { createTestDb, disposeMiniflare } from '../api/setup';
 import { bumpRateLimit } from '../../functions/api/_rate_limit';
 
 let db: D1Database;
