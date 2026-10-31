@@ -74,6 +74,27 @@ describe('進程內：經真實路由與 middleware', () => {
     expect(resp.status).toBe(405);
   });
 
+  it('form 選項以 urlencoded 送出，handler 讀得到欄位', async () => {
+    const api = createApi({ env });
+    const resp = await api.request('POST', '/api/oauth/consent', {
+      form: { client_id: 'x', decision: 'maybe' },
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+    });
+    // 無 session 會先轉去 login，這裡只驗 form 有被解析（redirect_after 帶回 client_id）
+    expect(resp.status).toBe(302);
+    expect(decodeURIComponent(resp.headers.get('Location')!)).toContain('client_id=x');
+  });
+
+  it('轉址不會被自動跟隨：回應保留 302 與 Location', async () => {
+    const api = createApi({ env });
+    const login = await api.request('POST', '/api/oauth/consent', {
+      form: { decision: 'allow' },
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+    });
+    expect(login.status).toBe(302);
+    expect(login.headers.get('Location')).toMatch(/^\/login\?redirect_after=/);
+  });
+
   it('路徑存在但方法不支援回 405', async () => {
     const api = createApi({ env });
     const resp = await api.request('DELETE', '/api/trips/http-trip/days', { as: OWNER });

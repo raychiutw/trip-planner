@@ -106,6 +106,8 @@ export interface RequestOptions {
   /** 直接帶一個既有的 bearer token（外部目標用）。 */
   bearer?: string;
   json?: unknown;
+  /** application/x-www-form-urlencoded 的表單內容（瀏覽器 form POST 用，例如 consent）。 */
+  form?: Record<string, string>;
   headers?: Record<string, string>;
 }
 
@@ -149,8 +151,12 @@ export function createApi(target: { env: Env } | { baseUrl: string }): Api {
     if (options.json !== undefined) {
       body = JSON.stringify(options.json);
       headers.set('content-type', 'application/json');
+    } else if (options.form) {
+      body = new URLSearchParams(options.form).toString();
+      headers.set('content-type', 'application/x-www-form-urlencoded');
     }
-    return doFetch(new Request(new URL(path, base), { method, headers, body }));
+    // 不自動跟隨轉址：OAuth 流程要驗的就是 302 的 Location
+    return doFetch(new Request(new URL(path, base), { method, headers, body, redirect: 'manual' }));
   }
 
   return { request, get: (path, options) => request('GET', path, options), tokenFor, fetch: doFetch };
