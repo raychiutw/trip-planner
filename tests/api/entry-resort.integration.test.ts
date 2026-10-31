@@ -7,19 +7,28 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { seedTrip, getDayId, mockEnv, mockAuth, mockContext, jsonRequest, callHandler } from './helpers';
+import { seedTrip, getDayId, mockEnv } from './helpers';
+import { createApi, type Api } from './http';
 import { resortDayByArrival } from '../../functions/api/_entry_sort';
-import { onRequestPatch } from '../../functions/api/trips/[id]/entries/[eid]';
-import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
+const OWNER = 'entry-resort-owner@test.com';
+const tripIds: string[] = [];
 
 beforeAll(async () => {
   db = await createTestDb();
+  tripIds.push('resort-trip');
   await seedTrip(db, { id: 'resort-trip', days: 8 });
 }, 30000);
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  // 共用 D1：只清自己建立的行程（days / entries 走 FK cascade，permissions 要手動清）
+  for (const id of tripIds) {
+    await db.prepare('DELETE FROM trip_permissions WHERE trip_id = ?').bind(id).run(); // 無 FK cascade
+    await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
+});
 
 /** 插入 entry，顯式指定 sort_order + start_time（null / '' 允許）。 */
 async function ins(dayId: number, sortOrder: number, startTime: string | null): Promise<number> {
@@ -109,21 +118,17 @@ describe('resortDayByArrival — 依抵達時間重排 sort_order', () => {
 
 describe('PATCH /entries/:eid resort guard — 端點層級：改 start_time 觸發、其他不觸發', () => {
   const TRIP = 'resort-ep-trip';
-  let env: Env;
+  let api: Api;
 
   beforeAll(async () => {
-    env = mockEnv(db);
-    await seedTrip(db, { id: TRIP, days: 4 });
+    api = createApi({ env: mockEnv(db) });
+    tripIds.push(TRIP);
+    await seedTrip(db, { id: TRIP, days: 4, owner: OWNER });
   }, 30000);
 
-  async function patch(eid: number, body: Record<string, unknown>) {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/entries/${eid}`, 'PATCH', body),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, eid: String(eid) },
-    });
-    return callHandler(onRequestPatch, ctx);
+  // 走 HTTP 邊界（tests/api/http.ts）
+  function patch(eid: number, body: Record<string, unknown>) {
+    return api.request('PATCH', `/api/trips/${TRIP}/entries/${eid}`, { as: OWNER, json: body });
   }
 
   it('(a) PATCH { start_time } → 當日依抵達時間重排', async () => {
