@@ -1154,7 +1154,7 @@ email → user_id 完整切換。
 
 - **單一收藏池**：每個 user 一個 `poi_favorites` 池。`(user_id, poi_id)` UNIQUE — 不能重複收藏同 POI。
 - **跨 trip 反查**：透過 `poi_favorites.poi_id` 對 **`trip_entry_pois`**（一般景點）與 **`trip_days.hotel_poi_id`**（住宿）兩路 JOIN 後 UNION，每筆收藏即時可知「目前在哪些 trip / 哪天 / 哪 entry 出現」。
-  > ⚠️ **2026-07-26 更正**：原寫 `trip_pois.poi_id`。`trip_pois` 在 v2.29.0 **整表 DROP**，`CONTEXT.md` 的「已退場的名字」表列它為 hard cutover、無 alias —— 照原文寫 SQL 會撞 no such table，而且會漏掉住宿那一路（住宿不在 entry 上，在 `trip_days.hotel_poi_id`）。後端 GET 用 `json_group_array` 一次查（避 N+1），usages 隨收藏 POI row 一起回。
+  > ⚠️ **2026-07-26 更正**：原寫 `trip_pois.poi_id`。`trip_pois` 在 v2.29.0 **整表 DROP**，`GLOSSARY.md` 的「已退場的名字」表列它為 hard cutover、無 alias —— 照原文寫 SQL 會撞 no such table，而且會漏掉住宿那一路（住宿不在 entry 上，在 `trip_days.hotel_poi_id`）。後端 GET 用 `json_group_array` 一次查（避 N+1），usages 隨收藏 POI row 一起回。
 - **「目前在 N 個行程」徽章**：收藏 POI card 在 POI 名稱下方加一行 `--font-size-footnote --color-muted` 文字，內容例「目前在 3 個行程」。N=0 時不渲染（避免「0 個行程」噪音）。
 - **進行程不刪收藏**：「搬」 = 複製；poi_favorites 是「跨 trip 願望清單」，進行程不代表不想再去（同景點可能不同 trip 都想去）。
 

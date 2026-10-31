@@ -95,7 +95,7 @@ src/
 ├── lib/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
-│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
+│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 GLOSSARY.md「entry 變更」
 │   ├── tripMutations.ts     行程層變更：archiveTrip/unarchiveTrip/deleteTrip/deleteDay 回 Result，
 │   │                        成功 emit tripUpdated；不 toast、不導覽（同 entryMutations 慣例）
 │   ├── segmentMutations.ts  手動車程建立／更新，成功 emit segmentUpdated 觸發共用讀取
@@ -225,7 +225,7 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 (functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
 `createEntriesBatch`／`replaceDayEntries`，functions/api/_entryWrite.ts）。整日重寫由 `replaceDayEntries`
 一次提交 entries、junction、備選資料、hotel／parking 與版本；其他建立入口保留共用 intake，
-見 `CONTEXT.md` 的「entry intake」詞條。
+見 `GLOSSARY.md` 的「entry intake」詞條。
 
 ### Google Maps Platform stack (v2.23.0+)
 
@@ -404,6 +404,7 @@ tests/
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
 | [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
+| [0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md) | 拆成 web、api、agent 三個專案，認證改 bearer token（Proposed，含殘留風險） |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 
@@ -432,7 +433,7 @@ tests/
 ## Related Docs
 
 - [README.md](README.md) — 使用者介紹、功能特色
-- [CONTEXT.md](CONTEXT.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
+- [GLOSSARY.md](GLOSSARY.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
 - [docs/adr/](docs/adr/) — 架構決策記錄（為什麼是這樣）
 - [AGENTS.md](AGENTS.md) — Matt Pocock 官方技能流程與 Tripline 發布規則
 - [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則
