@@ -1,5 +1,6 @@
 /**
  * Integration test — POST /api/trips/:id/recompute-travel
+ * 走 HTTP 邊界（tests/api/http.ts），認證用真實 bearer token，不直接呼叫 handler。
  *
  * v2.24.0 spec + v2.30.0 mode_source DROPPED：
  *   - 1km gate (Haversine)：≤1km → mode='walking' + WALK API；>1km → 'driving' + DRIVE API
@@ -33,12 +34,15 @@ vi.mock('../../functions/api/_maps_lock', () => ({
 }));
 
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip, getDayId, callHandler, seedEntry, seedPoi, jsonRequest } from './helpers';
-import { onRequestPost } from '../../functions/api/trips/[id]/recompute-travel';
+import { mockEnv, seedTrip, getDayId, seedEntry, seedPoi } from './helpers';
+import { createApi, type Api } from './http';
+import { computeRoute } from '../../src/server/maps/google-client';
+import { cleanupTrips } from './cleanup-trips';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
+let api: Api;
 
 async function setupTripWithEntries(tripId: string) {
   await seedTrip(db, { id: tripId });
@@ -60,24 +64,22 @@ async function setupTripWithEntries(tripId: string) {
 beforeEach(async () => {
   db = await createTestDb();
   env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-key' } as Partial<Env>);
+  api = createApi({ env });
   // 清掉前次 segments + entries 避免 UNIQUE 衝突
   await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-rec%').run();
   await db.prepare('DELETE FROM trip_entries WHERE day_id IN (SELECT id FROM trip_days WHERE trip_id LIKE ?)').bind('trip-rec%').run();
   await db.prepare('DELETE FROM pois WHERE name IN (?, ?, ?)').bind('A', 'B', 'C').run();
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTrips(db, ['trip-rec-%'], ['A', 'B', 'C', 'OtherA', 'OtherB', 'F1', 'F2', 'G1', 'G2', 'G3', 'NoCoordA', 'NoCoordB', 'yA-%', 'yB-%', 'yC-%']);
+  await disposeMiniflare();
+});
 
 describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
   it('A→B (500m) → walking segment + B→C (17km) → driving segment', async () => {
     const { e1, e2, e3 } = await setupTripWithEntries('trip-rec-1');
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-1/recompute-travel?day=all', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-1' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-1/recompute-travel?day=all', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { pairsComputed: number; modeBreakdown: Record<string, number> };
     expect(body.pairsComputed).toBe(2);
@@ -100,13 +102,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
        VALUES (?, ?, ?, 'transit', 999, NULL, 'manual', ?, ?)`,
     ).bind('trip-rec-user', e1, e2, now, now).run();
 
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-user/recompute-travel?day=all', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-user' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-user/recompute-travel?day=all', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { pairsSkippedTransit: number; pairsComputed: number };
     expect(body.pairsSkippedTransit).toBe(1);
@@ -127,13 +123,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
        VALUES (?, ?, ?, 'driving', 100, 99999, 'google', ?, ?)`,
     ).bind('trip-rec-auto', e1, e2, now - 10000, now - 10000).run();
 
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-auto/recompute-travel?day=all', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-auto' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-auto/recompute-travel?day=all', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
 
     // A→B 應被改回 walking（500m ≤ 1km）
@@ -142,6 +132,43 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     ).bind(e1, e2).first<{ mode: string; min: number; distance_m: number }>();
     expect(seg!.mode).toBe('walking');
     expect(seg!.distance_m).toBeLessThan(1000);
+  });
+
+  // 競態守衛：recompute 讀完既有 segment 之後、寫入之前，使用者把該段手動鎖定。
+  // 以 Google 呼叫（vi.mock）當作插入點，在計算途中改寫真實 D1，驗證最終不覆蓋手動值。
+  it('競態：計算途中該段被手動鎖定（既有列）→ 不覆蓋 manual 值', async () => {
+    const { e1, e2 } = await setupTripWithEntries('trip-rec-race-upd');
+    const now = Date.now();
+    await db.prepare(
+      `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+       VALUES (?, ?, ?, 'driving', 100, 99999, 'google', ?, ?)`,
+    ).bind('trip-rec-race-upd', e1, e2, now - 10000, now - 10000).run();
+    vi.mocked(computeRoute).mockImplementationOnce(async () => {
+      await db.prepare(`UPDATE trip_segments SET source='manual', min=999 WHERE from_entry_id=? AND to_entry_id=?`).bind(e1, e2).run();
+      return { polyline: 'mock', distance_meters: 500, duration_seconds: 360 };
+    });
+
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-race-upd/recompute-travel?day=all', { as: 'user@test.com' });
+    expect(resp.status).toBe(200);
+    const seg = await db.prepare('SELECT source, "min" FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ source: string; min: number }>();
+    expect(seg).toMatchObject({ source: 'manual', min: 999 });
+  });
+
+  it('競態：計算途中該段被手動建立（原本不存在）→ upsert 不覆蓋 manual 值', async () => {
+    const { e1, e2 } = await setupTripWithEntries('trip-rec-race-ins');
+    vi.mocked(computeRoute).mockImplementationOnce(async () => {
+      const t = Date.now();
+      await db.prepare(
+        `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, min, distance_m, source, computed_at, updated_at)
+         VALUES (?, ?, ?, 'transit', 999, NULL, 'manual', ?, ?)`,
+      ).bind('trip-rec-race-ins', e1, e2, t, t).run();
+      return { polyline: 'mock', distance_meters: 500, duration_seconds: 360 };
+    });
+
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-race-ins/recompute-travel?day=all', { as: 'user@test.com' });
+    expect(resp.status).toBe(200);
+    const seg = await db.prepare('SELECT mode, source, "min" FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ mode: string; source: string; min: number }>();
+    expect(seg).toMatchObject({ mode: 'transit', source: 'manual', min: 999 });
   });
 
   it('entry reorder 後清掉同日非相鄰 stale segments，只留下目前 pair', async () => {
@@ -177,13 +204,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       db.prepare('UPDATE trip_entries SET sort_order = 3 WHERE id = ?').bind(e3),
     ]);
 
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-prune/recompute-travel?day=1', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-prune' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-prune/recompute-travel?day=1', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { segmentsPruned: number };
     expect(body.segmentsPruned).toBe(2);
@@ -216,13 +237,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     ).bind('trip-rec-crossday', f2, f1, now - 1000, now - 1000).run();
 
     // 只 recompute day=1，但 day=2 的 orphan 也要被 trip-wide 清掉
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-crossday/recompute-travel?day=1', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-crossday' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-crossday/recompute-travel?day=1', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { segmentsPruned: number };
     expect(body.segmentsPruned).toBe(1);
@@ -262,13 +277,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
     ]);
 
     // 只 recompute day=1；day=2 的 transit + placeholder 皆 current-adjacent → 應存活
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-keepvalid/recompute-travel?day=1', 'POST'),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-rec-keepvalid' },
-    });
-    const resp = await callHandler(onRequestPost, ctx);
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-keepvalid/recompute-travel?day=1', { as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { segmentsPruned: number };
     expect(body.segmentsPruned).toBe(0);
@@ -288,14 +297,21 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
   // v2.29.0: 「dual-write trip_entries.travel_*」test removed — trip_entries.travel_* DROPPED。
   // travel 物件單一 source 改為 trip_segments（測在 days/days-num tests 涵蓋）。
 
-  it('未認證 → 401', async () => {
+  // 真實邊界：未帶 Origin 的未認證寫入先被 CSRF gate 擋（403）；帶合法 Origin 才會走到認證檢查（401）
+  it('未認證（帶合法 Origin）→ 401', async () => {
     await setupTripWithEntries('trip-rec-noauth');
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-rec-noauth/recompute-travel', 'POST'),
-      env,
-      params: { id: 'trip-rec-noauth' },
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-noauth/recompute-travel', {
+      headers: { Origin: 'http://localhost:5173' },
     });
-    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
+    expect(resp.status).toBe(401);
+  });
+
+  it('未認證且無 Origin → 403（CSRF gate，且不寫入 segment）', async () => {
+    await setupTripWithEntries('trip-rec-noauth-csrf');
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-noauth-csrf/recompute-travel?day=all');
+    expect(resp.status).toBe(403);
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM trip_segments WHERE trip_id = ?').bind('trip-rec-noauth-csrf').first<{ n: number }>();
+    expect(n!.n).toBe(0);
   });
 
   // v2.55.45 — 自動 transit 方式（monorail/bus）現會被 recompute（舊碼跳過全部 transit）
@@ -319,10 +335,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       return { e1, e2, e3 };
     }
     const recompute = (tripId: string) =>
-      callHandler(onRequestPost, mockContext({
-        request: jsonRequest(`https://test.com/api/trips/${tripId}/recompute-travel?day=all`, 'POST'),
-        env, auth: mockAuth({ email: 'user@test.com' }), params: { id: tripId },
-      }));
+      api.request('POST', `https://test.com/api/trips/${tripId}/recompute-travel?day=all`, { as: 'user@test.com' });
 
     it('G1 既有 monorail（非 manual）→ 被重算，寫 source=haversine + Yui 值（此前跳過）', async () => {
       const { e1, e2 } = await seed3AtYui('trip-rec-mono');
@@ -421,7 +434,12 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
         `INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, submode, min, distance_m, source, computed_at, updated_at, no_travel)
          VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, NULL, ?, ?, 1)`,
       ).bind('trip-rec-sp', e1, e2, now, now).run();
-      expect((await recompute('trip-rec-sp')).status).toBe(200);
+      const res = await recompute('trip-rec-sp');
+      expect(res.status).toBe(200);
+      // mutation 驗證補強：SQL 的 no_travel guard 也會擋寫入，只看資料列分不出前置跳過有沒有生效；
+      // 回應的 pairsSkippedTransit 是外部可見的訊號（被跳過的 pair 要被計為 skipped，不是 computed）
+      const summary = await res.json() as { pairsSkippedTransit: number };
+      expect(summary.pairsSkippedTransit).toBe(1);
       const seg = await db.prepare(
         'SELECT "min", distance_m, no_travel FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?',
       ).bind(e1, e2).first<{ min: number | null; distance_m: number | null; no_travel: number | null }>();
@@ -435,35 +453,17 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
   describe('failure paths (T-4)', () => {
     it('無寫權限 user → 403', async () => {
       await setupTripWithEntries('trip-rec-noperm');
-      const ctx = mockContext({
-        request: jsonRequest('https://test.com/api/trips/trip-rec-noperm/recompute-travel', 'POST'),
-        env,
-        auth: mockAuth({ email: 'stranger@test.com', userId: 'stranger-1' }),
-        params: { id: 'trip-rec-noperm' },
-      });
-      expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
+      expect((await api.request('POST', 'https://test.com/api/trips/trip-rec-noperm/recompute-travel', { as: 'stranger@test.com' })).status).toBe(403);
     });
 
     it('trip 不存在 → 403（沒寫權限視為不存在）', async () => {
-      const ctx = mockContext({
-        request: jsonRequest('https://test.com/api/trips/trip-rec-missing/recompute-travel', 'POST'),
-        env,
-        auth: mockAuth({ email: 'user@test.com' }),
-        params: { id: 'trip-rec-missing' },
-      });
-      const status = (await callHandler(onRequestPost, ctx)).status;
+      const status = (await api.request('POST', 'https://test.com/api/trips/trip-rec-missing/recompute-travel', { as: 'user@test.com' })).status;
       expect([403, 404]).toContain(status);
     });
 
     it('trip 沒任何 entry → 0 pairs computed', async () => {
       await seedTrip(db, { id: 'trip-rec-empty' });
-      const ctx = mockContext({
-        request: jsonRequest('https://test.com/api/trips/trip-rec-empty/recompute-travel?day=all', 'POST'),
-        env,
-        auth: mockAuth({ email: 'user@test.com' }),
-        params: { id: 'trip-rec-empty' },
-      });
-      const resp = await callHandler(onRequestPost, ctx);
+      const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-empty/recompute-travel?day=all', { as: 'user@test.com' });
       expect(resp.status).toBe(200);
       const body = await resp.json() as { pairsComputed: number };
       expect(body.pairsComputed).toBe(0);
@@ -473,13 +473,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       const envNoKey = mockEnv(db);
       envNoKey.GOOGLE_MAPS_API_KEY = '';
       await setupTripWithEntries('trip-rec-nokey');
-      const ctx = mockContext({
-        request: jsonRequest('https://test.com/api/trips/trip-rec-nokey/recompute-travel?day=all', 'POST'),
-        env: envNoKey,
-        auth: mockAuth({ email: 'user@test.com' }),
-        params: { id: 'trip-rec-nokey' },
-      });
-      const status = (await callHandler(onRequestPost, ctx)).status;
+      const status = (await createApi({ env: envNoKey }).request('POST', 'https://test.com/api/trips/trip-rec-nokey/recompute-travel?day=all', { as: 'user@test.com' })).status;
       expect([500, 502]).toContain(status);
     });
 
@@ -493,13 +487,7 @@ describe('POST /api/trips/:id/recompute-travel — 1km gate + segments', () => {
       await seedEntry(db, day1, { sortOrder: 1, poiId: poiA });
       await seedEntry(db, day1, { sortOrder: 2, poiId: poiB });
 
-      const ctx = mockContext({
-        request: jsonRequest('https://test.com/api/trips/trip-rec-nocoord/recompute-travel?day=all', 'POST'),
-        env,
-        auth: mockAuth({ email: 'user@test.com' }),
-        params: { id: 'trip-rec-nocoord' },
-      });
-      const resp = await callHandler(onRequestPost, ctx);
+      const resp = await api.request('POST', 'https://test.com/api/trips/trip-rec-nocoord/recompute-travel?day=all', { as: 'user@test.com' });
       expect(resp.status).toBe(200);
       const body = await resp.json() as { pairsComputed: number };
       // 缺 coords 的 pair 不該被算進 google route

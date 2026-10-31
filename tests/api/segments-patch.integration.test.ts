@@ -1,5 +1,6 @@
 /**
  * Integration test — PATCH /api/trips/:id/segments/:sid
+ * 走 HTTP 邊界（tests/api/http.ts），認證用真實 bearer token，不直接呼叫 handler。
  *
  * v2.30.0：mode_source DROPPED。contract：
  *   - mode='transit' → 必填 min（Japan Routes 無 transit 資料），source='manual'，不打 API
@@ -38,17 +39,20 @@ vi.mock('../../functions/api/_maps_lock', () => ({
 }));
 
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip, getDayId, callHandler, seedEntry, seedPoi, jsonRequest } from './helpers';
-import { onRequestPatch } from '../../functions/api/trips/[id]/segments/[sid]';
+import { mockEnv, seedTrip, getDayId, seedEntry, seedPoi } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
+let api: Api;
 let segId: number;
 
 beforeEach(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   // 清掉前次 segments 避免 UNIQUE 衝突
   await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-segp%').run();
   await seedTrip(db, { id: 'trip-segp' });
@@ -64,17 +68,14 @@ beforeEach(async () => {
   segId = r!.id;
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTrips(db, ['trip-segp', 'trip-other-segp', 'trip-segr', 'trip-segm', 'trip-sp'], ['segr-%', 'segm-%', 'sp-%']);
+  await disposeMiniflare();
+});
 
 describe('PATCH /api/trips/:id/segments/:sid', () => {
   it('mode=driving → 200 + mode 改了（缺 coords / 缺 API key 走 fallback，computed_at=NULL 標 stale）', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'driving' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segp', sid: String(segId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'driving' }, as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const updated = await db.prepare('SELECT mode, computed_at FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; computed_at: number | null }>();
     expect(updated!.mode).toBe('driving');
@@ -85,13 +86,7 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
   // → computeGoogle ok:false → 軟失敗：改 mode/submode、source=NULL + computed_at=NULL 標 stale，
   // 保留舊 min/distance（不覆寫）。仍回 200（不再強制手填）。
   it('mode=transit 無 min → 200 + stale（DRIVE 估軟失敗：source/computed_at=NULL，不再 400）', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segp', sid: String(segId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'transit' }, as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const updated = await db.prepare('SELECT mode, source, computed_at FROM trip_segments WHERE id = ?').bind(segId)
       .first<{ mode: string; source: string | null; computed_at: number | null }>();
@@ -103,13 +98,7 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
   it('mode=transit + min=30（無 submode=其他、此 fixture 無座標）→ 200 + source=manual + distance_m=NULL', async () => {
     // v2.55.45：手填方式距離自動算直線 Haversine，但此 fixture 的 entry 無 POI 座標
     // → Haversine 無法算 → distance_m 保持 NULL（有座標的情況見 segments-post 測試）。
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit', min: 30 }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segp', sid: String(segId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'transit', min: 30 }, as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; min: number; source: string; distance_m: number | null }>();
     expect(updated!.mode).toBe('transit');
@@ -119,43 +108,55 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
   });
 
   it('mode=transit + min=99999 (> 1440 上界) → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'transit', min: 99999 }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segp', sid: String(segId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'transit', min: 99999 }, as: 'user@test.com' })).status).toBe(400);
   });
 
   it('mode invalid (flying) → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'flying' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segp', sid: String(segId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'flying' }, as: 'user@test.com' })).status).toBe(400);
   });
 
-  it('未認證 → 401', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segp/segments/${segId}`, 'PATCH', { mode: 'walking' }),
-      env,
-      params: { id: 'trip-segp', sid: String(segId) },
+  // 真實邊界：未帶 Origin 的未認證寫入先被 CSRF gate 擋（403）；帶合法 Origin 才會走到認證檢查（401）
+  it('未認證（帶合法 Origin）→ 401', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, {
+      json: { mode: 'walking' },
+      headers: { Origin: 'http://localhost:5173' },
     });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(401);
+    expect(resp.status).toBe(401);
+  });
+
+  it('未認證且無 Origin → 403（CSRF gate，且 segment 不被改動）', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, { json: { mode: 'driving' } });
+    expect(resp.status).toBe(403);
+    const row = await db.prepare('SELECT mode FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string }>();
+    expect(row!.mode).toBe('walking');
+  });
+
+  // mutation 驗證時發現原本沒有守這道門（拿掉 requireTripWrite 測試仍全綠），補上
+  it('無寫入權限的使用者 → 403，且 segment 不被改動', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, {
+      json: { mode: 'driving' },
+      as: 'stranger-segp@test.com',
+    });
+    expect(resp.status).toBe(403);
+    const row = await db.prepare('SELECT mode, "min" FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; min: number }>();
+    expect(row).toMatchObject({ mode: 'walking', min: 5 });
+  });
+
+  // 同上：樂觀鎖（expectedVersion）原本無測試守護
+  it('expectedVersion 與現值不符 → 不套用變更', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, {
+      json: { mode: 'driving', expectedVersion: 9999 },
+      as: 'user@test.com',
+    });
+    expect(resp.status).toBeGreaterThanOrEqual(400);
+    expect(resp.status).toBeLessThan(500);
+    const row = await db.prepare('SELECT mode FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string }>();
+    expect(row!.mode).toBe('walking');
   });
 
   it('segment 不屬於該 trip → 404 (IDOR 防護)', async () => {
     await seedTrip(db, { id: 'trip-other-segp' });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-other-segp/segments/${segId}`, 'PATCH', { mode: 'walking' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-other-segp', sid: String(segId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(404);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-other-segp/segments/${segId}`, { json: { mode: 'walking' }, as: 'user@test.com' })).status).toBe(404);
   });
 });
 
@@ -167,6 +168,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-segr%').run();
     // 用 override env 補上 GOOGLE_MAPS_API_KEY（recompute path 必須）
     env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    api = createApi({ env });
     await seedTrip(db, { id: 'trip-segr' });
     const day1 = await getDayId(db, 'trip-segr', 1);
     // 9.3km apart：mock computeRoute → DRIVE ~18min, WALK ~111min
@@ -189,13 +191,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
   });
 
   it('mode driving→walking 不帶 min → backend 重算 min（不保留 driving 時間）', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'walking' }, as: 'user@test.com' });
     expect(resp.status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string; distance_m: number }>();
@@ -210,13 +206,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     // 先改成 walking baseline
     await db.prepare('UPDATE trip_segments SET mode = ?, "min" = ? WHERE id = ?').bind('walking', 111, segIdR).run();
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'driving' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'driving' }, as: 'user@test.com' })).status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min", source FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string }>();
     expect(updated!.mode).toBe('driving');
@@ -230,13 +220,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     // v2.30.0 舊契約是「driving/walking 忽略 body.min 強制 Google 重算」；v2.55.45 起
     // 自動方式（駕車/步行/單軌/公車）可手填覆寫 → 鎖定該值、source='manual'、距離改直線。
     // 「恢復自動計算」= 前端重送不帶 min（見下一 test）。
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking', min: 42 }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'walking', min: 42 }, as: 'user@test.com' })).status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min", source, distance_m FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string; distance_m: number | null }>();
     expect(updated!.mode).toBe('walking');
@@ -250,13 +234,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
     await db.prepare('UPDATE trip_segments SET mode=?, "min"=?, source=? WHERE id=?')
       .bind('walking', 42, 'manual', segIdR).run();
     // 重送不帶 min → 回自動 Google 重算
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'walking' }, as: 'user@test.com' })).status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min", source FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number; source: string }>();
     expect(updated!.mode).toBe('walking');
@@ -292,13 +270,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
       .bind(segIdR)
       .run();
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'walking' }, as: 'user@test.com' })).status).toBe(200);
     const updated = await db.prepare('SELECT mode, "min" FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; min: number }>();
     expect(updated!.mode).toBe('walking');
@@ -318,13 +290,7 @@ describe('PATCH /api/trips/:id/segments/:sid — mode change auto-recompute (v2.
            WHERE tep.sort_order = 1 AND tep.entry_id IN (SELECT ${col} FROM trip_segments WHERE id = ?))`,
       ).bind(segIdR).run();
     }
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segr/segments/${segIdR}`, 'PATCH', { mode: 'walking' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segr', sid: String(segIdR) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
+    expect((await api.request('PATCH', `https://test.com/api/trips/trip-segr/segments/${segIdR}`, { json: { mode: 'walking' }, as: 'user@test.com' })).status).toBe(200);
     const updated = await db.prepare('SELECT mode, source, computed_at FROM trip_segments WHERE id = ?')
       .bind(segIdR).first<{ mode: string; source: string | null; computed_at: number | null }>();
     expect(updated!.mode).toBe('walking');
@@ -370,12 +336,7 @@ describe('PATCH /api/trips/:id/segments/:sid — transit submode dispatch (v2.55
   }
 
   const patch = (body: Record<string, unknown>) =>
-    callHandler(onRequestPatch, mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-segm/segments/${smSegId}`, 'PATCH', body),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-segm', sid: String(smSegId) },
-    }));
+    api.request('PATCH', `https://test.com/api/trips/trip-segm/segments/${smSegId}`, { json: body, as: 'user@test.com' });
 
   const readSeg = () => db.prepare('SELECT mode, submode, "min", source, distance_m, computed_at FROM trip_segments WHERE id = ?')
     .bind(smSegId).first<{ mode: string; submode: string | null; min: number | null; source: string | null; distance_m: number | null; computed_at: number | null }>();
@@ -383,6 +344,7 @@ describe('PATCH /api/trips/:id/segments/:sid — transit submode dispatch (v2.55
   beforeEach(async () => {
     await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-segm%').run();
     env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    api = createApi({ env });
     await seedTrip(db, { id: 'trip-segm' });
   });
 
@@ -482,12 +444,7 @@ describe('PATCH /api/trips/:id/segments/:sid — 同一地點/免交通 (v2.55.4
   }
 
   const patch = (body: Record<string, unknown>) =>
-    callHandler(onRequestPatch, mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-sp/segments/${segId}`, 'PATCH', body),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-sp', sid: String(segId) },
-    }));
+    api.request('PATCH', `https://test.com/api/trips/trip-sp/segments/${segId}`, { json: body, as: 'user@test.com' });
 
   const readSeg = () => db.prepare('SELECT mode, submode, "min", source, distance_m, computed_at, no_travel FROM trip_segments WHERE id = ?')
     .bind(segId).first<{ mode: string; submode: string | null; min: number | null; source: string | null; distance_m: number | null; computed_at: number | null; no_travel: number | null }>();
@@ -495,6 +452,7 @@ describe('PATCH /api/trips/:id/segments/:sid — 同一地點/免交通 (v2.55.4
   beforeEach(async () => {
     await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-sp%').run();
     env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-google-key' });
+    api = createApi({ env });
     await seedTrip(db, { id: 'trip-sp' });
   });
 

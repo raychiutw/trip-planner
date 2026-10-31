@@ -69,8 +69,26 @@ describe('GET /api/invitations', () => {
     expect(res.status).toBe(500);
   });
 
-  it('401 when called without any credential（特徵測試：目前 middleware 不放行此路徑，與 handler 註解的「公開」不符，見 PR 說明）', async () => {
-    const res = await api.get('/api/invitations?token=anything');
+  it('未登入帶無效 token → 410（預覽是公開的，InvitePage 靠它顯示註冊／登入入口）', async () => {
+    const res = await api.get('/api/invitations?token=s15-anon-fake');
+    expect(res.status).toBe(410);
+    expect(await errorCode(res)).toBe('INVITATION_INVALID');
+  });
+
+  it('未登入帶有效 token → 200 預覽，且回應不含 token 或 hash', async () => {
+    await seedInvitation(db, { tripId, token: 's15-anon-valid', invitedEmail: 's15-anon-invitee@test.com', invitedBy: owner, expiresAt: '2099-05-04T10:00:00Z' });
+    const res = await api.get('/api/invitations?token=s15-anon-valid');
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).not.toContain('s15-anon-valid');
+    expect(text.toLowerCase()).not.toContain('token');
+    expect((JSON.parse(text) as { tripId: string }).tripId).toBe(tripId);
+    // 後面的測試會列出這個行程的 pending 邀請，別留下這筆
+    await db.prepare('DELETE FROM trip_invitations WHERE invited_email = ?').bind('s15-anon-invitee@test.com').run();
+  });
+
+  it('未登入同時帶 token 與 tripId → 仍需認證（不能借公開預覽列出 pending 邀請）', async () => {
+    const res = await api.get(`/api/invitations?token=s15-anon-valid&tripId=${tripId}`);
     expect(res.status).toBe(401);
   });
 

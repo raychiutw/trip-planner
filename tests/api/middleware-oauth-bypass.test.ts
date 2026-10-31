@@ -1,54 +1,56 @@
 /**
- * _middleware.ts /api/oauth/* bypass 結構測試（V2-P1）
+ * _middleware.ts /api/oauth/* bypass（V2-P1）— 走 HTTP 邊界
  *
- * 驗 source 含 OAuth bypass logic — OAuth endpoints 自管 auth (PKCE / JWT)，
- * 不該被 user-session middleware 攔截 401。
- *
- * 用 source-level test 而非 integration（避 miniflare setup 成本）；
- * end-to-end 行為靠 prod curl /api/oauth/spike 200 確認（next session post-deploy）。
+ * OAuth endpoints 自管 auth (PKCE / JWT)，不該被 user-session middleware 攔截 401；
+ * 但 body encoding 驗證仍要套用。原本是讀 middleware 原始碼比對字串，改成真實請求看回應。
  */
-import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
 
-const MIDDLEWARE_SRC = fs.readFileSync(
-  path.resolve(__dirname, '../../functions/api/_middleware.ts'),
-  'utf8',
-);
+let db: D1Database;
+let api: Api;
+
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db) });
+});
+
+afterAll(disposeMiniflare);
 
 describe('_middleware.ts — OAuth bypass (V2-P1)', () => {
-  it('含 /api/oauth/ pathname startsWith bypass block', () => {
-    expect(MIDDLEWARE_SRC).toMatch(/url\.pathname\.startsWith\(['"]\/api\/oauth\/['"]/);
+  it('/api/oauth/* 不需登入：匿名請求不會被擋成 401（對照組：同為匿名的 /api/requests 回 401）', async () => {
+    const oauth = await api.get('https://test.com/api/oauth/logout');
+    expect(oauth.status).toBe(302);
+    const guarded = await api.get('https://test.com/api/requests');
+    expect(guarded.status).toBe(401);
   });
 
-  it('bypass 設 auth = null 並 context.next()', () => {
-    // V2-P6 cutover 後檔案有兩個 /api/oauth/ 比對:CSRF bypass 跟 handleAuth
-    // bypass。lastIndexOf 抓 handleAuth 那個(它後面才有 auth = null + next())。
-    const lines = MIDDLEWARE_SRC.split('\n');
-    let lastOauthBypass = -1;
-    lines.forEach((l, i) => {
-      if (l.includes("startsWith('/api/oauth/')") || l.includes('startsWith("/api/oauth/")')) {
-        lastOauthBypass = i;
-      }
+  it('bypass 後 auth 為 null：即使帶了無效的 Bearer 也照常放行，不會被當成認證失敗', async () => {
+    const res = await api.get('https://test.com/api/oauth/logout', {
+      headers: { Authorization: 'Bearer not-a-real-token' },
     });
-    expect(lastOauthBypass).toBeGreaterThan(0);
-    const window = lines.slice(lastOauthBypass, lastOauthBypass + 5).join('\n');
-    expect(window).toMatch(/auth\s*=\s*null/);
-    expect(window).toMatch(/context\.next\(\)/);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toBe('/login');
   });
 
-  it('bypass 在「公開端點：POST /api/reports」block 之前（先 short-circuit）', () => {
-    const oauthIdx = MIDDLEWARE_SRC.indexOf('/api/oauth/');
-    const reportsIdx = MIDDLEWARE_SRC.indexOf("/api/reports'");
-    expect(oauthIdx).toBeGreaterThan(0);
-    expect(reportsIdx).toBeGreaterThan(0);
-    expect(oauthIdx, 'oauth bypass 該在 /api/reports 之前').toBeLessThan(reportsIdx);
+  it('公開端點 POST /api/reports 同樣不需登入（oauth bypass 與公開端點各自 short-circuit）', async () => {
+    const res = await api.request('POST', 'https://test.com/api/reports', {
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+      json: { tripId: 'oauth-bypass-no-such-trip', url: '/x', errorMessage: 'boom' },
+    });
+    expect(res.status).toBe(201);
   });
 
-  it('bypass 在 method+UTF-8 check 之後（仍套用 body encoding 驗證）', () => {
-    const utf8CheckIdx = MIDDLEWARE_SRC.indexOf('detectGarbledText');
-    const oauthIdx = MIDDLEWARE_SRC.indexOf('/api/oauth/');
-    expect(utf8CheckIdx, 'UTF-8 check 該在 source 中').toBeGreaterThan(0);
-    expect(oauthIdx, 'oauth bypass 該在 UTF-8 check 之後').toBeGreaterThan(utf8CheckIdx);
+  it('bypass 在 UTF-8 檢查之後：/api/oauth/* 的非 JSON body 若不是合法 UTF-8 仍回 400 DATA_ENCODING', async () => {
+    const res = await api.fetch(new Request('https://test.com/api/oauth/logout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new Uint8Array([0xff, 0xfe, 0xfd]),
+    }));
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_ENCODING');
   });
 });
