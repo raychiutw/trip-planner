@@ -170,6 +170,15 @@ describe('PATCH /flights/:rowId — update + OCC', () => {
     const res = await call(patchFlights, tripB, {}, { rowId: String(rowId) }, ownerEmail, 'PATCH');
     expect(res.status).toBe(400);
   });
+
+  // S13 補（mutation 驗證發現缺口）：路徑內的 trip 與 row 都對，但呼叫者沒有該行程寫入權限
+  it('PATCH 非授權 user → 403 且 row 不變', async () => {
+    const before = await db.prepare('SELECT note, version FROM trip_flights WHERE id = ?').bind(rowId).first();
+    const res = await call(patchFlights, tripB, { note: 'hacked' }, { rowId: String(rowId) }, strangerEmail, 'PATCH');
+    expect(res.status).toBe(403);
+    const after = await db.prepare('SELECT note, version FROM trip_flights WHERE id = ?').bind(rowId).first();
+    expect(after).toEqual(before);
+  });
 });
 
 describe('DELETE /flights/:rowId', () => {
@@ -185,6 +194,16 @@ describe('DELETE /flights/:rowId', () => {
     expect(res.status).toBe(200);
     const check = await db.prepare('SELECT id FROM trip_flights WHERE id = ?').bind(rowId).first();
     expect(check).toBeNull();
+  });
+
+  // S13 補（mutation 驗證發現缺口）
+  it('DELETE 非授權 user → 403 且 row 仍在', async () => {
+    const createRes = await call(postFlights, tripB, { airline: 'KEEP' });
+    const created = await createRes.json() as any;
+    const res = await call(deleteFlights, tripB, undefined, { rowId: String(created.id) }, strangerEmail, 'DELETE');
+    expect(res.status).toBe(403);
+    const check = await db.prepare('SELECT id FROM trip_flights WHERE id = ?').bind(created.id).first();
+    expect(check).not.toBeNull();
   });
 
   it('DELETE cross-trip → 403', async () => {
@@ -237,6 +256,17 @@ describe('PATCH /flights/reorder — bulk', () => {
       items: [{ id: other.id, sortOrder: 0 }],
     }, {}, ownerEmail, 'PATCH');
     expect(res.status).toBe(403);
+  });
+
+  // S13 補（mutation 驗證發現缺口）
+  it('reorder 非授權 user → 403 且 sort_order 不變', async () => {
+    const before = await db.prepare('SELECT id, sort_order FROM trip_flights WHERE trip_id = ? ORDER BY id').bind('s13-notes-mut-reorder').all();
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', {
+      items: [{ id: ids[0], sortOrder: 7 }],
+    }, {}, strangerEmail, 'PATCH');
+    expect(res.status).toBe(403);
+    const after = await db.prepare('SELECT id, sort_order FROM trip_flights WHERE trip_id = ? ORDER BY id').bind('s13-notes-mut-reorder').all();
+    expect(after.results).toEqual(before.results);
   });
 
   it('reorder empty items → 400', async () => {
