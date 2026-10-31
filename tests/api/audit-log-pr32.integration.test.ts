@@ -11,20 +11,27 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, mockAuth, seedTrip, callHandler, jsonRequest } from './helpers';
-import { onRequestPost as postDays } from '../../functions/api/trips/[id]/days';
-import { onRequestPost as postShift } from '../../functions/api/trips/[id]/days/shift';
-import type { Env } from '../../functions/api/_types';
+import { mockEnv, seedTrip } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
+
+// 走 HTTP 邊界（tests/api/http.ts）；共用 D1 用 s16- 專屬 trip id／owner，結束時清掉自己的資料
+const OWNER = 's16-pr32-owner@test.com';
+const TRIPS = ['s16-pr32-days-trip', 's16-pr32-shift-trip', 's16-pr32-shift-noop'];
 
 let db: D1Database;
-let env: Env;
+let api: Api;
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
+  api = createApi({ env: mockEnv(db) });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  for (const id of TRIPS) await db.prepare('DELETE FROM audit_log WHERE trip_id = ?').bind(id).run();
+  await cleanupTrips(db, TRIPS);
+  await disposeMiniflare();
+});
 
 async function fetchAuditRows(tripId: string, tableName: string) {
   const rs = await db
@@ -39,17 +46,11 @@ async function fetchAuditRows(tripId: string, tableName: string) {
 
 describe('PR32 — POST /api/trips/:id/days 補 audit_log', () => {
   it('append 新天 → audit_log action=insert + recordId 為新 day id', async () => {
-    const tripId = 'pr32-days-trip';
-    await seedTrip(db, { id: tripId, days: 2 });
+    const tripId = TRIPS[0]!;
+    await seedTrip(db, { id: tripId, days: 2, owner: OWNER });
     const before = await fetchAuditRows(tripId, 'trip_days');
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://t/api/trips/${tripId}/days`, 'POST', { position: 'end' }),
-      env,
-      auth: mockAuth(),
-      params: { id: tripId },
-    });
-    const res = await callHandler(postDays, ctx);
+    const res = await api.request('POST', `/api/trips/${tripId}/days`, { as: OWNER, json: { position: 'end' } });
     expect(res.status).toBe(200);
 
     const after = await fetchAuditRows(tripId, 'trip_days');
@@ -58,21 +59,25 @@ describe('PR32 — POST /api/trips/:id/days 補 audit_log', () => {
     expect(last.action).toBe('insert');
     expect(last.recordId).toBeGreaterThan(0);
     expect(last.diffJson).toContain('day_num');
+    expect(last.changedBy).toBe(OWNER);
+  });
+
+  // mutation 驗證補的缺口：被拒絕的寫入不得留下稽核
+  it('非 owner 新增天 → 403，不新增天也不寫 audit_log', async () => {
+    const tripId = TRIPS[0]!;
+    const before = await fetchAuditRows(tripId, 'trip_days');
+    const res = await api.request('POST', `/api/trips/${tripId}/days`, { as: 's16-pr32-stranger@test.com', json: { position: 'end' } });
+    expect(res.status).toBe(403);
+    expect(await fetchAuditRows(tripId, 'trip_days')).toHaveLength(before.length);
   });
 });
 
 describe('PR32 — POST /api/trips/:id/days/shift 補 audit_log', () => {
   it('shift +3d → audit_log action=update + recordId=null + op:shift summary', async () => {
-    const tripId = 'pr32-shift-trip';
-    await seedTrip(db, { id: tripId, days: 3 });
+    const tripId = TRIPS[1]!;
+    await seedTrip(db, { id: tripId, days: 3, owner: OWNER });
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://t/api/trips/${tripId}/days/shift`, 'POST', { startDate: '2026-04-04' }),
-      env,
-      auth: mockAuth(),
-      params: { id: tripId },
-    });
-    const res = await callHandler(postShift, ctx);
+    const res = await api.request('POST', `/api/trips/${tripId}/days/shift`, { as: OWNER, json: { startDate: '2026-04-04' } });
     expect(res.status).toBe(200);
 
     const audits = await fetchAuditRows(tripId, 'trip_days');
@@ -84,20 +89,15 @@ describe('PR32 — POST /api/trips/:id/days/shift 補 audit_log', () => {
     expect(shiftAudit.recordId).toBeNull();
     expect(shiftAudit.diffJson).toContain('"deltaDays":3');
     expect(shiftAudit.diffJson).toContain('"daysShifted":3');
+    expect(shiftAudit.changedBy).toBe(OWNER);
   });
 
   it('shift delta=0 → 早 return 不寫 audit', async () => {
-    const tripId = 'pr32-shift-noop';
-    await seedTrip(db, { id: tripId, days: 2 });
+    const tripId = TRIPS[2]!;
+    await seedTrip(db, { id: tripId, days: 2, owner: OWNER });
     const before = await fetchAuditRows(tripId, 'trip_days');
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://t/api/trips/${tripId}/days/shift`, 'POST', { startDate: '2026-04-01' }),
-      env,
-      auth: mockAuth(),
-      params: { id: tripId },
-    });
-    const res = await callHandler(postShift, ctx);
+    const res = await api.request('POST', `/api/trips/${tripId}/days/shift`, { as: OWNER, json: { startDate: '2026-04-01' } });
     expect(res.status).toBe(200);
 
     const after = await fetchAuditRows(tripId, 'trip_days');
