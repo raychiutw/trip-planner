@@ -1,209 +1,190 @@
 /**
  * /api/account/sessions + /sessions/:sid — V2-P6 multi-device session API
+ * 走 HTTP 邊界（tests/api/http.ts），session 是真實簽出的 cookie + session_devices 資料列；
+ * 原本檢查 SQL 字串的斷言，改讀真實 D1 的資料變化（撤銷了誰、沒動到誰）。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestGet, onRequestDelete as onDeleteAll } from '../../functions/api/account/sessions';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
 import { onRequestDelete as onDeleteOne } from '../../functions/api/account/sessions/[sid]';
-import { issueSession } from '../../functions/api/_session';
 
-interface MockEnv {
-  SESSION_SECRET?: string;
-  DB?: { prepare: ReturnType<typeof vi.fn> };
+const SESSION_SECRET = 'test-secret-32-chars-long-enough';
+// 共用 D1：專用 id／email，結束時清掉自己的資料
+const U1 = 'sess-user-1';
+const U2 = 'sess-user-2';
+const EMAIL1 = 'sess-user-1@example.com';
+const EMAIL2 = 'sess-user-2@example.com';
+
+let db: D1Database;
+let api: Api;
+
+async function revokedAt(sid: string): Promise<string | null> {
+  const row = await db.prepare('SELECT revoked_at FROM session_devices WHERE sid = ?').bind(sid).first<{ revoked_at: string | null }>();
+  return row!.revoked_at;
 }
 
-function makeStmt(firstResult: unknown = null, allResults: unknown[] = [], runMeta: { changes?: number } = { changes: 1 }) {
-  return {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: runMeta }),
-    all: vi.fn().mockResolvedValue({ results: allResults }),
-  };
+async function seedDevice(sid: string, userId: string, overrides: Partial<{ ua: string; ip: string; created: string; seen: string }> = {}) {
+  await db.prepare(
+    `INSERT INTO session_devices (sid, user_id, ua_summary, ip_hash, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)`,
+  ).bind(sid, userId, overrides.ua ?? 'Chrome · macOS', overrides.ip ?? 'abc123def456',
+    overrides.created ?? '2026-04-20 00:00:00', overrides.seen ?? '2026-04-25 00:00:00').run();
 }
 
-async function makeAuthedRequest(url: string, method: 'GET' | 'DELETE'): Promise<Request> {
-  // For these tests we use a stub fetch — issueSession needs SESSION_SECRET + DB
-  const r = new Response(null);
-  await issueSession(
-    new Request('https://x.com', { headers: { 'CF-Connecting-IP': '1.1.1.1' } }),
-    r,
-    'user-1',
-    { SESSION_SECRET: 'test-secret-32-chars-long-enough' } as never,
-  );
-  const setCookie = r.headers.get('Set-Cookie') ?? '';
-  const sessionCookie = setCookie.split(';')[0] ?? '';
-  return new Request(url, {
-    method,
-    headers: { Cookie: sessionCookie },
-  });
+async function cleanDevices() {
+  await db.prepare('DELETE FROM session_devices WHERE user_id IN (?, ?)').bind(U1, U2).run();
 }
 
-function makeContext(
-  request: Request,
-  env: MockEnv,
-  params: Record<string, string> = {},
-): Parameters<typeof onRequestGet>[0] {
-  return {
-    request,
-    env: env as unknown as never,
-    params: params as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
-}
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET }) });
+}, 30000);
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+beforeEach(cleanDevices);
+
+afterAll(async () => {
+  await cleanDevices();
+  await db.prepare('DELETE FROM users WHERE id IN (?, ?)').bind(U1, U2).run();
+  await disposeMiniflare();
 });
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
 
 describe('GET /api/account/sessions', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/account/sessions');
-    await expect(onRequestGet(makeContext(req, env)))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.get('/api/account/sessions');
+    expect(res.status).toBe(401);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
   it('200 returns sessions list with current marked', async () => {
-    const stmt = makeStmt(null, [
-      {
-        sid: 'sid-1',
-        ua_summary: 'Chrome · macOS',
-        ip_hash: 'abc123def456',
-        created_at: '2026-04-20T00:00:00Z',
-        last_seen_at: '2026-04-25T00:00:00Z',
-      },
-      {
-        sid: 'sid-2',
-        ua_summary: 'Safari · iOS',
-        ip_hash: 'xyz789abc',
-        created_at: '2026-04-22T00:00:00Z',
-        last_seen_at: '2026-04-24T00:00:00Z',
-      },
-    ]);
-    // For getSessionUser revocation check (not revoked → null result returned by first)
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions', 'GET');
-    const res = await onRequestGet(makeContext(req, env));
+    const me = await api.sessionFor(EMAIL1, U1);
+    // 目前這個 session 之外，再有一台舊裝置
+    await seedDevice('sess-old', U1, { ua: 'Safari · iOS', ip: 'xyz789abcdef', seen: '2026-04-24 00:00:00' });
+
+    const res = await api.get('/api/account/sessions', { cookie: me.cookie });
     expect(res.status).toBe(200);
     const json = await res.json() as {
       current_sid: string | null;
       sessions: Array<{ sid: string; ip_hash_prefix: string | null; is_current: boolean }>;
     };
+    expect(json.current_sid).toBe(me.sid);
     expect(json.sessions).toHaveLength(2);
+    expect(json.sessions.filter(s => s.is_current).map(s => s.sid)).toEqual([me.sid]);
+
     // ip_hash truncated to 8 chars
-    expect(json.sessions[0]?.ip_hash_prefix).toBe('abc123de');
-    expect(json.sessions[0]?.ip_hash_prefix?.length).toBe(8);
+    const old = json.sessions.find(s => s.sid === 'sess-old')!;
+    expect(old.ip_hash_prefix).toBe('xyz789ab');
+    expect(old.ip_hash_prefix?.length).toBe(8);
   });
 
-  it('SQL filters by user_id from session', async () => {
-    const stmt = makeStmt(null, []);
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions', 'GET');
-    await onRequestGet(makeContext(req, env));
+  it('只列自己未撤銷的 session（不含別人的、不含已撤銷的）', async () => {
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('sess-mine-revoked', U1);
+    await db.prepare(`UPDATE session_devices SET revoked_at = datetime('now') WHERE sid = ?`).bind('sess-mine-revoked').run();
+    await seedDevice('sess-theirs', U2);
 
-    const sessionSelect = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && (c[0] as string).includes('SELECT sid, ua_summary'),
-    );
-    expect(sessionSelect).toBeTruthy();
-    expect((sessionSelect![0] as string)).toContain('WHERE user_id = ?');
-    expect((sessionSelect![0] as string)).toContain('revoked_at IS NULL');
+    const res = await api.get('/api/account/sessions', { cookie: me.cookie });
+    const json = await res.json() as { sessions: Array<{ sid: string }> };
+    expect(json.sessions.map(s => s.sid)).toEqual([me.sid]);
   });
 });
 
 describe('DELETE /api/account/sessions (revoke all others)', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/account/sessions', { method: 'DELETE' });
-    await expect(onDeleteAll(makeContext(req, env)))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.request('DELETE', '/api/account/sessions', {
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+    });
+    expect(res.status).toBe(401);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
   it('200 + revokes all other sessions for current user', async () => {
-    const stmt = makeStmt(null, [], { changes: 3 });
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions', 'DELETE');
-    const res = await onDeleteAll(makeContext(req, env));
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('sess-a', U1);
+    await seedDevice('sess-b', U1);
+    await seedDevice('sess-c', U1);
+    await seedDevice('sess-theirs', U2);
+
+    const res = await api.request('DELETE', '/api/account/sessions', { cookie: me.cookie });
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; revoked: number };
     expect(json.ok).toBe(true);
     expect(json.revoked).toBe(3);
 
-    const updateSql = dbPrepare.mock.calls
-      .map((c) => c[0] as string)
-      .find((s) => s.includes('UPDATE session_devices SET revoked_at'));
-    expect(updateSql).toBeTruthy();
+    for (const sid of ['sess-a', 'sess-b', 'sess-c']) expect(await revokedAt(sid)).not.toBeNull();
+    // 自己這台與別人的都不動
+    expect(await revokedAt(me.sid!)).toBeNull();
+    expect(await revokedAt('sess-theirs')).toBeNull();
   });
 });
 
 describe('DELETE /api/account/sessions/:sid (revoke specific)', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/account/sessions/sid-x', { method: 'DELETE' });
-    await expect(onDeleteOne(makeContext(req, env, { sid: 'sid-x' })))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.request('DELETE', '/api/account/sessions/sid-x', {
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+    });
+    expect(res.status).toBe(401);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
-  it('400 when sid param missing', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn().mockReturnValue(makeStmt()) } };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions/', 'DELETE');
-    await expect(onDeleteOne(makeContext(req, env, {})))
-      .rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+  it('400 when sid param missing（路由層：結尾斜線落在 sessions.ts 的「登出其他裝置」）', async () => {
+    // 經真實路由，空的 sid 到不了 [sid].ts —— 結尾斜線等同 DELETE /api/account/sessions。
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('sess-a', U1);
+    const res = await api.request('DELETE', '/api/account/sessions/', { cookie: me.cookie });
+    expect(res.status).toBe(200);
+    expect(await revokedAt('sess-a')).not.toBeNull();
+
+    // [sid].ts 內的防呆分支仍保留原斷言：直接呼叫（路由層擋不到，只有 handler 自己守）
+    const req = new Request('https://x.com/api/account/sessions/', { method: 'DELETE', headers: { Cookie: me.cookie } });
+    await expect(onDeleteOne({
+      request: req, env: mockEnv(db, { SESSION_SECRET }), params: {}, data: {},
+      next: () => Promise.resolve(new Response()), waitUntil: () => undefined, passThroughOnException: () => undefined,
+    } as never)).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
   });
 
   it('404 SESSION_NOT_FOUND when sid doesn\'t belong to user', async () => {
-    // SQL UPDATE with WHERE user_id = current → 0 changes if cross-user attempt
-    const stmt = makeStmt(null, [], { changes: 0 });
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions/other-user-sid', 'DELETE');
-    const res = await onDeleteOne(makeContext(req, env, { sid: 'other-user-sid' }));
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('other-user-sid', U2);
+
+    const res = await api.request('DELETE', '/api/account/sessions/other-user-sid', { cookie: me.cookie });
     expect(res.status).toBe(404);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('SESSION_NOT_FOUND');
+    // 跨使用者撤銷不得生效
+    expect(await revokedAt('other-user-sid')).toBeNull();
   });
 
   it('200 + UPDATE revoked_at when sid belongs to user', async () => {
-    const stmt = makeStmt(null, [], { changes: 1 });
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/sessions/my-sid', 'DELETE');
-    const res = await onDeleteOne(makeContext(req, env, { sid: 'my-sid' }));
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('my-sid', U1);
+    await seedDevice('sess-keep', U1);
+
+    const res = await api.request('DELETE', '/api/account/sessions/my-sid', { cookie: me.cookie });
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; revoked_sid: string };
     expect(json.ok).toBe(true);
     expect(json.revoked_sid).toBe('my-sid');
 
-    // SQL filters by both sid AND user_id (cross-user defence)
-    const sql = dbPrepare.mock.calls
-      .map((c) => c[0] as string)
-      .find((s) => s.includes('UPDATE session_devices'));
-    expect(sql).toBeTruthy();
-    expect(sql).toContain('WHERE sid = ? AND user_id = ?');
+    // 只撤銷指定的那一台
+    expect(await revokedAt('my-sid')).not.toBeNull();
+    expect(await revokedAt('sess-keep')).toBeNull();
+  });
+
+  it('已撤銷的 session 再撤銷一次 → 404', async () => {
+    const me = await api.sessionFor(EMAIL1, U1);
+    await seedDevice('my-sid', U1);
+    expect((await api.request('DELETE', '/api/account/sessions/my-sid', { cookie: me.cookie })).status).toBe(200);
+    expect((await api.request('DELETE', '/api/account/sessions/my-sid', { cookie: me.cookie })).status).toBe(404);
+  });
+
+  it('被撤銷的 session 的 cookie 之後即失效（401）', async () => {
+    const me = await api.sessionFor(EMAIL1, U1);
+    const other = await api.sessionFor(EMAIL1, U1);
+    expect((await api.request('DELETE', `/api/account/sessions/${other.sid}`, { cookie: me.cookie })).status).toBe(200);
+    expect((await api.get('/api/account/sessions', { cookie: other.cookie })).status).toBe(401);
+    expect((await api.get('/api/account/sessions', { cookie: me.cookie })).status).toBe(200);
   });
 });
