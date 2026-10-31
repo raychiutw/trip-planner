@@ -2,138 +2,90 @@
 
 這份是 **ubiquitous language**：agent 與人在 issue 標題、重構提案、測試名稱、commit 訊息裡都用這裡的詞，不要飄到同義詞。
 
-深度資料在別處，這裡只定義「叫什麼、是什麼、別叫什麼」：
-資料模型與架構決策 → `ARCHITECTURE.md`｜UI/UX 規範 → `DESIGN.md`｜待做需求與規格 → GitHub Issues
+只定義「叫什麼、是什麼、別叫什麼」，不放實作。資料模型與架構決策 → `ARCHITECTURE.md`、`docs/adr/`｜UI/UX 規範 → `DESIGN.md`｜待做需求與規格 → GitHub Issues
 
 ---
 
 ## 行程結構（時間軸）
 
-```
-trips ─┬─ trip_days ── trip_entries ── trip_entry_pois
-       └─ trip_destinations
-```
-
 | 詞 | 意思 |
 |---|---|
-| **trip（行程）** | 一趟旅行。`trips`。擁有者是 `owner_user_id`。 |
-| **destination（目的地）** | 一趟行程可有多個目的地。`trip_destinations`。 |
-| **day（天）** | 行程的某一天。`trip_days`。當天住宿掛在 `trip_days.hotel_poi_id`（FK，不是 entry）。 |
-| **entry（條目）** | 某一天時間軸上的一格。`trip_entries`。**entry 沒有自己的名稱** —— 顯示名稱來自它的正選 POI（見下）。 |
-| **segment（車程 / 交通段）** | 兩個相鄰 entry 之間的移動。`trip_segments`。由 Google Routes 算出或使用者手填（`mode='transit'` 才手填分鐘數）。 |
+| **trip（行程）** | 一趟旅行。擁有者是建立它的使用者。 |
+| **destination（目的地）** | 一趟行程可有多個目的地。 |
+| **day（天）** | 行程的某一天。當天住宿是這一天的屬性，不是 entry。 |
+| **entry（條目）** | 某一天時間軸上的一格。**entry 沒有自己的名稱** —— 顯示名稱來自它的正選 POI。 |
+| **segment（車程 / 交通段）** | 兩個相鄰 entry 之間的移動。由系統算出，或使用者手填。 |
+
+**entry intake**：
+後端「在某一天建立 entry 並掛上正選／備選 POI」的唯一入口。單筆新增、批次建立與整日替換共用同一套欄位規則。
+_Avoid_: 在 handler 直接寫 entry 與 POI 關聯；與前端的「entry 變更」是不同層。
+
+**行程建立**：
+匯入與分享 clone 產生新行程的完整寫入流程。來源驗證、可見性與授權由各入口負責。
+
+**entry 變更**：
+前端改動 entry 的動作集合。成功後通知畫面更新並重算車程，失敗不重算。
+_Avoid_: 頁面或元件自己發更新事件、自己觸發重算；與後端的「entry intake」是不同層。
+
+**segment 生命週期**：
+車程的讀取、缺口判定與「待更新」狀態。只有成功的讀取能證明缺口；失敗的讀取不視為空資料。entry 儲存成功與車程重算成功是兩件事。
 
 ## POI 與正選／備選
 
 | 詞 | 意思 |
 |---|---|
-| **POI** | 地點主檔。`pois`。以 Google `place_id` 為 canonical ID，含 status lifecycle（`active` / `closed` / `missing`）。POI 是**跨行程共用的 immutable master**，不存任何 trip-scoped 客製。 |
-| **正選（master / primary）** | 一個 entry 掛的主要 POI —— `trip_entry_pois.sort_order = 1`。 |
-| **備選（alternate）** | 同一 entry 的候補 POI —— `sort_order > 1`。 |
-| **poi_relations** | POI 之間的多對多關聯（例：某景點附近的餐廳）。 |
-| **favorite（收藏）** | 跨行程的願望清單。`poi_favorites`。**不是** entry、不屬於任何一天。 |
+| **POI** | 地點主檔，以 Google `place_id` 為唯一識別。是**跨行程共用的唯讀主檔**，不存任何行程專屬的客製。 |
+| **正選（master / primary）** | 一個 entry 掛的主要 POI。 |
+| **備選（alternate）** | 同一個 entry 的候補 POI。 |
+| **POI 關聯** | POI 之間的多對多關係（例：某景點附近的餐廳）。 |
+| **favorite（收藏）** | 跨行程的願望清單。**不是** entry、不屬於任何一天。 |
 
-**entry intake**：
-後端「在某一天建立 entry 並掛上正選／備選 POI」的 module（`_entryWrite`）。單筆新增／收藏使用 `createEntry`，複製／分享 clone／匯入使用 `createEntriesBatch`，整日重寫使用 `replaceDayEntries`；共用 entry 與 junction 欄位規則。
-
-**整日替換**先完成輸入驗證與 POI resolve，再於同一 D1 batch 提交舊 entries 刪除、day 欄位與版本、新 entries、正選／備選、飯店及停車關聯。必要寫入失敗由資料庫回滾，舊 day 不需事後補償；不使用新增批次的 50 筆分批策略。批次超過平台限制也回報失敗，不宣稱已儲存。共用 POI 的 `fill-null` 政策維持原樣。
-
-名稱重寫依正選 POI 與原順序一對一承接舊備選，保留各自 description、note、reservation、reservation_url。新的明示 POI 清單取代原清單。新 entry 有 POI 時 `entry_pois_version=1`，承接備選時為 2；合法無 POI 佔位為 0。day 的 `version` 每次成功替換加一，失敗不變。
-_Avoid_: 在 handler 直接 `INSERT INTO trip_entries` / `trip_entry_pois`；與前端的「entry 變更」（動詞 module，見下）是不同層。
-
-**行程建立**：
-匯入與分享 clone 新行程的完整寫入流程（`functions/api/trips/_createTrip.ts`）：依序建立 trip、權限與目的地、days、由 entry intake 建立 entries 與正選／備選、住宿及 segments。module 持有分批提交、day／entry ID 對應、新建 POI 帳本與失敗補償；兩個入口各自負責來源驗證、可見性、格式轉換、授權及回應。補償會刪除本次行程與 audit，但共用 POI 的 `fill-null` 補值不回滾。這是新行程的跨批次補償，與整日替換的單批次交易不同。
-
-**entry 變更**：
-前端改動 entry 的動詞 module（`src/lib/entryMutations.ts`：createEntry / setMaster / deleteEntry / moveEntry / updateEntry / reorderEntries / updateEntryPoi…）。每個動詞回 Result，不 toast、不導覽；成功後 emit `entryUpdated` 並以正確 day scope 觸發車程重算（跨天兩個 day 各一次），失敗 emit resync 不重算。頁面只拿 Result 決定 toast／navigate。
-
-跨日移動更新來源與目標，複製更新目標，不受目前選中的日期限制。讀取協調以每次行程切換及每個 day 的請求序號識別回應，只接受該 scope 最新的結果；其他行程的事件不觸發目前行程重讀。操作面板與拖曳儲存完成時也核對操作所屬的行程生命週期，避免舊操作顯示提示或導頁。
-
-entry 儲存成功與 segment 重算成功是兩件事。重算故障時保留已儲存的 entry，交通沿用「車程待更新」提示；重新載入或真正改變相鄰景點的操作可依既有 single-flight／gap-signature 規則再次嘗試，不重送原本的建立操作。這層只協調重算入口，不計算路徑：Google client、手填 transit 及既有特定方式估算的界線維持原樣。
-**segment 生命週期**由 `useTripSegments` 協調讀取、缺口判定與待更新狀態；只有當前行程的成功讀取能證明缺口，未知日期或暫時排序不觸發自動補算。失敗讀取保留已知資料但不視為空資料。
-時間軸車程操作與 entry 編輯都透過 `saveSegment` 建立／更新 segment，成功時發送行程限定的 `segmentUpdated` 供生命週期重讀。兩個入口保留各自的輸入與版本語意；寫入成功後的讀取失敗不重送已儲存的修改。
-_Avoid_: 在頁面或元件直接 `apiFetchRaw` entries endpoint、自己 dispatch `entryUpdated`、自己呼叫 `requestTravelRecompute`（self-healing 的 auto 觸發除外）；與後端「entry intake」是不同層。
-
-> **trip-scoped 的自由文字不寫進 `pois`** —— entry 說明放 `trip_entries.description`；POI 備註與預訂放 `trip_entry_pois` 的 `reservation` / `reservation_url` / `description` / `note` 欄位。migration 0078 後沒有 `trip_entries.note`；entry-level note 輸入由正選承接。`reservation` 是**純文字訂位註解**，不放 JSON。
+> **行程專屬的自由文字不寫進 POI 主檔。** entry 說明、POI 備註與預訂都屬於行程。預訂（reservation）是**純文字訂位註解**，不放 JSON。
 
 ## 協作與存取
 
 | 詞 | 意思 |
 |---|---|
-| **permission（權限）** | 誰能看／改哪個 trip。`trip_permissions`。 |
+| **permission（權限）** | 誰能看／改哪個 trip。 |
 | **companion（旅伴）** | 被授權的協作者。可送 request、可動收藏，但**動不了 entries**（見 `ARCHITECTURE.md` 的身份章節）。 |
-| **invitation（邀請）** | 尚未接受的協作邀請。`trip_invitations`。 |
-| **share（分享）** | 未登入可讀的分享連結。`trip_shares`。 |
-| **request（請求 / AI 聊天）** | 旅伴用自然語言提的改行程／問建議。`trip_requests`。**「行程 AI 聊天」在後端就是 requests pipeline**，不是另一套系統。 |
+| **invitation（邀請）** | 尚未接受的協作邀請。 |
+| **share（分享）** | 未登入可讀的分享連結。 |
+| **request（請求 / AI 聊天）** | 旅伴用自然語言提的改行程／問建議。**「行程 AI 聊天」在後端就是 request 流程**，不是另一套系統。 |
 
 ### 請求怎麼結束（2026-07-28 grill 釘）
 
-一筆 request 結束時，**「結束了」與「為什麼結束」是兩個欄位**：`status` 說終結與否，`terminal_reason` 說原因。讀取端兩個都要看。理由（以及為什麼不把原因塞進 `status`）見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md)。
-
-**首次終結與收尾重試**：已授權的 request 更新由 `_requestTermination.updateRequest` 持有。第一次確立的終結狀態與原因不被後來通知改寫；request 先終結，健檢與筆記再獨立收尾。關聯查詢或資料庫寫入暫時失敗時，可重送終結通知補做。已保存的健檢 findings 不重新解析為空資料；筆記沿用 generation 與人工資料保護，遲到回覆不復活 request。
-
-**對話終結狀態**：主 tab 與行程 sheet 共用 `useConversation`。歷史與即時結果經同一個 request → 泡泡轉換；SSE 只有 status 時，由對話模組補讀完整 request。停止等待為中性態，真正失敗保留失敗態；完成但沒有 reply 也不再等待。終結後仍以原 request 身分接收遲到回覆，合併原泡泡、不重新鎖住輸入框。每 30 秒及切回頁面時補讀可見的未完成回報；暫時讀取失敗保留已知狀態並重試。
-
-**對話生命週期**：送出、optimistic 泡泡、歷史合併、等待恢復及斷線補回皆由同一個對話模組協調。等待由已合併的泡泡推導，舊歷史不能重新鎖住已完成 request；request ID 加角色決定同一訊息，保留既有畫面 ID。送出尚未取得 ID 時也會擋重複提交。每次切換行程都有獨立 generation，離開後的送出、分頁、SSE／poll 及 callback 都不能回寫新對話；返回時讀取持久化進度。分頁沿用原本「往前載入補位、離開底部不自動跳轉」政策，沒有擴張 #1209。
+一筆 request 結束時，**「結束了」與「為什麼結束」是兩件事**：讀取端兩個都要看。理由見 [ADR-0007](docs/adr/0007-request-termination-cancel-and-reap.md)。
 
 **停止等待**：
 使用者主動終結一筆還在等的 request。語意是「我不等了」，讓輸入框放開、隊列解開 —— **不是**叫 AI 停手，AI 可能還會繼續改行程。
 _Avoid_: 「取消」「中斷」「abort」（都會讓人以為 AI 停了，實際上沒有）
 
 **殭屍請求**：
-停在 `open`/`processing`、但已經沒有 worker 會再處理它的 request。**不是**「處理得很慢」—— 慢的請求還有人在跑。
+停在處理中、但已經沒有 worker 會再處理它的 request。**不是**「處理得很慢」—— 慢的請求還有人在跑。
 _Avoid_: 卡住、stuck（歧義：同時被拿來指殭屍請求與「我不想等了」，那是兩件事、兩套機制）
 
 **收屍**：
-系統把殭屍請求標成終結。兩層：api-server 確定 worker 死亡時就地標，加上牆鐘兜底。
-_Avoid_: 超時（只描述其中一層）、清理（跟 orphan tmux session 的清理混淆）
-
-**request worker**：
-api-server 裡驅動 requests pipeline 的核心（`scripts/lib/request-worker.ts`）：同 skill 鎖定及 session 去重 → peek 隊列 → 取 token（/tp-request 走 owner-restricted）→ 建立 session → 真實 REPL 就緒及提交協定 → watch → 收尾。接受 fetch／process／pane／clock adapter 注入；adapter 只執行外部效果，不回呼 worker。隔離暫時未就緒不啟動也不收屍；建立、REPL 或提交失敗先確認並關閉已有 session，再以 error 收尾。drained 不收新進 request，died／90 分鐘 deadline 走 timed_out；所有退出均釋放該 skill 的鎖。api-server 本體保留 HTTP／cron／寄信與健康狀態接線。
-_Avoid_: 在 api-server 頂層函式裡直接寫決策（那樣只能 readFileSync 測）；「worker」單獨講指這個 module，tmux 裡跑的 claude session 叫 session。
+系統把殭屍請求標成終結。兩層：agent 確定 worker 死亡時就地標，加上牆鐘兜底。
+_Avoid_: 超時（只描述其中一層）、清理（跟 orphan session 的清理混淆）
 
 **遲到完成**：
-request 已經終結之後，worker 才回報進來的成果。它的 `reply` 寫得進去，但不會讓 `status` 復活。
+request 已經終結之後，worker 才回報進來的成果。它的回覆寫得進去，但不會讓 request 復活。
 
-## 行程筆記（trip-level metadata）
+**request worker**：
+agent 裡驅動 request 流程的核心 module。
+_Avoid_: 「worker」單獨講指這個 module，跑 AI 的 claude session 叫 session。
 
-`trip_flights`（航班）· `trip_lodgings`（住宿）· `trip_reservations`（預訂）· `trip_pretrip_notes`（行前須知）· `trip_emergency_contacts`（緊急聯絡）· `trip_note_ai_jobs`（AI 產生任務）· `trip_note_ai_exclusions`（已刪 AI 主題的排除 tombstone）
+## 行程筆記
 
-AI 來源項目用 `origin` 記來源、`managed_by` 記目前由人或 AI 維護、`semantic_key` 辨識同一主題。人工維護項目不可被重新生成覆蓋；「恢復排除」只移除 tombstone，不代表立即把項目加回。
+行程層級的資訊：航班、住宿、預訂、行前須知、緊急聯絡，以及 AI 產生的項目。**人工維護的項目不可被重新生成覆蓋**；「恢復排除」只移除排除記錄，不代表立即把項目加回。
 
 ## 稽核與維運
 
 | 詞 | 意思 |
 |---|---|
-| **audit_log** | **行程資料變更**稽核（trip_id / action / diff_json / snapshot）。rollback 功能讀它。保留 60 天。 |
-| **auth_audit_log** | **登入／OAuth 事件**稽核（ip_hash）。保留 60 天。**與 `audit_log` 是兩張不同的表，不要混用。** |
-| **api_logs** | 錯誤日誌（`source` 欄分類）。保留 60 天。 |
-
----
-
-## OAuth token 發行
-
-**Token lifecycle**：`functions/api/oauth/_tokenLifecycle.ts` 持有授權碼交換、refresh 輪替的驗證、一次性消耗、pair 發行與 replay／family 撤銷政策。入口只處理 client 認證、協定解析／輸出及既有選用的 ID token 簽署。適用的 client／redirect／PKCE／scope 驗證必須先於任何 grant 消耗或撤銷。合法 refresh reuse 撤銷同一 grantId 的 access／refresh；其他 client 的錯誤請求不能觸發撤銷。
-
-**完整發行**：D1 adapter 以同一 batch 寫入 access、refresh 與來源 grant 關聯；消耗先以 CAS 提交，後續失敗不復活一次性 grant。來源必須仍存在且已消耗，避免已撤銷的 refresh family 在並行發行後重新出現。沿用既有 payload 與 TTL，沒有資料遷移。
-
----
-
-## 維運檢查結果
-
-**一次檢查結果**：`scripts/lib/operations-run.js` 的 `runOperations` 協調具名來源，分別持有 `completion`（complete／partial／failed）、`severity` 與來源資料。必要檢查完整且沒有異常才可顯示健康；完整但零資料必須另外標示。
-
-daily-check 與日報都使用此結果產生 JSON、HTML 與摘要；`sources` 的具名結果是唯一完成度／嚴重程度來源。daily-check 保留既有頂層資料欄位供舊消費者讀取，摘要及新 message renderer 直接讀共用結果。來源失敗不清除其他來源資料；route health 的 HTTP 異常與網路未完成會同時反映在摘要。
-
-| 入口 | 必要檢查／告警來源 | 資訊來源（不新增告警） |
-|---|---|---|
-| daily-check | Sentry、經既有規則篩選的 API errors、npm audit、未完成請求、排程 log、route health、prod data hygiene、audit anomaly；Google Maps quota 在已設定 client credentials 時為必要 | Workers、Web Analytics；未設定憑證的 Maps quota 顯示未執行，不假造用量 |
-| daily-report | 連結、Sentry、資料異常偵測 | 行程修改統計、Workers、Web Analytics、Lighthouse 分數、未經 daily-check 篩選的原始 API log 計數 |
-
-某行程 days 查詢失敗仍保留其他行程的連結證據；資料異常偵測的某條查詢失敗也保留已知異常。查詢失敗不能由空陣列推導為全部正常。HTTP 錯誤與網路失敗分別表達已知異常及檢查完成度。資訊來源查詢失敗會明示，但不一律轉成健康告警。
-
-來源 adapter 保留 D1 client 的既有重試、token helper、route health 門檻、Google Maps 額度及告警政策。npm audit 保留 180 秒 timeout、32 MiB buffer；無有效 audit 結果視為未完成。排程 log 的 ENOENT 仍表示沒有 log，其餘讀取錯誤列為未完成。通知對象、管道及資料異常通知條件沿用既有設定，測試不寄通知。
-
-CLI 輸出：daily-check 的 `scripts/logs/daily-check/YYYY-MM-DD-report.json` 與同名 `.html`；daily-report 的 `report.json` 與 `report.html`。匯入來源 factory 或 renderer 不會啟動掃描、寄信或寫檔。
+| **audit_log** | **行程資料變更**稽核。rollback 功能讀它。 |
+| **auth_audit_log** | **登入／OAuth 事件**稽核。**與 `audit_log` 是兩張不同的表，不要混用。** |
+| **api_logs** | 錯誤日誌。 |
 
 ---
 
@@ -158,7 +110,7 @@ _Avoid_: 抽屜、彈窗、浮層
 _Avoid_: 彈窗、popup、面板、modal（中文行文時）
 
 **行內警示**：
-嵌在內容流裡、不中斷操作的警示訊息（元件名叫 `AlertPanel`，但它**不是**面板也不是對話框）。
+嵌在內容流裡、不中斷操作的警示訊息。它**不是**面板也不是對話框。
 _Avoid_: 警示面板、alert panel
 
 **堆疊層級**：
@@ -166,13 +118,12 @@ _Avoid_: 警示面板、alert panel
 _Avoid_: 深度、L2/L3（口語可用，寫文件時用「第一層／更深層」）
 
 **導覽 tab（三種別搞混，2026-07-24 grill 釘）**：
-- **root tab（主 tab）**：底部 4-tab 導覽（聊天／行程／地圖／收藏）。元件 `GlobalBottomNav`，玻璃膠囊 + 滑動 active thumb，app 的 primary IA。**常駐**（捲動不隱；只有手機鍵盤彈出時才收起）。
-- **Day tab（日期 tab）**：行程明細與地圖**共用**的日期切換列（總覽／DAY 1–N）。元件 `MapDayTab` + `.tp-map-day-tabs`（`DayNav` 復用同一套）。視覺比照 root tab（owner 2026-07-24）。
-- **trip switcher（選擇行程下拉）**：titlebar「行程名稱 + ⌄」的 `TripTitleSwitcher`，切換 **active trip**（單一真相＝`ActiveTripContext`，persist `LS_KEY_TRIP_PREF`；聊天／地圖／行程三 tab 都應以它為準）。
-  聊天、行程清單、行程明細、root 地圖、行程地圖與側欄的可存取清單由 `useTripSelection` 共用 `/my-trips`、載入／失敗／刷新及較新讀取優先的生命週期；只有成功讀取能使失效偏好退回第一個可存取行程或空狀態。明確目標（連結、`?selected=` 或行程 sheet）不因清單缺項而被替換；偏好仍由 `ActiveTripContext` 持久化與跨分頁同步。root 地圖只選擇、導向行程地圖，或在清單為空時引導建立。桌機可恢復上次檢視行程與日期，手機進行程 tab 仍先呈現清單；上次檢視不等同 active trip。
-- **trips 篩選 tab**：`.tp-trips-tab`（全部／我的／共編／已歸檔），只在行程清單頁。
-- **行程歸檔**：行程擁有者變更 `trips.archived_at`；所有有權限的旅伴清單同步移入／移出「已歸檔」。歸檔只改清單分類，不撤銷行程權限、不改內容，也不關閉已選詳情或重設閱讀位置。
-_Avoid_: 「**POI tab**」—— 歧義（曾同時被拿來指 Day tab 與收藏頁篩選），一律改叫 **Day tab**；收藏頁的類型／地區是「收藏篩選」（`role=group` pill 列），不是 tab。
+- **root tab（主 tab）**：底部 4-tab 導覽（聊天／行程／地圖／收藏），app 的 primary IA。**常駐**（捲動不隱；只有手機鍵盤彈出時才收起）。
+- **Day tab（日期 tab）**：行程明細與地圖**共用**的日期切換列（總覽／DAY 1–N）。視覺比照 root tab。
+- **trip switcher（選擇行程下拉）**：titlebar「行程名稱 + ⌄」，切換 **active trip**。聊天、地圖、行程三個 tab 都以 active trip 為準；上次檢視的行程不等同 active trip。
+- **trips 篩選 tab**：行程清單頁的 全部／我的／共編／已歸檔，只出現在行程清單頁。
+- **行程歸檔**：只改清單分類，不撤銷行程權限、不改內容。
+_Avoid_: 「**POI tab**」—— 歧義（曾同時被拿來指 Day tab 與收藏頁篩選），一律改叫 **Day tab**；收藏頁的類型／地區是「收藏篩選」，不是 tab。
 
 > **單獨寫「sheet」是有歧義的** —— 它可能指行程 sheet、bottom sheet，或版面裡裝這些東西的槽位。文件與 issue 裡要指名是哪一個。版面本身（幾欄、怎麼排）屬 `DESIGN.md`，不在本詞彙表。
 
