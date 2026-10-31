@@ -3,32 +3,39 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, getDayId , callHandler } from './helpers';
-import { onRequestGet, onRequestPut } from '../../functions/api/trips/[id]/days/[num]';
-import { onRequestPost as onRequestPostEntry } from '../../functions/api/trips/[id]/days/[num]/entries';
-import { onRequestPatch as onRequestPatchEntry } from '../../functions/api/trips/[id]/entries/[eid]';
-import { onRequestPut as onRequestPutPoiId } from '../../functions/api/trips/[id]/entries/[eid]/poi-id';
-import type { Env } from '../../functions/api/_types';
+import { mockEnv, seedTrip, getDayId } from './helpers';
+import { createApi, type Api } from './http';
 
 let db: D1Database;
-let env: Env;
+let api: Api;
+const OWNER = 'days-num-owner@test.com';
+// 匿名的瀏覽器寫入請求會帶 Origin；沒帶會先被 CSRF 檢查擋成 403，到不了 handler 的 401
+const BROWSER_ORIGIN = 'https://trip-planner-dby.pages.dev';
+const tripIds: string[] = [];
+/** 建立行程並記下 id，afterAll 清掉（共用 D1）。 */
+const seed = async (opts: { id: string; days?: number; owner?: string }) => {
+  tripIds.push(opts.id);
+  return seedTrip(db, { owner: OWNER, ...opts });
+};
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
-  await seedTrip(db, { id: 'trip-dn', days: 3 });
+  api = createApi({ env: mockEnv(db) });
+  await seed({ id: 'trip-dn', days: 3 });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  // 共用 D1：只清自己建立的行程（days / entries 等子表走 FK cascade，permissions 要手動清）
+  for (const id of tripIds) {
+    await db.prepare('DELETE FROM trip_permissions WHERE trip_id = ?').bind(id).run(); // 無 FK cascade
+    await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
+});
 
 describe('GET /api/trips/:id/days/:num', () => {
   it('取得完整一天資料', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-dn/days/1'),
-      env,
-      params: { id: 'trip-dn', num: '1' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await api.request('GET', '/api/trips/trip-dn/days/1');
     expect(resp.status).toBe(200);
     const data = await resp.json() as Record<string, unknown>;
     expect(data.dayNum).toBe(1);
@@ -36,19 +43,13 @@ describe('GET /api/trips/:id/days/:num', () => {
   });
 
   it('不存在的天 → 404', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-dn/days/99'),
-      env,
-      params: { id: 'trip-dn', num: '99' },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
+    expect((await api.request('GET', '/api/trips/trip-dn/days/99')).status).toBe(404);
   });
 });
 
 describe('PUT /api/trips/:id/days/:num', () => {
   it('覆寫整天 + 建立 entry + find-or-create POI → 200', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    const resp = await api.request('PUT', '/api/trips/trip-dn/days/1', { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
@@ -71,12 +72,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
           name: 'ホテルオリオン',
           checkout: '11:00',
         },
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
 
     // 驗證 entries 已建立
@@ -112,41 +108,27 @@ describe('PUT /api/trips/:id/days/:num', () => {
   });
 
   it('缺 date → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/1', { as: OWNER, json: {
         dayOfWeek: '三',
         label: 'x',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+      } })).status).toBe(400);
   });
 
   it.each(['weather', 'weather_json'])('舊天氣欄位 %s → 400，不得靜默忽略', async (field) => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    const resp = await api.request('PUT', '/api/trips/trip-dn/days/1', { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
         timeline: [],
         [field]: { label: '那霸' },
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(400);
     const data = await resp.json() as { error?: { detail?: string } };
     expect(data.error?.detail ?? '').toContain(`${field} 已移除`);
   });
 
   it('只要帶舊 restaurants entry 欄位就拒絕，避免 runtime fallback', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    const resp = await api.request('PUT', '/api/trips/trip-dn/days/1', { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
@@ -157,75 +139,46 @@ describe('PUT /api/trips/:id/days/:num', () => {
             restaurants: [],
           },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(400);
     const data = await resp.json() as { error?: { detail?: string } };
     expect(data.error?.detail ?? '').toContain('restaurants 已移除');
   });
 
   it('timeline entry 舊 title 欄位 → 400，避免回到 entry title fallback', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    const resp = await api.request('PUT', '/api/trips/trip-dn/days/1', { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
         timeline: [{ time: '12:00', title: '午餐' }],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(400);
     const data = await resp.json() as { error?: { detail?: string } };
     expect(data.error?.detail ?? '').toContain('title 已移除');
   });
 
   it('未認證 → 401', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/1', { headers: { Origin: BROWSER_ORIGIN }, json: {
         date: '2026-04-01', dayOfWeek: '三', label: 'x',
-      }),
-      env,
-      params: { id: 'trip-dn', num: '1' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(401);
+      } })).status).toBe(401);
   });
 
   it('無權限 → 403', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/1', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/1', { as: 'stranger@test.com', json: {
         date: '2026-04-01', dayOfWeek: '三', label: 'x',
-      }),
-      env,
-      auth: mockAuth({ email: 'stranger@test.com' }),
-      params: { id: 'trip-dn', num: '1' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(403);
+      } })).status).toBe(403);
   });
 
   it('亂碼偵測 → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/2', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/2', { as: OWNER, json: {
         date: '2026-04-02', dayOfWeek: '四', label: 'Day 2',
         timeline: [{ time: '10:00', name: 'test\uFFFDgarbled' }],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '2' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+      } })).status).toBe(400);
   });
 
   /* Phase 2 POI Unification (v2.1.2.0+) */
   it('Phase 2: entry with maps + poi_type → 寫入 trip_entry_pois master + pois master', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/3', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/3', { as: OWNER, json: {
         date: '2026-04-03', dayOfWeek: '五', label: 'Day 3',
         timeline: [
           {
@@ -241,12 +194,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
             maps: 'https://www.google.com/maps/search/首里城',
           },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '3' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(200);
+      } })).status).toBe(200);
 
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entries = await db.prepare(
@@ -276,12 +224,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
   });
 
   it('Phase 2: GET /days/:num 回傳 canonical master JOIN 物件', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-dn/days/3'),
-      env,
-      params: { id: 'trip-dn', num: '3' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await api.request('GET', '/api/trips/trip-dn/days/3');
     expect(resp.status).toBe(200);
     const data = await resp.json() as { timeline: Array<{ master: { name: string; type: string } | null; stopPois?: Array<{ type: string; sortOrder: number }> }> };
     const transportEntry = data.timeline.find((e) => e.master?.name === '那覇空港');
@@ -294,19 +237,13 @@ describe('PUT /api/trips/:id/days/:num', () => {
   });
 
   it('Phase 2: POST /entries 建立 POI 並掛上 master (trip_entry_pois sort_order=1)', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/2/entries', 'POST', {
+    const resp = await api.request('POST', '/api/trips/trip-dn/days/2/entries', { as: OWNER, json: {
         name: '美麗海水族館',
         time: '10:00',
         poi_type: 'attraction',
         // Migration 0045: maps dropped, google_rating renamed to rating.
         rating: 4.5,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '2' },
-    });
-    const resp = await callHandler(onRequestPostEntry, ctx);
+      } });
     expect(resp.status).toBe(201);
     const row = await resp.json() as { id: number };
     expect(row.id).toBeGreaterThan(0);
@@ -335,16 +272,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
     ).bind(entry.id).first<{ poi_id: number }>();
     const originalPoiId = before!.poi_id;
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}`, 'PATCH', {
-        poi_id: 99999,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
     // poi_id 不在 ALLOWED_FIELDS，PATCH 視為沒有有效欄位 → 400
-    expect((await callHandler(onRequestPatchEntry, ctx)).status).toBe(400);
+    expect((await api.request('PATCH', `/api/trips/trip-dn/entries/${entry.id}`, { as: OWNER, json: {
+        poi_id: 99999,
+      } })).status).toBe(400);
 
     // master poi_id 保持原值未被改動
     const after = await db.prepare(
@@ -354,16 +285,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
   });
 
   it('Phase 2: PUT /days/:num 拒絕非法 poi_type → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-dn/days/2', 'PUT', {
+    expect((await api.request('PUT', '/api/trips/trip-dn/days/2', { as: OWNER, json: {
         date: '2026-04-02', dayOfWeek: '四', label: 'Day 2',
         timeline: [{ time: '10:00', name: 'bad type', poi_type: 'invalid_type' }],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', num: '2' },
-    });
-    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+      } })).status).toBe(400);
   });
 
   it('Phase 2: PUT /entries/:eid/poi-id 重掛到既有 POI（驗證存在）', async () => {
@@ -376,15 +301,9 @@ describe('PUT /api/trips/:id/days/:num', () => {
       "INSERT INTO pois (type, name, source) VALUES ('attraction', 'Admin Override POI', 'test') RETURNING id",
     ).first() as { id: number };
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, { as: OWNER, json: {
         poiId: newPoi.id,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
-    const resp = await callHandler(onRequestPutPoiId, ctx);
+      } });
     expect(resp.status).toBe(200);
 
     // v2.29.0: trip_entries.poi_id DROPPED. master 從 trip_entry_pois 查。
@@ -394,21 +313,40 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(row.poi_id).toBe(newPoi.id);
   });
 
+  // 轉 HTTP 邊界時 mutation 發現的缺口（拿掉 poi-id 的寫入權限檢查，原測試仍全綠），補上
+  it('Phase 2: PUT /entries/:eid/poi-id 非行程成員 → 403，master 不變', async () => {
+    const dayId = await getDayId(db, 'trip-dn', 3);
+    const entry = await db.prepare(
+      'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
+    ).bind(dayId).first() as { id: number };
+    const before = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    const target = await db.prepare(
+      "INSERT INTO pois (type, name) VALUES ('attraction', 'Stranger-Target-POI') RETURNING id",
+    ).first() as { id: number };
+
+    const resp = await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, {
+      as: 'days-num-stranger@test.com',
+      json: { poiId: target.id },
+    });
+    expect(resp.status).toBe(403);
+    const after = await db.prepare(
+      'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
+    ).bind(entry.id).first<{ poi_id: number }>();
+    expect(after!.poi_id).toBe(before!.poi_id);
+    await db.prepare('DELETE FROM pois WHERE id = ?').bind(target.id).run(); // 共用 D1，清掉自己建的 POI
+  });
+
   it('Phase 2: PUT /entries/:eid/poi-id 拒絕不存在的 poiId → 404', async () => {
     const dayId = await getDayId(db, 'trip-dn', 3);
     const entry = await db.prepare(
       'SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1',
     ).bind(dayId).first() as { id: number };
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+    expect((await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, { as: OWNER, json: {
         poiId: 99999,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
-    expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(404);
+      } })).status).toBe(404);
   });
 
   it('v2.27.0: PUT /entries/:eid/poi-id 阻擋 null 清空（per multi-POI invariant，要用 DELETE entry）', async () => {
@@ -425,15 +363,9 @@ describe('PUT /api/trips/:id/days/:num', () => {
     ).bind(entry.id).first<{ poi_id: number | null }>();
     const originalPoiId = before?.poi_id ?? null;
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+    expect((await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, { as: OWNER, json: {
         poiId: null,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
-    expect((await callHandler(onRequestPutPoiId, ctx)).status).toBe(400);
+      } })).status).toBe(400);
     // master poi_id 不變
     const after = await db.prepare(
       'SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1',
@@ -456,16 +388,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
       "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-Stale-Target') RETURNING id",
     ).first() as { id: number };
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, { as: OWNER, json: {
         poiId: newPoi.id,
         entryPoisVersion: '99999', // 故意 stale
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
-    const resp = await callHandler(onRequestPutPoiId, ctx);
+      } });
     expect(resp.status).toBe(409);
     // master poi_id 不變
     const after = await db.prepare(
@@ -484,16 +410,10 @@ describe('PUT /api/trips/:id/days/:num', () => {
       "INSERT INTO pois (type, name) VALUES ('attraction', 'R9-OCC-OK-Target') RETURNING id",
     ).first() as { id: number };
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-dn/entries/${entry.id}/poi-id`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/trip-dn/entries/${entry.id}/poi-id`, { as: OWNER, json: {
         poiId: newPoi.id,
         entryPoisVersion: String(v0!.v),
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-dn', eid: String(entry.id) },
-    });
-    const resp = await callHandler(onRequestPutPoiId, ctx);
+      } });
     expect(resp.status).toBe(200);
     const v1 = await db.prepare('SELECT entry_pois_version AS v FROM trip_entries WHERE id = ?').bind(entry.id).first<{ v: number }>();
     expect(v1!.v).toBe(v0!.v + 1);
@@ -506,7 +426,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
 describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () => {
   it('保留 alternates：當新 timeline entry 的 master POI 跟舊 entry 同 → alternates 還在', async () => {
     const TRIP = 'trip-dn-alt';
-    await seedTrip(db, { id: TRIP, days: 1 });
+    await seed({ id: TRIP, days: 1 });
     const dayId = await getDayId(db, TRIP, 1);
 
     // Seed: 1 entry with master "Master-X" + 2 alternates "Alt-A", "Alt-B"
@@ -537,20 +457,14 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
     expect(before!.c).toBe(3);
 
     // PUT /days/:num with same master POI title (find-or-create resolves to same row)
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-05-12',
         dayOfWeek: '二',
         label: 'Updated',
         timeline: [
           { time: '11:00', name: 'Master-X', poi_type: 'attraction' },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
 
     // Verify: alternates Alt-A + Alt-B restored
@@ -576,7 +490,7 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
   // Round 5 fix：per-OLD-entry snapshot + claim-once mapping，保證 entry order 對齊。
   it('保留 alternates：兩 entries 共享相同 master POI 時，各自 alternates 不互換', async () => {
     const TRIP = 'trip-dn-alt-shared';
-    await seedTrip(db, { id: TRIP, days: 1 });
+    await seed({ id: TRIP, days: 1 });
     const dayId = await getDayId(db, TRIP, 1);
 
     // Seed: master 共享 "Matsuya"，entry-1 有 alts [Alt-A, Alt-B]，entry-2 有 alts [Alt-C, Alt-D]
@@ -614,8 +528,7 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
     ]);
 
     // PUT /days/:num with two entries both pointing at Matsuya (same as before)
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-05-12',
         dayOfWeek: '二',
         label: 'Updated',
@@ -623,12 +536,7 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
           { time: '08:30', name: 'Matsuya', poi_type: 'restaurant' },
           { time: '19:00', name: 'Matsuya', poi_type: 'restaurant' },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
 
     // 確認兩個新 entries 各自保留自己原本的 alternates，不互換
@@ -658,13 +566,8 @@ describe('PUT /api/trips/:id/days/:num — v2.27.0 alternates preservation', () 
 describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065)', () => {
   it('GET response 含 version field（initial 0）', async () => {
     const TRIP = 'trip-dn-occ-get';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/${TRIP}/days/1`),
-      env,
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('GET', `/api/trips/${TRIP}/days/1`);
     expect(resp.status).toBe(200);
     const body = await resp.json() as { version?: number };
     expect(body.version).toBe(0);
@@ -672,19 +575,13 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 
   it('PUT 成功 bump version + response 帶 dayVersion=1', async () => {
     const TRIP = 'trip-dn-occ-bump';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
         timeline: [],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { dayVersion?: number };
     expect(body.dayVersion).toBe(1);
@@ -697,20 +594,14 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 
   it('PUT 帶 expectedDayVersion 配對成功 → 200 + dayVersion bumped', async () => {
     const TRIP = 'trip-dn-occ-match';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'Day 1',
         timeline: [],
         expectedDayVersion: 0,
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { dayVersion?: number };
     expect(body.dayVersion).toBe(1);
@@ -718,25 +609,17 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 
   it('PUT 帶 expectedDayVersion 不符 → 409 STALE_ENTRY', async () => {
     const TRIP = 'trip-dn-occ-stale';
-    await seedTrip(db, { id: TRIP, days: 1 });
+    await seed({ id: TRIP, days: 1 });
     // 先 bump 一次到 v=1
-    const ctx1 = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01', dayOfWeek: '三', label: 'D1', timeline: [],
-      }),
-      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
-    });
-    await callHandler(onRequestPut, ctx1);
+      } });
 
     // 現在 trip_days.version = 1，client 帶 expectedDayVersion: 0 (stale) → 409
-    const ctx2 = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-02', dayOfWeek: '四', label: 'D1-new', timeline: [],
         expectedDayVersion: 0,
-      }),
-      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx2);
+      } });
     expect(resp.status).toBe(409);
     const body = await resp.json() as { error?: { code?: string } };
     expect(body.error?.code).toBe('STALE_ENTRY');
@@ -750,26 +633,18 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 
   it('未帶 expectedDayVersion → backwards-compat 略過 OCC check（既有 client 不破）', async () => {
     const TRIP = 'trip-dn-occ-skip';
-    await seedTrip(db, { id: TRIP, days: 1 });
+    await seed({ id: TRIP, days: 1 });
     // 先 bump 兩次讓 version=2
     for (let i = 0; i < 2; i++) {
-      const ctx = mockContext({
-        request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+      await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
           date: '2026-04-01', dayOfWeek: '三', label: `D1-${i}`, timeline: [],
-        }),
-        env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
-      });
-      await callHandler(onRequestPut, ctx);
+        } });
     }
 
     // 不帶 expectedDayVersion，PUT 仍成功 → 不檢查
-    const ctxBwc = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01', dayOfWeek: '三', label: 'D1-bwc', timeline: [],
-      }),
-      env, auth: mockAuth({ email: 'user@test.com' }), params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctxBwc);
+      } });
     expect(resp.status).toBe(200);
     const body = await resp.json() as { dayVersion?: number };
     expect(body.dayVersion).toBe(3);
@@ -779,21 +654,15 @@ describe('PUT /api/trips/:id/days/:num — v2.30.x Day-level OCC (migration 0065
 describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master poi note', () => {
   it('name request 帶 note → 寫進 master trip_entry_pois.note（非 trip_entries）', async () => {
     const TRIP = 'trip-dn-note-titleonly';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'D1',
         timeline: [
           { time: '09:00', name: '展望台', poi_type: 'attraction', note: '看夕陽最佳' },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
     const dayId = await getDayId(db, TRIP, 1);
     const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();
@@ -806,9 +675,8 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
 
   it('canonical-choices entry：entry-level note 但 master choice note 空 → master poi note = entry note', async () => {
     const TRIP = 'trip-dn-note-choices';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'D1',
@@ -823,12 +691,7 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
             ],
           },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
     const dayId = await getDayId(db, TRIP, 1);
     const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();
@@ -847,9 +710,8 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
 
   it('canonical-choices entry：master choice 已有 per-POI note → 不被 entry note 覆蓋（保留 master choice note）', async () => {
     const TRIP = 'trip-dn-note-choices-keep';
-    await seedTrip(db, { id: TRIP, days: 1 });
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/${TRIP}/days/1`, 'PUT', {
+    await seed({ id: TRIP, days: 1 });
+    const resp = await api.request('PUT', `/api/trips/${TRIP}/days/1`, { as: OWNER, json: {
         date: '2026-04-01',
         dayOfWeek: '三',
         label: 'D1',
@@ -863,12 +725,7 @@ describe('PUT /api/trips/:id/days/:num — migration 0078 entry note → master 
             ],
           },
         ],
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: TRIP, num: '1' },
-    });
-    const resp = await callHandler(onRequestPut, ctx);
+      } });
     expect(resp.status).toBe(200);
     const dayId = await getDayId(db, TRIP, 1);
     const entry = await db.prepare('SELECT id FROM trip_entries WHERE day_id = ? ORDER BY sort_order LIMIT 1').bind(dayId).first<{ id: number }>();

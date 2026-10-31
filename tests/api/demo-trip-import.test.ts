@@ -13,15 +13,18 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { onRequestPost as importTrip } from '../../functions/api/trips/import';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv } from './helpers';
+import { mockEnv, userIdFor } from './helpers';
+import { createApi } from './http';
+import { cleanupImportedTrips } from './cleanup-imported';
 
 const DEMO_TRIP = JSON.parse(
   readFileSync(resolve(__dirname, '../../docs/demo/demo-trip.json'), 'utf-8'),
 );
 
-const DEMO_USER_ID = 'demo-user-for-import-test';
+// 走 HTTP 邊界（tests/api/http.ts）：以真實 bearer token 的使用者身分匯入。
+const DEMO_EMAIL = 'demo-import-test@example.com';
+const DEMO_USER_ID = userIdFor(DEMO_EMAIL);
 
 describe('demo 行程匯入 —— 真 D1 全路徑', () => {
   let db: D1Database;
@@ -29,35 +32,27 @@ describe('demo 行程匯入 —— 真 D1 全路徑', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
-    await db
-      .prepare('INSERT INTO users (id, email, display_name) VALUES (?,?,?)')
-      .bind(DEMO_USER_ID, 'demo@example.com', 'Demo')
-      .run();
-
-    const request = new Request('https://trip-planner-dby.pages.dev/api/trips/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(DEMO_TRIP),
-    });
-    const context = {
-      request,
-      env: mockEnv(db),
-      params: {} as never,
-      // requireAuth 讀 data.auth —— 直接注入已登入的 demo 使用者。
-      data: { auth: { userId: DEMO_USER_ID, isServiceToken: false } },
-      next: () => Promise.resolve(new Response()),
-      waitUntil: () => undefined,
-      passThroughOnException: () => undefined,
-    } as unknown as Parameters<typeof importTrip>[0];
-
-    const res = await importTrip(context);
+    const res = await createApi({ env: mockEnv(db) })
+      .request('POST', '/api/trips/import', { as: DEMO_EMAIL, json: DEMO_TRIP });
     expect(res.status, '匯入應成功').toBeLessThan(400);
     const created = (await res.json()) as { tripId?: string; id?: string };
     tripId = (created.tripId ?? created.id)!;
     expect(tripId, '回應必須帶新行程 id').toBeTruthy();
   }, 40000);
 
-  afterAll(async () => { await disposeMiniflare(); });
+  afterAll(async () => {
+    await cleanupImportedTrips(db, DEMO_EMAIL, []);
+    // fixture 的 POI 以名稱精確清除（仍被其他行程引用的由 FK 保護而略過）
+    const names = new Set<string>();
+    for (const d of DEMO_TRIP.days) {
+      if (d.hotel?.name) names.add(d.hotel.name);
+      for (const e of d.timeline) for (const p of e.stopPois ?? []) if (p.name) names.add(p.name);
+    }
+    for (const name of names) {
+      await db.prepare('DELETE FROM pois WHERE name = ?').bind(name).run().catch(() => undefined);
+    }
+    await disposeMiniflare();
+  });
 
   it('行程本體寫入，owner 是匯入者', async () => {
     const trip = await db

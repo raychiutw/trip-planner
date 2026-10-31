@@ -1,128 +1,95 @@
 /**
  * /api/account/connected-apps — V2-P5 user-side OAuth grant management
+ * 走 HTTP 邊界（tests/api/http.ts），以真實 session cookie 認證；
+ * 原本檢查 mock DB「bind 呼叫形狀」的斷言，改讀真實 D1 的資料變化。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestGet } from '../../functions/api/account/connected-apps';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
+import { D1Adapter } from '../../src/server/oauth-d1-adapter';
 import { onRequestDelete } from '../../functions/api/account/connected-apps/[client_id]';
-import { issueSession } from '../../functions/api/_session';
 
-interface MockEnv {
-  SESSION_SECRET?: string;
-  DB?: { prepare: ReturnType<typeof vi.fn> };
-}
+const SESSION_SECRET = 'test-secret-32-chars-long-enough';
+// 共用 D1：專用 id／email，結束時清掉自己的資料
+const U1 = 'ca-user-1';
+const U2 = 'ca-user-2';
+const EMAIL1 = 'ca-user-1@example.com';
+const EMAIL2 = 'ca-user-2@example.com';
+const APP = 'ca_tp_abc';
+const OTHER_APP = 'ca_tp_other';
 
-function makeStmt(firstResult: unknown = null, allResults: unknown[] = []) {
-  return {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-    all: vi.fn().mockResolvedValue({ results: allResults }),
-  };
-}
+let db: D1Database;
+let api: Api;
+let cookie1: string;
 
-async function makeAuthedRequest(url: string, method: 'GET' | 'DELETE'): Promise<Request> {
-  const r = new Response(null);
-  await issueSession(
-    new Request('https://x.com', { headers: { 'CF-Connecting-IP': '1.1.1.1' } }),
-    r,
-    'user-1',
-    { SESSION_SECRET: 'test-secret-32-chars-long-enough' } as never,
+async function seedConsent(userId: string, clientId: string, scopes = ['openid'], grantedAt = Date.now()) {
+  await new D1Adapter(db, 'Consent').upsert(
+    `${userId}:${clientId}`,
+    { user_id: userId, client_id: clientId, scopes, grantedAt } as never,
+    3600,
   );
-  const setCookie = r.headers.get('Set-Cookie') ?? '';
-  const sessionCookie = setCookie.split(';')[0] ?? '';
-  return new Request(url, {
-    method,
-    headers: { Cookie: sessionCookie },
-  });
 }
 
-function makeGetContext(request: Request, env: MockEnv): Parameters<typeof onRequestGet>[0] {
-  return {
-    request,
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
+async function seedToken(name: 'AccessToken' | 'RefreshToken', id: string, userId: string, clientId: string) {
+  await new D1Adapter(db, name).upsert(id, { user_id: userId, client_id: clientId } as never, 3600);
 }
 
-function makeDeleteContext(
-  request: Request,
-  env: MockEnv,
-  clientId: string,
-): Parameters<typeof onRequestDelete>[0] {
-  return {
-    request,
-    env: env as unknown as never,
-    params: { client_id: clientId } as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestDelete>[0];
+async function cleanOauthRows() {
+  await db.prepare(`DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') IN (?, ?)`).bind(U1, U2).run();
 }
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+async function countModels(name: string, id: string): Promise<number> {
+  const row = await db.prepare('SELECT count(*) AS n FROM oauth_models WHERE name = ? AND id = ?').bind(name, id).first<{ n: number }>();
+  return row!.n;
+}
+
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET }) });
+  cookie1 = (await api.sessionFor(EMAIL1, U1)).cookie;
+  await api.sessionFor(EMAIL2, U2);
+  for (const [id, name] of [[APP, 'Trip Buddy'], [OTHER_APP, 'Other App']]) {
+    await db.prepare(
+      `INSERT OR REPLACE INTO client_apps (client_id, client_type, app_name, app_description, homepage_url, redirect_uris, allowed_scopes, status)
+       VALUES (?, 'public', ?, 'Trip companion app', 'https://tripbuddy.example.com', '[]', '[]', 'active')`,
+    ).bind(id, name).run();
+  }
+}, 30000);
+
+beforeEach(cleanOauthRows);
+
+afterAll(async () => {
+  await cleanOauthRows();
+  await db.prepare('DELETE FROM client_apps WHERE client_id IN (?, ?)').bind(APP, OTHER_APP).run();
+  await db.prepare('DELETE FROM session_devices WHERE user_id IN (?, ?)').bind(U1, U2).run();
+  await db.prepare('DELETE FROM users WHERE id IN (?, ?)').bind(U1, U2).run();
+  await disposeMiniflare();
 });
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
 
 describe('GET /api/account/connected-apps', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/account/connected-apps', { method: 'GET' });
-    await expect(onRequestGet(makeGetContext(req, env))).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.get('/api/account/connected-apps');
+    expect(res.status).toBe(401);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
   it('200 returns empty list when no consents', async () => {
-    const stmt = makeStmt(null, []);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps', 'GET');
-    const res = await onRequestGet(makeGetContext(req, env));
+    const res = await api.get('/api/account/connected-apps', { cookie: cookie1 });
     expect(res.status).toBe(200);
     const json = await res.json() as { apps: unknown[] };
     expect(json.apps).toEqual([]);
   });
 
   it('200 returns connected apps with merged consent + client_app data', async () => {
-    const consentPayload = JSON.stringify({
-      user_id: 'user-1',
-      client_id: 'tp_abc',
-      scopes: ['openid', 'profile', 'trips.read'],
-      grantedAt: 1700000000000,
-    });
-    const stmt = makeStmt(null, [
-      {
-        consent_payload: consentPayload,
-        client_id: 'tp_abc',
-        app_name: 'Trip Buddy',
-        app_description: 'Trip companion app',
-        app_logo_url: null,
-        homepage_url: 'https://tripbuddy.example.com',
-        status: 'active',
-      },
-    ]);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps', 'GET');
-    const res = await onRequestGet(makeGetContext(req, env));
+    await seedConsent(U1, APP, ['openid', 'profile', 'trips.read'], 1700000000000);
+    const res = await api.get('/api/account/connected-apps', { cookie: cookie1 });
     const json = await res.json() as { apps: Array<Record<string, unknown>> };
 
     expect(json.apps).toHaveLength(1);
     expect(json.apps[0]).toMatchObject({
-      client_id: 'tp_abc',
+      client_id: APP,
       app_name: 'Trip Buddy',
       scopes: ['openid', 'profile', 'trips.read'],
       granted_at: 1700000000000,
@@ -130,121 +97,92 @@ describe('GET /api/account/connected-apps', () => {
     });
   });
 
-  it('SQL filters by user_id from session (not from query)', async () => {
-    const stmt = makeStmt(null, []);
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps', 'GET');
-    await onRequestGet(makeGetContext(req, env));
+  it('依授權時間由新到舊排序', async () => {
+    await seedConsent(U1, APP, ['openid'], 1000);
+    await seedConsent(U1, OTHER_APP, ['openid'], 2000);
+    const res = await api.get('/api/account/connected-apps', { cookie: cookie1 });
+    const json = await res.json() as { apps: Array<{ client_id: string }> };
+    expect(json.apps.map(a => a.client_id)).toEqual([OTHER_APP, APP]);
+  });
 
-    // bind args: session.uid + Date.now()
-    const bindCall = stmt.bind.mock.calls[0];
-    expect(bindCall[0]).toBe('user-1');
-    expect(typeof bindCall[1]).toBe('number');
+  it('只回 session 使用者自己的授權（不吃 query 的 user_id）', async () => {
+    await seedConsent(U1, APP);
+    await seedConsent(U2, OTHER_APP);
+    const res = await api.get(`/api/account/connected-apps?user_id=${U2}`, { cookie: cookie1 });
+    const json = await res.json() as { apps: Array<{ client_id: string }> };
+    expect(json.apps.map(a => a.client_id)).toEqual([APP]);
   });
 });
 
 describe('DELETE /api/account/connected-apps/:client_id', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/account/connected-apps/tp_abc', { method: 'DELETE' });
-    await expect(onRequestDelete(makeDeleteContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.request('DELETE', `/api/account/connected-apps/${APP}`, {
+      headers: { Origin: 'https://trip-planner-dby.pages.dev' },
+    });
+    expect(res.status).toBe(401);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
-  it('400 DATA_VALIDATION when client_id param missing', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps/', 'DELETE');
-    await expect(onRequestDelete(makeDeleteContext(req, env, '')))
-      .rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+  it('400 DATA_VALIDATION when client_id param missing（路由層：結尾斜線不會進到 [client_id]，回 405）', async () => {
+    // 經真實路由，空的 client_id 到不了 [client_id].ts —— 結尾斜線落在 connected-apps.ts（只有 GET）。
+    const res = await api.request('DELETE', '/api/account/connected-apps/', { cookie: cookie1 });
+    expect(res.status).toBe(405);
+
+    // [client_id].ts 內的防呆分支仍保留原斷言：直接呼叫（路由層擋不到，只有 handler 自己守）
+    const req = new Request('https://x.com/api/account/connected-apps/', {
+      method: 'DELETE',
+      headers: { Cookie: cookie1 },
+    });
+    await expect(onRequestDelete({
+      request: req, env: mockEnv(db, { SESSION_SECRET }), params: {}, data: {},
+      next: () => Promise.resolve(new Response()), waitUntil: () => undefined, passThroughOnException: () => undefined,
+    } as never)).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
   });
 
   it('404 CONSENT_NOT_FOUND when no consent for (user, client)', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
-        return makeStmt(null); // no consent
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps/unknown_app', 'DELETE');
-    const res = await onRequestDelete(makeDeleteContext(req, env, 'unknown_app'));
+    const res = await api.request('DELETE', '/api/account/connected-apps/unknown_app', { cookie: cookie1 });
     expect(res.status).toBe(404);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('CONSENT_NOT_FOUND');
   });
 
   it('200 destroys consent + all tokens for (user, client) pair', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
-        return makeStmt({
-          payload: JSON.stringify({
-            user_id: 'user-1',
-            client_id: 'tp_abc',
-            scopes: ['openid'],
-            grantedAt: Date.now(),
-          }),
-          expires_at: Date.now() + 60_000,
-        });
-      }
-      if (sql.includes('DELETE FROM oauth_models')) return makeStmt();
-      return makeStmt();
-    });
-    // v2.33.85: handler 用 DB.batch() 做 atomic delete，mock 需提供 batch stub
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: {
-        prepare: dbPrepare,
-        batch: vi.fn().mockResolvedValue([{ meta: { changes: 1 } }, { meta: { changes: 2 } }]),
-      } as unknown as MockEnv['DB'],
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps/tp_abc', 'DELETE');
-    const res = await onRequestDelete(makeDeleteContext(req, env, 'tp_abc'));
+    await seedConsent(U1, APP);
+    await seedToken('AccessToken', 'ca-at-1', U1, APP);
+    await seedToken('RefreshToken', 'ca-rt-1', U1, APP);
+    // 不該被動到的：同使用者別的 app、別的使用者同一個 app
+    await seedConsent(U1, OTHER_APP);
+    await seedToken('AccessToken', 'ca-at-other-app', U1, OTHER_APP);
+    await seedConsent(U2, APP);
+    await seedToken('AccessToken', 'ca-at-other-user', U2, APP);
+
+    const res = await api.request('DELETE', `/api/account/connected-apps/${APP}`, { cookie: cookie1 });
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; revoked_client_id: string };
     expect(json.ok).toBe(true);
-    expect(json.revoked_client_id).toBe('tp_abc');
+    expect(json.revoked_client_id).toBe(APP);
 
-    // Two DELETE statements: consent destroy + bulk token cleanup (batched together)
-    const deleteCalls = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
-    );
-    expect(deleteCalls.length).toBe(2);
-
-    // Bulk token cleanup must filter by both user_id + client_id
-    const bulkCleanup = deleteCalls.find(
-      (c) => (c[0] as string).includes("name IN ('AccessToken', 'RefreshToken')"),
-    );
-    expect(bulkCleanup).toBeTruthy();
+    // 同意紀錄 + 這組 (user, client) 的 access／refresh token 都消失
+    expect(await countModels('Consent', `${U1}:${APP}`)).toBe(0);
+    expect(await countModels('AccessToken', 'ca-at-1')).toBe(0);
+    expect(await countModels('RefreshToken', 'ca-rt-1')).toBe(0);
+    // 其他 app／其他使用者的資料不受影響
+    expect(await countModels('Consent', `${U1}:${OTHER_APP}`)).toBe(1);
+    expect(await countModels('AccessToken', 'ca-at-other-app')).toBe(1);
+    expect(await countModels('Consent', `${U2}:${APP}`)).toBe(1);
+    expect(await countModels('AccessToken', 'ca-at-other-user')).toBe(1);
   });
 
   it('Cannot revoke another user\'s consent (cross-user attack)', async () => {
-    // user-1 tries to revoke client tp_abc; consent stored for user-2:tp_abc only
-    // adapter.find(`${session.uid}:tp_abc`) → key 'user-1:tp_abc' returns null
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
-        return makeStmt(null); // user-1 has no consent for tp_abc
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/account/connected-apps/tp_abc', 'DELETE');
-    const res = await onRequestDelete(makeDeleteContext(req, env, 'tp_abc'));
+    // user-1 試圖撤銷 tp_abc；授權只存在 user-2:tp_abc → user-1 看不到、也動不到
+    await seedConsent(U2, APP);
+    await seedToken('AccessToken', 'ca-at-victim', U2, APP);
+
+    const res = await api.request('DELETE', `/api/account/connected-apps/${APP}`, { cookie: cookie1 });
     expect(res.status).toBe(404);
 
-    // No DELETE calls should have run (we 404'd before)
-    const deleteCalls = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
-    );
-    expect(deleteCalls.length).toBe(0);
+    expect(await countModels('Consent', `${U2}:${APP}`)).toBe(1);
+    expect(await countModels('AccessToken', 'ca-at-victim')).toBe(1);
   });
 });

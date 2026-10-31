@@ -1,177 +1,168 @@
 /**
- * GET /api/invitations?token=xxx — V2 共編邀請查詢
+ * GET /api/invitations?token=xxx — V2 共編邀請查詢（走 HTTP 邊界，tests/api/http.ts）
  *
  * Lookup invitation by HMAC(SESSION_SECRET, raw_token) → trip_invitations row。
  * 三種失敗 case 共用 410 GONE：
  *   - INVITATION_INVALID  : token_hash 找不到 row
  *   - INVITATION_EXPIRED  : expires_at < now
  *   - INVITATION_ACCEPTED : accepted_at IS NOT NULL（避免重複觸發）
+ * 另有 ?tripId=xxx 分支：trip owner 列出 pending 邀請（不含 raw token）。
+ *
+ * 原本用手寫 mock DB 檢查「bind 的參數是 hash 而非 raw token」「SQL 有 JOIN」；現在改成驗外部行為：
+ * 讀真實 D1 的列，換 SESSION_SECRET／存 raw token 都查不到，標題與邀請者資訊來自 trips／users。
+ *
+ * 共用 D1：email／trip 一律用 `s15-` 前綴，結束時只清自己的資料。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestGet } from '../../functions/api/invitations';
-import { AppError, errorResponse } from '../../functions/api/_errors';
-import { hashInvitationToken } from '../../src/server/invitation-token';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { INVITE_SECRET, seedInvitation } from './invitations-http';
+import { cleanupS15 } from './cleanup-shares';
+import { userIdFor } from './helpers';
 
-interface MockEnv {
-  DB?: { prepare: ReturnType<typeof vi.fn> };
-  SESSION_SECRET?: string;
+const owner = 's15-get-owner@test.com';
+const viewer = 's15-get-viewer@test.com';
+const reader = 's15-get-reader@test.com';
+const tripId = 's15-get-trip';
+let db: D1Database;
+let api: Api;
+
+function preview(query: string, as = reader, target: Api = api): Promise<Response> {
+  return target.get(`/api/invitations?${query}`, { as });
 }
 
-const TEST_SECRET = 'test-session-secret-32-chars-long';
-
-function makeStmt(firstResult: unknown = null) {
-  return {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-  };
+async function errorCode(res: Response): Promise<string> {
+  return ((await res.json()) as { error: { code: string } }).error.code;
 }
 
-function makeContext(query: string, env: MockEnv): Parameters<typeof onRequestGet>[0] {
-  return {
-    request: new Request(`https://x.com/api/invitations?${query}`, { method: 'GET' }),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
-}
-
-/**
- * Mirror functions/api/_middleware.ts try/catch: production stack catches
- * AppError → errorResponse(err). Direct onRequestGet() invocation in unit
- * tests bypasses middleware, so wrap here to assert final HTTP shape.
- */
-async function invoke(query: string, env: MockEnv): Promise<Response> {
-  try {
-    return await onRequestGet(makeContext(query, env));
-  } catch (err) {
-    if (err instanceof AppError) return errorResponse(err);
-    throw err;
-  }
-}
-
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-27T10:00:00Z'));
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET: INVITE_SECRET }) });
+  await cleanupS15(db);
+  // 先建一個干擾行程（不同標題、不同擁有者），確認預覽的標題與邀請者來自邀請所屬的那一個
+  await seedTrip(db, { id: 's15-get-decoy-trip', owner: 's15-get-decoy-owner@test.com' });
+  await db.prepare('UPDATE trips SET title = ? WHERE id = ?').bind('DECOY-TITLE', 's15-get-decoy-trip').run();
+  await db.prepare('UPDATE users SET display_name = ? WHERE id = ?').bind('DECOY-NAME', userIdFor('s15-get-decoy-owner@test.com')).run();
+  await seedTrip(db, { id: tripId, owner });
+  await seedUser(db, reader);
+  await seedUser(db, viewer);
+  await db.prepare('UPDATE users SET display_name = ? WHERE id = ?').bind('Ray', userIdFor(owner)).run();
+  await db.prepare('UPDATE trips SET title = ? WHERE id = ?').bind('沖繩 5 日', tripId).run();
 });
 
-afterEach(() => {
-  vi.useRealTimers();
+afterAll(async () => {
+  await cleanupS15(db);
+  await disposeMiniflare();
 });
-
 
 describe('GET /api/invitations', () => {
   it('400 when token query param missing', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() }, SESSION_SECRET: TEST_SECRET };
-    const res = await invoke('', env);
+    const res = await preview('');
     expect(res.status).toBe(400);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_TOKEN_MISSING');
+    expect(await errorCode(res)).toBe('INVITATION_TOKEN_MISSING');
   });
 
   it('500 when SESSION_SECRET not set (server misconfig)', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() } };
-    const res = await invoke('token=anything', env);
+    const noSecret = createApi({ env: mockEnv(db) });
+    const res = await preview('token=anything', reader, noSecret);
     expect(res.status).toBe(500);
   });
 
+  it('401 when called without any credential（特徵測試：目前 middleware 不放行此路徑，與 handler 註解的「公開」不符，見 PR 說明）', async () => {
+    const res = await api.get('/api/invitations?token=anything');
+    expect(res.status).toBe(401);
+  });
+
   it('410 INVITATION_INVALID when token_hash not found', async () => {
-    const stmt = makeStmt(null);
-    const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(stmt) }, SESSION_SECRET: TEST_SECRET };
-    const res = await invoke('token=fake-token', env);
+    const res = await preview('token=s15-fake-token');
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_INVALID');
+    expect(await errorCode(res)).toBe('INVITATION_INVALID');
   });
 
   it('410 INVITATION_EXPIRED when expires_at in past', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt({
-      trip_id: 'trip-1',
-      trip_title: '沖繩',
-      invited_email: 'invitee@x.com',
-      inviter_display_name: 'Ray',
-      inviter_email: 'ray@x.com',
-      expires_at: '2026-04-20T10:00:00Z', // 7 days ago
-      accepted_at: null,
-    }));
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await invoke('token=expired-token', env);
+    await seedInvitation(db, { tripId, token: 's15-get-expired', invitedEmail: 's15-get-expired-invitee@test.com', invitedBy: owner, expiresAt: '2020-01-01T00:00:00Z' });
+    const res = await preview('token=s15-get-expired');
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_EXPIRED');
+    expect(await errorCode(res)).toBe('INVITATION_EXPIRED');
   });
 
   it('410 INVITATION_ACCEPTED when accepted_at is set', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt({
-      trip_id: 'trip-1',
-      trip_title: '沖繩',
-      invited_email: 'invitee@x.com',
-      inviter_display_name: 'Ray',
-      inviter_email: 'ray@x.com',
-      expires_at: '2026-05-04T10:00:00Z',
-      accepted_at: '2026-04-26T10:00:00Z',
-    }));
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await invoke('token=accepted-token', env);
+    await seedInvitation(db, { tripId, token: 's15-get-accepted', invitedEmail: 's15-get-accepted-invitee@test.com', invitedBy: owner, acceptedAt: '2026-04-26T10:00:00Z' });
+    const res = await preview('token=s15-get-accepted');
     expect(res.status).toBe(410);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('INVITATION_ACCEPTED');
+    expect(await errorCode(res)).toBe('INVITATION_ACCEPTED');
   });
 
   it('200 happy path: returns trip preview + inviter info', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt({
-      trip_id: 'trip-1',
-      trip_title: '沖繩 5 日',
-      invited_email: 'invitee@x.com',
-      inviter_display_name: 'Ray',
-      inviter_email: 'ray@x.com',
-      expires_at: '2026-05-04T10:00:00Z',
-      accepted_at: null,
-    }));
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    const res = await invoke('token=valid-token', env);
+    await seedInvitation(db, { tripId, token: 's15-get-valid', invitedEmail: 's15-get-invitee@test.com', invitedBy: owner, expiresAt: '2099-05-04T10:00:00Z' });
+    const res = await preview('token=s15-get-valid');
     expect(res.status).toBe(200);
     const json = await res.json() as {
-      tripId: string;
-      tripTitle: string;
-      invitedEmail: string;
-      inviterDisplayName: string;
-      inviterEmail: string;
-      expiresAt: string;
+      tripId: string; tripTitle: string; invitedEmail: string; role: string;
+      inviterDisplayName: string; inviterEmail: string; expiresAt: string;
     };
-    expect(json.tripId).toBe('trip-1');
+    expect(json.tripId).toBe(tripId);
     expect(json.tripTitle).toBe('沖繩 5 日');
-    expect(json.invitedEmail).toBe('invitee@x.com');
+    expect(json.invitedEmail).toBe('s15-get-invitee@test.com');
+    expect(json.role).toBe('member');
     expect(json.inviterDisplayName).toBe('Ray');
-    expect(json.inviterEmail).toBe('ray@x.com');
-    expect(json.expiresAt).toBe('2026-05-04T10:00:00Z');
+    expect(json.inviterEmail).toBe(owner);
+    expect(json.expiresAt).toBe('2099-05-04T10:00:00Z');
+    // 預覽不洩漏 token hash 或內部欄位
+    const wire = JSON.stringify(json);
+    expect(wire).not.toContain('token_hash');
+    expect(wire).not.toContain('s15-get-valid');
   });
 
-  it('queries DB with HMAC(SESSION_SECRET, raw_token) not raw token', async () => {
-    const stmt = makeStmt(null);
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
+  it('查詢用 HMAC(SESSION_SECRET, raw_token)：存 raw token 的列、不同 SESSION_SECRET 都查不到', async () => {
+    await db.prepare(`INSERT INTO trip_invitations (token_hash, trip_id, invited_email, role, invited_by, expires_at)
+      VALUES (?, ?, ?, 'member', ?, '2099-01-01T00:00:00Z')`)
+      .bind('s15-get-raw-xyz', tripId, 's15-get-raw-invitee@test.com', userIdFor(owner)).run();
+    const raw = await preview('token=s15-get-raw-xyz');
+    expect(raw.status).toBe(410);
+    expect(await errorCode(raw)).toBe('INVITATION_INVALID');
 
-    const rawToken = 'my-raw-token-xyz';
-    await invoke(`token=${rawToken}`, env);
-
-    const expectedHash = await hashInvitationToken(rawToken, TEST_SECRET);
-    expect(stmt.bind).toHaveBeenCalledWith(expectedHash);
-    // raw token must NOT be passed
-    expect(stmt.bind).not.toHaveBeenCalledWith(rawToken);
+    const otherSecret = createApi({ env: mockEnv(db, { SESSION_SECRET: 'a-different-session-secret-32-chars' }) });
+    const res = await preview('token=s15-get-valid', reader, otherSecret);
+    expect(res.status).toBe(410);
+    expect(await errorCode(res)).toBe('INVITATION_INVALID');
   });
 
-  it('SQL JOINs trips for trip_title + users for inviter info', async () => {
-    const dbPrepare = vi.fn().mockReturnValue(makeStmt(null));
-    const env: MockEnv = { DB: { prepare: dbPrepare }, SESSION_SECRET: TEST_SECRET };
-    await invoke('token=t', env);
+  it('標題與邀請者資訊來自 trips／users 的現值', async () => {
+    await db.prepare('UPDATE trips SET title = ? WHERE id = ?').bind('改名後的行程', tripId).run();
+    const res = await preview('token=s15-get-valid');
+    expect(((await res.json()) as { tripTitle: string }).tripTitle).toBe('改名後的行程');
+  });
+});
 
-    const sql = dbPrepare.mock.calls[0][0] as string;
-    expect(sql).toMatch(/FROM trip_invitations/i);
-    expect(sql).toMatch(/JOIN trips/i);
-    expect(sql).toMatch(/JOIN users/i);
+describe('GET /api/invitations?tripId — owner 列出 pending 邀請', () => {
+  it('owner 只看到 pending、含 isExpired／daysRemaining，且不含 raw token', async () => {
+    const res = await api.get(`/api/invitations?tripId=${tripId}`, { as: owner });
+    expect(res.status).toBe(200);
+    const { items } = await res.json() as { items: { id: string; invitedEmail: string; isExpired: boolean; daysRemaining: number }[] };
+    const emails = items.map((i) => i.invitedEmail).sort();
+    // accepted 的 s15-get-accepted-invitee 不在列表內
+    expect(emails).toEqual(['s15-get-expired-invitee@test.com', 's15-get-invitee@test.com', 's15-get-raw-invitee@test.com']);
+    const expired = items.find((i) => i.invitedEmail === 's15-get-expired-invitee@test.com');
+    expect(expired).toMatchObject({ isExpired: true, daysRemaining: 0 });
+    const valid = items.find((i) => i.invitedEmail === 's15-get-invitee@test.com');
+    expect(valid?.isExpired).toBe(false);
+    expect(valid!.daysRemaining).toBeGreaterThan(0);
+    expect(valid?.id).toMatch(/^[0-9a-f]{64}$|^[A-Za-z0-9_-]{20,}$/); // hash 當穩定識別碼，不是 raw token
+    const wire = JSON.stringify(items);
+    expect(wire).not.toContain('s15-get-valid');
+    // 只回這幾個欄位：沒有 token、token_hash 這類敏感欄
+    for (const item of items) {
+      expect(Object.keys(item).sort()).toEqual(['createdAt', 'daysRemaining', 'expiresAt', 'id', 'invitedEmail', 'isExpired']);
+    }
+  });
+
+  it('非 owner（viewer 協作者、無關者）→ 403；未登入 → 401', async () => {
+    await db.prepare("INSERT OR IGNORE INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, 'viewer')")
+      .bind(userIdFor(viewer), tripId).run();
+    expect((await api.get(`/api/invitations?tripId=${tripId}`, { as: viewer })).status).toBe(403);
+    expect((await api.get(`/api/invitations?tripId=${tripId}`, { as: reader })).status).toBe(403);
+    expect((await api.get(`/api/invitations?tripId=${tripId}`)).status).toBe(401);
   });
 });
