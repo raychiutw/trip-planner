@@ -13,3 +13,8 @@ export async function serviceToken(db: D1Database, scopes: string[], clientId = 
   );
   return token;
 }
+
+/** 具名參數版本（middleware 與 companion 測試使用），內部沿用 serviceToken。 */
+export function serviceTokenFor(db: D1Database, opts: { clientId: string; scopes: string[] }): Promise<string> {
+  return serviceToken(db, opts.scopes, opts.clientId);
+}
