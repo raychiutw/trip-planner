@@ -427,6 +427,18 @@ async function handleAuth(
   // （CSPRNG ≥192-bit，DB 只存 SHA-256 hash），端點自管 per-IP rate-limit + default-deny
   // 區塊過濾 + 統一 404（無 enumeration oracle）+ no-store/no-referrer/frame-DENY headers。
   // 只 bypass GET：管理端點 GET/POST /api/trips/:id/shares 與 clone (POST) 仍要求 auth。
+  // 邀請預覽：InvitePage 給還沒登入的被邀請者看（「註冊並加入」「登入並加入」靠它）。
+  // 只放行 token 分支；tripId 分支（owner 列 pending 邀請）仍需認證，同時帶兩者視為後者。
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/api/invitations' &&
+    url.searchParams.has('token') &&
+    !url.searchParams.has('tripId')
+  ) {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   if (request.method === 'GET' && url.pathname.startsWith('/api/share/')) {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();
