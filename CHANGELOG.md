@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.115] - 2026-10-30
+
+### Removed
+- **`docs/` 只保留 matt 工作流需要的文件**：刪除 design-sessions（mockup 與截圖）、code-review 輪次紀錄、plans、research、runbooks、perf、monitoring、artifacts、api、backend-tasks、archive 與舊 session retro，共 213 個檔。留下 `docs/adr/`、`docs/agents/`，以及功能性資產 `docs/demo/demo-trip.json`（demo seed 與測試用）和 `docs/readme/`（README 截圖）。這些文件都還在 git history 可查。
+
+### For contributors
+- 移除只測「文件內容」的測試（uptime-monitor 文件、code-review README、archive、mockup HTML）；CLAUDE.md、AGENTS.md 拿掉指向已刪文件的連結。
+- 刻意沒動：DESIGN.md 內對 mockup 的 sign-off 引用，以及 src／migrations 註解裡的 mockup 路徑（現在指向已不存在的檔案，屬歷史出處）。
+- 本輪沒有跑 gstack 的 specialist／adversarial review army（純刪除加兩處指令檔連結），驗證靠 typecheck、lint、unit 4718、API 1302 與 CI。
+
 ## [2.57.113] - 2026-10-29
 
 ### Fixed

@@ -50,7 +50,6 @@ Official upstream references:
 [`to-tickets`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/to-tickets.md#L13-L42),
 [`implement`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/implement.md#L13-L29), and
 [`code-review`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/code-review.md#L13-L31).
-Detailed comparison: [`docs/research/2026-08-03-matt-pocock-skills-workflow.md`](docs/research/2026-08-03-matt-pocock-skills-workflow.md).
 
 When multiple skill frameworks could apply and the user has not named one, use this priority:
 
