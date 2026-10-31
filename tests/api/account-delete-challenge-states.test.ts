@@ -149,8 +149,8 @@ describe('DELETE /api/account/delete-reauth：取消只能從未完成的狀態�
   });
 });
 
-describe('GET /api/oauth/login/google?purpose=account-delete：只有 pending 能開始', () => {
-  it.each(['started', 'verified', 'failed', 'cancelled', 'used'] as const)('status=%s 被拒（403），狀態不變', async (status) => {
+describe('GET /api/oauth/login/google?purpose=account-delete：只有 pending 與 started 能開始', () => {
+  it.each(['verified', 'failed', 'cancelled', 'used'] as const)('status=%s 被拒（403），狀態不變', async (status) => {
     const u = await seed();
     const cid = await challengeIn(u, status);
     const res = await startGoogle(cid);
@@ -165,13 +165,50 @@ describe('GET /api/oauth/login/google?purpose=account-delete：只有 pending �
     expect(await statusOf(cid)).toBe('pending');
   });
 
-  it('同一個 pending challenge 開始兩次：第二次被拒', async () => {
+  it('同一個 challenge 開始兩次：第二次也能開始（重新整理、預讀不會卡死），狀態維持 started', async () => {
     const u = await seed();
     const cid = await challengeIn(u, 'pending');
-    const start = () => startGoogle(cid);
-    expect((await start()).status).toBe(302);
+    expect((await startGoogle(cid)).status).toBe(302);
     expect(await statusOf(cid)).toBe('started');
-    expect((await start()).status).toBe(403);
+    expect((await startGoogle(cid)).status).toBe(302);
+    expect(await statusOf(cid)).toBe('started');
+  });
+
+  it('兩個並行的開始請求（預讀加上使用者點擊）都成功，challenge 是 started', async () => {
+    const u = await seed();
+    const cid = await challengeIn(u, 'pending');
+    const [a, b] = await Promise.all([startGoogle(cid), startGoogle(cid)]);
+    expect([a.status, b.status]).toEqual([302, 302]);
+    expect(await statusOf(cid)).toBe('started');
+  });
+
+  it('已是 started 時，第二次開始的 state 寫入失敗：不得把別人進行中的流程降回 pending', async () => {
+    const u = await seed();
+    const cid = await challengeIn(u, 'pending');
+    expect((await startGoogle(cid)).status).toBe(302); // 第一次：pending → started，使用者正在 Google 頁面上
+    const broken = vi.spyOn(D1Adapter.prototype, 'upsert').mockRejectedValueOnce(new Error('d1 write failed'));
+    try {
+      expect((await startGoogle(cid)).status).toBeGreaterThanOrEqual(500);
+    } finally { broken.mockRestore(); }
+    expect(await statusOf(cid), '第一次開始的流程還在進行，不能被第二次的失敗還原').toBe('started');
+  });
+
+  it('開始兩次產生兩個 state：兩個都完成時只有第一個能讓 challenge 變 verified，第二個不會把它降級', async () => {
+    const u = await seed();
+    const cid = await challengeIn(u, 'pending');
+    const stateOf = async () => new URL((await startGoogle(cid)).headers.get('Location')!).searchParams.get('state')!;
+    const [s1, s2] = [await stateOf(), await stateOf()];
+    const idToken = `h.${btoa(JSON.stringify({ sub: `g-${u.id}`, email: `${u.id}@example.com`, email_verified: true, auth_time: Math.floor(Date.now() / 1000) }))}.s`;
+    const provider = vi.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id_token: idToken, access_token: 'a' })));
+    try {
+      const first = await api.get(`${ORIGIN}/api/oauth/callback/google?code=c&state=${s1}`);
+      expect(first.headers.get('Location')).toBe(`${MOBILE_PROD_REDIRECT}?challenge_id=${cid}&status=verified`);
+      expect(await statusOf(cid)).toBe('verified');
+      await api.get(`${ORIGIN}/api/oauth/callback/google?code=c&state=${s2}`);
+      expect(await statusOf(cid), '第二個 state 不得把已 verified 的 challenge 降級').toBe('verified');
+    } finally { provider.mockRestore(); }
+    expect((await del(u, { confirm: 'DELETE', challengeId: cid })).status).toBe(200); // 仍能用那一次 verified 刪除
+    expect(await userExists(u.id)).toBe(false);
   });
 });
 

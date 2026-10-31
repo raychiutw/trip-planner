@@ -13,6 +13,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - **Mobile App 正式 OAuth callback 契約**：production／UAT／development 各自精確註冊 client 與 redirect（不開 wildcard、不跨環境），附 iOS／Android 的 app link 關聯檔；mobile 端以 grant 綁定的 challenge 完成刪除帳號（建立、查狀態、取消、刪除）。決策與契約摘要見 ADR-0009、ADR-0010。
 - migration `0097_mobile_oauth_callbacks`（附 rollback）：只新增註冊，不覆蓋營運端自己登記的 redirect。**這是 additive migration，必須先套用到 production（與 staging）D1 再 merge。**
+- migration `0098_oauth_models_user_id_index`（附 rollback）：只新增索引。**同樣是 additive migration，已於 2026-10-31 套用到 staging 與 production D1，merge 前不需再套。**
 
 ### Fixed
 - **已刪除帳號的舊登入還能繼續使用**：帳號刪除會把該使用者的登入裝置紀錄整列抹除，但驗證 session 時只在「找到紀錄且已撤銷」才拒絕，找不到就放行，所以刪除前拿到的 cookie 仍會以已刪除使用者的身分通過驗證，直到 30 天到期。現在 session 帶有裝置識別卻找不到紀錄時一律視為已撤銷。沒有裝置識別的舊版 session 不受影響。這是在 staging 預覽站實際跑一次帳號刪除才發現的，單元測試沒抓到。
@@ -21,6 +22,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 取消一個已經 `failed` 的 mobile challenge 不再回 409：app 在 callback 回報失敗後送取消收尾，視為冪等的清理，回 200 且狀態仍是 `failed`。
 - 同時帶有效的 session cookie 與 `Authorization: Bearer` 標頭時，刪除帳號的預覽與刪除改依「實際認證出來的身分」判斷，不再依標頭有無把已登入的瀏覽器使用者導去 mobile 路徑而被拒。
 - 瀏覽器的 Google 重新驗證無法開始（沒登入、沒有 Google 身分）時，導回 `/account?deleteReauth=failed`，不再讓整頁導覽停在一頁 JSON 上。
+- Mobile 授權連結被重新整理或預讀時不再卡死：challenge 在 `pending` 與 `started` 都能再開始（之前第二次一律 403 的 JSON）。不增加風險：完成流程仍要同一個 Google 帳號通過 callback，`started→verified` 只會成功一次；第二個 state 不會把已 `verified` 的 challenge 降級；第二次開始的 state 寫入失敗也不會把進行中的流程還原成 `pending`。
+- 本機開發（`ENVIRONMENT=development`）可以跑 mobile 的刪除流程：callback 驗證在 development 接受 http loopback，且未設定時以 contract 的 dev 值為預設；production／preview 仍一律要 https。
+- 帳號抹除不再整表掃描 `oauth_models`：新增 `$.user_id` 的表達式索引（migration `0098_oauth_models_user_id_index`，只新增索引、附 rollback），查詢計畫改為 `MULTI-INDEX OR`，兩個條件各自走索引。
 - 抹除的內部 helper 把「表名」與「回報名稱」分開傳，原本靠字串特判，名稱一改就會讓該語句被當成「表不存在」而悄悄跳過刪除。
 
 ### For contributors

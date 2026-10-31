@@ -22,6 +22,14 @@
 /** 匿名化後 `audit_log.changed_by` 的前綴。刻意保留可辨識的形狀供稽核追溯同一主體。 */
 export const ERASURE_ANON_PREFIX = 'deleted-user-';
 
+/**
+ * 刪除某使用者的 token／grant／session／challenge。payload 裡 token 類用 `$.user_id`、session 與 challenge 類用 `$.uid`。
+ * 兩個 json_extract 都要有表達式索引（idx_oauth_models_user_id、idx_oauth_models_uid），否則每次刪帳號都整表解析 JSON。
+ * tests/unit/erasure-oauth-models-plan.test.ts 用 EXPLAIN QUERY PLAN 守住這件事。
+ */
+export const OAUTH_MODELS_ERASE_SQL = `DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') = ?
+    OR json_extract(payload, '$.uid') = ?`;
+
 export interface ErasureSummary {
   /** users.id 是 **TEXT** PK（非 autoincrement integer），型別不可寫成 number。 */
   userId: string;
@@ -98,8 +106,7 @@ export async function eraseUserAccount(db: D1Database, userId: string): Promise<
     SET changed_by = ?, changed_by_user_id = NULL, diff_json = NULL, snapshot = NULL
     WHERE changed_by_user_id = ?`, `${ERASURE_ANON_PREFIX}${userId}`, userId);
   for (const table of USER_ORPHAN_TABLES) add(table, `DELETE FROM ${table} WHERE user_id = ?`, userId);
-  add('oauth_models', `DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') = ?
-    OR json_extract(payload, '$.uid') = ?`, userId, userId);
+  add('oauth_models', OAUTH_MODELS_ERASE_SQL, userId, userId);
   if (user?.email) {
     add('rate_limit_buckets', 'DELETE FROM rate_limit_buckets WHERE bucket_key LIKE ?', `%:${user.email}`);
     for (const table of ['requests', 'trip_requests']) {
