@@ -7,7 +7,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv } from './helpers';
 import { createApi, type Api } from './http';
-import { onRequestDelete as onDeleteOne } from '../../functions/api/account/sessions/[sid]';
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
 // 共用 D1：專用 id／email，結束時清掉自己的資料
@@ -129,20 +128,15 @@ describe('DELETE /api/account/sessions/:sid (revoke specific)', () => {
     expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
-  it('400 when sid param missing（路由層：結尾斜線落在 sessions.ts 的「登出其他裝置」）', async () => {
+  it('sid 為空（結尾斜線）→ 落在 sessions.ts 的「登出其他裝置」，不會進 [sid]', async () => {
     // 經真實路由，空的 sid 到不了 [sid].ts —— 結尾斜線等同 DELETE /api/account/sessions。
     const me = await api.sessionFor(EMAIL1, U1);
     await seedDevice('sess-a', U1);
     const res = await api.request('DELETE', '/api/account/sessions/', { cookie: me.cookie });
     expect(res.status).toBe(200);
     expect(await revokedAt('sess-a')).not.toBeNull();
-
-    // [sid].ts 內的防呆分支仍保留原斷言：直接呼叫（路由層擋不到，只有 handler 自己守）
-    const req = new Request('https://x.com/api/account/sessions/', { method: 'DELETE', headers: { Cookie: me.cookie } });
-    await expect(onDeleteOne({
-      request: req, env: mockEnv(db, { SESSION_SECRET }), params: {}, data: {},
-      next: () => Promise.resolve(new Response()), waitUntil: () => undefined, passThroughOnException: () => undefined,
-    } as never)).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+    // 註：[sid].ts 內 `!sid` 的防呆分支在檔案路由下不可達（空的 sid 不會進到這支 handler），
+    // 所以不再直接呼叫 handler 斷言它；新 api 改由路由 schema 驗證路徑參數。
   });
 
   it('404 SESSION_NOT_FOUND when sid doesn\'t belong to user', async () => {

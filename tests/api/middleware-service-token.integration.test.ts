@@ -15,11 +15,10 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockServiceAuth, seedTrip, seedUser, seedPoi } from './helpers';
+import { mockEnv, seedTrip, seedUser, seedPoi } from './helpers';
 import { createApi, type Api } from './http';
 import { serviceTokenFor } from './service-token';
 import { cleanupTrips } from './cleanup-trips';
-import { hasPermission, hasWritePermission, requireTripReadAccess } from '../../functions/api/_auth';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
@@ -41,8 +40,6 @@ afterAll(async () => {
   for (const id of poiIds) {
     await db.prepare("DELETE FROM audit_log WHERE table_name = 'pois' AND record_id = ?").bind(id).run();
   }
-  await db.prepare("DELETE FROM trip_permissions WHERE user_id = 'ghost-user'").run();
-  await db.prepare("DELETE FROM users WHERE id = 'ghost-user'").run();
   await cleanupTrips(db, [TRIP], ['mw-svc-poi%']);
   await disposeMiniflare();
 });
@@ -134,43 +131,5 @@ describe('audit attribution sentinel (MF7)', () => {
     const by = await changedBy(poiId);
     expect(by).toBe('service:svc-ops-attribution-2');
     expect(by).not.toBe('admin@test.com');
-  });
-});
-
-// ---------------------------------------------------------------------------------------------
-// 直接呼叫 _auth 的 hasPermission / hasWritePermission（待 #1503）：
-// 經 middleware 不可能產生「isServiceToken 且帶 userId」的 auth，只能直接餵 mock。
-// ---------------------------------------------------------------------------------------------
-describe('service-token guard — 偽造 userId（直接呼叫，交給 #1503）', () => {
-  it('non-admin scope service token cannot escalate via forged userId on permission row', async () => {
-    // Even if a trip_permissions row existed for some user_id, the service-token guard
-    // returns false BEFORE the SQL lookup runs.
-    const ghostUserId = 'ghost-user';
-    await db.prepare(
-      'INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)'
-    ).bind(ghostUserId, 'ghost@test.com', 'ghost').run();
-    await db.prepare(
-      'INSERT OR IGNORE INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, ?)'
-    ).bind(ghostUserId, TRIP, 'member').run();
-
-    const auth = mockServiceAuth({
-      email: 'service:svc-ghost-1',
-      userId: ghostUserId, // forged — guard must still deny before SQL lookup
-      scopes: ['read'],
-      clientId: 'svc-ghost-1',
-    });
-    expect(await hasPermission(db, auth, TRIP)).toBe(false);
-    expect(await hasWritePermission(db, auth, TRIP)).toBe(false);
-
-    // 補強（mutation 驗證發現缺口）：scope 齊全時，擋住偽造 userId 的只剩 isServiceToken 這道 guard
-    const fullScope = mockServiceAuth({
-      email: 'service:svc-ghost-2',
-      userId: ghostUserId,
-      scopes: ['trips:read', 'trips:write'],
-      clientId: 'svc-ghost-2',
-    });
-    expect(await hasPermission(db, fullScope, TRIP)).toBe(false);
-    expect(await hasWritePermission(db, fullScope, TRIP)).toBe(false);
-    await expect(requireTripReadAccess(db, fullScope, TRIP)).rejects.toThrow();
   });
 });

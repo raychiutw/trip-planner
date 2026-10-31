@@ -8,7 +8,6 @@ import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv } from './helpers';
 import { createApi, type Api } from './http';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
-import { onRequestDelete } from '../../functions/api/account/connected-apps/[client_id]';
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
 // 共用 D1：專用 id／email，結束時清掉自己的資料
@@ -124,20 +123,13 @@ describe('DELETE /api/account/connected-apps/:client_id', () => {
     expect(json.error.code).toBe('AUTH_REQUIRED');
   });
 
-  it('400 DATA_VALIDATION when client_id param missing（路由層：結尾斜線不會進到 [client_id]，回 405）', async () => {
+  it('client_id 為空（結尾斜線）→ 不會進 [client_id]，回 405', async () => {
     // 經真實路由，空的 client_id 到不了 [client_id].ts —— 結尾斜線落在 connected-apps.ts（只有 GET）。
     const res = await api.request('DELETE', '/api/account/connected-apps/', { cookie: cookie1 });
     expect(res.status).toBe(405);
 
-    // [client_id].ts 內的防呆分支仍保留原斷言：直接呼叫（路由層擋不到，只有 handler 自己守）
-    const req = new Request('https://x.com/api/account/connected-apps/', {
-      method: 'DELETE',
-      headers: { Cookie: cookie1 },
-    });
-    await expect(onRequestDelete({
-      request: req, env: mockEnv(db, { SESSION_SECRET }), params: {}, data: {},
-      next: () => Promise.resolve(new Response()), waitUntil: () => undefined, passThroughOnException: () => undefined,
-    } as never)).rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+    // 註：[client_id].ts 內缺 client_id 的防呆分支在檔案路由下不可達（結尾斜線落在只有 GET 的 connected-apps.ts），
+    // 所以不再直接呼叫 handler 斷言它；新 api 改由路由 schema 驗證路徑參數。
   });
 
   it('404 CONSENT_NOT_FOUND when no consent for (user, client)', async () => {

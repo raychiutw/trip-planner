@@ -16,13 +16,38 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from '../api/setup';
-import { mockEnv, mockAuth, mockContext, seedUser, seedTrip, seedPoi } from '../api/helpers';
+import { mockEnv, mockAuth, seedUser, seedTrip, seedPoi } from '../api/helpers';
 import {
   resolveCompanionUserId,
   requireFavoriteActor,
 } from '../../functions/api/_companion';
 import { AppError } from '../../functions/api/_errors';
 import type { Env, AuthData } from '../../functions/api/_types';
+
+/** 建立 mock EventContext：本檔測的是 _companion 的 module 函式，不是 handler，所以這個 fixture 只留在這裡。 */
+export function mockContext(options: {
+  request: Request;
+  env: Env;
+  auth?: AuthData;
+  params?: Record<string, string>;
+}) {
+  const data: Record<string, unknown> = {};
+  if (options.auth) {
+    data.auth = options.auth;
+  }
+  const waitUntilPromises: Promise<unknown>[] = [];
+  return {
+    request: options.request,
+    env: options.env,
+    params: options.params || {},
+    data,
+    waitUntil: (p: Promise<unknown>) => { waitUntilPromises.push(p); },
+    passThroughOnException: () => {},
+    next: () => Promise.resolve(new Response('next')),
+    functionPath: '',
+    _waitUntilPromises: waitUntilPromises,
+  } as unknown as EventContext<Env, string, Record<string, unknown>>;
+}
 
 let db: D1Database;
 let env: Env;
