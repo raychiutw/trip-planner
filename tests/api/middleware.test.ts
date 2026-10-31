@@ -7,14 +7,12 @@
  *   - checkCompanionScope：帶 X-Request-Scope: companion，看回應是否為「超出旅伴請求範圍」。
  *   - detectSource：打一個必為 4xx 的請求，看 api_logs.source 欄位。
  *
- * 少數路徑 http.ts 的派送會在進入 middleware 前就回 404/405（沒有對應 route 或沒有該 method 的 handler），
- * HTTP 邊界觀察不到 middleware 的決定，這幾條仍直接呼叫 checkCompanionScope，集中在檔尾，交給 #1503。
+ * http.ts 的派送先跑 middleware 再找 route，所以沒有對應 route / method handler 的路徑也看得到 middleware 的決定。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv } from './helpers';
 import { createApi, type Api } from './http';
-import { checkCompanionScope } from '../../functions/api/_middleware';
 import type { Env } from '../../functions/api/_types';
 
 const BASE = 'https://test.com';
@@ -206,6 +204,17 @@ describe('checkCompanionScope（X-Request-Scope: companion 的路徑白名單）
   it('companion: GET permissions → 403', () => denied('GET', '/api/permissions'));
 
   it('companion: PUT days → 403', () => denied('PUT', '/api/trips/test-trip/days/1'));
+
+  it('companion: PATCH trip-pois → 放行', () => allowed('PATCH', '/api/trips/test-trip/trip-pois/5'));
+
+  it('companion: DELETE trip-pois → 放行', () => allowed('DELETE', '/api/trips/test-trip/trip-pois/5'));
+
+  // 2026-07-28：trip_docs 整條退役（前端不 fetch /docs，checklist/emergency 的 UI
+  // 入口 v2.17.17 就移除）。留著這條 companion 放行，agent 想寫行程筆記時就會倒進
+  // 這個黑洞 —— prod request 280 正是這樣寫了四次空內容還回報成功。
+  // 唯一的消費者是 MCP 的 putDoc 工具，已一併移除。
+  it('companion: PUT docs → 擋（trip_docs 已退役，不給 agent 寫）', () =>
+    denied('PUT', '/api/trips/test-trip/docs/flights'));
 });
 
 describe('detectSource（api_logs.source 的來源分類）', () => {
@@ -260,35 +269,5 @@ describe('detectSource（api_logs.source 的來源分類）', () => {
 
   it('anonymous: 完全沒帶任何 auth → anonymous（4xx 屬 bot 雜訊，不寫 log）', async () => {
     expect(await loggedSource({})).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------------------------
-// 以下只能直接呼叫 middleware 的 checkCompanionScope（待 #1503）：
-// 這些路徑在 http.ts 的派送裡沒有對應 route / method handler，會在進入 middleware 前就回 404/405，
-// 從 HTTP 邊界觀察不到 middleware 的放行或擋下決定。
-// ---------------------------------------------------------------------------------------------
-describe('checkCompanionScope — HTTP 邊界到不了的路徑（直接呼叫，交給 #1503）', () => {
-  function check(method: string, path: string, scope?: string) {
-    const headers: Record<string, string> = {};
-    if (scope) headers['X-Request-Scope'] = scope;
-    const req = new Request(`https://test.com${path}`, { method, headers });
-    return checkCompanionScope(req, new URL(req.url));
-  }
-
-  it('companion: PATCH trip-pois → 放行', () => {
-    expect(check('PATCH', '/api/trips/test-trip/trip-pois/5', 'companion')).toBeNull();
-  });
-
-  it('companion: DELETE trip-pois → 放行', () => {
-    expect(check('DELETE', '/api/trips/test-trip/trip-pois/5', 'companion')).toBeNull();
-  });
-
-  // 2026-07-28：trip_docs 整條退役（前端不 fetch /docs，checklist/emergency 的 UI
-  // 入口 v2.17.17 就移除）。留著這條 companion 放行，agent 想寫行程筆記時就會倒進
-  // 這個黑洞 —— prod request 280 正是這樣寫了四次空內容還回報成功。
-  // 唯一的消費者是 MCP 的 putDoc 工具，已一併移除。
-  it('companion: PUT docs → 擋（trip_docs 已退役，不給 agent 寫）', () => {
-    expect(check('PUT', '/api/trips/test-trip/docs/flights', 'companion')).not.toBeNull();
   });
 });
