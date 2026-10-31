@@ -1,36 +1,38 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import {
-  callHandler,
   getDayId,
-  mockAuth,
-  mockContext,
   mockEnv,
   seedEntry,
   seedPoi,
   seedTrip,
 } from './helpers';
-import { onRequestGet } from '../../functions/api/trips/[id]/health';
-import type { Env } from '../../functions/api/_types';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
 
+// 走 HTTP 邊界（tests/api/http.ts）；共用 D1，專屬 trip／POI 名稱，結束時清掉。
 let db: D1Database;
-let env: Env;
+let api: Api;
+const tripId = 'trip-health-canonical';
+const OWNER = 'trip-health-owner@test.com';
 
-beforeEach(async () => {
+beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
+  api = createApi({ env: mockEnv(db) });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTrips(db, [tripId], ['Health Closed Master', 'Health Missing Alternate']);
+  await disposeMiniflare();
+});
 
 describe('GET /api/trips/:id/health', () => {
   it('reads canonical trip_entry_pois (v2.29.0 trip_entries.poi_id DROPPED)', async () => {
-    const tripId = 'trip-health-canonical';
-    await seedTrip(db, { id: tripId });
+    await seedTrip(db, { id: tripId, owner: OWNER });
     const dayId = await getDayId(db, tripId, 1);
 
-    const closedMasterPoi = await seedPoi(db, { name: 'Closed Master', type: 'attraction' });
-    const missingAltPoi = await seedPoi(db, { name: 'Missing Alternate', type: 'restaurant' });
+    const closedMasterPoi = await seedPoi(db, { name: 'Health Closed Master', type: 'attraction' });
+    const missingAltPoi = await seedPoi(db, { name: 'Health Missing Alternate', type: 'restaurant' });
 
     await db.batch([
       db.prepare("UPDATE pois SET status='closed', status_reason='永久歇業' WHERE id = ?").bind(closedMasterPoi),
@@ -44,12 +46,7 @@ describe('GET /api/trips/:id/health', () => {
       db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 2)').bind(entryId, missingAltPoi),
     ]);
 
-    const resp = await callHandler(onRequestGet, mockContext({
-      request: new Request(`https://test.com/api/trips/${tripId}/health`),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: tripId },
-    }));
+    const resp = await api.get(`/api/trips/${tripId}/health`, { as: OWNER });
 
     expect(resp.status).toBe(200);
     const body = await resp.json() as {
