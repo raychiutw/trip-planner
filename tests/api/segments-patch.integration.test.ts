@@ -131,6 +131,29 @@ describe('PATCH /api/trips/:id/segments/:sid', () => {
     expect(row!.mode).toBe('walking');
   });
 
+  // mutation 驗證時發現原本沒有守這道門（拿掉 requireTripWrite 測試仍全綠），補上
+  it('無寫入權限的使用者 → 403，且 segment 不被改動', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, {
+      json: { mode: 'driving' },
+      as: 'stranger-segp@test.com',
+    });
+    expect(resp.status).toBe(403);
+    const row = await db.prepare('SELECT mode, "min" FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string; min: number }>();
+    expect(row).toMatchObject({ mode: 'walking', min: 5 });
+  });
+
+  // 同上：樂觀鎖（expectedVersion）原本無測試守護
+  it('expectedVersion 與現值不符 → 不套用變更', async () => {
+    const resp = await api.request('PATCH', `https://test.com/api/trips/trip-segp/segments/${segId}`, {
+      json: { mode: 'driving', expectedVersion: 9999 },
+      as: 'user@test.com',
+    });
+    expect(resp.status).toBeGreaterThanOrEqual(400);
+    expect(resp.status).toBeLessThan(500);
+    const row = await db.prepare('SELECT mode FROM trip_segments WHERE id = ?').bind(segId).first<{ mode: string }>();
+    expect(row!.mode).toBe('walking');
+  });
+
   it('segment 不屬於該 trip → 404 (IDOR 防護)', async () => {
     await seedTrip(db, { id: 'trip-other-segp' });
     expect((await api.request('PATCH', `https://test.com/api/trips/trip-other-segp/segments/${segId}`, { json: { mode: 'walking' }, as: 'user@test.com' })).status).toBe(404);
