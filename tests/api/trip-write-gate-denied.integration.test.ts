@@ -6,22 +6,17 @@
  *   已有各自的 403 案例，不在此重複）;
  * seam=none
  *
- * 真實 D1（Miniflare）。每列用一個「不在 trip_permissions 的陌生人」或 viewer 呼叫，
+ * 走 HTTP 邊界（tests/api/http.ts）+ 真實 D1（Miniflare）。每列用一個「不在 trip_permissions 的陌生人」或 viewer 呼叫，
  * 參數／body 都是合法的，所以 403 只可能來自寫入 gate（不是驗證失敗）。
  */
-import { describe, it, expect, beforeAll } from 'vitest';
-import { createTestDb } from './setup';
-import { mockEnv, mockContext, mockAuth, seedUser, seedTrip, callHandler, jsonRequest, userIdFor } from './helpers';
-import { onRequestPost as postRequest } from '../../functions/api/requests';
-import { onRequestPost as postEntry } from '../../functions/api/trips/[id]/days/[num]/entries';
-import { onRequestPatch as patchSegment } from '../../functions/api/trips/[id]/segments/[sid]';
-import { onRequestPatch as patchMaintenance } from '../../functions/api/trips/[id]/notes/[section]/[rowId]/maintenance';
-import { onRequestDelete as deleteExclusion } from '../../functions/api/trips/[id]/notes/[type]/exclusions/[exclusionId]';
-import { onRequestPatch as patchShare, onRequestDelete as deleteShare } from '../../functions/api/trips/[id]/shares/[shareId]';
-import type { Env } from '../../functions/api/_types';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv, seedUser, seedTrip, userIdFor } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
 
 let db: D1Database;
-let env: Env;
+let api: Api;
 const TRIP = 'gate-denied-trip';
 const owner = 'gate-owner@test.com';
 const stranger = 'gate-stranger@test.com';
@@ -29,7 +24,7 @@ const viewer = 'gate-viewer@test.com';
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
+  api = createApi({ env: mockEnv(db) });
   await seedTrip(db, { id: TRIP, owner, days: 1 });
   await seedUser(db, stranger);
   await seedUser(db, viewer);
@@ -37,25 +32,25 @@ beforeAll(async () => {
     .bind(userIdFor(viewer), TRIP).run();
 });
 
-type Row = { name: string; handler: unknown; method: string; params: Record<string, string>; body?: unknown };
+afterAll(async () => {
+  await cleanupTrips(db, [TRIP]);
+  await disposeMiniflare();
+});
+
+type Row = { name: string; method: string; path: string; body?: unknown };
 const rows: Row[] = [
-  { name: 'POST /requests', handler: postRequest, method: 'POST', params: {}, body: { tripId: TRIP, message: 'hi' } },
-  { name: 'POST /trips/:id/days/:num/entries', handler: postEntry, method: 'POST', params: { id: TRIP, num: '1' }, body: { title: 'x' } },
-  { name: 'PATCH /trips/:id/segments/:sid', handler: patchSegment, method: 'PATCH', params: { id: TRIP, sid: '1' }, body: {} },
-  { name: 'PATCH /trips/:id/notes/:section/:rowId/maintenance', handler: patchMaintenance, method: 'PATCH', params: { id: TRIP, section: 'pretrip', rowId: '1' }, body: {} },
-  { name: 'DELETE /trips/:id/notes/:type/exclusions/:exclusionId', handler: deleteExclusion, method: 'DELETE', params: { id: TRIP, type: 'tips', exclusionId: '1' } },
-  { name: 'PATCH /trips/:id/shares/:shareId', handler: patchShare, method: 'PATCH', params: { id: TRIP, shareId: '1' }, body: {} },
-  { name: 'DELETE /trips/:id/shares/:shareId', handler: deleteShare, method: 'DELETE', params: { id: TRIP, shareId: '1' } },
+  { name: 'POST /requests', method: 'POST', path: '/api/requests', body: { tripId: TRIP, message: 'hi' } },
+  { name: 'POST /trips/:id/days/:num/entries', method: 'POST', path: `/api/trips/${TRIP}/days/1/entries`, body: { title: 'x' } },
+  { name: 'PATCH /trips/:id/segments/:sid', method: 'PATCH', path: `/api/trips/${TRIP}/segments/1`, body: {} },
+  { name: 'PATCH /trips/:id/notes/:section/:rowId/maintenance', method: 'PATCH', path: `/api/trips/${TRIP}/notes/pretrip/1/maintenance`, body: {} },
+  { name: 'DELETE /trips/:id/notes/:type/exclusions/:exclusionId', method: 'DELETE', path: `/api/trips/${TRIP}/notes/tips/exclusions/1` },
+  { name: 'PATCH /trips/:id/shares/:shareId', method: 'PATCH', path: `/api/trips/${TRIP}/shares/1`, body: {} },
+  { name: 'DELETE /trips/:id/shares/:shareId', method: 'DELETE', path: `/api/trips/${TRIP}/shares/1` },
 ];
 
 describe.each([['陌生人', stranger], ['viewer', viewer]])('%s 寫入別人的行程 → 403', (_label, email) => {
   it.each(rows)('$name', async (r) => {
-    const res = await callHandler(r.handler as never, mockContext({
-      request: jsonRequest(`https://x/api/${TRIP}`, r.method, r.body),
-      env,
-      auth: mockAuth({ email }),
-      params: r.params,
-    }));
+    const res = await api.request(r.method, r.path, { as: email, json: r.body });
     expect(res.status).toBe(403);
   });
 });
