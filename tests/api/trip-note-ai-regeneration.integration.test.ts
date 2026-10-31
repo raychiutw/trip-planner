@@ -517,3 +517,61 @@ describe('GET AI state', () => {
     ).bind(requestId).first()).toMatchObject({ status: 'failed' });
   });
 });
+
+describe('權限與版本檢查（補強既有行為的守門）', () => {
+  const strangerEmail = `${PREFIX}-stranger@note-ai.test`;
+
+  it('非行程成員不能讀 AI state／排除清單，也不能維護、新增或刪除筆記', async () => {
+    const tripId = await freshTrip();
+    await seedUser(db, strangerEmail);
+    const aiRow = await db.prepare(
+      `INSERT INTO trip_pretrip_notes
+         (trip_id, title, content, ai_generated, ai_source, origin, managed_by, semantic_key)
+       VALUES (?, 'AI 提醒', '原內容', 1, 'general-tips', 'ai', 'ai', 'tips:x') RETURNING id, version`,
+    ).bind(tripId).first<{ id: number; version: number }>();
+    const contact = await db.prepare(
+      `INSERT INTO trip_emergency_contacts
+         (trip_id, name, phone, kind, ai_generated, origin, managed_by, semantic_key)
+       VALUES (?, '日本警察', '110', 'police', 1, 'ai', 'ai', 'emergency:police') RETURNING id`,
+    ).bind(tripId).first<{ id: number }>();
+    const stranger = (method: string, path: string, json?: unknown) =>
+      api.request(method, path, { as: strangerEmail, json });
+
+    expect((await stranger('GET', `/api/trips/${tripId}/notes/ai-state`)).status).toBe(403);
+    expect((await stranger('GET', `/api/trips/${tripId}/notes/emergency/exclusions`)).status).toBe(403);
+    expect((await stranger('PATCH', `/api/trips/${tripId}/notes/pretrip/${aiRow!.id}/maintenance`, {
+      managedBy: 'human', expectedVersion: aiRow!.version,
+    })).status).toBe(403);
+    expect((await stranger('POST', `/api/trips/${tripId}/notes/pretrip`, { title: '入侵', content: 'x' })).status).toBe(403);
+    expect((await stranger('DELETE', `/api/trips/${tripId}/notes/emergency/${contact!.id}`)).status).toBe(403);
+
+    // 被擋下的請求不得改動資料
+    expect(await db.prepare('SELECT managed_by, version FROM trip_pretrip_notes WHERE id = ?').bind(aiRow!.id).first())
+      .toEqual({ managed_by: 'ai', version: aiRow!.version });
+    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_pretrip_notes WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(1);
+    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_emergency_contacts WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(1);
+    expect((await db.prepare('SELECT COUNT(*) AS n FROM trip_note_ai_exclusions WHERE trip_id = ?').bind(tripId).first<{ n: number }>())!.n).toBe(0);
+  });
+
+  it('未帶 token 讀 AI state 回 401', async () => {
+    const tripId = await freshTrip();
+    expect((await api.get(`/api/trips/${tripId}/notes/ai-state`)).status).toBe(401);
+  });
+
+  it('維護歸屬帶過期的 expectedVersion 回 409 STALE_ENTRY，且不改動資料', async () => {
+    const tripId = await freshTrip();
+    const aiRow = await db.prepare(
+      `INSERT INTO trip_pretrip_notes
+         (trip_id, title, content, ai_generated, ai_source, origin, managed_by, semantic_key)
+       VALUES (?, 'AI 提醒', '原內容', 1, 'general-tips', 'ai', 'ai', 'tips:x') RETURNING id, version`,
+    ).bind(tripId).first<{ id: number; version: number }>();
+
+    const stale = await owner('PATCH', `/api/trips/${tripId}/notes/pretrip/${aiRow!.id}/maintenance`, {
+      managedBy: 'human', expectedVersion: aiRow!.version + 5,
+    });
+    expect(stale.status).toBe(409);
+    expect(((await stale.json()) as any).error.code).toBe('STALE_ENTRY');
+    expect(await db.prepare('SELECT managed_by, version FROM trip_pretrip_notes WHERE id = ?').bind(aiRow!.id).first())
+      .toEqual({ managed_by: 'ai', version: aiRow!.version });
+  });
+});

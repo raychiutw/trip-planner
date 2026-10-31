@@ -25,7 +25,8 @@ let db: D1Database;
 let env: Env;
 let api: Api;
 let serviceToken: string;
-const tripId = `${PREFIX}-trip-a`;
+const TRIP_A = `${PREFIX}-trip-a`;
+const tripId = TRIP_A;
 const ownerEmail = `${PREFIX}-owner@hook.test`;
 
 beforeAll(async () => {
@@ -42,7 +43,7 @@ afterAll(async () => {
   await disposeMiniflare();
 });
 
-async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency'): Promise<{ requestId: number; jobId: number }> {
+async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency', tripId = TRIP_A): Promise<{ requestId: number; jobId: number }> {
   const req = await db
     .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
     .bind(tripId, `[行程筆記-${docType}] test`, ownerEmail)
@@ -335,6 +336,37 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
 
       const rows = await fetchAudit('trip_pretrip_notes', requestId);
       expect(rows.length).toBe(0);
+    });
+  });
+
+  // 補強：PATCH /requests/:id 的授權（companion service token 或對該 trip 有寫權的使用者）
+  describe('授權', () => {
+    it('非成員的使用者與僅有維運 scope 的 token 都不能回報完成，job 與筆記不變', async () => {
+      const authTrip = `${PREFIX}-auth-1`;
+      await seedTrip(db, { id: authTrip, owner: ownerEmail });
+      const { requestId, jobId } = await createJobAndRequest('tips', authTrip);
+      const body = { status: 'completed', reply: JSON.stringify([{ title: '入侵項目', content: 'x', section: '一般' }]) };
+      const strangerEmail = `${PREFIX}-stranger@hook.test`;
+      await seedUser(db, strangerEmail);
+      const asStranger = await api.request('PATCH', `/api/requests/${requestId}`, { as: strangerEmail, json: body });
+      expect(asStranger.status).toBe(403);
+      const opsOnly = await serviceTokenFor(db, { clientId: 's14-ops', scopes: ['ops:maps'] });
+      const asOps = await api.request('PATCH', `/api/requests/${requestId}`, { bearer: opsOnly, json: body });
+      expect(asOps.status).toBe(403);
+
+      expect(await db.prepare('SELECT status FROM trip_note_ai_jobs WHERE id = ?').bind(jobId).first()).toEqual({ status: 'pending' });
+      expect(await db.prepare('SELECT status FROM trip_requests WHERE id = ?').bind(requestId).first()).not.toEqual({ status: 'completed' });
+      expect(await db.prepare("SELECT COUNT(*) AS n FROM trip_pretrip_notes WHERE trip_id = ? AND title = '入侵項目'").bind(authTrip).first()).toEqual({ n: 0 });
+    });
+
+    it('未帶 token 回 401', async () => {
+      const authTrip = `${PREFIX}-auth-2`;
+      await seedTrip(db, { id: authTrip, owner: ownerEmail });
+      const { requestId } = await createJobAndRequest('tips', authTrip);
+      expect((await api.request('PATCH', `/api/requests/${requestId}`, {
+        headers: { Origin: 'https://trip-planner-dby.pages.dev' }, // 通過 CSRF Origin 檢查，才輪到認證
+        json: { status: 'failed' },
+      })).status).toBe(401);
     });
   });
 });
