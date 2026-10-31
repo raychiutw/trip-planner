@@ -5,7 +5,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [2.57.117] - 2026-10-31
 
-> ⚠️ **尚未達到可上線狀態**：後端與契約已完成並通過全部自動測試，但「Google 是否真的回傳 `auth_time`」尚未在真實環境驗證。若 Google 不回傳，純 Google 帳號的刪除會 fail-closed 而無法完成（舊的「只輸入 DELETE」路徑已移除）。見 ADR-0009 的 Consequences。
+> ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。
 
 ### Changed
 - **刪除帳號需要近期重新驗證身分**：純 Google 登入的帳號不能再只靠登入狀態加輸入 `DELETE` 刪除，必須先完成同一個 Google 帳號的重新驗證（最多 5 分鐘內、一次性）。有密碼的帳號維持原本的密碼確認。Web 帳號頁與 mobile app 共用同一套規則；取消、逾時、驗證到別的帳號都會保留帳號與行程。
@@ -23,7 +23,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 新增守門測試：challenge 狀態矩陣（非 verified／過期／別人的／client 不符、並行只有一個成功、抹除失敗後還原、取消後 callback 重放不能復活）、migration 冪等與 rollback（含真實 snake_case token 形狀）、`.well-known` 與 `_headers`。每個守門都做過 mutation 驗證。
 - Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
 - 已知且刻意不在本 PR 處理：其他裝置的 session cookie 在刪帳號後仍有效（既有行為，`session_devices` 是刪除而非撤銷）、刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
-- 上線前必做：（1）UAT 實測 Google 是否回傳 `auth_time`，否則需決定其他新鮮度證明；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 套用 0097；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
+- 上線前必做：（1）日後啟用 Google 登入前，實測 Google 是否回傳 `auth_time`（目前休眠，不阻擋本次）；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 的 0097 已於 2026-10-31 套用；（5）受控帳號刪除 smoke（拒絕、逾時、重放、跨帳號／grant、rollback）。
 
 ## [2.57.116] - 2026-10-31
 

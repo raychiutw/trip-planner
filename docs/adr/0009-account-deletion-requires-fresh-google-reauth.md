@@ -40,7 +40,7 @@ Google Play 與 Apple 都要求 **app 內**可發起刪除，所以 mobile 必�
 
 ## Consequences
 
-- ⚠️ **最大風險：Google 的 OIDC discovery `claims_supported` 不含 `auth_time`**（2026-10-30 實查）。若 Google 不回傳，純 Google 帳號會永遠 fail-closed、**刪不了帳號**（違反商店要求）。上線前必須在 UAT 做真實 Google 往返；若不回，新鮮度證明要另做產品決策（例如 `prompt=select_account` 加 `iat`，強度較弱，需 owner 同意）。
+- ⚠️ **啟用 Google 登入前的風險：Google 的 OIDC discovery `claims_supported` 不含 `auth_time`**（2026-10-30 實查）。Google 文件說明它要在 Google Auth Platform 的 Advanced Settings 啟用「Session age claims」，且 app 需 In production 與 Verified；`max_age` 則沒有文件。若 Google 不回傳，純 Google 帳號會永遠 fail-closed、**刪不了帳號**（違反商店要求）。2026-10-31 實查：prod 沒有設 `GOOGLE_CLIENT_ID`（`/api/oauth/login/google` 回 503、登入頁不顯示 Google 按鈕），`auth_identities` 只有 `local` 45 筆，沒有任何 Google 帳號，所以這條路徑目前不影響任何人。因此現在是休眠路徑；啟用 Google 登入前必須先做真實 Google 往返；若不回，新鮮度證明要另做產品決策（例如 `prompt=select_account` 加 `iat`，強度較弱，需 owner 同意）。
 - 已知且刻意不在這次處理：刪帳號後**其他裝置的 session cookie 仍有效**（`session_devices` 是刪除而非標記撤銷，`getSessionUser` 對缺列視為未撤銷）；密碼分支沒有節流；一個 5 分鐘生命週期涵蓋整個 mobile 流程（慢登入可能以 `failed` 收場，需重建）；`started` 在少數路徑可能卡到過期（缺 state、缺環境設定）；`restoreDeleteReauth` 沒有擁有者檢查，極窄的競態。
 - 瀏覽器重新驗證的起點是 `GET`（可被預取或第三方頁面觸發），受害者仍須完成真實 Google 驗證，只會造成自己的 challenge 被燒掉。
 - 舊版 app 或快取的 SPA 送 `{confirm}` 會得到 403，只顯示通用的「刪除失敗」。
