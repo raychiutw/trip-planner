@@ -4,9 +4,34 @@
  */
 import { Miniflare } from 'miniflare';
 import * as fs from 'node:fs';
+import { createRequire } from 'node:module';
 import * as path from 'node:path';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
+
+/**
+ * 讓測試用 D1 的 HTTP 連線可以複用。
+ *
+ * Miniflare 的 DispatchFetchDispatcher 對每個送往 workerd 的請求都設 `reset: true`（Connection: close），
+ * 每個 D1 語句因此各開一條 TCP 連線。整套約 2 萬條語句，macOS 的暫時埠（約 1.6 萬個、TIME_WAIT 約 30 秒）
+ * 會被用光，隨機出現 EADDRNOTAVAIL（fetch failed）。乾淨 master 連跑 5 次：34～90 條失敗；套用後 5/5 全綠。
+ * 這個行程裡的 undici Pool 只服務 Miniflare，所以只在這裡關掉；用 Miniflare 解析 undici 以確保是同一份模組。
+ * 用 Symbol 防止 isolate:false 下被重複包裝。
+ */
+const PATCHED = Symbol.for('tripline.test.pool-keep-alive');
+{
+  const { Pool } = createRequire(createRequire(import.meta.url).resolve('miniflare'))('undici') as {
+    Pool: { prototype: { dispatch: (opts: { reset?: boolean }, handler: unknown) => boolean } & Record<symbol, unknown> };
+  };
+  if (!Pool.prototype[PATCHED]) {
+    const dispatch = Pool.prototype.dispatch;
+    Pool.prototype.dispatch = function (this: unknown, opts, handler) {
+      if (opts?.reset) opts.reset = false;
+      return dispatch.call(this, opts, handler);
+    };
+    Pool.prototype[PATCHED] = true;
+  }
+}
 
 // 快取 migration SQL（整個 test run 不變）
 let _migrationFiles: string[] | null = null;
