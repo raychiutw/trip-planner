@@ -72,29 +72,31 @@ function jsonResponse(status: number, body: unknown, headers: Record<string, str
 
 async function dispatch(request: Request, env: Env): Promise<Response> {
   const matched = matchRoute(new URL(request.url).pathname);
-  if (!matched) return jsonResponse(404, { error: { code: 'DATA_NOT_FOUND' } });
-
-  const module = await matched.route.load();
+  const module = matched ? await matched.route.load() : null;
   const method = request.method.toUpperCase();
-  const handler = module[METHOD_EXPORTS[method] ?? ''] ?? module.onRequest;
-  if (!handler) {
+  const handler = module ? (module[METHOD_EXPORTS[method] ?? ''] ?? module.onRequest) : undefined;
+
+  // Pages 的 _middleware 對 /api/* 底下所有請求都先跑，包含找不到路由或方法的；
+  // 它的 next() 才是落到路由（沒有就走下面的 404／405）。
+  const fallthrough = (): Response => {
+    if (!module) return jsonResponse(404, { error: { code: 'DATA_NOT_FOUND' } });
     const allow = Object.entries(METHOD_EXPORTS).filter(([, name]) => module[name]).map(([m]) => m).join(', ');
     return jsonResponse(405, { error: { code: 'METHOD_NOT_ALLOWED' } }, { Allow: allow });
-  }
+  };
 
   const pending: Promise<unknown>[] = [];
   const ctx = {
     request,
     env,
-    params: matched.params,
+    params: matched?.params ?? {},
     data: {} as Record<string, unknown>,
     waitUntil: (p: Promise<unknown>) => { pending.push(p); },
     passThroughOnException: () => {},
     functionPath: new URL(request.url).pathname,
-    next: () => Promise.resolve(handler(ctx)),
+    next: () => Promise.resolve(handler ? handler(ctx) : fallthrough()),
   };
   const middleware = (await loadMiddleware()).onRequest;
-  const response = middleware ? await middleware(ctx) : await handler(ctx);
+  const response = middleware ? await middleware(ctx) : await ctx.next();
   // 讓 waitUntil 的寫入（api_logs 等）在回應回傳前落地，測試才不會有時序問題
   await Promise.allSettled(pending);
   return response;

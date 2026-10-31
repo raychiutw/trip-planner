@@ -70,6 +70,21 @@ describe('進程內：經真實路由與 middleware', () => {
     expect(resp.status).toBe(404);
   });
 
+  it('middleware 先於路由：找不到路徑時仍先經過 CSRF 檢查（與 Pages 一致）', async () => {
+    const api = createApi({ env });
+    const resp = await api.request('POST', '/api/no-such-route', { json: {} });
+    expect(resp.status).toBe(403);
+  });
+
+  it('middleware 先於路由：方法不支援時，companion 範圍檢查仍先擋下', async () => {
+    const api = createApi({ env });
+    const resp = await api.request('DELETE', '/api/trips/http-trip/days', {
+      as: OWNER,
+      headers: { 'X-Request-Scope': 'companion' },
+    });
+    expect(resp.status).toBe(403);
+  });
+
   it('具體路徑優先於動態路徑：/trips/import 不被當成 /trips/:id', async () => {
     const api = createApi({ env });
     const resp = await api.get('/api/trips/import', { as: OWNER });
