@@ -79,7 +79,8 @@ describe('v2.33.43 round 5c — entries/[eid] catch re-classify', () => {
     const day2 = await getDayId(db, TRIP, 2);
     const a = await seedEntry(db, day2, { sortOrder: 1 });
     const b = await seedEntry(db, day2, { sortOrder: 2 });
-    await db.prepare('CREATE UNIQUE INDEX tmp_r5c_entries_unique ON trip_entries(day_id, sort_order)').run();
+    // 只對本測試的那一天建 partial index：共用 D1 裡其他檔的資料可能有重複 (day_id, sort_order)，全表索引會建立失敗
+    await db.prepare(`CREATE UNIQUE INDEX tmp_r5c_entries_unique ON trip_entries(day_id, sort_order) WHERE day_id = ${day2}`).run();
     try {
       const res = await api.request('PATCH', `${BASE}/api/trips/${TRIP}/entries/${b}`, {
         as: OWNER,
