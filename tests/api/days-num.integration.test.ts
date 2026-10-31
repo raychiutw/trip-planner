@@ -183,14 +183,15 @@ describe('PUT /api/trips/:id/days/:num', () => {
         timeline: [
           {
             time: '09:00',
-            name: '那覇空港',
+            // 專屬名稱（dn- 前綴）：對照組的消毒副本裡有真實 POI（如「那覇空港」），不能假設資料庫裡沒有同名的
+            name: 'dn-那覇空港',
             poi_type: 'transport',
             // Migration 0045: maps dropped, google_rating renamed to rating.
             rating: 4.2,
           },
           {
             time: '12:00',
-            name: '首里城',
+            name: 'dn-首里城',
             maps: 'https://www.google.com/maps/search/首里城',
           },
         ],
@@ -212,13 +213,13 @@ describe('PUT /api/trips/:id/days/:num', () => {
 
     // Migration 0045: pois.maps dropped (use mapsUrl helper); google_rating renamed to rating.
     const transportPoi = await db.prepare(
-      "SELECT id, rating FROM pois WHERE name = '那覇空港' AND type = 'transport'",
+      "SELECT id, rating FROM pois WHERE name = 'dn-那覇空港' AND type = 'transport'",
     ).first() as { id: number; rating: number } | null;
     expect(transportPoi).not.toBeNull();
     expect(transportPoi!.rating).toBe(4.2);
 
     const attractionPoi = await db.prepare(
-      "SELECT id FROM pois WHERE name = '首里城' AND type = 'attraction'",
+      "SELECT id FROM pois WHERE name = 'dn-首里城' AND type = 'attraction'",
     ).first();
     expect(attractionPoi).not.toBeNull();
   });
@@ -227,7 +228,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
     const resp = await api.request('GET', '/api/trips/trip-dn/days/3');
     expect(resp.status).toBe(200);
     const data = await resp.json() as { timeline: Array<{ master: { name: string; type: string } | null; stopPois?: Array<{ type: string; sortOrder: number }> }> };
-    const transportEntry = data.timeline.find((e) => e.master?.name === '那覇空港');
+    const transportEntry = data.timeline.find((e) => e.master?.name === 'dn-那覇空港');
     expect(transportEntry).toBeDefined();
     expect(Object.prototype.hasOwnProperty.call(transportEntry as Record<string, unknown>, 'title')).toBe(false);
     expect(transportEntry!.master).not.toBeNull();

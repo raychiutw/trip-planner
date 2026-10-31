@@ -5,6 +5,7 @@
 import { Miniflare } from 'miniflare';
 import * as fs from 'node:fs';
 import { createRequire } from 'node:module';
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
@@ -103,16 +104,36 @@ async function hasMigratedSchema(db: D1Database): Promise<boolean> {
 /**
  * 取得共用 D1 database（lazy init + migration 只跑一次）
  */
+/**
+ * 對照組模式（拆分 T6）：CONTROL_GROUP_DIR 指向 `node scripts/control-group/build.ts` 的產物時，
+ * 測試改跑在「消毒過的 staging 資料副本」上，而不是空的 D1。只連本機這份消毒副本，
+ * 不會連任何遠端資料庫（Miniflare 全程在本機）。測試會寫入，所以每個 process 用暫存複製，原件不動。
+ */
+function controlGroupPersist(): string | null {
+  const dir = process.env.CONTROL_GROUP_DIR;
+  if (!dir) return null;
+  const source = path.join(path.resolve(dir), 'd1');
+  if (!fs.existsSync(source)) {
+    throw new Error(`CONTROL_GROUP_DIR=${dir} 底下沒有 d1/；先跑 node scripts/control-group/build.ts`);
+  }
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'control-group-'));
+  fs.cpSync(source, copy, { recursive: true });
+  process.on('exit', () => fs.rmSync(copy, { recursive: true, force: true }));
+  return copy;
+}
+
 export async function createTestDb(): Promise<D1Database> {
   if (!_cache.__tp_mf) {
+    const persist = controlGroupPersist();
     _cache.__tp_mf = new Miniflare({
       modules: true,
       script: 'export default { fetch() { return new Response("ok"); } }',
       // Vitest's forks pool can re-evaluate this module in separate workers.
       // Give each process an isolated in-memory D1 id so migrations never race
       // against a DB created by another worker.
-      d1Databases: { DB: `tripline-test-${process.pid}` },
-      d1Persist: false,
+      // 對照組模式的資料庫 id 固定為 control-group（與 build 時一致，才找得到同一個 sqlite 檔）。
+      d1Databases: { DB: persist ? 'control-group' : `tripline-test-${process.pid}` },
+      d1Persist: persist ?? false,
     });
   }
   if (!_cache.__tp_db) {
