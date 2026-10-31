@@ -13,7 +13,7 @@ import {
   clientIp,
   RATE_LIMITS,
 } from '../../functions/api/_rate_limit';
-import { createTestDb, disposeMiniflare } from './setup';
+import { createTestDb, disposeMiniflare } from '../api/setup';
 
 let db: D1Database;
 
