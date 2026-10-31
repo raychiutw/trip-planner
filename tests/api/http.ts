@@ -27,7 +27,8 @@ const METHOD_EXPORTS: Record<string, string> = {
 };
 
 // 延遲載入：只載入被請求到的路由，避免在 isolate:false 的單一 worker 裡把全部 handler 拉進共用的 module cache
-const files = import.meta.glob('../../functions/api/**/*.ts') as Record<string, () => Promise<Module>>;
+// 第二個樣式涵蓋 .well-known 這類點開頭的目錄（glob 預設會略過）
+const files = import.meta.glob(['../../functions/api/**/*.ts', '../../functions/api/**/.*/**/*.ts']) as Record<string, () => Promise<Module>>;
 
 /** `../../functions/api/trips/[id]/days.ts` → ['api','trips',':id','days']；底線開頭的檔案不是路由。 */
 function toSegments(file: string): string[] | null {

@@ -1,61 +1,43 @@
 /**
- * GET /api/oauth/login/google unit test — V2-P1
+ * GET /api/oauth/login/google — V2-P1
+ * 走 HTTP 邊界（tests/api/http.ts）；暫存的 state 改驗真實 D1 的 oauth_models，不看 mock 呼叫形狀。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestGet } from '../../functions/api/oauth/login/google';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi } from './http';
 
-interface MockEnv {
-  GOOGLE_CLIENT_ID?: string;
-  DB?: {
-    prepare: ReturnType<typeof vi.fn>;
-  };
-}
+let db: D1Database;
 
-function makeEnv(opts: { clientId?: string } = {}): MockEnv {
-  const stmt = {
-    bind: vi.fn().mockReturnThis(),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-  };
-  return {
-    GOOGLE_CLIENT_ID: opts.clientId,
-    DB: { prepare: vi.fn().mockReturnValue(stmt) },
-  };
-}
-
-function makeContext(url: string, env: MockEnv): Parameters<typeof onRequestGet>[0] {
-  return {
-    request: new Request(url),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
-}
-
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+beforeAll(async () => {
+  db = await createTestDb();
 });
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+afterAll(disposeMiniflare);
 
+const api = (clientId?: string) => createApi({ env: mockEnv(db, clientId ? { GOOGLE_CLIENT_ID: clientId } : {}) });
+
+/** 從 Google authorize URL 取出 state，再到 D1 讀出對應的暫存資料。 */
+async function storedState(res: Response): Promise<{ payload: Record<string, unknown>; expiresAt: number }> {
+  const state = new URL(res.headers.get('Location')!).searchParams.get('state')!;
+  const row = await db
+    .prepare("SELECT payload, expires_at FROM oauth_models WHERE name = 'OAuthState' AND id = ?")
+    .bind(state)
+    .first<{ payload: string; expires_at: number }>();
+  expect(row).not.toBeNull();
+  return { payload: JSON.parse(row!.payload), expiresAt: row!.expires_at };
+}
 
 describe('GET /api/oauth/login/google', () => {
   it('returns 503 OAUTH_NOT_CONFIGURED when GOOGLE_CLIENT_ID missing', async () => {
-    const env = makeEnv({}); // no clientId
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/login/google', env));
+    const res = await api().get('https://x.com/api/oauth/login/google');
     expect(res.status).toBe(503);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('OAUTH_NOT_CONFIGURED');
   });
 
   it('redirects 302 to Google authorize URL when configured', async () => {
-    const env = makeEnv({ clientId: 'test-client-id' });
-    const res = await onRequestGet(makeContext('https://trip-planner-dby.pages.dev/api/oauth/login/google', env));
+    const res = await api('test-client-id').get('https://trip-planner-dby.pages.dev/api/oauth/login/google');
     expect(res.status).toBe(302);
     const location = res.headers.get('Location');
     expect(location).toMatch(/^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/);
@@ -69,52 +51,36 @@ describe('GET /api/oauth/login/google', () => {
   });
 
   it('stores state in D1 oauth_models with 5min TTL', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    await onRequestGet(makeContext('https://x.com/api/oauth/login/google', env));
-
-    expect(env.DB!.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO oauth_models'));
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    expect(stmt.bind).toHaveBeenCalledWith(
-      'OAuthState',
-      expect.any(String), // state
-      expect.stringContaining('"provider":"google"'),
-      Date.now() + 300 * 1000, // 5min TTL
-    );
+    const before = Date.now();
+    const res = await api('gid').get('https://x.com/api/oauth/login/google');
+    const after = Date.now();
+    const { payload, expiresAt } = await storedState(res);
+    expect(payload.provider).toBe('google');
+    expect(expiresAt).toBeGreaterThanOrEqual(before + 300 * 1000);
+    expect(expiresAt).toBeLessThanOrEqual(after + 300 * 1000);
   });
 
   it('open redirect protection: redirect_after_login must start with single /', async () => {
-    const env = makeEnv({ clientId: 'gid' });
     // open redirect attempt: //evil.com → 應 fallback default
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/login/google?redirect_after_login=//evil.com/steal', env));
+    const res = await api('gid').get('https://x.com/api/oauth/login/google?redirect_after_login=//evil.com/steal');
     expect(res.status).toBe(302);
-    // state stored 但 redirectAfterLogin 應 = /manage default
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/manage');
+    expect((await storedState(res)).payload.redirectAfterLogin).toBe('/manage');
   });
 
   it('open redirect protection: absolute URL → fallback default', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/login/google?redirect_after_login=https://evil.com', env));
+    const res = await api('gid').get('https://x.com/api/oauth/login/google?redirect_after_login=https://evil.com');
     expect(res.status).toBe(302);
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/manage');
+    expect((await storedState(res)).payload.redirectAfterLogin).toBe('/manage');
   });
 
   it('valid same-origin redirect_after_login preserved', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    await onRequestGet(makeContext('https://x.com/api/oauth/login/google?redirect_after_login=/trip/test-trip', env));
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/trip/test-trip');
+    const res = await api('gid').get('https://x.com/api/oauth/login/google?redirect_after_login=/trip/test-trip');
+    expect((await storedState(res)).payload.redirectAfterLogin).toBe('/trip/test-trip');
   });
 
   it('state is unique across calls (32 bytes random)', async () => {
-    const env1 = makeEnv({ clientId: 'gid' });
-    const env2 = makeEnv({ clientId: 'gid' });
-    const res1 = await onRequestGet(makeContext('https://x.com/api/oauth/login/google', env1));
-    const res2 = await onRequestGet(makeContext('https://x.com/api/oauth/login/google', env2));
+    const res1 = await api('gid').get('https://x.com/api/oauth/login/google');
+    const res2 = await api('gid').get('https://x.com/api/oauth/login/google');
     const state1 = new URL(res1.headers.get('Location')!).searchParams.get('state');
     const state2 = new URL(res2.headers.get('Location')!).searchParams.get('state');
     expect(state1).not.toBe(state2);
