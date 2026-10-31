@@ -8,23 +8,26 @@
  *   - Debounce — 30s 內同 trip+type pending → return existing job (no double request)
  *   - trip_requests.message 含對應 prefix [行程筆記-{type}]
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedTrip, seedUser } from './helpers';
-import { onRequestPost as postGenerate } from '../../functions/api/trips/[id]/notes/[type]/generate';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTripNotes } from './cleanup-trip-notes';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
-const tripA = 'trip-gen-a';
-const tripB = 'trip-gen-b';
-const tripC = 'trip-gen-c';
-const ownerEmail = 'owner@gen.test';
-const strangerEmail = 'stranger@gen.test';
+let api: Api;
+const tripA = 's13-notes-gen-a';
+const tripB = 's13-notes-gen-b';
+const tripC = 's13-notes-gen-c';
+const ownerEmail = 'owner@s13-notes-gen.test';
+const strangerEmail = 'stranger@s13-notes-gen.test';
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   await seedUser(db, ownerEmail);
   await seedUser(db, strangerEmail);
   await seedTrip(db, { id: tripA, owner: ownerEmail });
@@ -32,16 +35,13 @@ beforeAll(async () => {
   await seedTrip(db, { id: tripC, owner: ownerEmail });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTripNotes(db, ['s13-notes-gen-%'], ['%@s13-notes-gen.test']);
+  await disposeMiniflare();
+});
 
-async function callGen(tripId: string, type: string, email = ownerEmail) {
-  const ctx = mockContext({
-    request: jsonRequest(`https://test/api/trips/${tripId}/notes/${type}/generate`, 'POST', {}),
-    env,
-    auth: mockAuth({ email }),
-    params: { id: tripId, type },
-  });
-  return callHandler(postGenerate, ctx);
+function callGen(tripId: string, type: string, email = ownerEmail) {
+  return api.request('POST', `/api/trips/${tripId}/notes/${type}/generate`, { as: email, json: {} });
 }
 
 describe('POST /api/trips/:id/notes/:type/generate', () => {
@@ -134,5 +134,58 @@ describe('POST /api/trips/:id/notes/:type/generate', () => {
       status: 'timed_out',
       error_code: 'NOTES_AI_JOB_STALE',
     });
+  });
+});
+
+// 對外觸發（Mac Mini api-server）屬外部邊界：以 stub 取代全域 fetch，斷言送出內容與對回應的處理
+describe('POST /api/trips/:id/notes/:type/generate — 對外觸發 api-server', () => {
+  const tripT = 's13-notes-gen-trigger';
+  const triggerEnv = () => mockEnv(db, { TRIPLINE_API_URL: 'https://api.example.test', TRIPLINE_API_SECRET: 'fake-secret' } as Partial<Env>);
+
+  beforeAll(async () => {
+    await seedTrip(db, { id: tripT, owner: ownerEmail });
+  });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  async function emailEvents(status: string) {
+    const rs = await db.prepare(
+      `SELECT diff_json AS diffJson FROM audit_log WHERE trip_id = ? AND table_name = 'email' ORDER BY id ASC`,
+    ).bind(tripT).all<{ diffJson: string }>();
+    return (rs.results ?? []).map((r) => JSON.parse(r.diffJson)).filter((d) => d.status === status);
+  }
+
+  it('成功 → POST {TRIPLINE_API_URL}/trigger?source=api，帶 Bearer secret 與 { requestId }', async () => {
+    const stub = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', stub);
+    const res = await createApi({ env: triggerEnv() })
+      .request('POST', `/api/trips/${tripT}/notes/tips/generate`, { as: ownerEmail, json: {} });
+    expect(res.status).toBe(202);
+    const body = await res.json() as any;
+    expect(stub).toHaveBeenCalledTimes(1);
+    const [url, init] = stub.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.example.test/trigger?source=api');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer fake-secret');
+    expect(JSON.parse(init.body as string)).toEqual({ requestId: body.requestId });
+    expect(await emailEvents('trigger-failed')).toEqual([]);
+  });
+
+  it('api-server 回非 2xx → 仍回 202（不影響使用者），並記一筆 trigger-failed', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('boom', { status: 500 })));
+    const res = await createApi({ env: triggerEnv() })
+      .request('POST', `/api/trips/${tripT}/notes/emergency/generate`, { as: ownerEmail, json: {} });
+    expect(res.status).toBe(202);
+    const failed = await emailEvents('trigger-failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0].error).toContain('Trigger responded 500');
+  });
+
+  it('未設定 TRIPLINE_API_URL → 不對外呼叫，記一筆 config-missing', async () => {
+    const stub = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', stub);
+    const res = await api.request('POST', `/api/trips/${tripT}/notes/lodging-tips/generate`, { as: ownerEmail, json: {} });
+    expect(res.status).toBe(202);
+    expect(stub).not.toHaveBeenCalled();
+    expect(await emailEvents('config-missing')).toHaveLength(1);
   });
 });

@@ -1,27 +1,42 @@
+/**
+ * clone 分享行程（POST /api/share/:token/clone）— 走 HTTP 邊界（tests/api/http.ts）。
+ * 建立端點與 clone 端點都經過 middleware 與真實 bearer token；寫入失敗用 D1 Proxy 注入。
+ *
+ * 共用 D1：email／trip／POI 一律用 `s15-` 前綴，用專屬 CF-Connecting-IP 隔離 per-IP 限流桶，結束時只清自己的資料。
+ */
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, getDayId, jsonRequest, mockAuth, mockContext, mockEnv, mockServiceAuth, seedEntry, seedEntryAlternate, seedHotelForDay, seedPoi, seedTrip, seedUser, userIdFor } from './helpers';
-import { onRequestPost as createShare } from '../../functions/api/trips/[id]/shares';
-import { onRequestPost as cloneShare } from '../../functions/api/share/[token]/clone';
+import { getDayId, mockEnv, seedEntry, seedEntryAlternate, seedHotelForDay, seedPoi, seedTrip, seedUser, userIdFor } from './helpers';
+import { createApi } from './http';
+import { serviceToken } from './service-token';
+import { cleanupS15 } from './cleanup-shares';
 
 let db: D1Database;
 let token: string;
-const sourceId = 'clone-creation-source';
-const owner = 'clone-creation-owner@test.com';
+const sourceId = 's15-clone-creation-source';
+const owner = 's15-clone-creation-owner@test.com';
+const TEST_IP = '198.51.100.152';
+const ipHeaders = { 'CF-Connecting-IP': TEST_IP };
+const api = () => createApi({ env: mockEnv(db) });
+
+function createShare(tripId: string, body: Record<string, unknown>) {
+  return api().request('POST', `/api/trips/${tripId}/shares`, { as: owner, json: body });
+}
 
 beforeAll(async () => {
   db = await createTestDb();
+  await cleanupS15(db, [TEST_IP]);
   await seedTrip(db, { id: sourceId, owner, days: 1 });
   const dayId = await getDayId(db, sourceId, 1);
-  const firstPoi = await seedPoi(db, { name: 'clone-creation-first', type: 'attraction' });
-  const secondPoi = await seedPoi(db, { name: 'clone-creation-second', type: 'attraction' });
+  const firstPoi = await seedPoi(db, { name: 's15-clone-creation-first', type: 'attraction' });
+  const secondPoi = await seedPoi(db, { name: 's15-clone-creation-second', type: 'attraction' });
   const first = await seedEntry(db, dayId, { sortOrder: 1, poiId: firstPoi });
   const second = await seedEntry(db, dayId, { sortOrder: 2, poiId: secondPoi });
-  const alternate = await seedPoi(db, { name: 'clone-creation-alternate', type: 'restaurant' });
+  const alternate = await seedPoi(db, { name: 's15-clone-creation-alternate', type: 'restaurant' });
   await seedEntryAlternate(db, { entryId: first, poiId: alternate });
   await db.prepare("UPDATE trip_entry_pois SET description = '正選說明', note = '正選備註', reservation = '已預訂', reservation_url = 'https://example.com/booking' WHERE entry_id = ? AND sort_order = 1").bind(first).run();
   await db.prepare("UPDATE trip_entry_pois SET description = '備選說明', note = '備選備註', reservation = '候補' WHERE entry_id = ? AND sort_order = 2").bind(first).run();
-  const hotel = await seedPoi(db, { name: 'clone-creation-hotel', type: 'hotel' });
+  const hotel = await seedPoi(db, { name: 's15-clone-creation-hotel', type: 'hotel' });
   await seedHotelForDay(db, dayId, hotel);
   await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, version) VALUES (?, ?, ?, 'walking', 0)")
     .bind(sourceId, first, second).run();
@@ -30,13 +45,12 @@ beforeAll(async () => {
   await db.prepare("INSERT INTO trip_reservations (trip_id, kind, title) VALUES (?, 'restaurant', '晚餐')").bind(sourceId).run();
   await db.prepare("INSERT INTO trip_pretrip_notes (trip_id, section, title, content, ai_generated, ai_source) VALUES (?, 'general', '提醒', '帶護照', 1, 'imported')").bind(sourceId).run();
   await db.prepare("INSERT INTO trip_emergency_contacts (trip_id, name, phone) VALUES (?, '隱藏聯絡人', '0900')").bind(sourceId).run();
-  const share = await callHandler(createShare as never, mockContext({
-    request: jsonRequest(`https://x/api/trips/${sourceId}/shares`, 'POST', { visibleSections: ['flights', 'lodgings', 'reservations', 'pretrip'] }),
-    env: mockEnv(db), auth: mockAuth({ email: owner }), params: { id: sourceId },
-  }));
-  token = (await share.json() as { token: string }).token;
+  token = (await (await createShare(sourceId, { visibleSections: ['flights', 'lodgings', 'reservations', 'pretrip'] })).json() as { token: string }).token;
 });
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupS15(db, [TEST_IP]);
+  await disposeMiniflare();
+});
 
 function failStatements(patterns: RegExp[]): D1Database {
   return new Proxy(db, { get(target, property) {
@@ -58,22 +72,19 @@ function failStatements(patterns: RegExp[]): D1Database {
   } });
 }
 
-async function clone(email: string, requestDb = db) {
+async function clone(email: string, requestDb = db, shareToken = token) {
   await seedUser(db, email);
-  return callHandler(cloneShare as never, mockContext({
-    request: jsonRequest(`https://x/api/share/${token}/clone`, 'POST'),
-    env: mockEnv(requestDb), auth: mockAuth({ email }), params: { token },
-  }));
+  return createApi({ env: mockEnv(requestDb) }).request('POST', `/api/share/${shareToken}/clone`, { as: email, headers: ipHeaders });
 }
 
 it('建立及補償都失敗時，回應可辨識清理未完成', async () => {
-  const response = await clone('clone-cleanup-fail@test.com', failStatements([/INSERT INTO trip_segments/, /DELETE FROM trips WHERE id/]));
+  const response = await clone('s15-clone-cleanup-fail@test.com', failStatements([/INSERT INTO trip_segments/, /DELETE FROM trips WHERE id/]));
   expect(response.status).toBeGreaterThanOrEqual(500);
   await expect(response.json()).resolves.toMatchObject({ error: { detail: expect.stringContaining('清理失敗') } });
 });
 
 it('複製可見內容並保留來源；新行程的 owner、POI 欄位、住宿與 segment 正確', async () => {
-  const email = 'clone-complete@test.com';
+  const email = 's15-clone-complete@test.com';
   const response = await clone(email);
   expect(response.status).toBe(201);
   const { tripId } = await response.json() as { tripId: string };
@@ -118,7 +129,7 @@ it.each([
   ['junction', /INSERT INTO trip_entry_pois/], ['hotel', /UPDATE trip_days SET hotel_poi_id/],
   ['segment', /INSERT INTO trip_segments/],
 ] as const)('%s 寫入失敗時不留下複製行程，來源行程仍可用', async (phase, sql) => {
-  const email = `clone-${phase}-fail@test.com`;
+  const email = `s15-clone-${phase}-fail@test.com`;
   const response = await clone(email, failStatements([sql]));
   expect(response.status).toBeGreaterThanOrEqual(500);
   const trip = await db.prepare('SELECT id FROM trips WHERE owner_user_id = ? AND data_source = ?')
@@ -128,11 +139,11 @@ it.each([
 });
 
 it('60 筆 entry 已分批提交後 segment 失敗會清理，重新複製仍完整成功', async () => {
-  const largeId = 'clone-large-source';
+  const largeId = 's15-clone-large-source';
   await seedTrip(db, { id: largeId, owner, days: 2 });
   const firstDay = await getDayId(db, largeId, 1);
   const secondDay = await getDayId(db, largeId, 2);
-  const poiId = await seedPoi(db, { name: 'clone-large-poi', type: 'attraction' });
+  const poiId = await seedPoi(db, { name: 's15-clone-large-poi', type: 'attraction' });
   const inserts = Array.from({ length: 60 }, (_, i) => db.prepare('INSERT INTO trip_entries (day_id, sort_order, start_time) VALUES (?, ?, ?) RETURNING id')
     .bind(i < 30 ? firstDay : secondDay, i % 30 + 1, '10:00'));
   const created = await db.batch(inserts);
@@ -140,17 +151,11 @@ it('60 筆 entry 已分批提交後 segment 失敗會清理，重新複製仍完
   await db.batch(entryIds.map((id) => db.prepare('INSERT INTO trip_entry_pois (entry_id, poi_id, sort_order) VALUES (?, ?, 1)').bind(id, poiId)));
   await db.prepare("INSERT INTO trip_segments (trip_id, from_entry_id, to_entry_id, mode, version) VALUES (?, ?, ?, 'walking', 0)")
     .bind(largeId, entryIds[30], entryIds[31]).run();
-  const share = await callHandler(createShare as never, mockContext({
-    request: jsonRequest(`https://x/api/trips/${largeId}/shares`, 'POST', {}),
-    env: mockEnv(db), auth: mockAuth({ email: owner }), params: { id: largeId },
-  }));
+  const share = await createShare(largeId, {});
   const largeToken = (await share.json() as { token: string }).token;
-  const email = 'clone-large@test.com';
+  const email = 's15-clone-large@test.com';
   await seedUser(db, email);
-  const run = (requestDb = db) => callHandler(cloneShare as never, mockContext({
-    request: jsonRequest(`https://x/api/share/${largeToken}/clone`, 'POST'),
-    env: mockEnv(requestDb), auth: mockAuth({ email }), params: { token: largeToken },
-  }));
+  const run = (requestDb = db) => clone(email, requestDb, largeToken);
   const auditsBefore = await db.prepare('SELECT COUNT(*) AS n FROM audit_log WHERE changed_by = ?')
     .bind(email).first<{ n: number }>();
   const failed = await run(failStatements([/INSERT INTO trip_segments/]));
@@ -177,38 +182,53 @@ it('60 筆 entry 已分批提交後 segment 失敗會清理，重新複製仍完
 });
 
 it('未知、撤銷、過期分享維持 404；未登入及受限身分不能複製', async () => {
-  const email = 'clone-access@test.com';
+  const email = 's15-clone-access@test.com';
   await seedUser(db, email);
-  const post = (shareToken: string, auth = mockAuth({ email })) => callHandler(cloneShare as never, mockContext({
-    request: jsonRequest(`https://x/api/share/${shareToken}/clone`, 'POST'),
-    env: mockEnv(db), auth, params: { token: shareToken },
-  }));
+  const post = (shareToken: string) => clone(email, db, shareToken);
   expect((await post('unknown-share-token-123456789')).status).toBe(404);
   for (const [state, value] of [['revoked_at', '2026-01-01'], ['expires_at', 1]] as const) {
-    const response = await callHandler(createShare as never, mockContext({
-      request: jsonRequest(`https://x/api/trips/${sourceId}/shares`, 'POST', {}),
-      env: mockEnv(db), auth: mockAuth({ email: owner }), params: { id: sourceId },
-    }));
+    const response = await createShare(sourceId, {});
     const share = await response.json() as { id: number; token: string };
     await db.prepare(`UPDATE trip_shares SET ${state} = ? WHERE id = ?`).bind(value, share.id).run();
     expect((await post(share.token)).status).toBe(404);
   }
-  expect((await post(token, mockServiceAuth())).status).toBe(401);
-  expect((await post(token, mockAuth({ email, restrictTrip: sourceId }))).status).toBe(403);
+  const cloneUrl = `/api/share/${token}/clone`;
+  // 未登入（有 Origin 的瀏覽器請求）、service token（無使用者）→ 401；單一行程受限 token → 403
+  const sameOrigin = { Origin: 'https://trip-planner-dby.pages.dev' };
+  expect((await api().request('POST', cloneUrl, { headers: { ...ipHeaders, ...sameOrigin } })).status).toBe(401);
+  expect((await api().request('POST', cloneUrl, { bearer: await serviceToken(db, ['companion']), headers: ipHeaders })).status).toBe(401);
+  expect((await api().request('POST', cloneUrl, { as: email, restrictTrip: sourceId, headers: ipHeaders })).status).toBe(403);
+});
+
+it('同一 IP 的 clone 次數達上限 → 429，且不建立行程（per-IP 預檢）', async () => {
+  const email = 's15-clone-ip-limit@test.com';
+  const blockedIp = '198.51.100.153';
+  await seedUser(db, email);
+  await db.prepare('INSERT INTO rate_limit_buckets (bucket_key, count, window_start, locked_until) VALUES (?, 31, ?, ?)')
+    .bind(`clone:ip:${blockedIp}`, Date.now(), Date.now() + 60_000).run();
+  try {
+    const response = await api().request('POST', `/api/share/${token}/clone`, { as: email, headers: { 'CF-Connecting-IP': blockedIp } });
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBeTruthy();
+    const n = await db.prepare("SELECT COUNT(*) AS n FROM trips WHERE owner_user_id = ? AND data_source = 'cloned'").bind(userIdFor(email)).first<{ n: number }>();
+    expect(n?.n).toBe(0);
+  } finally {
+    await db.prepare('DELETE FROM rate_limit_buckets WHERE bucket_key = ?').bind(`clone:ip:${blockedIp}`).run();
+  }
 });
 
 it('速率限制與行程數上限仍在建立前生效', async () => {
-  const limited = 'clone-rate-limit@test.com';
+  const limited = 's15-clone-rate-limit@test.com';
   await seedUser(db, limited);
   await db.prepare('INSERT INTO rate_limit_buckets (bucket_key, count, window_start, locked_until) VALUES (?, 11, ?, ?)')
     .bind(`clone:user:${userIdFor(limited)}`, Date.now(), Date.now() + 60_000).run();
   expect((await clone(limited)).status).toBe(429);
 
-  const capped = 'clone-cap@test.com';
+  const capped = 's15-clone-cap@test.com';
   await seedUser(db, capped);
   for (let start = 0; start < 1000; start += 50) {
     await db.batch(Array.from({ length: 50 }, (_, i) => db.prepare('INSERT INTO trips (id, name, owner_user_id) VALUES (?, ?, ?)')
-      .bind(`cap-${start + i}`, `Cap ${start + i}`, userIdFor(capped))));
+      .bind(`s15-cap-${start + i}`, `Cap ${start + i}`, userIdFor(capped))));
   }
   const response = await clone(capped);
   expect(response.status).toBe(400);
