@@ -1,19 +1,21 @@
 /**
  * Integration test — GET /api/trips/:id/days（含 summary + ?all=1 batch 模式）
+ * 走 HTTP 邊界（tests/api/http.ts），不直接呼叫 handler。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, seedTrip, seedEntry, seedPoi, seedHotelForDay, seedEntryAlternate, getDayId, callHandler } from './helpers';
-import { onRequestGet } from '../../functions/api/trips/[id]/days';
-import { onRequestGet as onRequestGetSingle } from '../../functions/api/trips/[id]/days/[num]';
+import { mockEnv, seedTrip, seedEntry, seedPoi, seedHotelForDay, seedEntryAlternate, getDayId } from './helpers';
+import { createApi, type Api } from './http';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
+let api: Api;
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
 
   // Trip A: 5 天，Day1 和 Day2 有 entries 和 canonical stopPois（測 cross-day isolation）
   await seedTrip(db, { id: 'trip-days', days: 5 });
@@ -76,12 +78,8 @@ afterAll(disposeMiniflare);
 
 describe('GET /api/trips/:id/days — summary 模式', () => {
   it('列出所有天（不含 timeline / hotel）', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days';
+    const resp = await api.get(path);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data).toHaveLength(5);
@@ -93,24 +91,16 @@ describe('GET /api/trips/:id/days — summary 模式', () => {
   });
 
   it('不存在的行程 → 404 (v2.33.41 security: trip read access 先檢查存在)', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/nope/days'),
-      env,
-      params: { id: 'nope' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/nope/days';
+    const resp = await api.get(path);
     expect(resp.status).toBe(404);
   });
 });
 
 describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   it('回傳完整 days 含 timeline / hotel / POI', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days?all=1';
+    const resp = await api.get(path);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data).toHaveLength(5);
@@ -122,12 +112,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('POI 不跨天洩漏（Day1/Day2 stopPois 嚴格隔離）', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days?all=1';
+    const resp = await api.get(path);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
@@ -142,12 +128,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('hotel context 正確歸類（含 parking 附加）', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days?all=1';
+    const resp = await api.get(path);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1 = data[0];
@@ -164,12 +146,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('shopping POI（v2.29.0 改 alternate type=shopping）出現在 stopPois', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days?all=1';
+    const resp = await api.get(path);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
@@ -182,12 +160,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
 
   it('entry travel 物件來自 trip_segments', async () => {
     // v2.29.0: trip_entries.travel_* DROPPED；travel 從 trip_segments 取
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-travel/days?all=1'),
-      env,
-      params: { id: 'trip-travel' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-travel/days?all=1';
+    const resp = await api.get(path);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
@@ -219,10 +193,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
        VALUES (?, ?, ?, 'transit', 'monorail', 15, 6000, 'haversine', ?, ?)`,
     ).bind('trip-travel', m1, m2, Date.now(), Date.now()).run();
 
-    const resp = await callHandler(onRequestGet, mockContext({
-      request: new Request('https://test.com/api/trips/trip-travel/days?all=1'),
-      env, params: { id: 'trip-travel' },
-    }));
+    const resp = await api.get('/api/trips/trip-travel/days?all=1');
     const data = await resp.json() as Array<Record<string, unknown>>;
     const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;
     const travel = d2Timeline[0].travel as Record<string, unknown>;
@@ -241,10 +212,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
        VALUES (?, ?, ?, 'walking', NULL, NULL, NULL, 'manual', ?, ?, 1)`,
     ).bind('trip-sp-days', m1, m2, Date.now(), Date.now()).run();
 
-    const resp = await callHandler(onRequestGet, mockContext({
-      request: new Request('https://test.com/api/trips/trip-sp-days/days?all=1'),
-      env, params: { id: 'trip-sp-days' },
-    }));
+    const resp = await api.get('/api/trips/trip-sp-days/days?all=1');
     const data = await resp.json() as Array<Record<string, unknown>>;
     const timeline = data[0].timeline as Array<Record<string, unknown>>;
     const travel = timeline[0].travel as Record<string, unknown>; // m1（from_entry）帶 m1→m2 段
@@ -252,12 +220,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('Phase 3：entry.master 取 canonical POI master（取代舊 entry.location JSON）', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-days/days?all=1';
+    const resp = await api.get(path);
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
@@ -270,12 +234,8 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('空行程（有天但無 POI）不 crash，回傳空 hotel/timeline', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-empty/days?all=1'),
-      env,
-      params: { id: 'trip-empty' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/trip-empty/days?all=1';
+    const resp = await api.get(path);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data).toHaveLength(3);
@@ -286,33 +246,21 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
   });
 
   it('不存在的行程 → 404 (v2.33.41 security: trip read access 先檢查存在)', async () => {
-    const ctx = mockContext({
-      request: new Request('https://test.com/api/trips/nope/days?all=1'),
-      env,
-      params: { id: 'nope' },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const path = '/api/trips/nope/days?all=1';
+    const resp = await api.get(path);
     expect(resp.status).toBe(404);
   });
 
   it('batch 輸出與 single-day 端點每日資料完全一致（regression guard）', async () => {
     // Batch
-    const batchCtx = mockContext({
-      request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
-      env,
-      params: { id: 'trip-days' },
-    });
-    const batchResp = await callHandler(onRequestGet, batchCtx);
+    const batchPath = '/api/trips/trip-days/days?all=1';
+    const batchResp = await api.get(batchPath);
     const batchData = await batchResp.json() as Array<Record<string, unknown>>;
 
     // Day 1 through 5 via single-day endpoint
     for (const dayNum of [1, 2, 3, 4, 5]) {
-      const singleCtx = mockContext({
-        request: new Request(`https://test.com/api/trips/trip-days/days/${dayNum}`),
-        env,
-        params: { id: 'trip-days', num: String(dayNum) },
-      });
-      const singleResp = await callHandler(onRequestGetSingle, singleCtx);
+      const singlePath = `/api/trips/trip-days/days/${dayNum}`;
+      const singleResp = await api.get(singlePath);
       const singleData = await singleResp.json() as Record<string, unknown>;
       const batchDay = batchData[dayNum - 1];
 
