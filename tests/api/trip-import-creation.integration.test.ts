@@ -1,13 +1,18 @@
 import { beforeAll, afterAll, expect, it } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, mockAuth, mockContext, mockEnv, seedUser, userIdFor } from './helpers';
-import { onRequestPost } from '../../functions/api/trips/import';
+import { mockEnv, seedUser, userIdFor } from './helpers';
+import { createApi } from './http';
+import { cleanupImportedTrips } from './cleanup-imported';
 
+// 走 HTTP 邊界（tests/api/http.ts）。故障注入（failStatements）是 env 層級的基礎設施故障，不是檢查 SQL 形狀。
 let db: D1Database;
 const email = 'trip-creation@test.com';
 
 beforeAll(async () => { db = await createTestDb(); await seedUser(db, email); });
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupImportedTrips(db, email, ['大型匯入%', '匯入故障%', '匯入補償%', '匯入共用 POI%', '同名匯入%']);
+  await disposeMiniflare();
+});
 
 function payload(name: string, count = 60) {
   return {
@@ -56,10 +61,7 @@ function failStatements(patterns: RegExp[]): D1Database {
 }
 
 async function importTrip(body: unknown, requestDb = db) {
-  return callHandler(onRequestPost, mockContext({
-    request: new Request('https://test/api/trips/import', { method: 'POST', body: JSON.stringify(body) }),
-    env: mockEnv(requestDb), auth: mockAuth({ email }),
-  }));
+  return createApi({ env: mockEnv(requestDb) }).request('POST', '/api/trips/import', { as: email, json: body });
 }
 
 it('匯入 60 個 entry 後，多日、住宿、正選備選與 segment 均指向新行程', async () => {
