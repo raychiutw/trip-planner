@@ -10,7 +10,7 @@ const email = 'trip-creation@test.com';
 
 beforeAll(async () => { db = await createTestDb(); await seedUser(db, email); });
 afterAll(async () => {
-  await cleanupImportedTrips(db, email, ['大型匯入%', '匯入故障%', '匯入補償%', '匯入共用 POI%', '同名匯入%']);
+  await cleanupImportedTrips(db, email, ['大型匯入%', '匯入故障%', '匯入補償%', '匯入受限%', '匯入共用 POI%', '同名匯入%']);
   await disposeMiniflare();
 });
 
@@ -165,4 +165,13 @@ it('匯入入口拒絕無效資料，重複匯入同名行程仍建立各自的 
   const firstId = (await first.json() as { tripId: string }).tripId;
   const secondId = (await second.json() as { tripId: string }).tripId;
   expect(firstId).not.toBe(secondId);
+});
+
+it('受限 token（restrict_trip）不可匯入新行程，也不建立任何資料', async () => {
+  const body = payload('匯入受限 token', 2);
+  const response = await createApi({ env: mockEnv(db) })
+    .request('POST', '/api/trips/import', { as: email, restrictTrip: 'some-other-trip', json: body });
+  expect(response.status).toBe(403);
+  const trip = await db.prepare('SELECT id FROM trips WHERE name = ?').bind(body.meta.name).first();
+  expect(trip).toBeNull();
 });

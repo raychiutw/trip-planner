@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv } from './helpers';
+import { mockEnv, userIdFor } from './helpers';
 import { createApi, type Api } from './http';
 import { cleanupTrips } from './cleanup-trips';
 
@@ -50,6 +50,16 @@ describe('POST /api/trips — 後端產生 ID', () => {
 
     const row = await db.prepare('SELECT id FROM trips WHERE id = ?').bind(body.tripId).first();
     expect(row, '產生的 id 必須真的寫進 DB').not.toBeNull();
+  });
+
+  it('建立者成為行程 owner（owner_user_id 與 trip_permissions 都寫入）', async () => {
+    const res = await create(base);
+    const { tripId } = (await res.json()) as { tripId: string };
+    const trip = await db.prepare('SELECT owner_user_id FROM trips WHERE id = ?').bind(tripId).first<{ owner_user_id: string }>();
+    expect(trip!.owner_user_id).toBe(userIdFor(EMAIL));
+    const perm = await db.prepare('SELECT role FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+      .bind(tripId, userIdFor(EMAIL)).first<{ role: string }>();
+    expect(perm?.role).toBe('owner');
   });
 
   it('產生的 id 遵循既有慣例（中文名 → trip-xxxx）', async () => {

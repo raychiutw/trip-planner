@@ -61,4 +61,11 @@ describe('GET /api/trips/:id/health', () => {
       missingAltPoi,
     ].sort((a, b) => a - b));
   });
+
+  // 補上權限守門：原測試只覆蓋 owner 成功路徑，拿掉 hasPermission 檢查時 mutation 不會轉紅。
+  it('非成員 → 403；未認證 → 401', async () => {
+    await seedTrip(db, { id: tripId, owner: OWNER });
+    expect((await api.get(`/api/trips/${tripId}/health`, { as: 'trip-health-stranger@test.com' })).status).toBe(403);
+    expect((await api.get(`/api/trips/${tripId}/health`)).status).toBe(401);
+  });
 });
