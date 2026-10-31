@@ -1,0 +1,101 @@
+import { getSessionCookie } from '../_cookies';
+import { generateOpaqueToken, sha256Base64 } from '../_utils';
+import { AppError } from '../_errors';
+import { MOBILE_DEV_REDIRECT } from '../_mobileOAuth';
+
+const PROOF_NAME = 'AccountDeleteProof';
+/** 重新驗證證明與 mobile challenge 的有效期；Google auth_time 的新鮮度也用同一個值。 */
+export const DELETE_PROOF_TTL_MS = 5 * 60 * 1000;
+const CHALLENGE_NAME = 'AccountDeleteChallenge';
+
+/**
+ * mobile callback 的設定驗證。production／preview 一律要 https；
+ * 只有 development 允許 http loopback（本機開發的 contract 就是 loopback），且沒設定時以 contract 的 dev 值為預設。
+ */
+export function mobileCallbackUrl(env: { MOBILE_OAUTH_CALLBACK_URL?: string; ENVIRONMENT?: string }): URL {
+  const dev = env.ENVIRONMENT === 'development';
+  let url: URL;
+  try { url = new URL(env.MOBILE_OAUTH_CALLBACK_URL ?? (dev ? MOBILE_DEV_REDIRECT : '')); } catch { throw new AppError('SERVER_MISCONFIG', 'Mobile OAuth callback 未設定'); }
+  const devLoopback = dev && url.protocol === 'http:' && (url.hostname === '127.0.0.1' || url.hostname === 'localhost');
+  if ((url.protocol !== 'https:' && !devLoopback) || url.search || url.hash || url.username || url.password) {
+    throw new AppError('SERVER_MISCONFIG', 'Mobile OAuth callback 設定無效');
+  }
+  return url;
+}
+
+interface MobileChallenge {
+  uid: string;
+  clientId: string;
+  grantId: string;
+  status: 'pending' | 'started' | 'verified' | 'failed' | 'cancelled' | 'used';
+}
+
+export async function createMobileDeleteChallenge(db: D1Database, uid: string, grantId: string, clientId: string): Promise<string> {
+  const id = generateOpaqueToken();
+  await db.prepare('INSERT INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)')
+    .bind(CHALLENGE_NAME, id, JSON.stringify({ uid, grantId, clientId, status: 'pending' }), Date.now() + DELETE_PROOF_TTL_MS).run();
+  return id;
+}
+
+export async function readMobileDeleteChallenge(db: D1Database, id: string): Promise<(MobileChallenge & { expired: boolean }) | null> {
+  const row = await db.prepare('SELECT payload, expires_at FROM oauth_models WHERE name = ? AND id = ?')
+    .bind(CHALLENGE_NAME, id).first<{ payload: string; expires_at: number }>();
+  if (!row) return null;
+  return { ...JSON.parse(row.payload) as MobileChallenge, expired: row.expires_at < Date.now() };
+}
+
+export async function transitionMobileDeleteChallenge(
+  db: D1Database, id: string, uid: string, grantId: string, from: MobileChallenge['status'], to: MobileChallenge['status'],
+): Promise<boolean> {
+  const result = await db.prepare(`UPDATE oauth_models SET payload = json_set(payload, '$.status', ?)
+    WHERE name = ? AND id = ? AND expires_at >= ? AND json_extract(payload, '$.uid') = ?
+      AND json_extract(payload, '$.grantId') = ? AND json_extract(payload, '$.status') = ?`)
+    .bind(to, CHALLENGE_NAME, id, Date.now(), uid, grantId, from).run();
+  return (result.meta?.changes ?? 0) === 1;
+}
+
+export async function deleteReauthSessionId(request: Request): Promise<string | null> {
+  const cookie = getSessionCookie(request);
+  return cookie ? sha256Base64(cookie) : null;
+}
+
+/** 只有 Google callback 驗證為同一帳號後，才能發出這份證明。 */
+export async function grantDeleteReauth(db: D1Database, request: Request, userId: string): Promise<boolean> {
+  const id = await deleteReauthSessionId(request);
+  if (!id) return false;
+  await db.prepare('INSERT OR REPLACE INTO oauth_models (name, id, payload, expires_at) VALUES (?, ?, ?, ?)')
+    .bind(PROOF_NAME, id, JSON.stringify({ uid: userId }), Date.now() + DELETE_PROOF_TTL_MS)
+    .run();
+  return true;
+}
+
+/** 原子性的一次性檢查：有效期限、帳號與瀏覽器 session 都必須屬於這份證明。 */
+export async function consumeDeleteReauth(db: D1Database, request: Request, userId: string): Promise<boolean> {
+  const id = await deleteReauthSessionId(request);
+  if (!id) return false;
+  const result = await db.prepare(`UPDATE oauth_models SET payload = json_set(payload, '$.consumed', ?)
+    WHERE name = ? AND id = ? AND expires_at >= ?
+      AND json_extract(payload, '$.uid') = ? AND json_extract(payload, '$.consumed') IS NULL`)
+    .bind(Date.now(), PROOF_NAME, id, Date.now(), userId)
+    .run();
+  return (result.meta?.changes ?? 0) === 1;
+}
+
+/** 原子刪除失敗時帳號仍完整，所以這份一次性證明可還原後重試。 */
+export async function restoreDeleteReauth(db: D1Database, request: Request, userId: string): Promise<void> {
+  const id = await deleteReauthSessionId(request);
+  if (!id) return;
+  await db.prepare(`UPDATE oauth_models SET payload = json_remove(payload, '$.consumed')
+    WHERE name = ? AND id = ? AND expires_at >= ? AND json_extract(payload, '$.uid') = ?
+      AND json_extract(payload, '$.consumed') IS NOT NULL`)
+    .bind(PROOF_NAME, id, Date.now(), userId).run();
+}
+
+export async function hasDeleteReauth(db: D1Database, request: Request, userId: string): Promise<boolean> {
+  const id = await deleteReauthSessionId(request);
+  if (!id) return false;
+  const row = await db.prepare(`SELECT 1 FROM oauth_models WHERE name = ? AND id = ? AND expires_at >= ?
+    AND json_extract(payload, '$.uid') = ? AND json_extract(payload, '$.consumed') IS NULL`)
+    .bind(PROOF_NAME, id, Date.now(), userId).first();
+  return !!row;
+}

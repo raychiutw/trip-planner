@@ -91,8 +91,11 @@ export async function getSessionUser(
         .prepare('SELECT revoked_at FROM session_devices WHERE sid = ?')
         .bind(payload.sid)
         .first<{ revoked_at: string | null }>();
-      if (row && row.revoked_at) {
-        // Session manually revoked — refuse
+      // 找不到紀錄＝這個 session 的裝置列已被抹除（帳號刪除、auth-cleanup 過期清理），一律當作已撤銷。
+      // 以前只擋「有紀錄且 revoked_at 有值」，帳號刪除後舊 cookie 因此還能以已刪除的使用者身分通過驗證。
+      // session 有效期 30 天、auth-cleanup 只清「撤銷滿 30 天或 last_seen 超過 30 天」的列，所以被清掉的 cookie 本來就過期了。
+      // 沒有 sid 的舊版 token 不走這段（維持向下相容）。
+      if (!row || row.revoked_at) {
         return null;
       }
       // Best-effort touch last_seen_at, throttled to 5min so D1 write churn
