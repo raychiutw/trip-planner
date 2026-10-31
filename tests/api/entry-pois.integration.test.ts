@@ -70,6 +70,7 @@ afterAll(async () => {
     .all<{ id: number }>();
   for (const r of linked.results) poiIds.push(r.id);
   await cleanupTrips(db, ['s9-ep%']);
+  await db.prepare("DELETE FROM audit_log WHERE trip_id LIKE 's9-ep%'").run(); // 無 FK，要手動清
   for (const id of new Set(poiIds)) await db.prepare('DELETE FROM pois WHERE id = ?').bind(id).run();
   await disposeMiniflare();
 });
@@ -1420,5 +1421,139 @@ describe('PATCH /pois/:poiId — poi_type (change category via re-point)', () =>
       .first<{ status: string; status_reason: string | null }>();
     expect(target!.status).toBe('active'); // 既有 row 自己的 lifecycle 不被動到
     expect(target!.status_reason).toBeNull();
+  });
+});
+
+// =============================================================================
+// 以下為轉 HTTP 邊界時 mutation 驗證發現的缺口（拿掉檢查／改壞實作測試仍綠），一併補上。
+// =============================================================================
+describe('mutation 補洞 — entry 歸屬（cross-trip）', () => {
+  it('POST /alternates：URL trip 與 entry 所屬 trip 不符 → 404，不新增', async () => {
+    await seedTrip(db, { id: 's9-ep-other-alt', owner: OWNER });
+    const { entryId } = await seedEntryWithMaster({ poiName: 'XT-Add-Master' });
+    const altPoiId = await newPoi('XT-Add-Alt');
+    expect((await call('POST', entryPath(entryId, '/alternates', 's9-ep-other-alt'), { poiId: altPoiId })).status).toBe(404);
+    const c = await db.prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ?').bind(entryId).first<{ c: number }>();
+    expect(c!.c).toBe(1);
+  });
+
+  it('DELETE /alternates/:poiId：URL trip 與 entry 所屬 trip 不符 → 404，alternate 仍在', async () => {
+    await seedTrip(db, { id: 's9-ep-other-del', owner: OWNER });
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'XT-Del-Master', altPoiNames: ['XT-Del-Alt'] });
+    expect((await call('DELETE', entryPath(entryId, `/alternates/${altPoiIds[0]}`, 's9-ep-other-del'))).status).toBe(404);
+    const c = await db.prepare('SELECT COUNT(*) AS c FROM trip_entry_pois WHERE entry_id = ?').bind(entryId).first<{ c: number }>();
+    expect(c!.c).toBe(2);
+  });
+
+  it('PATCH /alternates/reorder：URL trip 與 entry 所屬 trip 不符 → 404，順序不變', async () => {
+    await seedTrip(db, { id: 's9-ep-other-re', owner: OWNER });
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'XT-Re-Master', altPoiNames: ['XT-Re-1', 'XT-Re-2'] });
+    expect((await call('PATCH', entryPath(entryId, '/alternates/reorder', 's9-ep-other-re'), { order: [altPoiIds[1], altPoiIds[0]] })).status).toBe(404);
+    const rows = await db
+      .prepare('SELECT poi_id FROM trip_entry_pois WHERE entry_id = ? AND sort_order > 1 ORDER BY sort_order')
+      .bind(entryId)
+      .all<{ poi_id: number }>();
+    expect(rows.results.map((r) => r.poi_id)).toEqual(altPoiIds);
+  });
+});
+
+describe('mutation 補洞 — master 輸入與 OCC 欄位名', () => {
+  it('poiId 是 0 → 400（不是 404）', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'M-ZeroId' });
+    expect((await call('PATCH', entryPath(entryId, '/master'), { poiId: 0 })).status).toBe(400);
+  });
+
+  it('body entryPoisVersion 過期 → 409 STALE_ENTRY（canonical 欄位名也要被檢查）', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'M-StaleCanonical', altPoiNames: ['M-StaleCanonical-Alt'] });
+    const resp = await call('PATCH', entryPath(entryId, '/master'), { poiId: altPoiIds[0], entryPoisVersion: '99999' });
+    expect(resp.status).toBe(409);
+    const body = (await resp.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('STALE_ENTRY');
+  });
+
+  it('swap 成功 → entry_pois_version +1（OCC token 前進）', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'M-VersionBump', altPoiNames: ['M-VersionBump-Alt'] });
+    const before = await readVersion(entryId);
+    expect((await call('PATCH', entryPath(entryId, '/master'), { poiId: altPoiIds[0] })).status).toBe(200);
+    expect(await readVersion(entryId)).toBe(before + 1);
+  });
+});
+
+describe('mutation 補洞 — reorder 結果與版本', () => {
+  it('reorder 後 sort_order 恰為 2,3,4，且 entry_pois_version +1', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'Re-Exact', altPoiNames: ['Re-E1', 'Re-E2', 'Re-E3'] });
+    const before = await readVersion(entryId);
+    expect((await call('PATCH', entryPath(entryId, '/alternates/reorder'), { order: [altPoiIds[1], altPoiIds[2], altPoiIds[0]] })).status).toBe(200);
+    const rows = await db
+      .prepare('SELECT poi_id, sort_order FROM trip_entry_pois WHERE entry_id = ? ORDER BY sort_order')
+      .bind(entryId)
+      .all<{ poi_id: number; sort_order: number }>();
+    expect(rows.results.map((r) => r.sort_order)).toEqual([1, 2, 3, 4]);
+    expect(rows.results.slice(1).map((r) => r.poi_id)).toEqual([altPoiIds[1], altPoiIds[2], altPoiIds[0]]);
+    expect(await readVersion(entryId)).toBe(before + 1);
+  });
+});
+
+describe('mutation 補洞 — PATCH /pois/:poiId 同時換分類與 note', () => {
+  it('poi_type + note 一起送 → note 寫在 re-point 後的新 row，舊 row 不被寫', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'PT RePointNote' });
+    const resp = await call('PATCH', entryPath(entryId, `/pois/${masterPoiId}`), { poi_type: 'restaurant', note: '換分類也要帶備註' });
+    expect(resp.status).toBe(200);
+    const master = await db
+      .prepare('SELECT poi_id, note FROM trip_entry_pois WHERE entry_id = ? AND sort_order = 1')
+      .bind(entryId)
+      .first<{ poi_id: number; note: string | null }>();
+    expect(master!.poi_id).not.toBe(masterPoiId);
+    expect(master!.note).toBe('換分類也要帶備註');
+  });
+});
+
+describe('mutation 補洞 — 寫入會留下 audit_log', () => {
+  const lastAudit = (entryId: number) =>
+    db
+      .prepare("SELECT action, changed_by, diff_json FROM audit_log WHERE trip_id = ? AND table_name = 'trip_entry_pois' AND record_id = ? ORDER BY id DESC LIMIT 1")
+      .bind(TRIP_ID, entryId)
+      .first<{ action: string; changed_by: string; diff_json: string }>();
+
+  it('master swap → update，diff 記錄 from/to', async () => {
+    const { entryId, masterPoiId, altPoiIds } = await seedEntryWithMaster({ poiName: 'Aud-M', altPoiNames: ['Aud-M-Alt'] });
+    expect((await call('PATCH', entryPath(entryId, '/master'), { poiId: altPoiIds[0] })).status).toBe(200);
+    const row = await lastAudit(entryId);
+    expect(row).toMatchObject({ action: 'update', changed_by: OWNER });
+    expect(JSON.parse(row!.diff_json)).toEqual({ master_swap: { from: masterPoiId, to: altPoiIds[0] } });
+  });
+
+  it('加 alternate → insert，diff 記錄 poi 與 sort_order', async () => {
+    const { entryId } = await seedEntryWithMaster({ poiName: 'Aud-A' });
+    const altPoiId = await newPoi('Aud-A-Alt');
+    expect((await call('POST', entryPath(entryId, '/alternates'), { poiId: altPoiId })).status).toBe(201);
+    const row = await lastAudit(entryId);
+    expect(row).toMatchObject({ action: 'insert', changed_by: OWNER });
+    expect(JSON.parse(row!.diff_json)).toEqual({ alt_added: altPoiId, sort_order: 2 });
+  });
+
+  it('刪 alternate → delete，diff 記錄被移除的 poi', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'Aud-D', altPoiNames: ['Aud-D-Alt'] });
+    expect((await call('DELETE', entryPath(entryId, `/alternates/${altPoiIds[0]}`))).status).toBe(200);
+    const row = await lastAudit(entryId);
+    expect(row).toMatchObject({ action: 'delete', changed_by: OWNER });
+    expect(JSON.parse(row!.diff_json)).toEqual({ alt_removed: altPoiIds[0] });
+  });
+
+  it('reorder → update，diff 記錄新順序', async () => {
+    const { entryId, altPoiIds } = await seedEntryWithMaster({ poiName: 'Aud-R', altPoiNames: ['Aud-R-1', 'Aud-R-2'] });
+    const order = [altPoiIds[1], altPoiIds[0]];
+    expect((await call('PATCH', entryPath(entryId, '/alternates/reorder'), { order })).status).toBe(200);
+    const row = await lastAudit(entryId);
+    expect(row).toMatchObject({ action: 'update', changed_by: OWNER });
+    expect(JSON.parse(row!.diff_json)).toEqual({ reordered: order });
+  });
+
+  it('PATCH /pois/:poiId note → update', async () => {
+    const { entryId, masterPoiId } = await seedEntryWithMaster({ poiName: 'Aud-N' });
+    expect((await call('PATCH', entryPath(entryId, `/pois/${masterPoiId}`), { note: '稽核備註' })).status).toBe(200);
+    const row = await lastAudit(entryId);
+    expect(row).toMatchObject({ action: 'update', changed_by: OWNER });
+    expect(row!.diff_json).toContain('稽核備註');
   });
 });
