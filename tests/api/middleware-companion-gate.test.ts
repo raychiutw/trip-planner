@@ -2,234 +2,154 @@
  * Middleware companion gate (poi-favorites-rename §5.1)
  *
  * 端對端驗證：V2 Bearer token → middleware attaches auth.scopes / auth.clientId
- * → resolveCompanionUserId 正確套三 gate（X-Request-Scope header + scopes 含
+ * → poi-favorites 的 companion 三 gate（X-Request-Scope header + scopes 含
  * 'companion' + clientId === env.TP_REQUEST_CLIENT_ID）。
  *
- *   case (a) 三條件全符合 → companion mapping 啟用（resolver 回 userId）
- *   case (b) 缺 scope（OAuth scopes 不含 companion）→ self_reported_scope
- *   case (c) 缺 clientId（mismatch）→ client_unauthorized
- *   case (d) 缺 header（X-Request-Scope）→ V2 user 路徑（resolver 回 null，不寫 audit）
+ *   case (a) 三條件全符合 → companion mapping 啟用（以 request 提交者的身分建立收藏）
+ *   case (b) 缺 scope（OAuth scopes 不含 companion）→ 401 + audit self_reported_scope
+ *   case (c) 缺 clientId（mismatch）→ 401 + audit client_unauthorized
+ *   case (d) 缺 header（X-Request-Scope）→ V2 user 路徑（無 user → 401，不寫 audit）
  *
- * 與 companion-resolver.test.ts 的差異：本檔走真實 OAuth AccessToken row +
- * 真實 middleware.onRequest，確認 middleware → helper 的橋接無斷裂。
+ * 走 HTTP 邊界：真實 AccessToken row + 真實路由派送（middleware → handler → _companion），
+ * 不再手寫 context 呼叫 onRequest / resolveCompanionUserId；結果改驗回應與真實 D1 的資料變化。
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, seedUser, seedTrip } from './helpers';
-import { onRequest } from '../../functions/api/_middleware';
-import { resolveCompanionUserId } from '../../functions/api/_companion';
-import { D1Adapter } from '../../src/server/oauth-d1-adapter';
-import type { Env, AuthData } from '../../functions/api/_types';
+import { mockEnv, seedUser, seedTrip, seedPoi } from './helpers';
+import { createApi, type Api } from './http';
+import { serviceTokenFor } from './service-token';
+import { cleanupTrips } from './cleanup-trips';
 
 let db: D1Database;
-let env: Env;
+let api: Api;
+let submitterId: string;
+let poiId: number;
+const requestIds: number[] = [];
 
 const TP_REQUEST_CLIENT_ID = 'tripline-internal-cli';
 const SUBMITTER_EMAIL = 'companion-gate-submitter@test.com';
+const TRIP_ID = 'companion-gate-trip-1';
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db, { TP_REQUEST_CLIENT_ID });
-  await seedUser(db, SUBMITTER_EMAIL);
+  api = createApi({ env: mockEnv(db, { TP_REQUEST_CLIENT_ID }) });
+  submitterId = await seedUser(db, SUBMITTER_EMAIL);
+  await seedTrip(db, { id: TRIP_ID, owner: SUBMITTER_EMAIL });
+  poiId = await seedPoi(db, { name: 'companion-gate-poi' });
 });
-
-afterAll(disposeMiniflare);
 
 beforeEach(async () => {
-  await db.prepare("DELETE FROM oauth_models WHERE name = 'AccessToken'").run();
-  await db.prepare("DELETE FROM audit_log WHERE trip_id = 'system:companion'").run();
-  await db.prepare("DELETE FROM trip_requests WHERE trip_id LIKE 'companion-gate-%'").run();
+  await db.prepare('DELETE FROM poi_favorites WHERE user_id = ?').bind(submitterId).run();
 });
 
-async function insertAccessToken(opts: {
-  token: string;
-  clientId: string;
-  scopes: string[];
-  userId?: string | null;
-}): Promise<void> {
-  const adapter = new D1Adapter(db, 'AccessToken');
-  await adapter.upsert(
-    opts.token,
-    {
-      jti: opts.token,
-      client_id: opts.clientId,
-      user_id: opts.userId ?? null,
-      scopes: opts.scopes,
-      grantId: `grant-${opts.token}`,
-    },
-    300,
-  );
-}
+afterAll(async () => {
+  for (const id of requestIds) {
+    await db.prepare('DELETE FROM companion_request_actions WHERE request_id = ?').bind(id).run();
+    await db.prepare('DELETE FROM audit_log WHERE request_id = ?').bind(id).run();
+    await db.prepare('DELETE FROM trip_requests WHERE id = ?').bind(id).run();
+  }
+  await db.prepare('DELETE FROM poi_favorites WHERE user_id = ?').bind(submitterId).run();
+  await cleanupTrips(db, [TRIP_ID], ['companion-gate-poi']);
+  await db.prepare('DELETE FROM users WHERE id = ?').bind(submitterId).run();
+  await disposeMiniflare();
+});
 
 async function seedRequest(): Promise<number> {
-  const tripId = 'companion-gate-trip-1';
-  await seedTrip(db, { id: tripId, owner: SUBMITTER_EMAIL });
   const row = await db
     .prepare(
       'INSERT INTO trip_requests (trip_id, message, submitted_by, status) VALUES (?, ?, ?, ?) RETURNING id',
     )
-    .bind(tripId, 'gate test', SUBMITTER_EMAIL, 'processing')
+    .bind(TRIP_ID, 'gate test', SUBMITTER_EMAIL, 'processing')
     .first<{ id: number }>();
+  requestIds.push(row!.id);
   return row!.id;
 }
 
-/**
- * 跑一遍 middleware，回傳 middleware 寫入 context.data.auth 的值。
- * stubbed next 會 short-circuit 真正的 handler，只測 middleware 階段附 auth。
- */
-async function runMiddleware(opts: {
-  request: Request;
-}): Promise<{ auth: AuthData | null; response: Response }> {
-  const data: Record<string, unknown> = {};
-  const ctx = {
-    request: opts.request,
-    env,
-    params: {},
-    data,
-    next: () => Promise.resolve(new Response('next', { status: 200 })),
-    waitUntil: (_p: Promise<unknown>) => undefined,
-    passThroughOnException: () => undefined,
-    functionPath: '',
-  } as unknown as Parameters<typeof onRequest>[0];
+function postFavorite(token: string, requestId: number, withScopeHeader = true): Promise<Response> {
+  return api.request('POST', 'https://test.com/api/poi-favorites', {
+    bearer: token,
+    headers: {
+      ...(withScopeHeader ? { 'X-Request-Scope': 'companion' } : {}),
+      Origin: 'https://trip-planner-dby.pages.dev',
+    },
+    json: { poiId, companionRequestId: requestId },
+  });
+}
 
-  const response = await onRequest(ctx);
-  return { auth: (data.auth ?? null) as AuthData | null, response };
+async function failureReason(requestId: number): Promise<string | undefined> {
+  const audit = await db
+    .prepare(
+      `SELECT companion_failure_reason FROM audit_log
+       WHERE trip_id = 'system:companion' AND request_id = ? AND companion_failure_reason IS NOT NULL
+       ORDER BY id DESC LIMIT 1`,
+    )
+    .bind(requestId)
+    .first<{ companion_failure_reason: string }>();
+  return audit?.companion_failure_reason;
+}
+
+async function favoritesOf(userId: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS n FROM poi_favorites WHERE user_id = ? AND poi_id = ? AND deleted_at IS NULL')
+    .bind(userId, poiId)
+    .first<{ n: number }>();
+  return row!.n;
 }
 
 describe('middleware companion gate (§5.1)', () => {
-  it('case (a) Bearer companion scope + 對的 clientId + 對的 header → 三 gate 全過 / resolver 回 userId', async () => {
-    const token = 'token-companion-ok';
-    await insertAccessToken({
-      token,
-      clientId: TP_REQUEST_CLIENT_ID,
-      scopes: ['companion'],
-      userId: null,
-    });
+  it('case (a) Bearer companion scope + 對的 clientId + 對的 header → 三 gate 全過 / 以 request 提交者身分建立收藏', async () => {
+    const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['companion'] });
     const requestId = await seedRequest();
 
-    const req = new Request('https://test.com/api/poi-favorites', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Request-Scope': 'companion',
-        Origin: 'https://trip-planner-dby.pages.dev',
-      },
-    });
-    const { auth } = await runMiddleware({ request: req });
+    const res = await postFavorite(token, requestId);
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { userId: string; poiId: number };
+    // middleware 把 scopes / clientId 帶進去，三 gate 才會過；收藏歸屬是 request 提交者，不是 service token
+    expect(body.userId).toBe(submitterId);
+    expect(body.poiId).toBe(poiId);
+    expect(await favoritesOf(submitterId)).toBe(1);
 
-    // middleware 應 attach scopes / clientId
-    expect(auth).not.toBeNull();
-    expect(auth!.scopes).toContain('companion');
-    expect(auth!.clientId).toBe(TP_REQUEST_CLIENT_ID);
-    expect(auth!.isServiceToken).toBe(true);
-
-    // 真正餵進 resolver 看是否 gate 全過
-    const result = await resolveCompanionUserId(env, req, auth, requestId);
-    expect(result).not.toBeNull();
-    expect(result!.requestId).toBe(requestId);
-    expect(result!.userId).toBeTruthy();
-  });
-
-  it('case (b) Bearer 不含 companion scope → resolver 回 null + audit self_reported_scope', async () => {
-    const token = 'token-admin-only';
-    await insertAccessToken({
-      token,
-      clientId: TP_REQUEST_CLIENT_ID,
-      scopes: ['admin'], // 缺 companion
-      userId: null,
-    });
-    const requestId = await seedRequest();
-
-    const req = new Request('https://test.com/api/poi-favorites', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Request-Scope': 'companion',
-        Origin: 'https://trip-planner-dby.pages.dev',
-      },
-    });
-    const { auth } = await runMiddleware({ request: req });
-    expect(auth!.scopes).not.toContain('companion');
-
-    const result = await resolveCompanionUserId(env, req, auth, requestId);
-    expect(result).toBeNull();
-
+    // companion 寫入留下以 request 為單位的稽核
     const audit = await db
-      .prepare(
-        `SELECT companion_failure_reason FROM audit_log
-         WHERE trip_id = 'system:companion' AND request_id = ? ORDER BY id DESC LIMIT 1`,
-      )
+      .prepare(`SELECT changed_by FROM audit_log WHERE trip_id = 'system:companion' AND request_id = ? AND table_name = 'poi_favorites'`)
       .bind(requestId)
-      .first<{ companion_failure_reason: string }>();
-    expect(audit!.companion_failure_reason).toBe('self_reported_scope');
+      .first<{ changed_by: string }>();
+    expect(audit?.changed_by).toBe(`companion:${requestId}`);
+    expect(await failureReason(requestId)).toBeUndefined();
   });
 
-  it('case (c) Bearer 含 companion scope 但 clientId 不對 → resolver 回 null + audit client_unauthorized', async () => {
-    const token = 'token-wrong-client';
-    await insertAccessToken({
-      token,
-      clientId: 'rogue-cli',
-      scopes: ['companion'],
-      userId: null,
-    });
+  it('case (b) Bearer 不含 companion scope → 401 + audit self_reported_scope', async () => {
+    const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['admin'] }); // 缺 companion
     const requestId = await seedRequest();
 
-    const req = new Request('https://test.com/api/poi-favorites', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'X-Request-Scope': 'companion',
-        Origin: 'https://trip-planner-dby.pages.dev',
-      },
-    });
-    const { auth } = await runMiddleware({ request: req });
-    expect(auth!.scopes).toContain('companion');
-    expect(auth!.clientId).toBe('rogue-cli');
-
-    const result = await resolveCompanionUserId(env, req, auth, requestId);
-    expect(result).toBeNull();
-
-    const audit = await db
-      .prepare(
-        `SELECT companion_failure_reason FROM audit_log
-         WHERE trip_id = 'system:companion' AND request_id = ? ORDER BY id DESC LIMIT 1`,
-      )
-      .bind(requestId)
-      .first<{ companion_failure_reason: string }>();
-    expect(audit!.companion_failure_reason).toBe('client_unauthorized');
+    const res = await postFavorite(token, requestId);
+    expect(res.status).toBe(401);
+    expect(await failureReason(requestId)).toBe('self_reported_scope');
+    expect(await favoritesOf(submitterId)).toBe(0);
   });
 
-  it('case (d) 缺 X-Request-Scope header → resolver 回 null（V2 user 路徑，不寫 audit）', async () => {
-    const token = 'token-no-header';
-    await insertAccessToken({
-      token,
-      clientId: TP_REQUEST_CLIENT_ID,
-      scopes: ['companion'],
-      userId: null,
-    });
+  it('case (c) Bearer 含 companion scope 但 clientId 不對 → 401 + audit client_unauthorized', async () => {
+    const token = await serviceTokenFor(db, { clientId: 'rogue-cli', scopes: ['companion'] });
     const requestId = await seedRequest();
 
-    const req = new Request('https://test.com/api/poi-favorites', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // 故意不放 X-Request-Scope
-        Origin: 'https://trip-planner-dby.pages.dev',
-      },
-    });
-    const { auth } = await runMiddleware({ request: req });
-    expect(auth!.scopes).toContain('companion');
+    const res = await postFavorite(token, requestId);
+    expect(res.status).toBe(401);
+    expect(await failureReason(requestId)).toBe('client_unauthorized');
+    expect(await favoritesOf(submitterId)).toBe(0);
+  });
 
-    const result = await resolveCompanionUserId(env, req, auth, requestId);
-    expect(result).toBeNull();
+  it('case (d) 缺 X-Request-Scope header → 走 V2 user 路徑（服務 token 無 user → 401，不寫 audit）', async () => {
+    const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['companion'] });
+    const requestId = await seedRequest();
+
+    const res = await postFavorite(token, requestId, false);
+    expect(res.status).toBe(401);
 
     const audit = await db
-      .prepare(
-        `SELECT id FROM audit_log
-         WHERE trip_id = 'system:companion' AND request_id = ?`,
-      )
+      .prepare(`SELECT id FROM audit_log WHERE trip_id = 'system:companion' AND request_id = ?`)
       .bind(requestId)
       .first();
     expect(audit).toBeNull();
+    expect(await favoritesOf(submitterId)).toBe(0);
   });
 });
