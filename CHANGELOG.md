@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.124] - 2026-11-01
+
+### Added
+- **新 api 的 App「瀏覽器登入」授權頁 `/oauth/authorize`**：App 以系統瀏覽器登入時，新 api 會把使用者導到這一頁（先前網站沒有這個頁面，使用者看到空白頁）。已登入顯示「以 {名稱} 的身分繼續？」與一顆「繼續」，權限收在可展開區；未登入先顯示登入表單；有「使用其他帳號」。沒有「拒絕」按鈕——不是本人要求就直接關閉頁面。設計稿 C 經 owner 簽核。這一頁不看新 api 的登入旗標（網站其餘部分仍走舊入口），只需要 `VITE_API_BASE_URL`，由新增的 `.env.production` 提供。
+
+### For contributors
+- 13 個頁面測試（先確認頁面不存在的紅燈再實作）＋ 2 個 `.env.production` 守衛（網址必須指向 production api、`VITE_NEW_API_AUTH` 不可被打開）。Mutation 8 個全部轉紅，其中防連點的 ref 防護一開始存活，補了「同一個 act 內連點」的測試後轉紅。全套 4586 個測試通過。
+- 真瀏覽器只看了登入與錯誤兩個畫面（本機 dev）；完整往返（登入→繼續→導回 callback）需要 production 的 api origin，合併部署後用臨時 @control.invalid 帳號驗證，驗證前不通知 App 端改回新 api 授權。
+- 沒有跑 gstack 的 review army。
+
 ## [2.57.123] - 2026-11-01
 
 ### Added

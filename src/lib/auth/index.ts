@@ -38,3 +38,19 @@ export function getNewApiAuth(): AuthClient | null {
 export function useNewApiAuth(): AuthClient | null {
   return getNewApiAuth();
 }
+
+let authorizeSingleton: AuthClient | null = null;
+
+/**
+ * `/oauth/authorize` 頁專用的 client：**不看旗標**（那一頁本來就是給新 api 的第一方 App 授權用，
+ * production 的 web 旗標仍關著）。只要求 `VITE_API_BASE_URL`；沒設定就丟錯，由頁面顯示「目前無法使用」。
+ * 需要重新登入時不導頁（onReauthRequired 為空），由頁面自己切回登入表單。
+ */
+export function getAuthorizeAuth(): AuthClient {
+  if (!authorizeSingleton) {
+    const apiBase = getNewApiBase();
+    if (!apiBase) throw new Error('未設定 VITE_API_BASE_URL');
+    authorizeSingleton = createAuthClient({ apiBase, storage: createIdbAuthStorage(), onReauthRequired: () => {} });
+  }
+  return authorizeSingleton;
+}
