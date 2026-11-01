@@ -98,6 +98,7 @@ const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
 const AppearanceSettingsPage = lazyWithRetry(() => import('../pages/AppearanceSettingsPage'));
 const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/NotificationsSettingsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
+const OauthAuthorizePage = lazyWithRetry(() => import('../pages/OauthAuthorizePage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
 const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 // v2.18.0:共編 sheet 升格獨立頁面
@@ -317,6 +318,8 @@ if (el) {
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
+              {/* 新 api 的第一方 App「瀏覽器登入」授權頁（登入＋一鍵繼續）；不看新 api 旗標 */}
+              <Route path="/oauth/authorize" element={<OauthAuthorizePage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
               {/* 2026-05-03 modal-to-fullpage migration: NewTripModal → /trips/new */}
