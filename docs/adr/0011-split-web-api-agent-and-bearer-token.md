@@ -1,6 +1,6 @@
 # ADR-0011：拆成 web、api、agent 三個專案，認證改 bearer token
 
-- **Status**：Proposed（拆分尚未開始；#1458 先收尾）
+- **Status**：Accepted（2026-11-02，owner 指示；實作狀態與尚未完成的部分見「實作狀態」）
 - **來源**：2026-10-31 `/grill-with-docs`（「把本機 api server、web、api 拆成三個 GitHub 專案，api 要完整安全性」）
 
 ## Context
@@ -26,6 +26,17 @@ web 與 api（Pages Functions）現在是同一個 Pages 專案、同一個網�
 **順序：** #1458（帳號刪除加 mobile OAuth）先在現有 repo 收尾並 merge，只做到現有網域可運作；issuer 與 redirect URI 在拆分時才改。
 
 **「完整安全性」的範圍**是四類：供應鏈與 CI/CD、執行期防護、認證與 token、稽核與偵測；細項留給 spec。
+
+## 實作狀態（2026-11-02 接受時）
+
+**已完成**：三個專案已拆開，各有 CI。api 在 Cloudflare Worker（Hono 重寫，契約由 OpenAPI 產生），認證是 bearer：web 與行動端是 OAuth public client（PKCE，access token 15 分鐘、refresh token 輪替並有 family revoke），另加了本 ADR 當時沒寫的 **DPoP**（token 可綁定金鑰）；SSE 用一次性 ticket；api→agent 用 HMAC 簽章（trigger／mail／mint 各一把 key）。agent 在 `trip-planner-agent`，web repo 已移除 agent 檔案。api 與舊入口**共用同一個 production D1**，migration 只加不刪。新 api 已在 production 運作，行動端（Flutter）的授權與換 token 往返已用真瀏覽器驗證（web 補了 `/oauth/authorize` 頁）。
+
+**與本文決策不同、或尚未完成的部分**（接受時如實記錄，不是已解決）：
+
+- **web 尚未切換。** 網站的登入旗標（`VITE_NEW_API_AUTH`）在 production 仍是關的，網站走舊入口；「切換當天所有人強制重新登入一次」只會在翻旗標時發生。目前實際上是 **App 走新 api、網站走舊入口並行**，不是大爆炸一次切完。回切＝把 App 的 base URL 指回舊入口、網站旗標維持關閉。
+- **沒有 WAF。** 不買自訂網域，api 在 `workers.dev`，沒有 zone，Cloudflare 的 WAF 規則無處可掛（T11 的這一項延後）；應用層 rate limit、稽核與告警已做。要補 WAF 得先有 api 的正式網域。
+- **新 api 的刪帳號對 web 的無密碼帳號尚無路徑。** 舊入口靠瀏覽器 cookie 做重新驗證，新 api 沒有 cookie；production 目前沒有無密碼帳號，但在補設計前這是缺口。
+- **舊入口目前不只是備援，網站與 agent 還在實際使用它**（agent 的排程腳本呼叫的就是舊入口），所以下方的「舊入口是旁路」殘留風險現在是**生效中**，不是未來才會發生。
 
 ## Considered Options
 
