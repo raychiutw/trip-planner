@@ -3,7 +3,6 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const skillPaths = [
-  '.claude/skills/tp-request/SKILL.md',
   '.codex/skills/tp-request/SKILL.md',
 ];
 
@@ -39,19 +38,16 @@ describe('筆記 AI 逾時必須大於 session 壽命', () => {
   const GENERATE_SRC = readFileSync(
     'functions/api/trips/[id]/notes/[type]/generate.ts', 'utf-8',
   );
-  const WORKER_SRC = readFileSync('scripts/lib/request-worker.ts', 'utf-8');
-  const PRINT_RUN_SRC = readFileSync('scripts/lib/print-run.ts', 'utf-8');
 
   it('INSERT 用的逾時 > 一個 tick 內 contained claude -p 的最壞執行時間', () => {
     const m = GENERATE_SRC.match(/datetime\('now',\s*'\+(\d+) minutes'\)/);
     expect(m, 'generate.ts 找不到 timeout_at 的 datetime 運算式').not.toBeNull();
     const minutes = Number(m![1]);
-    const rounds = Number(WORKER_SRC.match(/PRINT_MAX_ROUNDS = (\d+)/)?.[1]);
-    const runMin = Number(PRINT_RUN_SRC.match(/PRINT_RUN_TIMEOUT_MS = (\d+) \* 60 \* 1000/)?.[1]);
-    expect(rounds).toBeGreaterThan(0);
-    expect(runMin).toBeGreaterThan(0);
+    // agent 腳本（PRINT_MAX_ROUNDS × PRINT_RUN_TIMEOUT_MS）已搬到 trip-planner-agent，
+    // 這裡改鎖 ADR-0007 記載的最壞上限常數 90 分鐘；agent 端若調整上限，要同步改這個下限。
+    const worstCaseMinutes = 90;
     // 最壞情況：每輪都跑滿單輪上限 —— 在那之前 session 都還可能在正常工作，job 不能先被判逾時
-    expect(minutes).toBeGreaterThan(rounds * runMin);
+    expect(minutes).toBeGreaterThan(worstCaseMinutes);
   });
 
   /*
