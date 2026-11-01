@@ -3,10 +3,11 @@
  *
  * `VITE_NEW_API_AUTH === '1'` 才啟用；API 網址用 `VITE_API_BASE_URL`。
  * flag 關閉時 `getNewApiAuth()`／`useNewApiAuth()` 回 null：不建立 client、不打 fetch、不碰 IndexedDB，
- * 呼叫端照舊走 cookie 流程（apiClient.ts／LoginPage 目前都沒有改，行為與現在完全一致）。
+ * 呼叫端照舊走 cookie 流程（apiClient.ts／LoginPage／useCurrentUser／logout 都先問這裡，回 null 就走原路，行為與現在完全一致）。
  */
 import { createAuthClient, type AuthClient } from './client';
 import { createIdbAuthStorage } from './storage';
+import { defaultReauthHandler } from './transport';
 
 export { AuthError, createAuthClient, type AuthClient } from './client';
 export { createIdbAuthStorage, createMemoryAuthStorage, type AuthStorage } from './storage';
@@ -17,13 +18,18 @@ export function isNewApiAuthEnabled(): boolean {
 
 let singleton: AuthClient | null = null;
 
+/** 新 api 的網址（已去尾斜線）；只有旗標開啟時有意義。 */
+export function getNewApiBase(): string {
+  return ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '').replace(/\/+$/, '');
+}
+
 /** 啟用時回應用層唯一的 client（第一次呼叫才建立）；關閉時回 null。 */
 export function getNewApiAuth(): AuthClient | null {
   if (!isNewApiAuthEnabled()) return null;
   if (!singleton) {
-    const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+    const apiBase = getNewApiBase();
     if (!apiBase) throw new Error('VITE_NEW_API_AUTH=1 時必須設定 VITE_API_BASE_URL');
-    singleton = createAuthClient({ apiBase, storage: createIdbAuthStorage() });
+    singleton = createAuthClient({ apiBase, storage: createIdbAuthStorage(), onReauthRequired: defaultReauthHandler });
   }
   return singleton;
 }
