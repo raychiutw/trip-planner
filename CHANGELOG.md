@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.120] - 2026-11-01
+
+### Added
+- **web 端的新 API 登入 plumbing（T18，預設關閉）**：新增 `src/lib/auth/`——PKCE、DPoP（不可匯出的 ES256 金鑰存在 IndexedDB）、access token 只放記憶體、refresh token 放 IndexedDB、single-flight refresh（含 Web Locks）。由 `VITE_NEW_API_AUTH=1` 啟用、`VITE_API_BASE_URL` 指向新 api；旗標預設關，LoginPage 與 apiClient 都還沒接線，所以 production 行為完全不變。流量切換屬於 T21。
+
+### For contributors
+- 36 個新測試（含 `fake-oauth-api` 假 OAuth server）；全套 4921 個測試通過，CI 綠。
+- 沒有跑 gstack 的 specialist／adversarial review army；只有 PR 內的測試與 CI 作為驗證。版號跳過 2.57.119，那是 #1458 已佔的號碼。
+
 ## [2.57.118] - 2026-10-31
 
 ### Fixed
