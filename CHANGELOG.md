@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.127] - 2026-11-02
+
+### Added
+- **新 api 模式下，沒有密碼的帳號（Google 登入）也能在網站刪除帳號**：新 api 沒有 cookie，原本的「瀏覽器重新驗證」做不到。現在帳號頁在新 api 模式（`VITE_NEW_API_AUTH=1`）會先建立重新驗證 challenge、導去 Google 驗證，回到 `/account` 後以 `{ challengeId }` 刪除（不再只靠輸入 DELETE）。畫面不變，只改呼叫方式；旗標關閉（舊入口）與有密碼帳號的行為完全不變。production 目前旗標仍關、也沒有 Google 帳號，所以暫時沒有可見效果。
+
+### For contributors
+- 10 個新測試（先確認 5 個紅燈）；9 個 mutation 全部轉紅，其中「回應缺 authorizeUrl 仍導頁」一開始存活，補了「200 但格式不對」的案例後轉紅。全套 4597 個測試通過（`auth-service-token-guard` 載入時偶發 socket 錯誤，單獨重跑通過）。
+- 這是 web 端；需要 api 端的 web fresh-auth（trip-planner-api 另一個 PR）部署後才會真正可用。回導參數沿用既有的 `?deleteReauth=done|failed`。沒有跑 gstack 的 review army。
+
 ## [2.57.125] - 2026-11-01
 
 ### Fixed
