@@ -7,6 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
+const HEADERS = readFileSync('public/_headers', 'utf8');
+
 const env = Object.fromEntries(
   readFileSync('.env.production', 'utf8')
     .split('\n')
@@ -21,5 +23,15 @@ describe('.env.production', () => {
   });
   it('不打開 VITE_NEW_API_AUTH（production 仍走舊入口，切換是人工動作）', () => {
     expect(env.VITE_NEW_API_AUTH ?? '').not.toBe('1');
+  });
+});
+
+describe('_headers 的 CSP connect-src（瀏覽器真的會擋，單元測試測不到，所以在這裡鎖）', () => {
+  const connectSrc = /Content-Security-Policy:.*?connect-src([^;]*);/.exec(HEADERS)?.[1] ?? '';
+  it('包含 VITE_API_BASE_URL 的精確 origin（否則 /oauth/authorize 的登入請求會被 CSP 擋掉）', () => {
+    expect(connectSrc.split(/\s+/)).toContain(new URL(env.VITE_API_BASE_URL!).origin);
+  });
+  it('不用 *.workers.dev 這類過寬的萬用字元', () => {
+    expect(connectSrc).not.toMatch(/\*\.workers\.dev/);
   });
 });

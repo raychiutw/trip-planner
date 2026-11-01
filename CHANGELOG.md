@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.125] - 2026-11-01
+
+### Fixed
+- **App「瀏覽器登入」的授權頁登入被瀏覽器擋掉**：網站的 CSP `connect-src` 沒有包含新 api 的網址，`/oauth/authorize` 頁一送出登入就被瀏覽器以 CSP 攔下，使用者只看到「登入失敗，請稍後再試」。現在 `connect-src` 加入新 api 的精確網址（不用 `*.workers.dev` 萬用字元）。
+
+### For contributors
+- 這個問題只有真瀏覽器會出現（單元測試與本機 dev 都不會套 CSP），是 production 往返驗證抓到的。新增守衛測試：`connect-src` 必須包含 `VITE_API_BASE_URL` 的精確 origin、不可用 `*.workers.dev`；拿掉該 origin 的 mutation 會轉紅。教訓：新增跨網域呼叫的功能，驗證清單要包含 CSP。沒有跑 gstack 的 review army。
+
 ## [2.57.124] - 2026-11-01
 
 ### Added
