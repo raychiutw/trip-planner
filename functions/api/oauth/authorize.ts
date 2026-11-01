@@ -34,6 +34,7 @@ import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken } from '../_utils';
 import { oauthErrorResponse } from '../_errors';
+import { isMobileClientId, mobileOAuthContract } from '../_mobileOAuth';
 import type { Env } from '../_types';
 
 const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
@@ -66,6 +67,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     code_challenge_method: params.get('code_challenge_method') ?? undefined,
     prompt: params.get('prompt') ?? undefined,
   };
+
+  if (isMobileClientId(req.client_id ?? '')) {
+    const contract = mobileOAuthContract(context.env, context.request);
+    if (!contract || req.client_id !== contract.clientId || req.redirect_uri !== contract.redirectUri) {
+      return oauthErrorResponse('unauthorized_client', 'Mobile client or callback is not allowed in this environment', 400);
+    }
+  }
 
   // Lookup client_apps row (if client_id provided)
   let client: ClientAppRow | null = null;

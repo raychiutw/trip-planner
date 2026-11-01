@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "8Z6WVFJ574.com.raychiu.tripline",
+        "paths": ["/oauth/callback", "/uat/oauth/callback"]
+      }
+    ]
+  }
+}

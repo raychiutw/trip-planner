@@ -33,6 +33,7 @@ import { recordAuthEvent } from '../_auth_audit';
 import { generateOpaqueToken, parseFormOrJson, parseBasicAuth } from '../_utils';
 import { oauthErrorResponse, buildRateLimitResponse } from '../_errors';
 import type { Env } from '../_types';
+import { isMobileClientId, mobileOAuthContract } from '../_mobileOAuth';
 
 import { ACCESS_TOKEN_TTL_SEC, exchangeAuthorizationCode, rotateRefreshToken } from './_tokenLifecycle';
 
@@ -91,6 +92,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (!clientId) {
     return oauthErrorResponse('invalid_client', 'Missing client_id');
+  }
+  if (isMobileClientId(clientId)) {
+    const contract = mobileOAuthContract(context.env, context.request);
+    if (!contract || clientId !== contract.clientId ||
+        (grant_type === 'authorization_code' && body.redirect_uri !== contract.redirectUri)) {
+      return oauthErrorResponse('invalid_client', 'Mobile client or callback is not allowed in this environment');
+    }
   }
 
   // v2.33.103 SEC-7: per-IP rate-limit 在 client lookup + PBKDF2 verify 前。
