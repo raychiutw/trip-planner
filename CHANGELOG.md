@@ -12,6 +12,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 10 個新測試（先確認 5 個紅燈）；9 個 mutation 全部轉紅，其中「回應缺 authorizeUrl 仍導頁」一開始存活，補了「200 但格式不對」的案例後轉紅。全套 4597 個測試通過（`auth-service-token-guard` 載入時偶發 socket 錯誤，單獨重跑通過）。
 - 這是 web 端；需要 api 端的 web fresh-auth（trip-planner-api 另一個 PR）部署後才會真正可用。回導參數沿用既有的 `?deleteReauth=done|failed`。沒有跑 gstack 的 review army。
 
+## [2.57.126] - 2026-11-02
+
+### Changed
+- **ADR-0011（拆成 web、api、agent，認證改 bearer token）轉為 Accepted**，並新增「實作狀態」一節，如實記錄接受時哪些做完、哪些沒有：App 走新 api、網站旗標仍關著走舊入口（不是一次切完）；沒有 WAF（api 在 `workers.dev`，沒有 zone）；新 api 對 web 無密碼帳號的刪除尚無路徑；舊入口目前仍被網站與 agent 實際使用，所以「舊入口是旁路」這項殘留風險是生效中。ARCHITECTURE.md 的決策索引同步。
+
+### For contributors
+- 純文件變更；`architecture-key-decisions` 測試通過。沒有跑 gstack 的 review army。
+
 ## [2.57.125] - 2026-11-01
 
 ### Fixed
