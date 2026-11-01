@@ -24,6 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # T19：契約（contracts/openapi.json）與已提交的 src/api/schema.d.ts 必須一致；
+      # 契約改動沒重新產生型別就在這裡失敗，產生出的型別變動再由下面的 tsc 在編譯期擋住壞掉的呼叫端。
+      - name: API contract (generated types in sync)
+        run: npm run check:api-contract
+
       - name: TypeScript check (frontend)
         run: npx tsc --noEmit
 

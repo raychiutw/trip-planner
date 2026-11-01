@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.121] - 2026-11-01
+
+### Added
+- **web 的 typed API client 與 SSE ticket 連線（T19，預設關閉）**：由 api 的 OpenAPI 契約（`contracts/openapi.json`）產生型別（`src/api/schema.d.ts`），`src/lib/api/client.ts` 是用 `fetch` 包的 typed client，`withAuth.ts` 接 T18 的 `apiFetch`。CI 新增 `check:api-contract`，契約與型別不同步就會紅。`VITE_NEW_API_AUTH=1` 時，`useRequestSSE` 改為先換一次性 ticket 再連線，並在 `reconnect` 事件與連線錯誤時自動重新換票（退避 1–30 秒、連續失敗 6 次放棄）；旗標關閉時走原本的程式，production 行為不變。
+
+### For contributors
+- 新增 devDependency `openapi-typescript@7.13.0`（exact；lockfile 新增 22 筆，皆來自 registry.npmjs.org、無 install script）。52 個新測試；type-level 守衛放在 `contract.typecheck.ts`，由 `npm run typecheck` 檢查。
+- 沒有跑 gstack 的 specialist／adversarial review army；驗證靠測試、mutation（22 個，殺死 20 個，存活 2 個為等價變異）與 CI。
+
 ## [2.57.120] - 2026-11-01
 
 ### Added
