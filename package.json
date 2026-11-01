@@ -32,7 +32,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"functions/**/*.ts\""
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260910.1",
+    "@cloudflare/workers-types": "^5.20261029.1",
     "@playwright/test": "^1.61.1",
     "@sentry/vite-plugin": "^11.9.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -59,7 +59,7 @@
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.0.5",
-    "wrangler": "^4.131.0"
+    "wrangler": "^4.156.0"
   },
   "_overrides_note": "v2.33.61 round 14: pin transitive deps to patch HIGH CVE per `npm audit` 2026-05-24. Re-audit + remove if upstream releases fix.",
   "overrides": {
