@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.57.119] - 2026-10-31
+## [2.57.122] - 2026-10-31
 
 > ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。
 
@@ -33,6 +33,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Review 紀錄：四輪完整審查（specialists＋Claude adversarial）每輪都有新發現，第三次修正後已超出 3 次修正循環上限，經 owner 同意再跑第四輪；審查綁定狀態為 `incomplete`。第四輪之後的 commit 只含註解、文件與一組測試對照列，未重新審查。Codex 未安裝，無外部審查；`gstack-state-matrix` 在第四輪不可用，改為人工矩陣。
 - 已知且刻意不在本 PR 處理：刪除路徑的密碼分支沒有節流（既有）、單一 5 分鐘生命週期涵蓋整個 mobile 流程、`mobile-callback…pages.dev` 只可能是本專案的 branch alias（刪掉或 force-reset 該 branch 會讓 mobile 登入與刪除全部失效）。
 - 上線前必做：（1）日後啟用 Google 登入前，實測 Google 是否回傳 `auth_time`（目前休眠，不阻擋本次）；（2）callback 主機與 association 檔部署；（3）Flutter 實機 callback、背景與 cold start、取消；（4）prod／staging D1 的 0097 已於 2026-10-31 套用；（5）受控帳號刪除 smoke：密碼帳號的完整刪除已於 2026-10-31 在 staging 預覽站跑過（12 項全過）；Google 重新驗證的真實往返（拒絕、逾時、重放、跨帳號／grant）目前只有 mock 測試覆蓋，要啟用 Google 登入後才能實測。
+
+## [2.57.121] - 2026-11-01
+
+### Added
+- **web 的 typed API client 與 SSE ticket 連線（T19，預設關閉）**：由 api 的 OpenAPI 契約（`contracts/openapi.json`）產生型別（`src/api/schema.d.ts`），`src/lib/api/client.ts` 是用 `fetch` 包的 typed client，`withAuth.ts` 接 T18 的 `apiFetch`。CI 新增 `check:api-contract`，契約與型別不同步就會紅。`VITE_NEW_API_AUTH=1` 時，`useRequestSSE` 改為先換一次性 ticket 再連線，並在 `reconnect` 事件與連線錯誤時自動重新換票（退避 1–30 秒、連續失敗 6 次放棄）；旗標關閉時走原本的程式，production 行為不變。
+
+### For contributors
+- 新增 devDependency `openapi-typescript@7.13.0`（exact；lockfile 新增 22 筆，皆來自 registry.npmjs.org、無 install script）。52 個新測試；type-level 守衛放在 `contract.typecheck.ts`，由 `npm run typecheck` 檢查。
+- 沒有跑 gstack 的 specialist／adversarial review army；驗證靠測試、mutation（22 個，殺死 20 個，存活 2 個為等價變異）與 CI。
+
+## [2.57.120] - 2026-11-01
+
+### Added
+- **web 端的新 API 登入 plumbing（T18，預設關閉）**：新增 `src/lib/auth/`——PKCE、DPoP（不可匯出的 ES256 金鑰存在 IndexedDB）、access token 只放記憶體、refresh token 放 IndexedDB、single-flight refresh（含 Web Locks）。由 `VITE_NEW_API_AUTH=1` 啟用、`VITE_API_BASE_URL` 指向新 api；旗標預設關，LoginPage 與 apiClient 都還沒接線，所以 production 行為完全不變。流量切換屬於 T21。
+
+### For contributors
+- 36 個新測試（含 `fake-oauth-api` 假 OAuth server）；全套 4921 個測試通過，CI 綠。
+- 沒有跑 gstack 的 specialist／adversarial review army；只有 PR 內的測試與 CI 作為驗證。版號跳過 2.57.119，那是 #1458 已佔的號碼。
 
 ## [2.57.118] - 2026-10-31
 
