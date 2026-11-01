@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.123] - 2026-11-01
+
+### Added
+- **公開分享連結可以在 iOS App 內開啟**：`apple-app-site-association` 的 paths 加入 `/s/*`（原本只有 `/oauth/callback` 與 `/uat/oauth/callback`），iOS 上點到 `trip-planner-dby.pages.dev/s/…` 的分享連結會開 Tripline App。Android 的 `assetlinks.json` 本來就涵蓋主站，不需改。App 端的設定（Flutter #506）尚未發版，所以這個變更在 App 發版前沒有可見效果。
+
+### For contributors
+- 先確認既有 AASA 測試對新增路徑轉紅，再更新測試：保留 callback 路徑對照，另鎖 `/s/*` 並檢查 `_routes.json` 有路由它；拿掉 `/s/*` 的 mutation 會讓測試轉紅。沒有跑 gstack 的 review army。
+
 ## [2.57.122] - 2026-10-31
 
 > ℹ️ **Google 重新驗證目前是休眠路徑**：prod 沒有啟用 Google 登入、也沒有 Google 帳號（`auth_identities` 全是 `local`），所以現在刪帳號仍走密碼確認。日後要啟用 Google 登入時，必須先在 Google Auth Platform 啟用 `auth_time`（需 In production 與 Verified）並實測，見 ADR-0009 的 Consequences。

@@ -108,7 +108,10 @@ describe('public/.well-known association files', () => {
   it('iOS 與 Android 都指向已核實的 app id，且路徑與實際註冊的 callback 一致（不是另寫一份常數）', () => {
     const detail = aasa.applinks.details[0];
     expect(detail.appID.endsWith('.com.raychiu.tripline')).toBe(true);
-    expect(detail.paths).toEqual([new URL(MOBILE_PROD_REDIRECT).pathname, new URL(MOBILE_UAT_REDIRECT).pathname]);
+    // callback 路徑與實際註冊的一致；另加公開分享連結 /s/*（iOS App 內開啟，owner 指示 2026-11-01）
+    expect(detail.paths).toEqual([new URL(MOBILE_PROD_REDIRECT).pathname, new URL(MOBILE_UAT_REDIRECT).pathname, '/s/*']);
+    // /s/* 必須對應站上真的有的分享路由（_routes.json 有路由它，不是指向不存在的路徑）
+    expect(JSON.parse(read('public/_routes.json')).include).toContain('/s/*');
     expect(links[0].target.package_name).toBe('com.raychiu.tripline');
     expect(links[0].target.sha256_cert_fingerprints.length).toBeGreaterThan(0);
   });
