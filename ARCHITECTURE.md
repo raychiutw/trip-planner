@@ -240,9 +240,9 @@ functions/api/route.ts             Routes API proxy (driving / walking / transit
 functions/api/pois/[id]/enrich.ts  即時 Place Details 補 POI metadata
 functions/api/admin/maps-{lock,unlock,backfill-status,maps-settings,quota-estimate}.ts
                                    Kill switch + 90/50 hysteresis (app_settings table)
-scripts/google-poi-refresh-30d.ts  daily refresh 50/day cap (mac mini cron)
-scripts/google-poi-initial-backfill.ts
-scripts/google-quota-monitor.ts
+trip-planner-agent/scripts/google-poi-refresh-30d.ts  daily refresh 50/day cap (mac mini cron)
+trip-planner-agent/scripts/google-poi-initial-backfill.ts
+trip-planner-agent/scripts/google-quota-monitor.ts
 
 API endpoints:
   POST /api/pois/:id/enrich          手動觸發單一 POI enrich (admin/owner/即時 + 30d cron)
@@ -251,9 +251,9 @@ API endpoints:
   POST /api/places/autocomplete       Places Autocomplete (typeahead, v2.31.94)
 
 排程 (mac mini cron via launchd):
-  scripts/google-poi-refresh-30d.ts   每日 50/day cap (autoplan T11)
-  scripts/google-poi-initial-backfill.ts  一次性
-  scripts/google-quota-monitor.ts     monitor Google Cloud API quota
+  trip-planner-agent/scripts/google-poi-refresh-30d.ts   每日 50/day cap (autoplan T11)
+  trip-planner-agent/scripts/google-poi-initial-backfill.ts  一次性
+  trip-planner-agent/scripts/google-quota-monitor.ts     monitor Google Cloud API quota
   (v2.31.4: poi-enrich-batch.ts + /tp-poi-enrich-monthly skill 已 rip out — 改 即時 + 30d 模型)
 ```
 
@@ -365,7 +365,7 @@ Migration 必須 **idempotent**（`IF NOT EXISTS` / `IF EXISTS`），因為 D1 �
 | Frontend errors | Sentry SDK（`src/lib/sentry.ts`）| Sentry cloud |
 | Backend errors | `AppError` throw → `_errors.ts` + `api_logs` INSERT | D1 `api_logs` table |
 | Audit（寫操作）| `_audit.ts` | D1 `audit_log` table |
-| Daily health | `scripts/daily-check.js` + Gmail API | Telegram（紅燈推播）|
+| Daily health | `trip-planner-agent` 的 `scripts/daily-check.js` + Gmail API | Telegram（紅燈推播）|
 
 ---
 

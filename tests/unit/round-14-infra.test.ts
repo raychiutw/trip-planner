@@ -1,7 +1,7 @@
 /**
  * round-14-infra.test.ts — v2.33.60 Round 14 frontend infra + security guard
  *
- * Source-grep guard for 9 fix:
+ * Source-grep guard（auth-cleanup.js 的 retention sweep 屬 agent repo，已隨 T16 階段 C 移除）:
  *   1. _headers CSP narrow + global security headers (Referrer-Policy / COOP / nosniff)
  *   2. index.html theme-color sync to manifest #F47B5E
  *   3. vite.config 拔 leaflet optimizeDeps + 補 manualChunks
@@ -10,7 +10,6 @@
  *   6. wrangler.toml [env.production.vars] ENVIRONMENT
  *   7. tsconfig.functions exclude
  *   8. tokens.css warning hue 對齊 (orange family) + toast border color-mix
- *   9. auth-cleanup.js 4 個新 retention sweep
  *  10. migration 0069 trip_health_reports FK + 0070 sqlite_sequence fix
  */
 import { describe, it, expect } from 'vitest';
@@ -27,7 +26,6 @@ const MANIFEST = JSON.parse(read('public/manifest.json'));
 const WRANGLER = read('wrangler.toml');
 const TSCONFIG_FN = JSON.parse(read('tsconfig.functions.json'));
 const TOKENS_CSS = read('css/tokens.css');
-const AUTH_CLEANUP = read('scripts/auth-cleanup.js');
 const MIG_0069 = read('migrations/0069_trip_health_reports_fk.sql');
 const MIG_0070 = read('migrations/0070_fix_0047_sqlite_sequence.sql');
 
@@ -146,24 +144,6 @@ describe('v2.33.60 #8 — tokens.css warning hue + toast border color-mix', () =
   it('toast border 拔掉寫死 rgba()', () => {
     expect(TOKENS_CSS).not.toMatch(/\.tp-toast--error \{ border-color: rgba\(193/);
     expect(TOKENS_CSS).not.toMatch(/\.tp-toast--warning \{ border-color: rgba\(244/);
-  });
-});
-
-describe('v2.33.60 #9 — auth-cleanup.js 4 個新 retention sweep', () => {
-  it('trip_invitations 加 sweep (accepted 90d / expired 30d)', () => {
-    expect(AUTH_CLEANUP).toContain('trip_invitations');
-    expect(AUTH_CLEANUP).toMatch(/expires_at < datetime\('now', '-30 days'\)/);
-  });
-
-  it('pois_search_cache 加 sweep (expires_at < now)', () => {
-    expect(AUTH_CLEANUP).toContain('pois_search_cache');
-    expect(AUTH_CLEANUP).toMatch(/pois_search_cache WHERE expires_at < datetime\('now'\)/);
-  });
-
-  it('companion_request_actions + error_reports 90d sweep', () => {
-    expect(AUTH_CLEANUP).toContain('companion_request_actions');
-    expect(AUTH_CLEANUP).toContain('error_reports');
-    expect(AUTH_CLEANUP).toMatch(/error_reports WHERE created_at < datetime\('now', '-90 days'\)/);
   });
 });
 

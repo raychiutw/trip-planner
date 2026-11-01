@@ -45,7 +45,7 @@ On-ramps（匯入主線）：
 
 - **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再支援，請勿呼叫。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
 - Feature branch + PR via `/ship`. Never push master directly.
-- `tp-*` skills hit API, not local files.
+- `tp-*` skills hit API, not local files。skill 與本機 agent（api-server、排程、`scripts/`）已搬到 `trip-planner-agent` repo，本 repo 不再有。
 - Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
 - Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
 - **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。

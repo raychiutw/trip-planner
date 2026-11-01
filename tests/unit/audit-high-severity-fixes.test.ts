@@ -72,12 +72,6 @@ describe('audit fix source locks', () => {
     expect(mod).not.toMatch(/\{ dayId:/);
   });
 
-  it('daily-report queries trip_requests (not the non-existent requests table)', () => {
-    const src = read('scripts/daily-report.js');
-    expect(src).toMatch(/FROM trip_requests WHERE created_at/);
-    expect(src).not.toMatch(/FROM requests WHERE created_at/);
-  });
-
   it('rollback gates updated_at by TABLE_COLUMNS membership (no SQL error on permission/relation tables)', () => {
     const src = read('functions/api/trips/[id]/audit/[aid]/rollback.ts');
     expect(src).toMatch(/TABLE_COLUMNS\[safeTable\]\.includes\('updated_at'\)/);
@@ -132,10 +126,6 @@ describe('audit fix source locks — medium tier', () => {
     expect(src).not.toMatch(/customDate: l\.expiresAt == null \? '' : new Date\(l\.expiresAt\)\.toISOString/);
   });
 
-  it('daily-check normalizes D1 naive datetime to UTC before stuck-cutoff compare', () => {
-    expect(read('scripts/daily-check.js')).toMatch(/createdUtc = r\.created_at\.includes\('T'\)/);
-  });
-
   it('requests notes dedup scopes the SELECT by ai_source', () => {
     const src = read('functions/api/_noteAi.ts');
     expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \? AND origin = 'ai'/);
@@ -181,12 +171,6 @@ describe('audit fix source locks — batch 3', () => {
     const src = read('src/components/shared/AlertPanel.tsx');
     expect(src).toMatch(/\.tp-alert-panel\.is-warning \{[\s\S]*var\(--color-warning-bg\)/);
     expect(src).not.toMatch(/border-color: rgb\(244, 140, 6\)/);
-  });
-
-  it('backfill-poi-addresses exec uses direct argv (no sh -c shell injection)', () => {
-    const src = read('scripts/backfill-poi-addresses.ts');
-    expect(src).toMatch(/function exec\(argv: string\[\]\)/);
-    expect(src).not.toMatch(/Bun\.spawnSync\(\['sh', '-c'/);
   });
 
 
