@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { apiFetchRaw } from '../lib/apiClient';
+import { AuthError, getNewApiAuth } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
@@ -310,16 +311,43 @@ export default function LoginPage() {
     try { sessionStorage.removeItem('tp_login_fail_count'); } catch { /* ignore */ }
   }
 
+  /**
+   * 送出帳密。旗標 VITE_NEW_API_AUTH 關閉（預設）：同源 POST /api/oauth/login（cookie session）。
+   * 開啟：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。兩條路都回同形狀，後續導向與錯誤文案共用。
+   * 網路層錯誤照舊 throw，由呼叫端 catch 顯示「網路連線失敗」。
+   */
+  async function submitCredentials(
+    trimmedEmail: string,
+    pwd: string,
+  ): Promise<{ ok: true } | { ok: false; code: string; retryAfter: string | null }> {
+    const auth = getNewApiAuth();
+    if (auth) {
+      try {
+        await auth.login(trimmedEmail, pwd);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {
+          return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
+        }
+        throw err;
+      }
+    }
+    const res = await apiFetchRaw('/oauth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: trimmedEmail, password: pwd }),
+    });
+    if (res.ok) return { ok: true };
+    const errJson = (await res.json().catch(() => null)) as ApiError | null;
+    return { ok: false, code: errJson?.error?.code ?? 'UNKNOWN', retryAfter: res.headers.get('Retry-After') };
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBannerError(null);
     setSubmitting(true);
     try {
-      const res = await apiFetchRaw('/oauth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      if (res.ok) {
+      const outcome = await submitCredentials(email.trim(), password);
+      if (outcome.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
         if (invitationPath) {
@@ -344,8 +372,7 @@ export default function LoginPage() {
         return;
       }
 
-      const errJson = (await res.json().catch(() => null)) as ApiError | null;
-      const code = errJson?.error?.code ?? 'UNKNOWN';
+      const code = outcome.code;
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
           setBannerError('請輸入電子郵件與密碼');
@@ -355,7 +382,7 @@ export default function LoginPage() {
           setBannerError('電子郵件或密碼錯誤');
           break;
         case 'LOGIN_RATE_LIMITED': {
-          const retryAfter = res.headers.get('Retry-After');
+          const retryAfter = outcome.retryAfter;
           setLockedRetryAfter(retryAfter ? Number(retryAfter) : 1800);
           break;
         }

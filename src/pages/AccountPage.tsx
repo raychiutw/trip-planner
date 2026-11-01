@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetch } from '../lib/apiClient';
+import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
 import { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
@@ -464,7 +465,7 @@ export default function AccountPage() {
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
     try {
-      await apiFetchRaw('/oauth/logout', { method: 'POST' });
+      await logoutSession();
       // 清掉「上次已登入」旗標（見 lib/authHint）。不清的話，登出後第一次進 `/`
       // 會被 LandingPage 依舊旗標轉去 /trips，再被 useRequireAuth 踢回 /login ——
       // 使用者想看行銷頁卻直接彈到登入頁。旗標會在那次 401 時自我校正，但沒必要

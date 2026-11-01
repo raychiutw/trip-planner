@@ -176,6 +176,10 @@ export function createFakeOAuthApi() {
       return oauthErr('unsupported_grant_type', 'x');
     }
 
+    // 不需登入的公開端點（契約中沒有 security 的那批）
+    if (path === '/api/public-config') return json(200, { providers: { google: false } });
+    if (path === '/api/oauth/signup' && method === 'POST') return json(201, { ok: true });
+
     // 資源端點與登出：Authorization: DPoP <token> + proof（含 ath）
     const auth = headers['authorization'] ?? '';
     const [scheme, token] = auth.split(' ');
@@ -191,6 +195,11 @@ export function createFakeOAuthApi() {
       return new Response(null, { status: 204 });
     }
     if (path === '/api/me') return json(200, { email: at.email });
+    if (path === '/api/oauth/userinfo') {
+      return json(200, {
+        id: 'u1', email: at.email, emailVerified: true, displayName: null, avatarUrl: null, createdAt: '2026-01-01T00:00:00Z',
+      });
+    }
     return json(404, { error: { code: 'NOT_FOUND', message: 'x' } });
   }
 
