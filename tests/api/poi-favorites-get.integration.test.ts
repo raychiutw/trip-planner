@@ -187,45 +187,14 @@ describe('GET /api/poi-favorites — §7.1 V2 user / anonymous', () => {
 // ----- §7.2 companion -----
 
 describe('GET /api/poi-favorites — §7.2 companion', () => {
-  it('companion 三 gate + ?companionRequestId=N → 回該 submitter 的 favorites pool', async () => {
+  it('companion 帶合法 gate + ?companionRequestId=N → 403（GET 已於 2026-11-02 移出 companion 白名單）', async () => {
     const requestId = await newTripRequest();
-    // submitter 自己有收藏
-    const submitterUserRow = await db
-      .prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')
-      .bind(SUBMITTER_EMAIL)
-      .first<{ id: string }>();
-    const submitterUserId = submitterUserRow!.id;
-    const poiSubmitter = await seedPoi(db, { name: `${PREFIX}Submitter favorite` });
-    await db
-      .prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?)')
-      .bind(submitterUserId, poiSubmitter)
-      .run();
-
     const resp = await api.get(`${URL_BASE}?companionRequestId=${requestId}`, {
       bearer: await companionToken(env),
       headers: { 'X-Request-Scope': 'companion' },
     });
-    expect(resp.status).toBe(200);
-    const data = await resp.json() as Array<{ poiId: number; userId: string }>;
-    const fav = data.find((d) => d.poiId === poiSubmitter);
-    expect(fav).toBeDefined();
-    expect(fav!.userId).toBe(submitterUserId);
-  });
-
-  it('companion gate 失敗（缺 OAuth scope）→ 401', async () => {
-    const requestId = await newTripRequest();
-    const resp = await api.get(`${URL_BASE}?companionRequestId=${requestId}`, {
-      bearer: await companionToken(env, { scopes: ['admin'] }), // 缺 companion scope
-      headers: { 'X-Request-Scope': 'companion' },
-    });
-    expect(resp.status).toBe(401);
-  });
-
-  it('companion 缺 ?companionRequestId 查詢 → 401（resolver 走 invalid_request_id）', async () => {
-    const resp = await api.get(URL_BASE, {
-      bearer: await companionToken(env),
-      headers: { 'X-Request-Scope': 'companion' },
-    });
-    expect(resp.status).toBe(401);
+    expect(resp.status).toBe(403);
+    const body = await resp.json() as { error: { code: string } };
+    expect(body.error.code).toBe('PERM_DENIED');
   });
 });
