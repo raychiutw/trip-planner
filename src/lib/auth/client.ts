@@ -13,6 +13,12 @@ import type { AuthStorage } from './storage';
 
 export const CLIENT_ID = 'tripline-web';
 
+/**
+ * 登入請求要的 scope。login 端點沒帶 scope 時只簽 openid profile email，資源伺服器要 trips:read／trips:write，
+ * 少了會讀行程全 403（flutter#517／#521）。需授權伺服器先把行程 scope 登記進 tripline-web 的 allowed_scopes（後端票 #519），否則會被 invalid_scope 拒絕。
+ */
+export const LOGIN_SCOPE = 'openid profile email trips:read trips:write';
+
 export class AuthError extends Error {
   readonly code: string;
   readonly status?: number;
@@ -149,7 +155,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email, password, client_id: CLIENT_ID, code_challenge: challenge, code_challenge_method: 'S256', dpop_jkt: jkt,
+          email, password, client_id: CLIENT_ID, code_challenge: challenge, code_challenge_method: 'S256', dpop_jkt: jkt, scope: LOGIN_SCOPE,
         }),
       });
     } catch (e) {
