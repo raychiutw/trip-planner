@@ -1,8 +1,8 @@
 /**
  * GET  /api/poi-favorites            — 列出當前使用者的 POI 收藏（JOIN pois + usages）
- * POST /api/poi-favorites { poiId, note?, companionRequestId? } — 新增收藏
+ * POST /api/poi-favorites { poiId, note? } — 新增收藏
  *
- * Companion path: see functions/api/_companion.ts (requireFavoriteActor +
+ * Actor / bucket helpers: see functions/api/_favorite-actor.ts (requireFavoriteActor +
  * pickFavoriteBucketForActor). 所有寫入皆限流（Phase 3：無 admin 豁免）。
  *
  * v2.33.105 SEC-2: pre-gate per-IP throttle 在 actor resolve 之前；post-gate
@@ -10,7 +10,6 @@
  */
 import { AppError } from './_errors';
 import { buildRateLimitResponse } from './_errors';
-import { logAudit } from './_audit';
 import { json, parseJsonBody } from './_utils';
 import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
 import { assertNotTripRestricted } from './_auth';
@@ -18,13 +17,12 @@ import {
   pickFavoriteBucketForActor,
   preGateFavoriteThrottle,
   requireFavoriteActor,
-} from './_companion';
+} from './_favorite-actor';
 import type { Env, AuthData } from './_types';
 
 interface PoiFavoritePostBody {
   poiId?: number;
   note?: string;
-  companionRequestId?: number;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -34,22 +32,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   //   會列舉 owner 全跨 trip 收藏。containment。
   if (auth) assertNotTripRestricted(auth);
 
-  // poi-favorites-rename §7：companion 模式從 ?companionRequestId=N query string 取
-  // requestId、走 requireFavoriteActor 三 gate；gate 失敗 → 401。
-  // 非 companion header 維持既有行為：anonymous / service-token without userId → []
-  let effectiveUserId: string;
-  const headerScope = context.request.headers.get('X-Request-Scope');
-  if (headerScope === 'companion') {
-    // v2.33.105 SEC-2: pre-gate per-IP throttle 防 actor resolve DB hammering
-    const preGate = await preGateFavoriteThrottle(context.env, context.request);
-    if (preGate) return preGate;
-    const actor = await requireFavoriteActor(context, null, 'favorite_list');
-    effectiveUserId = actor.userId;
-  } else if (auth?.userId) {
-    effectiveUserId = auth.userId;
-  } else {
-    return json([]); // anonymous / service-token without resolution → empty
-  }
+  // anonymous / service-token without userId → []
+  if (!auth?.userId) return json([]);
+  const effectiveUserId = auth.userId;
 
   const { results } = await context.env.DB.prepare(
     // v2.31.17: 補 p.rating 進 SELECT，讓 AddStopPage / ChangePoiPage favorites
@@ -124,15 +109,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 解析 body。malformed body 直接 400。
   const body = await parseJsonBody<PoiFavoritePostBody>(context.request);
 
-  // 先驗 poiId 早 reject 不浪費 actor resolve（companion 與 V2 user 共用）
+  // 先驗 poiId 早 reject 不浪費 actor resolve
   if (!body.poiId || !Number.isInteger(body.poiId) || body.poiId <= 0) {
     throw new AppError('DATA_VALIDATION', '缺少或無效的 poiId');
   }
 
-  // 真正解 effective userId。companion gate 失敗 → V2 user fallback；
-  // V2 user fallback userId null → 拋 401。
-  // 同時為 companion 模式寫 companion_request_actions（UNIQUE 衝突 → 409 COMPANION_QUOTA_EXCEEDED）。
-  const actor = await requireFavoriteActor(context, body, 'favorite_create');
+  // 解 effective userId：無 userId（service token）→ 拋 401。
+  const actor = requireFavoriteActor(context);
 
   // v2.33.105 SEC-2: post-gate bucket 用 RESOLVED actor，而非 claimed body。
   // Phase 3（移除全域 admin）：無 admin rate-limit 豁免，所有寫入皆限流。
@@ -179,20 +162,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (err.message.includes('FOREIGN KEY')) throw new AppError('DATA_NOT_FOUND', 'POI 不存在');
     }
     throw err;
-  }
-
-  // companion 模式寫 audit_log（D5 sentinel）— fire-and-forget 不阻塞 response
-  if (actor.isCompanion) {
-    context.waitUntil(
-      logAudit(context.env.DB, {
-        tripId: actor.audit.tripId,
-        tableName: 'poi_favorites',
-        recordId: row.id as number,
-        action: 'insert',
-        changedBy: actor.audit.changedBy,
-        requestId: actor.requestId,
-      }),
-    );
   }
 
   return json(row, 201);

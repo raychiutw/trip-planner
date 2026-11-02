@@ -222,7 +222,7 @@ export default function AddPoiFavoriteToTripPage() {
   const favoriteId = Number(idParam);
   // v2.23.8: direct mode — 從 ExplorePage ➕ 加入行程 進來，無 favorite，POI 走 query params
   // route /add-to-trip?place_id=X&name=Y&lat=Z&lng=W&address=A&category=C
-  // 有 idParam → favorite mode（走 /api/poi-favorites/:id/add-to-trip rate-limit + companion gate）
+  // 有 idParam → favorite mode（走 /api/poi-favorites/:id/add-to-trip rate-limit）
   // 無 idParam → direct mode（走 /api/trips/:tripId/days/:dayNum/entries 直建 entry）
   const isDirectMode = !idParam;
   const [searchParams] = useSearchParams();

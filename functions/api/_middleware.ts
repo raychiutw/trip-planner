@@ -495,12 +495,8 @@ async function handleAuth(
               /* best-effort */
             }
           }
-          // poi-favorites-rename §5.6：companion gate 三條件（X-Request-Scope header
-          // + scopes 含 'companion' + clientId === env.TP_REQUEST_CLIENT_ID）由
-          // functions/api/_companion.ts requireFavoriteActor 套用。middleware 只負責
-          // attach scopes / clientId，gate 邏輯落在 helper 是因 4 個 poi-favorites
-          // endpoint 都需共用此 gate，集中在 helper 比 middleware 早期執行更乾淨
-          // （middleware-level 只能粗篩 path 白名單，不知 body.companionRequestId）。
+          // middleware 只負責 attach scopes / clientId；companion 的 path 白名單在
+          // checkCompanionScope，handler 層的 scope 檢查走 hasOpsScope / requireScope。
           (context.data as Record<string, unknown>).auth = {
             email,
             userId: tokenRow.user_id,

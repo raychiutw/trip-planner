@@ -57,8 +57,6 @@ export interface Env {
   // Cloud Monitoring API auth (quota check) — service account JSON string
   GOOGLE_CLOUD_PROJECT_ID?: string;
   GOOGLE_CLOUD_SA_KEY?: string;
-  // poi-favorites-rename §5.7：companion gate 鎖定 mac mini cron OAuth client_id。
-  // middleware 用此 env 比對 auth.clientId 作為 companion 啟用第三道 gate
-  // （與 X-Request-Scope header + scopes 含 'companion' 同時成立才視為 companion）。
+  // 第一方 OAuth client_id 覆寫（見 _first-party.ts isFirstPartyClientId；預設 'tripline-tp-request'）。
   TP_REQUEST_CLIENT_ID?: string;
 }
