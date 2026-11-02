@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { isNewApiAuthEnabled } from '../lib/auth';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
 import { showToast } from '../components/shared/Toast';
@@ -20,6 +21,13 @@ import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { writeAuthHint } from '../lib/authHint';
+
+/** 新 api 模式：重新驗證的 challenge id 在導去 Google 前存起來，回到 /account 後 DELETE 要帶它（跨頁面導向，只能放 sessionStorage）。 */
+const DELETE_CHALLENGE_KEY = 'tp-delete-challenge';
+const readDeleteChallenge = (): string | null => { try { return sessionStorage.getItem(DELETE_CHALLENGE_KEY); } catch { return null; } };
+const writeDeleteChallenge = (id: string | null) => {
+  try { if (id) sessionStorage.setItem(DELETE_CHALLENGE_KEY, id); else sessionStorage.removeItem(DELETE_CHALLENGE_KEY); } catch { /* 無痕或被禁用：之後會要求重新驗證 */ }
+};
 
 /** GET /api/account 的刪除影響預覽。 */
 interface DeleteAccountPreview {
@@ -417,6 +425,7 @@ export default function AccountPage() {
     const result = new URLSearchParams(window.location.search).get('deleteReauth');
     if (result !== 'done' && result !== 'failed') return;
     window.history.replaceState(window.history.state, '', '/account');
+    if (result === 'failed') writeDeleteChallenge(null);
     void openDeleteModal().then(() => {
       if (result === 'failed') setDeleteError('身分驗證未完成，帳號尚未刪除。請重新驗證。');
     });
@@ -430,9 +439,32 @@ export default function AccountPage() {
 
   const deleteAccount = useCallback(async () => {
     if (!deletePreview || !canConfirmDelete || deleting) return;
+    const newApi = isNewApiAuthEnabled();
     if (!deletePreview.hasPassword && !deletePreview.reauthenticated) {
-      window.location.href = '/api/oauth/login/google?purpose=account-delete';
+      if (!newApi) {
+        window.location.href = '/api/oauth/login/google?purpose=account-delete';
+        return;
+      }
+      // 新 api 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
+      setDeleteError(null);
+      try {
+        const started = await apiFetch<{ challengeId?: string; authorizeUrl?: string }>('/account/delete-reauth', { method: 'POST' });
+        if (!started.challengeId || !started.authorizeUrl) throw new Error('Invalid delete-reauth response');
+        writeDeleteChallenge(started.challengeId);
+        window.location.href = started.authorizeUrl;
+      } catch {
+        setDeleteError('無法開始身分驗證，帳號尚未刪除。請稍後再試。');
+      }
       return;
+    }
+    let challengeId: string | null = null;
+    if (!deletePreview.hasPassword && newApi) {
+      challengeId = readDeleteChallenge();
+      if (!challengeId) {
+        setDeleteError('近期身分驗證已失效，請重新驗證。帳號尚未刪除。');
+        setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
+        return;
+      }
     }
     setDeleting(true);
     setDeleteError(null);
@@ -441,9 +473,11 @@ export default function AccountPage() {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          deletePreview.hasPassword ? { password: deleteInput } : { confirm: deleteInput },
+          deletePreview.hasPassword ? { password: deleteInput }
+            : challengeId ? { challengeId } : { confirm: deleteInput },
         ),
       });
+      writeDeleteChallenge(null);
       // 帳號已不存在，不能留在帳號頁。用整頁導向而非 SPA navigate —— 要把
       // 記憶體中的 auth context / 快取一併清掉。
       window.location.href = '/';
@@ -457,6 +491,7 @@ export default function AccountPage() {
           : '刪除失敗，請稍後再試',
       );
       if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
+        writeDeleteChallenge(null);
         setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
       }
     }
