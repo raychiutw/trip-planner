@@ -5,7 +5,8 @@
  * `/api/saved-pois*` 4 條 pattern 改為 `/api/poi-favorites*`（hard cutover，不留
  * alias）。
  *
- * 4 條白名單：
+ * 2026-11-02 最小權限收窄：下列 4 條原本放行的收藏路徑已移出白名單，
+ * companion 請求一律 403（MCP 沒有收藏工具，白名單不該多放行）：
  *   GET    /api/poi-favorites
  *   POST   /api/poi-favorites
  *   DELETE /api/poi-favorites/:id
@@ -44,20 +45,20 @@ async function blocked(method: string, path: string): Promise<boolean> {
 }
 
 describe('companion scope — /api/poi-favorites whitelist (§5.3)', () => {
-  it('GET  /api/poi-favorites → 放行', async () => {
-    expect(await blocked('GET', '/api/poi-favorites')).toBe(false);
+  it('GET  /api/poi-favorites → 403（2026-11-02 起收藏路徑移出 companion 白名單）', async () => {
+    expect(await blocked('GET', '/api/poi-favorites')).toBe(true);
   });
 
-  it('POST /api/poi-favorites → 放行', async () => {
-    expect(await blocked('POST', '/api/poi-favorites')).toBe(false);
+  it('POST /api/poi-favorites → 403（2026-11-02 起收藏路徑移出 companion 白名單）', async () => {
+    expect(await blocked('POST', '/api/poi-favorites')).toBe(true);
   });
 
-  it('DELETE /api/poi-favorites/123 → 放行', async () => {
-    expect(await blocked('DELETE', '/api/poi-favorites/123')).toBe(false);
+  it('DELETE /api/poi-favorites/123 → 403（2026-11-02 起收藏路徑移出 companion 白名單）', async () => {
+    expect(await blocked('DELETE', '/api/poi-favorites/123')).toBe(true);
   });
 
-  it('POST /api/poi-favorites/123/add-to-trip → 放行', async () => {
-    expect(await blocked('POST', '/api/poi-favorites/123/add-to-trip')).toBe(false);
+  it('POST /api/poi-favorites/123/add-to-trip → 403（2026-11-02 起收藏路徑移出 companion 白名單）', async () => {
+    expect(await blocked('POST', '/api/poi-favorites/123/add-to-trip')).toBe(true);
   });
 
   it('POST /api/poi-favorites/abc/add-to-trip → 403（id 必須是數字）', async () => {

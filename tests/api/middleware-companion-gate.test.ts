@@ -5,9 +5,9 @@
  * → poi-favorites 的 companion 三 gate（X-Request-Scope header + scopes 含
  * 'companion' + clientId === env.TP_REQUEST_CLIENT_ID）。
  *
- *   case (a) 三條件全符合 → companion mapping 啟用（以 request 提交者的身分建立收藏）
- *   case (b) 缺 scope（OAuth scopes 不含 companion）→ 401 + audit self_reported_scope
- *   case (c) 缺 clientId（mismatch）→ 401 + audit client_unauthorized
+ *   case (a) 三條件全符合，但 2026-11-02 收窄後 /api/poi-favorites 不在白名單 → middleware 403
+ *   case (b)(c) 已刪除：handler 的 companion gate 失敗路徑（self_reported_scope / client_unauthorized）
+ *               被 middleware 擋在前面，無法經 HTTP 到達（見 PR 內文）
  *   case (d) 缺 header（X-Request-Scope）→ V2 user 路徑（無 user → 401，不寫 audit）
  *
  * 走 HTTP 邊界：真實 AccessToken row + 真實路由派送（middleware → handler → _companion），
@@ -97,45 +97,20 @@ async function favoritesOf(userId: string): Promise<number> {
 }
 
 describe('middleware companion gate (§5.1)', () => {
-  it('case (a) Bearer companion scope + 對的 clientId + 對的 header → 三 gate 全過 / 以 request 提交者身分建立收藏', async () => {
+  it('case (a) companion 三條件全符合，但 POST /api/poi-favorites 已移出白名單 → middleware 403 PERM_DENIED，不建立收藏（2026-11-02 收窄）', async () => {
     const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['companion'] });
     const requestId = await seedRequest();
 
     const res = await postFavorite(token, requestId);
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { userId: string; poiId: number };
-    // middleware 把 scopes / clientId 帶進去，三 gate 才會過；收藏歸屬是 request 提交者，不是 service token
-    expect(body.userId).toBe(submitterId);
-    expect(body.poiId).toBe(poiId);
-    expect(await favoritesOf(submitterId)).toBe(1);
-
-    // companion 寫入留下以 request 為單位的稽核
-    const audit = await db
-      .prepare(`SELECT changed_by FROM audit_log WHERE trip_id = 'system:companion' AND request_id = ? AND table_name = 'poi_favorites'`)
-      .bind(requestId)
-      .first<{ changed_by: string }>();
-    expect(audit?.changed_by).toBe(`companion:${requestId}`);
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: { code: string; detail: string } };
+    expect(body.error.code).toBe('PERM_DENIED');
+    expect(body.error.detail).toBe('此操作超出旅伴請求範圍');
+    expect(await favoritesOf(submitterId)).toBe(0);
+    // 被 gate 擋在 handler 之前：沒有 companion 稽核、沒有動作配額列
     expect(await failureReason(requestId)).toBeUndefined();
-  });
-
-  it('case (b) Bearer 不含 companion scope → 401 + audit self_reported_scope', async () => {
-    const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['admin'] }); // 缺 companion
-    const requestId = await seedRequest();
-
-    const res = await postFavorite(token, requestId);
-    expect(res.status).toBe(401);
-    expect(await failureReason(requestId)).toBe('self_reported_scope');
-    expect(await favoritesOf(submitterId)).toBe(0);
-  });
-
-  it('case (c) Bearer 含 companion scope 但 clientId 不對 → 401 + audit client_unauthorized', async () => {
-    const token = await serviceTokenFor(db, { clientId: 'rogue-cli', scopes: ['companion'] });
-    const requestId = await seedRequest();
-
-    const res = await postFavorite(token, requestId);
-    expect(res.status).toBe(401);
-    expect(await failureReason(requestId)).toBe('client_unauthorized');
-    expect(await favoritesOf(submitterId)).toBe(0);
+    const action = await db.prepare('SELECT 1 AS x FROM companion_request_actions WHERE request_id = ?').bind(requestId).first();
+    expect(action).toBeNull();
   });
 
   it('case (d) 缺 X-Request-Scope header → 走 V2 user 路徑（服務 token 無 user → 401，不寫 audit）', async () => {
@@ -151,5 +126,68 @@ describe('middleware companion gate (§5.1)', () => {
       .first();
     expect(audit).toBeNull();
     expect(await favoritesOf(submitterId)).toBe(0);
+  });
+});
+
+/**
+ * 2026-11-02 最小權限收窄：companion 白名單只剩 agent MCP 標為 companion 的 10 個工具。
+ * 被移除的 10 項（trip-pois 寫入 3、PATCH requests、GET 3、收藏寫入 3）帶 companion header 一律
+ * 403 PERM_DENIED「超出旅伴請求範圍」；保留的 10 項仍過 gate；同路徑沒帶 header 的一般請求不受影響。
+ */
+describe('companion 白名單最小權限（2026-11-02 收窄）', () => {
+  const SCOPE_DETAIL = '此操作超出旅伴請求範圍';
+  const ORIGIN = 'https://trip-planner-dby.pages.dev';
+
+  const REMOVED: Array<[string, string]> = [
+    ['POST', '/api/trips/t1/entries/1/trip-pois'],
+    ['PATCH', '/api/trips/t1/trip-pois/5'],
+    ['DELETE', '/api/trips/t1/trip-pois/5'],
+    ['PATCH', '/api/requests/42'],
+    ['GET', '/api/trips/t1/days/1'],
+    ['GET', '/api/requests?tripId=t1'],
+    ['GET', '/api/poi-favorites'],
+    ['POST', '/api/poi-favorites'],
+    ['DELETE', '/api/poi-favorites/7'],
+    ['POST', '/api/poi-favorites/7/add-to-trip'],
+  ];
+  const KEPT: Array<[string, string]> = [
+    ['POST', '/api/trips/t1/days/1/entries'],
+    ['PATCH', '/api/trips/t1/entries/1'],
+    ['POST', '/api/trips/t1/entries/1/alternates'],
+    ['DELETE', '/api/trips/t1/entries/1/alternates/9'],
+    ['PATCH', '/api/trips/t1/entries/1/alternates/reorder'],
+    ['PATCH', '/api/trips/t1/entries/1/master'],
+    ['PUT', '/api/trips/t1/entries/1/poi-id'],
+    ['POST', '/api/trips/t1/recompute-travel'],
+    ['POST', '/api/pois/123/enrich'],
+    ['PATCH', '/api/pois/123'],
+  ];
+
+  async function call(method: string, path: string, companion: boolean) {
+    const token = await serviceTokenFor(db, { clientId: TP_REQUEST_CLIENT_ID, scopes: ['companion'] });
+    const res = await api.request(method, `https://test.com${path}`, {
+      bearer: token,
+      headers: { Origin: ORIGIN, ...(companion ? { 'X-Request-Scope': 'companion' } : {}) },
+      json: method === 'GET' || method === 'DELETE' ? undefined : {},
+    });
+    const err = ((await res.json().catch(() => ({}))) as { error?: { code?: string; detail?: string } }).error;
+    return { res, err };
+  }
+
+  it.each(REMOVED)('被移除：companion %s %s → 403 PERM_DENIED', async (method, path) => {
+    const { res, err } = await call(method, path, true);
+    expect(res.status).toBe(403);
+    expect(err?.code).toBe('PERM_DENIED');
+    expect(err?.detail).toBe(SCOPE_DETAIL);
+  });
+
+  it.each(KEPT)('保留：companion %s %s → 通過 gate', async (method, path) => {
+    const { err } = await call(method, path, true);
+    expect(err?.detail).not.toBe(SCOPE_DETAIL);
+  });
+
+  it.each(REMOVED)('一般請求不受影響：無 header %s %s → 不被 gate 擋', async (method, path) => {
+    const { err } = await call(method, path, false);
+    expect(err?.detail).not.toBe(SCOPE_DETAIL);
   });
 });

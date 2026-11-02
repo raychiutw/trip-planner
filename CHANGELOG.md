@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.128] - 2026-11-02
+
+### Security
+- **旅伴（companion）請求的路徑白名單收窄為最小權限**：帶 `X-Request-Scope: companion` 的請求，原本除了 AI 助理真正用到的 10 個行程編輯工具外，還多放行 10 項（trip-pois 三個寫入、`PATCH /api/requests/:id`、三個 GET、收藏的新增／刪除／加入行程）。查證沒有任何呼叫者用到：唯一會送這個 header 的是 agent 的 MCP server（只對標為 companion 的工具）；App 與網站都不送；AI 的隔離 session 只能用 MCP 工具，沒有收藏或 trip-pois 工具；production 的 `companion_request_actions` 與 `system:companion` 稽核紀錄都是 0 筆（這功能從沒被用過）。現在白名單恰好等於那 10 個工具；**沒帶 companion header 的一般請求完全不受影響**。新 api 已同步收窄（trip-planner-api #45，已部署）。
+
+### For contributors
+- 先寫測試（10 條被移除路徑 → 403，紅燈 10 個）再改白名單；既有的 15 個「companion 可以用」的測試改成斷言 403、刪除 20 個現在被 gate 擋在 handler 之前而到不了的測試（含 3 個變成假綠的所有權檢查，清單在 PR 內文）。Mutation：10 條路徑逐一加回與整個 gate 拿掉都轉紅。handler 裡的 companion 程式碼已成為死碼，另案清理。沒有跑 gstack 的 review army。
+
 ## [2.57.127] - 2026-11-02
 
 ### Added
