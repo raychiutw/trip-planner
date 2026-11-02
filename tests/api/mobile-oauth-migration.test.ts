@@ -116,6 +116,12 @@ describe('public/.well-known association files', () => {
     expect(links[0].target.sha256_cert_fingerprints.length).toBeGreaterThan(0);
   });
 
+  it('webcredentials 列出與 applinks 相同的 app id（iOS 17.4+ 的 https callback 要 webcredentials 網域關聯；沒有它 ASWebAuthenticationSession 一出現就回 CANCELED）', () => {
+    expect(aasa.webcredentials).toBeDefined();
+    expect(aasa.webcredentials.apps).toEqual([aasa.applinks.details[0].appID]);
+    expect(aasa.applinks.details[0].paths).toEqual(expect.arrayContaining([new URL(MOBILE_PROD_REDIRECT).pathname]));
+  });
+
   it('extensionless 的 apple-app-site-association 以 application/json 提供（否則 iOS 不認）', () => {
     const block = headers.split(/\n\s*\n/).find(b => b.startsWith('/.well-known/apple-app-site-association'));
     expect(block).toBeDefined();

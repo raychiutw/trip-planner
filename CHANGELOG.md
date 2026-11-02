@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.129] - 2026-11-02
+
+### Fixed
+- **iOS 真機登入時授權視窗一出現就被取消**：iOS 17.4 以後，`ASWebAuthenticationSession` 用 https callback 時，callback 網域的 `apple-app-site-association` 必須有 `webcredentials` 關聯；原本只有 `applinks`，所以系統在視窗出現時就回 `CANCELED`。`apple-app-site-association` 加入 `"webcredentials": { "apps": ["8Z6WVFJ574.com.raychiu.tripline"] }`（applinks 不動）。注意 `mobile-callback` 是 Pages 的分支 alias，服務的是那個分支的建置，需要另外把該分支更新到 master 才會生效；App 端也要加對應的 `webcredentials:` entitlement 並發版。
+
+### For contributors
+- 先確認新測試對舊檔案轉紅（`webcredentials` 不存在），加入後轉綠；`mobile-oauth-migration` 7/7 通過。沒有跑 gstack 的 review army。
+
 ## [2.57.128] - 2026-11-02
 
 ### Security
