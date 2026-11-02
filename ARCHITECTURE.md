@@ -407,6 +407,7 @@ tests/
 | [0009](docs/adr/0009-account-deletion-requires-fresh-google-reauth.md) | 刪除帳號需伺服器驗證的近期 Google 重新驗證，無法驗證就 fail-closed（⚠️ Google 是否回 `auth_time` 待驗證） |
 | [0010](docs/adr/0010-mobile-oauth-public-client-callback-contract.md) | Mobile OAuth 是 public client，callback 與 client 依環境精確綁定、用 HTTPS app link |
 | [0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md) | 拆成 web、api、agent 三個專案，認證改 bearer token（Accepted 2026-11-02；web 尚未切換、無 WAF，含殘留風險） |
+| [0012](docs/adr/0012-ai-data-consent-requester-and-owner.md) | AI 資料同意：送出者與行程 owner 雙方持有，server 端把關（Accepted；文案欄位待補） |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 

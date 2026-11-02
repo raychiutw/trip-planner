@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.130] - 2026-11-03
+
+### Changed
+- **AI 資料同意的領域詞彙與決策定案**：GLOSSARY 新增「AI 資料同意」一節（AI 操作授權、AI 資料同意、同意版本、資料同意狀態、受管制入口、雙方同意），新增 ADR-0012：同意由送出者與行程 owner 雙方持有、server 端把關、不回填舊授權、撤回沿用 ADR-0007 語意、交給 AI 的請求資料只留顯示名稱。ARCHITECTURE.md 的決策索引同步。
+
+### For contributors
+- 純文件變更；`architecture-key-decisions` 測試通過。決策來自 2026-11-03 的 `/grill-with-docs`（#1348）；責任人與聯絡信箱、Claude 帳號「改善模型」設定的核實結果仍待 owner 提供。沒有跑 gstack 的 review army。
+
 ## [2.57.129] - 2026-11-02
 
 ### Fixed
