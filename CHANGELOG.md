@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.131] - 2026-11-03
+
+### Removed
+- **旅伴（companion）白名單收窄後不可達的死碼（舊入口）**：companion 白名單收窄為最小權限之後（2.57.128），收藏與 trip-pois 的 companion 專屬分支經 HTTP 已經到不了。移除 companion 解析、`companion_request_actions` 的寫入、companion rate-limit bucket、failure audit，以及 `COMPANION_QUOTA_EXCEEDED` 錯誤碼；`requireFavoriteActor` 改為只驗 `auth.userId`。一般使用者（cookie／bearer）的收藏、trip-pois、requests、trips 行為與測試完全不變；保留保留項的 10 個 companion 工具、`COMPANION_ALLOWED` 與檢查、`hasOpsScope(auth,'companion')`、api-logs 來源標記，以及 migration 與資料表。
+
+### For contributors
+- 新增守衛測試：service token 沒有 userId 打三個收藏寫入端點必須 401 且不寫資料（`requireFavoriteActor` 不驗 userId 的 mutation 原本沒有測試會紅）。刪除 `companion-resolver` 單元測試（被刪的 resolver 專屬）。7 個 mutation 全部轉紅。unit 4576、api 1468 通過；本機偶發的 DOM 測試失敗單獨重跑通過。沒有跑 gstack 的 review army。
+
 ## [2.57.130] - 2026-11-03
 
 ### Changed
