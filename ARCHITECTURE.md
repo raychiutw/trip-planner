@@ -81,19 +81,6 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 BrowserRouter 走 pretty URL (無 hash)。`/manage/` 與 `/admin/` 的 `dist/` 仍有
 `index.html` 複本以支援 direct access (build step in `package.json`)。
 
-聊天、桌機側欄、行程清單、行程明細與地圖頁的可存取行程摘要共用 `useMyTrips`，只讀 `/my-trips` 的 camelCase
-回應，按登入 user ID 隔離清單；初次同時讀取共用請求，`tp-trips-updated` 觸發刷新，
-較舊回應不得覆蓋較新結果；正式的建立、更新與刪除行程事件也會觸發刷新。
-當最後一個讀取者離開後，再次進入會共用一次重讀，補上分享複製或接受邀請期間漏接的更新。
-清單狀態區分載入、失敗與成功空清單。聊天、行程清單與行程明細透過
-`useAccessibleTripSelection` 協調明確目標、有效偏好與成功讀取後的 fallback；
-`/map` 只在清單確認後選擇並導向 `/trip/:tripId/map`，成功空清單保留新增引導，
-行程地圖本身保留日期、POI 與 Google 地圖操作；
-明確目標不在清單時，行程明細仍交由 `useTrip` 讀取並呈現實際錯誤。
-桌機行程清單只在首次進入時依 active trip 與上次檢視行程還原，手機保留清單返回。
-側欄直接讀 `ActiveTripContext` 的選擇。偏好仍由該 context 寫入既有 localStorage
-key 並接收跨分頁 storage event；上次檢視行程維持獨立語意。
-
 ### 目錄結構
 
 ```
@@ -104,21 +91,20 @@ src/
 │   ├── trip/                TimelineRail（拆 RailRow / EntryTimeChip / RailRowMenu / StopPoiChoiceCard）/
 │   │                        DayNav / DaySection / TripMapRail / DayMap ...
 │   └── shared/              Icon / Toast / ErrorBoundary / PageNav ...
-├── hooks/                   useTrip / useConversation / useDarkMode / usePrintMode / usePermissions ...
+├── hooks/                   useTrip / useTripRead（useTripMeta／useTripDays／useTripDestinations）/ useConversation / useDarkMode / usePrintMode / usePermissions ...
 ├── lib/
 │   ├── apiClient.ts         統一 fetch wrapper（處理 AppError）
 │   ├── entryMutations.ts    entry 變更：動詞 module（createEntry/setMaster/deleteEntry/...）回 Result，
-│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 CONTEXT.md「entry 變更」
-│   ├── travelRecompute.ts   segment 重算：single-flight、gap signature、唯讀停止與待更新狀態
-│   ├── segmentScope.ts      segment 讀取者生命週期，隔離晚到操作的通知，保留必要 server 重算
-│   ├── manualSegment.ts     兩個手動交通入口共用 POST／PATCH、成功通知與行程生命週期隔離
+│   │                        emit entryUpdated + 依 day scope 觸發車程重算，見 GLOSSARY.md「entry 變更」
+│   ├── tripMutations.ts     行程層變更：archiveTrip/unarchiveTrip/deleteTrip/deleteDay 回 Result，
+│   │                        成功 emit tripUpdated；不 toast、不導覽（同 entryMutations 慣例）
+│   ├── segmentMutations.ts  手動車程建立／更新，成功 emit segmentUpdated 觸發共用讀取
+│   ├── travelRecompute.ts   車程重算 single-flight、gap signature、403 停用與失敗狀態
 │   ├── mapRow.ts            DB row → UI object 統一轉換
 │   ├── scrollSpy.ts         純函式：捲動位置 → active day index
 │   └── ...                  localStorage、sentry、timelineUtils
 └── types/                   trip.ts / api.ts
 ```
-
-手動交通寫入由 `manualSegment` 執行 POST／PATCH，成功後只在原行程讀取生命週期仍有效時送出 segment 更新通知，由 `useTripSegments` 重讀。`TravelPillDialog` 保留 600ms autosave 與 409 版本重讀／重試；`EditEntryPage` 保留簡化的 mode／分鐘輸入及不強制帶版本的契約。entry 與 segment 同時修改時各自記錄成功結果，重讀或另一項寫入失敗不重送已成功的操作；過期畫面不發布提示或通知。
 
 ### 狀態管理
 
@@ -127,6 +113,10 @@ src/
 1. **Server state** — `useTrip`（SWR-style fetch + cache），`useRequests`（SSE）
 2. **Cross-component UI state** — React context（`DarkModeProvider`、`PermissionsProvider`）
 3. **Local state** — `useState` / `useRef`，不外流
+
+`useTripSegments` 是 segment 讀取與自動補算的共同入口。TripPage provider 共用一次讀取給時間軸與日區塊；獨立編輯頁自行讀取。entry/segment 更新會使舊讀取失效，完成新讀取後才判定相鄰 entry 的缺口，並交由 `travelRecompute` 按 day scope 去重與回報待更新狀態。
+`segmentMutations.saveSegment` 負責兩個手動編輯入口的 POST／PATCH 與成功事件；版本重試及表單錯誤提示留在各入口。刷新結果由 `useTripSegments` 處理，不改寫已成功的儲存結果。
+`useMyTrips` 依使用者共用 `/my-trips` 清單讀取、同時請求、刷新與最新結果；`useTripSelection` 將清單與 `ActiveTripContext` 偏好接合。聊天、行程清單、行程明細、root 地圖、行程地圖與側欄沿用同一清單與偏好；明確 URL／行程 sheet 目標仍優先，存取權由實際行程讀取判定。失敗讀取不確認空清單。root `/map` 只導向選定行程地圖或顯示空狀態，days、pins 與 Google 地圖操作留在 `/trip/:id/map`。桌機 `/trips` 的上次檢視行程及日期還原留在清單頁，手機仍先呈現清單。
 
 ### CSS 架構
 
@@ -181,10 +171,7 @@ functions/api/
 ├── _types.ts            Env / shared types
 ├── _utils.ts            共用 DB / header helpers
 ├── _validate.ts         input validation + garbled guard
-├── trips/               trips CRUD + batch days endpoint
-│   ├── _tripCreation.ts 新行程建立順序、ID 對應、分批帳本與補償（匯入與分享 clone 共用；caller 保留來源驗證／轉換）
-│   ├── _import.ts       匯入來源驗證、舊格式正規化及建立 plan 轉換
-│   └── _tripWrite.ts    分批 D1、清理與 ID／行程數上限 primitives
+├── trips/               trips CRUD + batch days endpoint；_createTrip.ts 持有新行程分批建立、ID 對應及補償
 ├── pois/                POI CRUD（AI 維護的 master）
 ├── requests/            旅伴請求（含 SSE stream）
 ├── permissions/         trip_permissions CRUD
@@ -238,7 +225,7 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 (functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
 `createEntriesBatch`／`replaceDayEntries`，functions/api/_entryWrite.ts）。整日重寫由 `replaceDayEntries`
 一次提交 entries、junction、備選資料、hotel／parking 與版本；其他建立入口保留共用 intake，
-見 `CONTEXT.md` 的「entry intake」詞條。
+見 `GLOSSARY.md` 的「entry intake」詞條。
 
 ### Google Maps Platform stack (v2.23.0+)
 
@@ -253,9 +240,9 @@ functions/api/route.ts             Routes API proxy (driving / walking / transit
 functions/api/pois/[id]/enrich.ts  即時 Place Details 補 POI metadata
 functions/api/admin/maps-{lock,unlock,backfill-status,maps-settings,quota-estimate}.ts
                                    Kill switch + 90/50 hysteresis (app_settings table)
-scripts/google-poi-refresh-30d.ts  daily refresh 50/day cap (mac mini cron)
-scripts/google-poi-initial-backfill.ts
-scripts/google-quota-monitor.ts
+trip-planner-agent/scripts/google-poi-refresh-30d.ts  daily refresh 50/day cap (mac mini cron)
+trip-planner-agent/scripts/google-poi-initial-backfill.ts
+trip-planner-agent/scripts/google-quota-monitor.ts
 
 API endpoints:
   POST /api/pois/:id/enrich          手動觸發單一 POI enrich (admin/owner/即時 + 30d cron)
@@ -264,9 +251,9 @@ API endpoints:
   POST /api/places/autocomplete       Places Autocomplete (typeahead, v2.31.94)
 
 排程 (mac mini cron via launchd):
-  scripts/google-poi-refresh-30d.ts   每日 50/day cap (autoplan T11)
-  scripts/google-poi-initial-backfill.ts  一次性
-  scripts/google-quota-monitor.ts     monitor Google Cloud API quota
+  trip-planner-agent/scripts/google-poi-refresh-30d.ts   每日 50/day cap (autoplan T11)
+  trip-planner-agent/scripts/google-poi-initial-backfill.ts  一次性
+  trip-planner-agent/scripts/google-quota-monitor.ts     monitor Google Cloud API quota
   (v2.31.4: poi-enrich-batch.ts + /tp-poi-enrich-monthly skill 已 rip out — 改 即時 + 30d 模型)
 ```
 
@@ -378,7 +365,7 @@ Migration 必須 **idempotent**（`IF NOT EXISTS` / `IF EXISTS`），因為 D1 �
 | Frontend errors | Sentry SDK（`src/lib/sentry.ts`）| Sentry cloud |
 | Backend errors | `AppError` throw → `_errors.ts` + `api_logs` INSERT | D1 `api_logs` table |
 | Audit（寫操作）| `_audit.ts` | D1 `audit_log` table |
-| Daily health | `scripts/daily-check.js` + Gmail API | Telegram（紅燈推播）|
+| Daily health | `trip-planner-agent` 的 `scripts/daily-check.js` + Gmail API | Telegram（紅燈推播）|
 
 ---
 
@@ -416,6 +403,10 @@ tests/
 | [0005](docs/adr/0005-google-maps-platform-only.md) | 全套切換 Google Maps Platform，不留 fallback（v2.23.0，2026-05-23 鎖死） |
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
+| [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
+| [0009](docs/adr/0009-account-deletion-requires-fresh-google-reauth.md) | 刪除帳號需伺服器驗證的近期 Google 重新驗證，無法驗證就 fail-closed（⚠️ Google 是否回 `auth_time` 待驗證） |
+| [0010](docs/adr/0010-mobile-oauth-public-client-callback-contract.md) | Mobile OAuth 是 public client，callback 與 client 依環境精確綁定、用 HTTPS app link |
+| [0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md) | 拆成 web、api、agent 三個專案，認證改 bearer token（Accepted 2026-11-02；web 尚未切換、無 WAF，含殘留風險） |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 
@@ -444,7 +435,7 @@ tests/
 ## Related Docs
 
 - [README.md](README.md) — 使用者介紹、功能特色
-- [CONTEXT.md](CONTEXT.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
+- [GLOSSARY.md](GLOSSARY.md) — 領域詞彙（ubiquitous language）、已退場的名字對照
 - [docs/adr/](docs/adr/) — 架構決策記錄（為什麼是這樣）
 - [AGENTS.md](AGENTS.md) — Matt Pocock 官方技能流程與 Tripline 發布規則
 - [CLAUDE.md](CLAUDE.md) — 專案事實、命名歷史與非衝突的 agent 規則

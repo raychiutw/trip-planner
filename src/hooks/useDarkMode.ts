@@ -1,10 +1,11 @@
-import { useSyncExternalStore } from 'react';
-import { lsSet, lsGet } from '../lib/localStorage';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { lsSet, lsGet, LS_PREFIX } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
 
 /** Theme color values (light / dark) — for <meta name="theme-color">. Mirrors V2 Terracotta `--color-accent`. */
 const THEME_COLORS = { light: '#A97A4A', dark: '#1C1C1E' } as const;
+const COLOR_MODE_EVENT = 'tp-color-mode-change';
 
 /** Resolve whether dark class should be applied for a given color mode. */
 function resolveDark(mode: ColorMode): boolean {
@@ -12,7 +13,8 @@ function resolveDark(mode: ColorMode): boolean {
   if (mode === 'light') return false;
   return (
     typeof window !== 'undefined' &&
-    !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
   );
 }
 
@@ -34,73 +36,72 @@ function updateMetaThemeColor(dark: boolean) {
   }
 }
 
-interface ThemeState { colorMode: ColorMode; isDark: boolean; saveFailed: boolean }
-let state: ThemeState | undefined;
-let printing = false;
-const listeners = new Set<() => void>();
-
-function getSnapshot(): ThemeState {
-  if (!state) {
-    const colorMode = readColorMode();
-    state = { colorMode, isDark: resolveDark(colorMode), saveFailed: false };
-  }
-  return state;
-}
-
-function publish(colorMode = getSnapshot().colorMode, saveFailed = getSnapshot().saveFailed) {
-  const isDark = !printing && resolveDark(colorMode);
-  const previous = getSnapshot();
-  document.body.classList.toggle('dark', isDark);
-  updateMetaThemeColor(isDark);
-  if (previous.colorMode === colorMode && previous.isDark === isDark && previous.saveFailed === saveFailed) return;
-  state = { colorMode, isDark, saveFailed };
-  listeners.forEach(listener => listener());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  // One set of environment listeners regardless of the number of hook consumers.
-  if (listeners.size === 1) startListening();
-  return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) {
-      stopListening?.();
-      stopListening = undefined;
-      state = undefined;
-      printing = false;
-    }
-  };
-}
-let stopListening: (() => void) | undefined;
-function startListening() {
-  const media = window.matchMedia?.('(prefers-color-scheme: dark)');
-  const onSystemChange = () => publish();
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key === 'tp-color-mode' || event.key === 'tp-dark') publish(readColorMode(), false);
-  };
-  media?.addEventListener('change', onSystemChange);
-  window.addEventListener('storage', onStorage);
-  publish();
-  stopListening = () => {
-    media?.removeEventListener('change', onSystemChange);
-    window.removeEventListener('storage', onStorage);
-  };
-}
-
-function setColorMode(mode: ColorMode) {
-  publish(mode, !lsSet('color-mode', mode));
-}
-
-/** Print presentation never changes the saved preference; exit resolves the current environment. */
-function setPrintAppearance(active: boolean) {
-  printing = active;
-  publish();
-}
-
-function toggleDark() { setColorMode(getSnapshot().isDark ? 'light' : 'dark'); }
-
-/** Shared preference and resolved appearance for every mounted consumer. */
+/**
+ * Hook to manage light/dark mode state.
+ *
+ * Supports three-way color mode (light / auto / dark).
+ * Applies `body.dark` class and updates `<meta name="theme-color">`.
+ */
 export function useDarkMode() {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
-  return { ...snapshot, setColorMode, setPrintAppearance, toggleDark };
+  // v2.33.40 round 4.5: 之前 readColorMode() 在 initial render 跑兩次（一次給
+  // colorMode、一次給 isDark），兩次都打 localStorage。改用單一 init 函式。
+  const [colorMode, setColorModeState] = useState<ColorMode>(readColorMode);
+  const [isDark, setIsDark] = useState(() => resolveDark(colorMode));
+  const modeRef = useRef(colorMode);
+
+  // The root initializer and page/sheet controls can coexist. Same-tab storage
+  // writes emit no `storage` event, so fan out the one preference to every hook.
+  useEffect(() => {
+    const applyMode = (mode: ColorMode) => {
+      modeRef.current = mode;
+      setColorModeState(mode);
+      setIsDark(resolveDark(mode));
+    };
+    const onModeChange = (event: Event) => applyMode((event as CustomEvent<ColorMode>).detail);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LS_PREFIX + 'color-mode' || event.key === LS_PREFIX + 'dark') {
+        applyMode(readColorMode());
+      }
+    };
+    window.addEventListener(COLOR_MODE_EVENT, onModeChange);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(COLOR_MODE_EVENT, onModeChange);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    updateMetaThemeColor(isDark);
+  }, [isDark]);
+
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    if (colorMode !== 'auto') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      // Ignore a stale auto listener before React has cleaned it up after a click.
+      if (modeRef.current === 'auto') setIsDark(e.matches);
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [colorMode]);
+
+  const setColorMode = useCallback((mode: ColorMode) => {
+    lsSet('color-mode', mode);
+    window.dispatchEvent(new CustomEvent<ColorMode>(COLOR_MODE_EVENT, { detail: mode }));
+  }, []);
+
+  const toggleDark = useCallback(() => {
+    setColorMode(isDark ? 'light' : 'dark');
+  }, [isDark, setColorMode]);
+
+  return { isDark, setIsDark, colorMode, setColorMode, toggleDark };
 }

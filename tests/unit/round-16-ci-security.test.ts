@@ -19,13 +19,11 @@ const exists = (p: string) => existsSync(path.resolve(__dirname, '../..', p));
 const WORKFLOWS = [
   '.github/workflows/ci.yml',
   '.github/workflows/deploy.yml',
-  '.github/workflows/daily-report.yml',
   '.github/workflows/lighthouse.yml',
   '.github/workflows/rate-limit-cleanup.yml',
-  '.github/workflows/telegram-smoke.yml',
 ];
 
-describe('v2.33.66 HIGH-1 — permissions: contents: read on all 6 workflows', () => {
+describe('v2.33.66 HIGH-1 — permissions: contents: read on all 4 workflows', () => {
   for (const wf of WORKFLOWS) {
     it(`${wf} declares permissions: contents: read`, () => {
       const src = read(wf);

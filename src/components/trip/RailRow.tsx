@@ -82,13 +82,6 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
 
   const [editingNote, setEditingNote] = useState(false);
   const [draftNote, setDraftNote] = useState('');
-  const noteTarget = `${tripId}:${entryIdNum}:${masterPoiId}`;
-  const [editingTarget, setEditingTarget] = useState(noteTarget);
-  if (editingTarget !== noteTarget) {
-    setEditingTarget(noteTarget);
-    setEditingNote(false);
-    setDraftNote('');
-  }
   // v2.33.108: note save 走 useAutosave hook（state/error 由 hook 管）。
   // deleteError 保留 separate state — 跟 note edit error 互不干擾。
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -101,7 +94,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   // 移除「儲存 / 取消」button，改「完成」按鈕（純關閉 edit mode，狀態已 auto-saved）。
   // ESC 改 revert + 關 — 若未 save 直接 cancel；若已 save 則 revert 需透過原值重 PATCH（保守做法：ESC 一律 flush + close）。
   const noteAutosave = useAutosave<{ note: string }>({
-    entityKey: noteTarget,
+    scopeKey: `${tripId}:${entryIdNum}:${masterPoiId}`,
     debounceMs: 800,
     save: async (body) => {
       if (!tripId || entryIdNum == null || masterPoiId == null) {
@@ -135,10 +128,10 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   };
 
   const closeEditNote = useCallback(async () => {
-    const outcome = await noteAutosave.flush();
-    if (outcome.status !== 'saved') return;
-    setEditingNote(false);
-    setDraftNote('');
+    if (await noteAutosave.flush()) {
+      setEditingNote(false);
+      setDraftNote('');
+    }
   }, [noteAutosave]);
 
   const handleNoteChange = (value: string) => {

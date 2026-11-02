@@ -107,6 +107,10 @@ export function initSentry(): void {
     integrations: [browserTracingIntegration()],
     // Sample 10 % of transactions to stay within the free quota.
     tracesSampleRate: 0.1,
+    // Sentry 11 預設 span streaming，會讓下方 beforeSendTransaction 失效（被忽略、不呼叫），
+    // HeadlessChrome 雜訊會復發。先保留 static 語意；SDK 文件標示此選項未來會移除，
+    // 屆時需改成初始化時依 UA / localhost 直接不取樣。
+    traceLifecycle: 'static',
     // Session Replay is intentionally disabled to conserve free quota.
     beforeSend(event: SentryErrorEvent, _hint: EventHint) {
       return isNoiseEvent(event) ? null : event;

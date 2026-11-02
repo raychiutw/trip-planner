@@ -1,28 +1,26 @@
 /**
  * DesktopSidebarConnected — auto-fetch current user + 我的行程清單（rev2）。
  *
- * Connected variant：useCurrentUser 填 `user`、useMyTrips 填 `trips`；
- * active trip 由 ActiveTripContext 提供，與聊天的選擇保持一致。
+ * Connected variant：useCurrentUser 填 `user`、useTripSelection 填 `trips` 與
+ * ActiveTripContext 偏好；明確 URL（/trips?selected=<id> 或 /trip/:id）優先標示。
  *
  * Pure <DesktopSidebar/>（prop-driven）保留給測試 / explicit override。
  *
- * Unknown identity shows loading/retry in the existing account area;
- * the trip list retains its loading skeleton until identity resolves.
+ * Loading state：user / trips 還沒 resolve 時 sidebar 保持 neutral skeleton，
+ * 避免 login/account + 清單 flicker。
  */
-import AuthStatus from '../shared/AuthStatus';
 import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import DesktopSidebar, { type DesktopSidebarProps, type SidebarUser } from './DesktopSidebar';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { useMyTrips } from '../../hooks/useMyTrips';
-import { useActiveTrip } from '../../contexts/ActiveTripContext';
+import { useTripSelection } from '../../hooks/useMyTrips';
 
-export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'userStatus' | 'trips' | 'tripsStatus' | 'activeTripId'>;
+export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'tripsStatus' | 'activeTripId'>;
 
 export default function DesktopSidebarConnected(props: DesktopSidebarConnectedProps) {
-  const auth = useCurrentUser();
-  const { user } = auth;
-  const { activeTripId } = useActiveTrip();
-  const { trips, status: tripsStatus } = useMyTrips(user?.id);
+  const { user } = useCurrentUser();
+  const { pathname, search } = useLocation();
+  const { trips, status: tripsStatus, activeTripId: preferredTripId } = useTripSelection(user?.id, { fallback: false });
 
   const sidebarUser = useMemo<SidebarUser | null | undefined>(() => {
     if (user === undefined) return undefined;
@@ -34,5 +32,12 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     };
   }, [user]);
 
-  return <DesktopSidebar {...props} user={sidebarUser} userStatus={<AuthStatus auth={auth} />} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
+  const activeTripId = useMemo(() => {
+    const sel = new URLSearchParams(search).get('selected');
+    if (sel) return sel;
+    const m = pathname.match(/^\/trip\/([^/]+)/);
+    return m ? m[1] : preferredTripId;
+  }, [pathname, search, preferredTripId]);
+
+  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
 }

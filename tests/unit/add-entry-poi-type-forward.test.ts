@@ -31,7 +31,9 @@ describe('add-entry paths forward poi_type (Google primaryType → whitelist)', 
     expect(ADD_STOP).toMatch(/poi_type:.*mapGooglePrimaryTypeToPoiType\(r\.category\)/);
   });
 
-  // Canonical favorite POI identity is exercised in entry-target-recovery.test.tsx.
+  it('AddStopPage favorites payload derives poi_type from r.poiType', () => {
+    expect(ADD_STOP).toMatch(/poi_type:\s*mapGooglePrimaryTypeToPoiType\(r\.poiType\)/);
+  });
 
   it('AddPoiFavoriteToTripPage direct mode forwards poi_type from the favorite', () => {
     expect(ADD_FAV).toMatch(/mapGooglePrimaryTypeToPoiType/);

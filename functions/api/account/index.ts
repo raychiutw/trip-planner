@@ -5,19 +5,19 @@
  * Google Play 對「可建立帳號的 app」**強制要求**帳號刪除路徑，且要求 app 內與網頁
  * 各有一條。這支是兩條路徑共用的後端。
  *
- * Auth: requireSessionUser
+ * Auth：瀏覽器 session，或與環境相符的 mobile OAuth grant
  *
  * Body（擇一）:
  *   { password: string }  — 帳號有 local 密碼身分時**必須**帶，做二次確認
- *   { confirm: 'DELETE' } — 純 OAuth 帳號（無 password_hash）沒有密碼可打，改用確認字串
+ *   { confirm: 'DELETE', challengeId?: string } — 無密碼帳號須先完成同帳號近期驗證
  *
  * Response 200: { ok: true, tripsDeleted, auditRowsAnonymized, tablesCleared }
- *   同時回 Set-Cookie 清除 session —— 帳號都沒了，cookie 不該還能用。
+ *   瀏覽器回應同時清除 session cookie；OAuth token 由 erasure 一併撤銷。
  *
  * ⚠ 這是**不可逆**操作。二次確認不是形式：owner 決策為「擁有的行程一併刪除，
  *   含共編者的」，誤觸的代價是別人的資料也沒了。
  *
- * ⚠ 實際抹除邏輯在 `_erasure.ts`（逐表顯式刪除，不依賴 CASCADE）。
+ * ⚠ 實際抹除邏輯在 `_erasure.ts`（單一 D1 batch 顯式刪除）。
  *   本檔只負責驗證與回應，不重複實作刪除順序。
  */
 import { mobileOAuthContract } from '../_mobileOAuth';
@@ -36,7 +36,7 @@ interface DeleteAccountBody {
   challengeId?: unknown;
 }
 
-/** 純 OAuth 帳號用的確認字串。刻意用英文大寫，避免輸入法誤觸。 */
+/** 純 OAuth 帳號的確認字串（另需近期 Google 重新驗證，只打這個不夠）。刻意用英文大寫，避免輸入法誤觸。 */
 const CONFIRM_PHRASE = 'DELETE';
 
 /**
@@ -60,7 +60,9 @@ async function findLocalPasswordHash(env: Env, userId: string): Promise<string |
  * 確認對話框必須誠實顯示「按下去會發生什麼」。owner 決策是**行程一併刪除，含共編者的**，
  * 所以受影響的共編人數一定要先讓使用者看到 —— 這個數字前端算不出來，只能後端查。
  *
- * Response: { hasPassword, tripsOwned, collaboratorsAffected }
+ * Response: { hasPassword, reauthProvider, reauthenticated, tripsOwned, collaboratorsAffected }
+ *   - reauthProvider：純 OAuth 帳號需要重新驗證的 provider（目前只有 'google'），有密碼或無可用 provider 時為 null
+ *   - reauthenticated：只對瀏覽器 cookie flow 有意義；mobile Bearer 的證明在 challenge，這裡一律 false
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const actor = await requireAccountActor(context);
@@ -146,7 +148,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     summary = await eraseUserAccount(context.env.DB, userId);
   } catch (error) {
-    // D1 batch has rolled back the erasure; restore the same fresh-auth proof.
+    // D1 batch 已回滾刪除；還原同一份 fresh-auth 證明。
     if (!passwordHash) {
       if (actor.grantId && typeof body.challengeId === 'string') {
         await transitionMobileDeleteChallenge(context.env.DB, body.challengeId, userId, actor.grantId, 'used', 'verified');

@@ -57,7 +57,6 @@ export const ErrorCode = {
   INVITATION_INVALID: 'INVITATION_INVALID',
   INVITATION_ACCEPTED: 'INVITATION_ACCEPTED',
   INVITATION_EXPIRED: 'INVITATION_EXPIRED',
-  INVITATION_EMAIL_MISMATCH: 'INVITATION_EMAIL_MISMATCH',
   SERVER_MISCONFIG: 'SERVER_MISCONFIG',
   // Tripline auth flow（login / signup / reset-password）—— 對 frontend 提供穩定 code
   LOGIN_INVALID_INPUT: 'LOGIN_INVALID_INPUT',
@@ -119,7 +118,6 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   INVITATION_INVALID: '邀請連結無效，請聯絡邀請者重寄',
   INVITATION_ACCEPTED: '此邀請已接受過，請直接登入',
   INVITATION_EXPIRED: '邀請已過期，請聯絡邀請者重寄',
-  INVITATION_EMAIL_MISMATCH: '此邀請不屬於你的帳號',
   SERVER_MISCONFIG: '伺服器設定錯誤，請聯絡管理員',
   LOGIN_INVALID_INPUT: 'email + password 必填',
   LOGIN_INVALID: 'email 或密碼錯誤',
@@ -168,7 +166,7 @@ export interface AuthData {
   scopes?: string[];
   /** OAuth client_id from V2 Bearer token. Only present for service token. */
   clientId?: string;
-  /** Stable OAuth grant shared by access and refresh tokens; sensitive operations can bind to it. */
+  /** access 與 refresh token 共用的穩定 OAuth grant；敏感操作可綁定它。 */
   grantId?: string;
   /**
    * Trip-scoped token restriction (v2.55.56, tp-request downscope). When set, the
@@ -199,7 +197,7 @@ export interface AuthData {
  * Valid request status values — 對齊 migration 0049 的 D1 CHECK constraint。
  *
  * 曾長期漂移：帶著 v2.21.3 就退場的 `received`、缺了 `failed`（而 `failed` 是
- * 後端唯一的失敗終態）。CONTEXT.md 的「已退場的名字」是權威。
+ * 後端唯一的失敗終態）。GLOSSARY.md 的「已退場的名字」是權威。
  */
 export type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
 
@@ -302,8 +300,6 @@ export interface PoiFavorite {
   note?: string | null;
   // JOIN pois 欄位（GET endpoint 會回）
   poiName?: string;
-  /** Canonical Google identity; null for a custom POI. */
-  poiPlaceId?: string | null;
   poiAddress?: string | null;
   poiLat?: number | null;
   poiLng?: number | null;

@@ -1,7 +1,6 @@
 /**
- * PR3 — import endpoint + frontend wiring (source grep).
- * Import lifecycle behavior is covered by trip-import-lifecycle.integration.test.ts.
- * These remaining checks cover validation and frontend wiring not replaced there.
+ * 匯入驗證邊界與前端入口的既有靜態守衛。
+ * 建立、ID 對應與補償由 trip-import-creation.integration.test.ts 的真 D1 行為測試驗證。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

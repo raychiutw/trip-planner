@@ -1,62 +1,55 @@
 /**
  * _middleware.ts — GET /api/poi-search public-read bypass (poi-favorites-rename §5.2)
  *
- * Cutover 修補：poi-search 是 OSM Nominatim proxy，無 user data，本應 anonymous
- * public-read（同 /api/route / /api/public-config pattern）。漏列的 198 筆
- * production 401 由本 PR 修補。
+ * Cutover 修補：poi-search 是 Places proxy，無 user data，本應 anonymous public-read
+ * （同 /api/route / /api/public-config pattern）。漏列的 198 筆 production 401 由此修補。
  *
- * 採 source-level grep 測試（同 middleware-oauth-bypass.test.ts pattern）避免
- * miniflare 整合設置成本。
+ * 走 HTTP 邊界：匿名請求送到 poi-search，若 middleware 放行，會進到 handler 的參數驗證（400），
+ * 而不是被擋成 401。原本讀 middleware 原始碼比對字串的斷言，改成看真實回應。
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
 
-const MIDDLEWARE_SRC = fs.readFileSync(
-  path.resolve(__dirname, '../../functions/api/_middleware.ts'),
-  'utf8',
-);
+let db: D1Database;
+let api: Api;
+
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db) });
+});
+
+afterAll(disposeMiniflare);
 
 describe('_middleware.ts — GET /api/poi-search public-read bypass (§5.2)', () => {
-  it('包含 GET /api/poi-search bypass block', () => {
-    // Bypass 應檢查 method === GET 且 pathname === '/api/poi-search'
-    expect(MIDDLEWARE_SRC).toMatch(
-      /request\.method\s*===\s*['"]GET['"][\s\S]{0,200}url\.pathname\s*===\s*['"]\/api\/poi-search['"]/,
-    );
+  it('匿名 GET /api/poi-search 被放行：進到 handler 驗證（400），不是 401', async () => {
+    const res = await api.get('https://test.com/api/poi-search');
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('DATA_VALIDATION');
   });
 
-  it('bypass 設 auth = null 並 context.next()', () => {
-    const lines = MIDDLEWARE_SRC.split('\n');
-    let bypassLine = -1;
-    lines.forEach((l, i) => {
-      if (l.includes("/api/poi-search'") || l.includes('"/api/poi-search"')) {
-        bypassLine = i;
-      }
+  it('bypass 先於 session 檢查：帶無效 session cookie 的匿名請求一樣被放行', async () => {
+    const res = await api.get('https://test.com/api/poi-search', {
+      headers: { Cookie: 'tripline_session=not-a-valid-session' },
     });
-    expect(bypassLine).toBeGreaterThan(0);
-
-    const window = lines.slice(bypassLine, bypassLine + 5).join('\n');
-    expect(window).toMatch(/auth\s*=\s*null/);
-    expect(window).toMatch(/context\.next\(\)/);
+    expect(res.status).toBe(400);
   });
 
-  it('bypass 在 V2 session check 之前（anonymous 不需要先 lookup session）', () => {
-    const poiSearchIdx = MIDDLEWARE_SRC.indexOf('/api/poi-search');
-    const sessionLookupIdx = MIDDLEWARE_SRC.indexOf('getSessionUser(request');
-    expect(poiSearchIdx).toBeGreaterThan(0);
-    expect(sessionLookupIdx).toBeGreaterThan(0);
-    expect(
-      poiSearchIdx,
-      'poi-search bypass 應在 V2 session lookup 之前 short-circuit',
-    ).toBeLessThan(sessionLookupIdx);
+  it('bypass 只限 poi-search 本身：相鄰的需認證路徑對照仍回 401（匿名 GET /api/requests）', async () => {
+    const res = await api.get('https://test.com/api/requests');
+    expect(res.status).toBe(401);
   });
 
-  it('POST 不在 bypass：POST /api/poi-search 仍走 V2 auth path', () => {
-    // 只 GET 有 public bypass；POST 該要求認證（防 abuse Nominatim quota）。
-    // grep：bypass block 的 method === 應為 'GET'，不是 POST。
-    const poiSearchIdx = MIDDLEWARE_SRC.indexOf('/api/poi-search');
-    const before = MIDDLEWARE_SRC.slice(Math.max(0, poiSearchIdx - 200), poiSearchIdx);
-    // 不應有 'POST' 在 poi-search bypass block 範圍內
+  // 僅 GET 有 bypass：poi-search 沒有 POST handler，經真實路由派送會在進入 middleware 前就回 405，
+  // HTTP 邊界觀察不到「POST 不在 bypass」。這條仍用原始碼比對，交給 #1503 處理。
+  it('POST 不在 bypass：POST /api/poi-search 仍走 V2 auth path（原始碼比對，待 #1503）', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../functions/api/_middleware.ts'), 'utf8');
+    const poiSearchIdx = src.indexOf('/api/poi-search');
+    const before = src.slice(Math.max(0, poiSearchIdx - 200), poiSearchIdx);
     expect(before).not.toMatch(/method\s*===\s*['"]POST['"][\s\S]{0,150}poi-search/);
   });
 });

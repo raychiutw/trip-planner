@@ -14,7 +14,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
-import type { MyTrip } from '../../hooks/useMyTrips';
+import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
 import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
@@ -23,9 +23,7 @@ const SCOPED_STYLES = `
   /* §10.3 vibrancy（owner 2026-07-19）：暖奶油半透明毛玻璃 — color-mix 主背景 + backdrop
    * blur。走主 app token（--color-background/foreground/muted/hover/border）→ 自動
    * light/dark adapt，取代舊固定深棕 --color-sidebar-* token（那組已無其他 consumer）。 */
-  background: color-mix(in srgb, var(--color-background) 72%, transparent);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  --glass-alpha: 72%; --glass-filter: blur(30px) saturate(180%);   /* recipe：tokens.css 的 .tp-glass */
   border-right: 1px solid var(--color-border);
   padding: 16px 12px 12px;
   display: flex; flex-direction: column;
@@ -196,20 +194,20 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** undefined = auth loading, null = confirmed unauthenticated */
   user?: SidebarUser | null | undefined;
-  /** Loading/recovery presentation supplied by the identity owner. */
-  userStatus?: ReactNode;
   /** rev2：我的行程清單（undefined = 尚未 resolve → skeleton；[] = 無行程） */
   trips?: MyTrip[];
-  /** Distinguish an initial read failure from the loading skeleton and confirmed empty list. */
-  tripsStatus?: 'loading' | 'success' | 'error';
+  tripsStatus?: MyTripsState['status'];
   /** 目前 active trip id（清單 highlight） */
   activeTripId?: string | null;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+  // v2.33.45 round 6b: Array.from CJK-safe slice。顯示字串同時是無障礙名稱的開頭（WCAG 2.5.3 Label in Name）。
+  const nameChars = user ? Array.from(user.name) : [];
+  const displayName = nameChars.length > 10 ? `${nameChars.slice(0, 10).join('')}…` : (user?.name ?? '');
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
@@ -218,7 +216,7 @@ export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, a
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-sidebar" data-testid="desktop-sidebar">
+      <div className="tp-sidebar tp-glass" data-testid="desktop-sidebar">
         <div className="tp-sidebar-brand">
           {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
         </div>
@@ -260,8 +258,8 @@ export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, a
 
         <div className="tp-sidebar-section-label">我的行程</div>
         <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
-          {tripsStatus === 'error' && (!trips || trips.length === 0) ? (
-            <div className="tp-sidebar-trips-empty" role="alert">行程清單載入失敗</div>
+          {tripsStatus === 'error' && trips === undefined ? (
+            <div className="tp-sidebar-trips-empty" role="alert">載入行程失敗，請稍後再試</div>
           ) : trips === undefined ? (
             <div className="tp-sidebar-trips-loading" role="status" aria-label="載入行程中">
               <span className="tp-trip-skeleton is-a" />
@@ -289,7 +287,7 @@ export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, a
         </nav>
 
         <div className="tp-sidebar-cta">
-          {user === undefined ? (userStatus ?? (
+          {user === undefined ? (
             <div
               className="tp-user-chip tp-user-chip-loading"
               data-testid="sidebar-user-loading"
@@ -302,23 +300,21 @@ export default function DesktopSidebar({ user, userStatus, trips, tripsStatus, a
                 <span className="tp-user-skeleton-line is-secondary" />
               </div>
             </div>
-          )) : user ? (
+          ) : user ? (
             <Link
               to="/account"
+              id="account-sheet-open-desktop"
               className="tp-account-card"
               data-testid="sidebar-account-card"
-              aria-label={`帳號設定：${user.name}`}
               onClick={() => openSheet(location)}
             >
               <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
               <div className="tp-account-body">
                 <div className="tp-account-name">
-                  {/* v2.33.45 round 6b: Array.from CJK-safe slice */}
-                  {(() => {
-                    const chars = Array.from(user.name);
-                    return chars.length > 10 ? `${chars.slice(0, 10).join('')}…` : user.name;
-                  })()}
+                  {displayName}
                 </div>
+                {/* 無障礙名稱 = 顯示名稱 + 後綴；不用 aria-label，否則 axe（WCAG 2.5.3）會把 aria-hidden 頭像的首字也算進可見文字而判不符。 */}
+                <span className="sr-only"> 帳號設定</span>
               </div>
             </Link>
           ) : (

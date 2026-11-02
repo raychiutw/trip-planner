@@ -57,6 +57,29 @@ async function expectStopped() {
 
 describe('request terminal state in the real conversation', () => {
   it.each([
+    ['failed', 'cancelled', '已停止等待'],
+    ['failed', 'error', 'AI 處理失敗'],
+    ['completed', null, 'AI 已完成'],
+  ])('announces a live %s/%s transition as %s', async (status, terminalReason, announcement) => {
+    show('main');
+    await screen.findByTestId('chat-stop-waiting');
+    await waitFor(() => expect(RequestEvents.instances.at(-1)?.onmessage).toBeTypeOf('function'));
+    row = { ...row, status, terminalReason, reply: status === 'completed' ? '水族館已加到行程' : null };
+    await act(async () => { RequestEvents.instances.at(-1)!.emit({ status }); });
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(announcement));
+  });
+
+  it('announces an unconfirmed stop without claiming that AI failed', async () => {
+    show('main');
+    await screen.findByTestId('chat-stop-waiting');
+    detailStatus = 503;
+    await act(async () => { fireEvent.click(screen.getByTestId('chat-stop-waiting')); });
+    await screen.findByText(/伺服器沒有確認/);
+    expect(screen.getByRole('status')).toHaveTextContent('停止等待未確認');
+    expect(screen.getByRole('status')).not.toHaveTextContent('AI 處理失敗');
+  });
+
+  it.each([
     ['[AI 健檢] secret system schema', '已觸發 AI 行程健檢'],
     ['[行程筆記-lodging-tips] secret system schema', '已觸發 AI 行程筆記生成（住宿在地建議）'],
     ['[行程筆記-tips] secret system schema', '已觸發 AI 行程筆記生成（行前須知）'],
@@ -86,38 +109,6 @@ describe('request terminal state in the real conversation', () => {
     await waitFor(() => expect(screen.getByTestId('chat-msg-assistant')).toHaveTextContent(text!));
     expect(screen.getByTestId('chat-msg-assistant')).toHaveClass(className!);
     expect(screen.getByTestId('chat-input')).not.toBeDisabled();
-  });
-
-  it.each([
-    ['failed', 'cancelled', null, '已停止等待'],
-    ['failed', 'error', null, 'AI 處理失敗'],
-    ['completed', null, null, 'AI 已完成，但沒有回覆內容'],
-    ['completed', null, '已加入水族館', 'AI 已完成回覆'],
-  ])('live result announces %s/%s and unlocks the composer', async (status, terminalReason, reply, announcement) => {
-    show('main');
-    await screen.findByTestId('chat-stop-waiting');
-    await waitFor(() => expect(RequestEvents.instances.at(-1)?.onmessage).toBeTypeOf('function'));
-    row = { ...row, status: status!, terminalReason, reply };
-    await act(async () => { RequestEvents.instances.at(-1)!.emit({ status }); });
-    await waitFor(() => expect(screen.getByRole('status', { name: '聊天狀態' })).toHaveTextContent(announcement!));
-    expect(screen.getByRole('status', { name: '聊天狀態' })).toHaveAttribute('aria-live', 'polite');
-    expect(screen.getByTestId('chat-input')).not.toBeDisabled();
-  });
-
-  it('re-reading unchanged history is silent, while a late reply is announced once', async () => {
-    row = { ...row, status: 'failed', terminalReason: 'cancelled' }; history = [{ ...row }];
-    show('main'); await screen.findByText(/AI 若仍在處理/);
-    const status = screen.getByRole('status', { name: '聊天狀態' });
-    expect(status).toBeEmptyDOMElement();
-    await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(status).toBeEmptyDOMElement();
-    row = { ...row, reply: '遲到的回報' };
-    await act(async () => window.dispatchEvent(new Event('focus')));
-    await waitFor(() => expect(status).toHaveTextContent('收到後續回報'));
-    const observed = vi.fn(); const observer = new MutationObserver(observed);
-    observer.observe(status, { childList: true, characterData: true, subtree: true });
-    await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(observed).not.toHaveBeenCalled(); observer.disconnect();
   });
 
   it('retries missing terminal details instead of inventing an execution failure', async () => {

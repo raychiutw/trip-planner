@@ -14,42 +14,46 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedTrip, seedUser } from './helpers';
-import { onRequestPost as postFlights } from '../../functions/api/trips/[id]/notes/flights';
-import { onRequestPatch as patchFlights, onRequestDelete as deleteFlights } from '../../functions/api/trips/[id]/notes/flights/[rowId]';
-import { onRequestPatch as reorderFlights } from '../../functions/api/trips/[id]/notes/flights/reorder';
-import { onRequestPost as postReservations } from '../../functions/api/trips/[id]/notes/reservations';
-import { onRequestPost as postEmergency } from '../../functions/api/trips/[id]/notes/emergency';
-import { onRequestPost as postPretrip } from '../../functions/api/trips/[id]/notes/pretrip';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTripNotes } from './cleanup-trip-notes';
 import type { Env } from '../../functions/api/_types';
+
+// 路由（相對於 /api/trips/:id/notes/）；:rowId 由 call() 的 params 帶入
+const postFlights = 'flights';
+const patchFlights = 'flights/:rowId';
+const deleteFlights = 'flights/:rowId';
+const reorderFlights = 'flights/reorder';
+const postReservations = 'reservations';
+const postEmergency = 'emergency';
+const postPretrip = 'pretrip';
 
 let db: D1Database;
 let env: Env;
-const tripA = 'trip-mut-a';
-const tripB = 'trip-mut-b';
-const ownerEmail = 'owner@mut.test';
-const strangerEmail = 'stranger@mut.test';
+let api: Api;
+const tripA = 's13-notes-mut-a';
+const tripB = 's13-notes-mut-b';
+const ownerEmail = 'owner@s13-notes-mut.test';
+const strangerEmail = 'stranger@s13-notes-mut.test';
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   await seedUser(db, ownerEmail);
   await seedUser(db, strangerEmail);
   await seedTrip(db, { id: tripA, owner: ownerEmail });
   await seedTrip(db, { id: tripB, owner: ownerEmail });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTripNotes(db, ['s13-notes-mut-%'], ['%@s13-notes-mut.test']);
+  await disposeMiniflare();
+});
 
-async function call<T>(handler: any, tripId: string, body?: T, params: Record<string, string> = {}, email = ownerEmail, method = 'POST') {
-  const url = `https://test/api/trips/${tripId}/notes/...`;
-  const ctx = mockContext({
-    request: jsonRequest(url, method, body),
-    env,
-    auth: mockAuth({ email }),
-    params: { id: tripId, ...params },
-  });
-  return callHandler(handler, ctx);
+async function call<T>(route: string, tripId: string, body?: T, params: Record<string, string> = {}, email = ownerEmail, method = 'POST') {
+  const path = route.replace(':rowId', params.rowId ?? '');
+  return api.request(method, `/api/trips/${tripId}/notes/${path}`, { as: email, json: body });
 }
 
 describe('POST — create row', () => {
@@ -166,6 +170,15 @@ describe('PATCH /flights/:rowId — update + OCC', () => {
     const res = await call(patchFlights, tripB, {}, { rowId: String(rowId) }, ownerEmail, 'PATCH');
     expect(res.status).toBe(400);
   });
+
+  // S13 補（mutation 驗證發現缺口）：路徑內的 trip 與 row 都對，但呼叫者沒有該行程寫入權限
+  it('PATCH 非授權 user → 403 且 row 不變', async () => {
+    const before = await db.prepare('SELECT note, version FROM trip_flights WHERE id = ?').bind(rowId).first();
+    const res = await call(patchFlights, tripB, { note: 'hacked' }, { rowId: String(rowId) }, strangerEmail, 'PATCH');
+    expect(res.status).toBe(403);
+    const after = await db.prepare('SELECT note, version FROM trip_flights WHERE id = ?').bind(rowId).first();
+    expect(after).toEqual(before);
+  });
 });
 
 describe('DELETE /flights/:rowId', () => {
@@ -183,6 +196,16 @@ describe('DELETE /flights/:rowId', () => {
     expect(check).toBeNull();
   });
 
+  // S13 補（mutation 驗證發現缺口）
+  it('DELETE 非授權 user → 403 且 row 仍在', async () => {
+    const createRes = await call(postFlights, tripB, { airline: 'KEEP' });
+    const created = await createRes.json() as any;
+    const res = await call(deleteFlights, tripB, undefined, { rowId: String(created.id) }, strangerEmail, 'DELETE');
+    expect(res.status).toBe(403);
+    const check = await db.prepare('SELECT id FROM trip_flights WHERE id = ?').bind(created.id).first();
+    expect(check).not.toBeNull();
+  });
+
   it('DELETE cross-trip → 403', async () => {
     const createRes = await call(postFlights, tripB, { airline: 'CI' });
     const created = await createRes.json() as any;
@@ -195,18 +218,18 @@ describe('PATCH /flights/reorder — bulk', () => {
   let ids: number[];
   beforeAll(async () => {
     // Clean tripA flights first
-    await db.prepare('DELETE FROM trip_flights WHERE trip_id = ?').bind('trip-reorder').run();
-    await seedTrip(db, { id: 'trip-reorder', owner: ownerEmail });
+    await db.prepare('DELETE FROM trip_flights WHERE trip_id = ?').bind('s13-notes-mut-reorder').run();
+    await seedTrip(db, { id: 's13-notes-mut-reorder', owner: ownerEmail });
     ids = [];
     for (let i = 0; i < 3; i++) {
-      const res = await call(postFlights, 'trip-reorder', { airline: 'CI', flight_no: `F${i}` });
+      const res = await call(postFlights, 's13-notes-mut-reorder', { airline: 'CI', flight_no: `F${i}` });
       const row = await res.json() as any;
       ids.push(row.id);
     }
   });
 
   it('reorder 3 rows → 200 + sort_order swap + version bump on all', async () => {
-    const res = await call(reorderFlights, 'trip-reorder', {
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', {
       items: [
         { id: ids[0], sortOrder: 2 },
         { id: ids[1], sortOrder: 0 },
@@ -219,7 +242,7 @@ describe('PATCH /flights/reorder — bulk', () => {
 
     const { results } = await db
       .prepare('SELECT id, sort_order, version FROM trip_flights WHERE trip_id = ? ORDER BY sort_order')
-      .bind('trip-reorder')
+      .bind('s13-notes-mut-reorder')
       .all<{ id: number; sort_order: number; version: number }>();
     expect(results.map((r) => r.id)).toEqual([ids[1], ids[2], ids[0]]);
     // version 都從 0 升到 1（POST 後沒動過 → 0；reorder bump → 1）
@@ -229,26 +252,37 @@ describe('PATCH /flights/reorder — bulk', () => {
   it('reorder 帶 cross-trip id → 403', async () => {
     const otherRes = await call(postFlights, tripA, { airline: 'OTHER' });
     const other = await otherRes.json() as any;
-    const res = await call(reorderFlights, 'trip-reorder', {
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', {
       items: [{ id: other.id, sortOrder: 0 }],
     }, {}, ownerEmail, 'PATCH');
     expect(res.status).toBe(403);
   });
 
+  // S13 補（mutation 驗證發現缺口）
+  it('reorder 非授權 user → 403 且 sort_order 不變', async () => {
+    const before = await db.prepare('SELECT id, sort_order FROM trip_flights WHERE trip_id = ? ORDER BY id').bind('s13-notes-mut-reorder').all();
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', {
+      items: [{ id: ids[0], sortOrder: 7 }],
+    }, {}, strangerEmail, 'PATCH');
+    expect(res.status).toBe(403);
+    const after = await db.prepare('SELECT id, sort_order FROM trip_flights WHERE trip_id = ? ORDER BY id').bind('s13-notes-mut-reorder').all();
+    expect(after.results).toEqual(before.results);
+  });
+
   it('reorder empty items → 400', async () => {
-    const res = await call(reorderFlights, 'trip-reorder', { items: [] }, {}, ownerEmail, 'PATCH');
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', { items: [] }, {}, ownerEmail, 'PATCH');
     expect(res.status).toBe(400);
   });
 
   it('reorder invalid id 型別 → 400', async () => {
-    const res = await call(reorderFlights, 'trip-reorder', { items: [{ id: 'abc', sortOrder: 0 }] as any }, {}, ownerEmail, 'PATCH');
+    const res = await call(reorderFlights, 's13-notes-mut-reorder', { items: [{ id: 'abc', sortOrder: 0 }] as any }, {}, ownerEmail, 'PATCH');
     expect(res.status).toBe(400);
   });
 });
 
 // PR26 — audit_log integration for trip-notes mutations
 describe('audit_log — PR26 trip-notes mutations', () => {
-  const tripAudit = 'trip-notes-audit';
+  const tripAudit = 's13-notes-mut-audit';
 
   beforeAll(async () => {
     await seedTrip(db, { id: tripAudit, owner: ownerEmail });

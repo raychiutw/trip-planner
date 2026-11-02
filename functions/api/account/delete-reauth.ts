@@ -1,7 +1,7 @@
 import { AppError } from '../_errors';
 import { getPublicOrigin, rawJson } from '../_utils';
 import { mobileOAuthContract } from '../_mobileOAuth';
-import { createMobileDeleteChallenge, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
+import { DELETE_PROOF_TTL_MS, createMobileDeleteChallenge, mobileCallbackUrl, readMobileDeleteChallenge, transitionMobileDeleteChallenge } from './_deleteReauth';
 import { requireMobileAccountActor } from './_accountActor';
 import type { Env } from '../_types';
 
@@ -30,7 +30,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const authorizeUrl = new URL('/api/oauth/login/google', getPublicOrigin(context.env, context.request));
   authorizeUrl.searchParams.set('purpose', 'account-delete');
   authorizeUrl.searchParams.set('challenge', challengeId);
-  const response = rawJson({ challengeId, authorizeUrl: authorizeUrl.toString(), expiresIn: 300 });
+  const response = rawJson({ challengeId, authorizeUrl: authorizeUrl.toString(), expiresIn: DELETE_PROOF_TTL_MS / 1000 });
   response.headers.set('Cache-Control', 'no-store');
   return response;
 };
@@ -45,6 +45,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { id, challenge, actor } = await ownedChallenge(context);
   if (challenge.status === 'used') throw new AppError('DATA_CONFLICT', '驗證已使用');
+  // failed 是終態：app 在 callback 回報失敗後常會再送一次取消收尾，視為冪等的清理，不回 409。
+  if (challenge.status === 'failed') return rawJson({ status: 'failed' });
   if (challenge.expired) throw new AppError('ACCOUNT_DELETE_REAUTH_REQUIRED', '驗證已過期');
   if (challenge.status !== 'cancelled') {
     let cancelled = false;

@@ -1,311 +1,218 @@
 /**
  * /api/dev/apps/:client_id — V2-P4 detail / update / suspend
+ * 走 HTTP 邊界（tests/api/http.ts）：session 是真實簽出的 cookie + session_devices 資料列；
+ * 原本檢查 SQL 字串與 bind 參數的斷言，改讀真實 D1 的 client_apps 資料變化。
+ * 共用 D1：專用 id／email（s16-dd-），結束時清掉自己的資料。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  onRequestGet,
-  onRequestPatch,
-  onRequestDelete,
-} from '../../functions/api/dev/apps/[client_id]';
-import { issueSession } from '../../functions/api/_session';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
 
-interface MockEnv {
-  SESSION_SECRET?: string;
-  DB?: { prepare: ReturnType<typeof vi.fn> };
-}
+const SESSION_SECRET = 'test-secret-32-chars-long-enough';
+const U1 = 's16-dd-user-1';
+const U2 = 's16-dd-user-2';
+const EMAIL1 = 's16-dd-user-1@example.com';
+const EMAIL2 = 's16-dd-user-2@example.com';
+const APP = 's16-dd-tp_abc';
+const APP_OF_U2 = 's16-dd-tp_other';
+// 匿名的瀏覽器寫入請求會帶 Origin；沒帶會先被 CSRF 檢查擋成 403，到不了 401
+const BROWSER_ORIGIN = 'https://trip-planner-dby.pages.dev';
 
-function makeStmt(firstResult: unknown = null) {
-  return {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-  };
-}
+let db: D1Database;
+let api: Api;
+let cookie1: string;
 
-const SAMPLE_APP_ROW = {
-  client_id: 'tp_abc',
-  client_type: 'public',
-  app_name: 'Trip Buddy',
-  app_description: 'Travel companion',
-  app_logo_url: null,
-  homepage_url: 'https://example.com',
-  redirect_uris: '["https://example.com/cb"]',
-  allowed_scopes: '["openid","profile"]',
-  owner_user_id: 'user-1',
-  status: 'active',
-  created_at: '2026-04-20',
-  updated_at: '2026-04-22',
+type AppRow = {
+  client_id: string; client_type: string; app_name: string; app_description: string | null;
+  homepage_url: string | null; redirect_uris: string; allowed_scopes: string; owner_user_id: string | null;
+  status: string; updated_at: string;
 };
+const appRow = (clientId: string) =>
+  db.prepare('SELECT * FROM client_apps WHERE client_id = ?').bind(clientId).first<AppRow>();
 
-async function makeAuthedRequest(url: string, method: string, body?: unknown): Promise<Request> {
-  const r = new Response(null);
-  await issueSession(
-    new Request('https://x.com', { headers: { 'CF-Connecting-IP': '1.1.1.1' } }),
-    r,
-    'user-1',
-    { SESSION_SECRET: 'test-secret-32-chars-long-enough' } as never,
-  );
-  const setCookie = r.headers.get('Set-Cookie') ?? '';
-  const sessionCookie = setCookie.split(';')[0] ?? '';
-  return new Request(url, {
-    method,
-    headers: {
-      Cookie: sessionCookie,
-      'content-type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+async function seed(clientId: string, ownerId: string) {
+  await db.prepare(
+    `INSERT INTO client_apps (client_id, client_type, app_name, app_description, homepage_url, redirect_uris, allowed_scopes, owner_user_id, status, created_at, updated_at)
+     VALUES (?, 'public', 'Trip Buddy', 'Travel companion', 'https://example.com', '["https://example.com/cb"]', '["openid","profile"]', ?, 'active', '2026-04-20', '2026-04-22')`,
+  ).bind(clientId, ownerId).run();
 }
 
-function makeContext(
-  request: Request,
-  env: MockEnv,
-  clientId: string,
-): Parameters<typeof onRequestGet>[0] {
-  return {
-    request,
-    env: env as unknown as never,
-    params: { client_id: clientId } as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestGet>[0];
+async function cleanup() {
+  await db.prepare('DELETE FROM client_apps WHERE client_id LIKE ?').bind('s16-dd-%').run();
 }
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET }) });
+  cookie1 = (await api.sessionFor(EMAIL1, U1)).cookie;
+  await api.sessionFor(EMAIL2, U2);
+}, 30000);
+
+beforeEach(async () => {
+  await cleanup();
+  await seed(APP, U1);
+  await seed(APP_OF_U2, U2);
 });
 
-afterEach(() => {
-  vi.useRealTimers();
+afterAll(async () => {
+  await cleanup();
+  await db.prepare('DELETE FROM session_devices WHERE user_id IN (?, ?)').bind(U1, U2).run();
+  await db.prepare('DELETE FROM users WHERE id IN (?, ?)').bind(U1, U2).run();
+  await disposeMiniflare();
 });
-
 
 describe('GET /api/dev/apps/:client_id', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/dev/apps/tp_abc', { method: 'GET' });
-    await expect(onRequestGet(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.get(`/api/dev/apps/${APP}`);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: { code: 'AUTH_REQUIRED' } });
   });
 
   it('404 APP_NOT_FOUND when client_id not owned by user', async () => {
-    const stmt = makeStmt(null); // not found
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_xyz', 'GET');
-    const res = await onRequestGet(makeContext(req, env, 'tp_xyz'));
+    const res = await api.get('/api/dev/apps/s16-dd-tp_xyz', { cookie: cookie1 });
     expect(res.status).toBe(404);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('APP_NOT_FOUND');
   });
 
   it('200 returns full row with parsed redirect_uris + allowed_scopes', async () => {
-    const stmt = makeStmt(SAMPLE_APP_ROW);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'GET');
-    const res = await onRequestGet(makeContext(req, env, 'tp_abc'));
+    const res = await api.get(`/api/dev/apps/${APP}`, { cookie: cookie1 });
     expect(res.status).toBe(200);
     const json = await res.json() as Record<string, unknown>;
-    expect(json.client_id).toBe('tp_abc');
+    expect(json.client_id).toBe(APP);
     expect(json.app_name).toBe('Trip Buddy');
     expect(json.redirect_uris).toEqual(['https://example.com/cb']);
     expect(json.allowed_scopes).toEqual(['openid', 'profile']);
+    expect(json).not.toHaveProperty('client_secret_hash');
   });
 
-  it('SQL filters by both client_id AND owner_user_id (cross-user attack defence)', async () => {
-    const stmt = makeStmt(SAMPLE_APP_ROW);
-    const dbPrepare = vi.fn().mockReturnValue(stmt);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'GET');
-    await onRequestGet(makeContext(req, env, 'tp_abc'));
-
-    const sql = dbPrepare.mock.calls[0][0] as string;
-    expect(sql).toContain('WHERE client_id = ? AND owner_user_id = ?');
-    expect(stmt.bind).toHaveBeenCalledWith('tp_abc', 'user-1');
+  // 原本斷言 SQL 含 `client_id = ? AND owner_user_id = ?`；改成直接驗行為：別人的 app 讀不到
+  it('cross-user attack defence：讀別人擁有的 client_id → 404，不洩漏內容', async () => {
+    const res = await api.get(`/api/dev/apps/${APP_OF_U2}`, { cookie: cookie1 });
+    expect(res.status).toBe(404);
+    expect(JSON.stringify(await res.json())).not.toContain('Trip Buddy');
   });
 });
 
 describe('PATCH /api/dev/apps/:client_id', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/dev/apps/tp_abc', { method: 'PATCH' });
-    await expect(onRequestPatch(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { headers: { Origin: BROWSER_ORIGIN }, json: {} });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: { code: 'AUTH_REQUIRED' } });
   });
 
   it('404 when client_id not owned', async () => {
-    const stmt = makeStmt(null);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_xyz', 'PATCH', {
-      app_name: 'New Name',
-    });
-    const res = await onRequestPatch(makeContext(req, env, 'tp_xyz'));
+    const res = await api.request('PATCH', '/api/dev/apps/s16-dd-tp_xyz', { cookie: cookie1, json: { app_name: 'New Name' } });
     expect(res.status).toBe(404);
   });
 
+  it('cross-user：改別人擁有的 client_id → 404，資料不變', async () => {
+    const res = await api.request('PATCH', `/api/dev/apps/${APP_OF_U2}`, { cookie: cookie1, json: { app_name: 'Hijacked' } });
+    expect(res.status).toBe(404);
+    expect((await appRow(APP_OF_U2))?.app_name).toBe('Trip Buddy');
+  });
+
   it('400 when no patchable fields provided', async () => {
-    const dbPrepare = vi.fn().mockImplementation(() => makeStmt(SAMPLE_APP_ROW));
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'PATCH', {});
-    await expect(onRequestPatch(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: {} });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: 'DATA_VALIDATION' } });
   });
 
   it('400 when app_name too short', async () => {
-    const dbPrepare = vi.fn().mockImplementation(() => makeStmt(SAMPLE_APP_ROW));
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'PATCH', {
-      app_name: 'X',
-    });
-    await expect(onRequestPatch(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: { app_name: 'X' } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: 'DATA_VALIDATION' } });
+    expect((await appRow(APP))?.app_name).toBe('Trip Buddy');
   });
 
   it('400 when redirect_uris contains non-HTTPS', async () => {
-    const dbPrepare = vi.fn().mockImplementation(() => makeStmt(SAMPLE_APP_ROW));
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'PATCH', {
-      redirect_uris: ['http://attacker.com/cb'],
-    });
-    await expect(onRequestPatch(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'DATA_VALIDATION' });
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: { redirect_uris: ['http://attacker.com/cb'] } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: 'DATA_VALIDATION' } });
+    expect((await appRow(APP))?.redirect_uris).toBe('["https://example.com/cb"]');
   });
 
   it('200 updates allowed fields + returns updated row', async () => {
-    let callCount = 0;
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT')) {
-        // First select returns existing, second select returns updated
-        callCount++;
-        if (callCount === 1) return makeStmt(SAMPLE_APP_ROW);
-        return makeStmt({ ...SAMPLE_APP_ROW, app_name: 'New Name' });
-      }
-      if (sql.includes('UPDATE client_apps')) return makeStmt();
-      return makeStmt();
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, {
+      cookie: cookie1, json: { app_name: 'New Name', app_description: 'Updated description' },
     });
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'PATCH', {
-      app_name: 'New Name',
-      app_description: 'Updated description',
-    });
-    const res = await onRequestPatch(makeContext(req, env, 'tp_abc'));
     expect(res.status).toBe(200);
     const json = await res.json() as Record<string, unknown>;
     expect(json.app_name).toBe('New Name');
+    expect(json.app_description).toBe('Updated description');
 
-    // Verify UPDATE called with the right fields
-    const updateCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE client_apps'),
-    );
-    expect(updateCall).toBeTruthy();
-    const updateSql = updateCall![0] as string;
-    expect(updateSql).toContain('app_name = ?');
-    expect(updateSql).toContain('app_description = ?');
-    expect(updateSql).toContain('updated_at = datetime');
+    // Verify the row was really updated (and updated_at bumped)
+    const row = await appRow(APP);
+    expect(row).toMatchObject({ app_name: 'New Name', app_description: 'Updated description' });
+    expect(row!.updated_at).not.toBe('2026-04-22');
   });
 
   it('Cannot update protected fields (client_id / client_type / status / owner_user_id)', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT')) return makeStmt(SAMPLE_APP_ROW);
-      if (sql.includes('UPDATE')) return makeStmt();
-      return makeStmt();
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, {
+      cookie: cookie1,
+      json: {
+        app_name: 'New',
+        client_id: 'malicious',          // ignored
+        client_type: 'confidential',      // ignored
+        status: 'pending_review',         // ignored
+        owner_user_id: 'attacker',        // ignored
+      },
     });
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'PATCH', {
-      app_name: 'New',
-      client_id: 'malicious',          // ignored
-      client_type: 'confidential',      // ignored
-      status: 'active',                 // ignored
-      owner_user_id: 'attacker',        // ignored
-    } as Record<string, unknown>);
-    await onRequestPatch(makeContext(req, env, 'tp_abc'));
+    expect(res.status).toBe(200);
+    const row = await appRow(APP);
+    expect(row).toMatchObject({ app_name: 'New', client_id: APP, client_type: 'public', status: 'active', owner_user_id: U1 });
+    expect(await appRow('malicious')).toBeNull();
+  });
 
-    const updateCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE client_apps'),
-    );
-    const sql = updateCall![0] as string;
-    // None of the protected columns should appear in UPDATE SET clause
-    expect(sql).not.toMatch(/SET[^W]*client_id\s*=/);
-    expect(sql).not.toMatch(/SET[^W]*client_type\s*=/);
-    expect(sql).not.toMatch(/SET[^W]*status\s*=/);
-    expect(sql).not.toMatch(/SET[^W]*owner_user_id\s*=/);
+  // mutation 驗證補的缺口：維運 scope 不得經 PATCH 提權
+  it.each(['companion', 'ops:maps'])('allowed_scopes 含 %s → 400，scope 不變', async (scope) => {
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: { allowed_scopes: ['openid', scope] } });
+    expect(res.status).toBe(400);
+    expect((await appRow(APP))?.allowed_scopes).toBe('["openid","profile"]');
+  });
+
+  it('allowed_scopes 空陣列 → 400（不退回預設值）', async () => {
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: { allowed_scopes: [] } });
+    expect(res.status).toBe(400);
+    expect((await appRow(APP))?.allowed_scopes).toBe('["openid","profile"]');
+  });
+
+  it('homepage_url 非 https → 400，資料不變', async () => {
+    const res = await api.request('PATCH', `/api/dev/apps/${APP}`, { cookie: cookie1, json: { homepage_url: 'javascript:alert(1)' } });
+    expect(res.status).toBe(400);
+    expect((await appRow(APP))?.homepage_url).toBe('https://example.com');
   });
 });
 
 describe('DELETE /api/dev/apps/:client_id', () => {
   it('401 when no session', async () => {
-    const env: MockEnv = { SESSION_SECRET: 'test-secret-32-chars-long-enough', DB: { prepare: vi.fn() } };
-    const req = new Request('https://x.com/api/dev/apps/tp_abc', { method: 'DELETE' });
-    await expect(onRequestDelete(makeContext(req, env, 'tp_abc')))
-      .rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+    const res = await api.request('DELETE', `/api/dev/apps/${APP}`, { headers: { Origin: BROWSER_ORIGIN } });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: { code: 'AUTH_REQUIRED' } });
   });
 
   it('404 when client_id not owned', async () => {
-    const stmt = makeStmt(null);
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_xyz', 'DELETE');
-    const res = await onRequestDelete(makeContext(req, env, 'tp_xyz'));
+    const res = await api.request('DELETE', '/api/dev/apps/s16-dd-tp_xyz', { cookie: cookie1 });
     expect(res.status).toBe(404);
   });
 
+  it('cross-user：停用別人擁有的 client_id → 404，狀態不變', async () => {
+    const res = await api.request('DELETE', `/api/dev/apps/${APP_OF_U2}`, { cookie: cookie1 });
+    expect(res.status).toBe(404);
+    expect((await appRow(APP_OF_U2))?.status).toBe('active');
+  });
+
   it('200 soft-deletes (status=suspended) preserving audit trail', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT')) return makeStmt(SAMPLE_APP_ROW);
-      if (sql.includes('UPDATE client_apps')) return makeStmt();
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 'test-secret-32-chars-long-enough',
-      DB: { prepare: dbPrepare },
-    };
-    const req = await makeAuthedRequest('https://x.com/api/dev/apps/tp_abc', 'DELETE');
-    const res = await onRequestDelete(makeContext(req, env, 'tp_abc'));
+    const res = await api.request('DELETE', `/api/dev/apps/${APP}`, { cookie: cookie1 });
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean; suspended_client_id: string };
     expect(json.ok).toBe(true);
-    expect(json.suspended_client_id).toBe('tp_abc');
+    expect(json.suspended_client_id).toBe(APP);
 
-    // Verify UPDATE status='suspended' (NOT physical DELETE)
-    const updateCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes("status = 'suspended'"),
-    );
-    expect(updateCall).toBeTruthy();
-    // No DELETE FROM client_apps anywhere
-    const deleteCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM client_apps'),
-    );
-    expect(deleteCall).toBeFalsy();
+    // Verify status='suspended'（NOT physical DELETE）：資料列仍在，其餘欄位保留
+    const row = await appRow(APP);
+    expect(row).not.toBeNull();
+    expect(row).toMatchObject({ status: 'suspended', app_name: 'Trip Buddy', owner_user_id: U1 });
   });
 });

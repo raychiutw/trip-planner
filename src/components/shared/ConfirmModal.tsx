@@ -5,13 +5,13 @@
  *   - 對齊 V2 Terracotta tokens(`--color-priority-high-dot` 為 destructive)
  *   - 標題 + 訊息 + 兩個 action button(取消 ghost / 確認 destructive 實心)
  *   - Escape + click backdrop dismiss
- *   - Focus 自動 trap 在 modal 內(cancel button 預設 focus)
+ *   - Focus 自動 trap 在 modal 內(confirm button 預設 focus)
  *
  * Use case:
  *   - CollabPanel 移除成員 / 撤銷邀請
  *   - 將來其他 destructive 流程(刪除 trip / 刪除 entry / 登出)
  */
-import { useId, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
@@ -99,6 +99,14 @@ const SCOPED_STYLES = `
 .tp-confirm-btn-danger:hover { filter: brightness(0.92); }
 .tp-confirm-btn-danger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-confirm-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+.tp-confirm-btn-primary {
+  background: var(--color-accent-fill);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent-fill);
+}
+.tp-confirm-btn-primary:hover { filter: brightness(0.92); }
+.tp-confirm-btn-primary:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+.tp-confirm-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
 
 export interface ConfirmModalProps {
@@ -112,11 +120,13 @@ export interface ConfirmModalProps {
   warning?: string;
   /** 確認按鈕 label,預設「確認」 */
   confirmLabel?: string;
+  /** Reversible actions can use the regular accent; destructive remains the default. */
+  confirmTone?: 'destructive' | 'primary';
   /** 取消按鈕 label,預設「取消」 */
   cancelLabel?: string;
-  /** An operation is in flight: disable actions and prevent dismissal. */
+  /** 確認 button 是否 disabled(loading state) */
   busy?: boolean;
-  /** Prerequisites are incomplete; cancellation remains available. */
+  /** Disable confirmation while keeping cancel, Escape, and backdrop available. */
   confirmDisabled?: boolean;
   /** 點 confirm 觸發 */
   onConfirm: () => void;
@@ -128,8 +138,6 @@ export interface ConfirmModalProps {
    * 不另造一個 modal，沿用本元件既有的焦點鎖定 / Escape / scroll-lock / a11y。
    */
   children?: ReactNode;
-  /** Used after the opener is removed or disabled by the confirmed operation. */
-  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 export default function ConfirmModal({
@@ -138,16 +146,14 @@ export default function ConfirmModal({
   message,
   warning,
   confirmLabel = '確認',
+  confirmTone = 'destructive',
   cancelLabel = '取消',
   busy = false,
   confirmDisabled = false,
   onConfirm,
   onCancel,
   children,
-  fallbackFocusRef,
 }: ConfirmModalProps) {
-  const titleId = useId();
-  const messageId = useId();
   const confirmRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   // 統一 sheet 引擎（B1）：開啟 focus **安全（取消）鈕**（W12 刪除政策 / HIG「破壞性動作預設
@@ -156,7 +162,6 @@ export default function ConfirmModal({
   // focus-trap + body scroll-lock。z-index 維持 --z-modal；public props + testid 全不動。
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onCancel, {
     initialFocusRef: cancelRef,
-    fallbackFocusRef,
     canDismiss: !busy,
   });
 
@@ -178,14 +183,14 @@ export default function ConfirmModal({
           className="tp-confirm-modal"
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby={titleId}
-          aria-describedby={messageId}
+          aria-labelledby="tp-confirm-title"
+          aria-describedby="tp-confirm-message"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handlePanelKeyDown}
           data-testid="confirm-modal"
         >
-          <h2 className="tp-confirm-title" id={titleId}>{title}</h2>
-          <p className="tp-confirm-message" id={messageId}>{message}</p>
+          <h2 className="tp-confirm-title" id="tp-confirm-title">{title}</h2>
+          <p className="tp-confirm-message" id="tp-confirm-message">{message}</p>
           {warning && (
             <div className="tp-confirm-warning" data-testid="confirm-modal-warning">
               <span className="tp-confirm-warning-icon" aria-hidden="true">⚠</span>
@@ -207,7 +212,7 @@ export default function ConfirmModal({
             <button
               ref={confirmRef}
               type="button"
-              className="tp-confirm-btn tp-confirm-btn-danger"
+              className={`tp-confirm-btn ${confirmTone === 'primary' ? 'tp-confirm-btn-primary' : 'tp-confirm-btn-danger'}`}
               onClick={onConfirm}
               disabled={busy || confirmDisabled}
               data-testid="confirm-modal-confirm"

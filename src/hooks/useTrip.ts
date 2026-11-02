@@ -47,7 +47,7 @@ export interface UseTripReturn {
 
 /* ===== Hook ===== */
 
-export function useTrip(tripId: string | null, reloadKey = 0): UseTripReturn {
+export function useTrip(tripId: string | null): UseTripReturn {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [days, setDays] = useState<DaySummary[]>([]);
   const [currentDay, setCurrentDay] = useState<Day | null>(null);
@@ -185,7 +185,7 @@ export function useTrip(tripId: string | null, reloadKey = 0): UseTripReturn {
       controller.abort();
       cancelled = true;
     };
-  }, [tripId, reloadKey]);
+  }, [tripId]);
 
   /* --- Refetch a specific day (bypass cache) ---
    * Handles both「current day」 case (dayNum === currentDayNum 同步 setCurrentDay)
@@ -193,8 +193,6 @@ export function useTrip(tripId: string | null, reloadKey = 0): UseTripReturn {
    * 需 update allDays[dayNum] 該 DaySection 才會 re-render)。 */
   const refetchDay = useCallback((dayNum: number) => {
     if (!Number.isInteger(dayNum) || dayNum < 1) return;
-    // Invalidate the lookup cache without deleting from the currently rendered snapshot.
-    allDaysRef.current = { ...allDaysRef.current };
     delete allDaysRef.current[dayNum];
     fetchDay(dayNum).then((day) => {
       if (day) {

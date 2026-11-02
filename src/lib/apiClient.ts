@@ -5,6 +5,17 @@
 import { reportFetchResult } from './networkBus';
 import { ApiError } from './errors';
 import * as Sentry from '@sentry/react';
+import { getNewApiAuth, getNewApiBase } from './auth';
+import { sendViaNewApi } from './auth/transport';
+
+/**
+ * 所有 `/api` 請求的單一出口。旗標 VITE_NEW_API_AUTH 關閉（預設）時就是原本的同源 fetch；
+ * 開啟時改送新 api（DPoP token、401 refresh 重試一次；見 lib/auth/transport）。
+ */
+function sendApi(path: string, init: RequestInit): Promise<Response> {
+  const auth = getNewApiAuth();
+  return auth ? sendViaNewApi(auth, getNewApiBase(), '/api' + path, init) : fetch('/api' + path, init);
+}
 
 /**
  * Trim Sentry breadcrumb payload to avoid PII leak.
@@ -50,7 +61,7 @@ export function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response>
   if (opts?.body && bodyIsJsonString(opts.body) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  return fetch('/api' + path, { ...opts, headers }).then(
+  return sendApi(path, { ...opts, headers }).then(
     (r) => { reportFetchResult(true); return r; },
     (e) => { reportFetchResult(false); throw ApiError.fromNetworkError(e); },
   );
@@ -115,7 +126,7 @@ export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: 
   // 內部 helper 跑單次 fetch（不重試）。Network error 直接 throw。
   const doFetch = async (): Promise<Response> => {
     try {
-      return await fetch('/api' + path, { ...opts, headers });
+      return await sendApi(path, { ...opts, headers });
     } catch (networkError) {
       reportFetchResult(false);
       throw ApiError.fromNetworkError(networkError);

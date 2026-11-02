@@ -13,11 +13,14 @@
  *   4. window.confirm → ConfirmModal styled dialog
  *   5. CSS class prefix 改 .tp-collab-panel(原 .tp-collab-sheet)
  */
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { apiFetchRaw } from '../../lib/apiClient';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { CollabRole } from '../../types/api';
 import Icon from '../shared/Icon';
+import { showToast } from '../shared/Toast';
 import ConfirmModal from '../shared/ConfirmModal';
+import ErrorBanner from '../shared/ErrorBanner';
 
 type AddRole = 'member' | 'viewer';
 type EditableRole = 'member' | 'viewer'; // 可由 owner 切換的 role
@@ -70,7 +73,7 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: visible;
+  overflow: hidden;
 }
 .tp-collab-row {
   display: flex; align-items: center;
@@ -332,65 +335,165 @@ export interface CollabPanelProps {
 }
 
 export default function CollabPanel({ tripId }: CollabPanelProps) {
-  return <TripPermissions key={tripId} tripId={tripId} />;
-}
+  const tripIdRef = useRef(tripId);
+  useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
 
-function TripPermissions({ tripId }: CollabPanelProps) {
-  const { permissions, pendingInvitations, permLoading, permError, invitationError,
-    authorized, canManage, loadPermissions, busy, actionError, notice, changePermission } = usePermissions(tripId);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const roleTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const { permissions, pendingInvitations, permLoading, permError, loadPermissions } = usePermissions(
+    tripIdRef as React.RefObject<string>,
+  );
   const [email, setEmail] = useState('');
   const [addRole, setAddRole] = useState<AddRole>('member');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [changingRoleId, setChangingRoleId] = useState<number | null>(null);
+  const [roleError, setRoleError] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{ id: number; email: string } | null>(null);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeError, setRemoveError] = useState('');
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
-  const disabled = busy || !canManage;
+  const [revokingEmail, setRevokingEmail] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState('');
+
+  useEffect(() => {
+    if (tripId) loadPermissions(tripId);
+  }, [tripId, loadPermissions]);
 
   // Click outside role menu to close
   useEffect(() => {
     if (openMenuId === null) return;
-    menuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus();
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
       if (!target.closest('.tp-collab-role-wrap')) setOpenMenuId(null);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') { e.stopPropagation(); setOpenMenuId(null); roleTriggerRef.current?.focus(); }
+      if (e.key === 'Escape') setOpenMenuId(null);
     }
     document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('keydown', onKey);
     };
   }, [openMenuId]);
 
   async function handleAdd() {
-    if (!email.trim()) return;
-    if (await changePermission({ kind: 'add', email, role: addRole })) {
-      setEmail(''); setAddRole('member');
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !tripId) return;
+    setAddError('');
+    setAdding(true);
+    try {
+      const r = await apiFetchRaw('/permissions', {
+        method: 'POST',
+        body: JSON.stringify({ email: trimmed, tripId, role: addRole }),
+      });
+      if (r.status === 201) {
+        const data = await r.json().catch(() => null) as { status?: string } | null;
+        const successMsg = data?.status === 'invitation_sent'
+          ? `邀請信已寄至 ${trimmed}`
+          : `已新增 ${trimmed}`;
+        showToast(successMsg, 'success');
+        setEmail('');
+        setAddRole('member');
+        loadPermissions(tripId);
+        return;
+      }
+      if (r.status === 409) {
+        const data = await r.json().catch(() => null);
+        const msg = data?.error?.message ?? '此電子郵件已有權限或待回覆邀請';
+        throw new Error(msg);
+      }
+      if (r.status === 403) throw new Error('僅行程擁有者或管理者可操作');
+      const data = await r.json().catch(() => null);
+      const errObj = data?.error;
+      const errMsg = typeof errObj === 'string' ? errObj
+        : errObj?.message ?? errObj?.detail ?? '新增失敗';
+      throw new Error(errMsg);
+    } catch (err) {
+      setAddError(`新增未完成：${(err as Error).message}。電子郵件已保留，請重試。`);
+    } finally {
+      setAdding(false);
     }
   }
 
-  async function handleChangeRole(id: number, role: EditableRole) {
+  async function handleChangeRole(id: number, newRole: EditableRole) {
     setOpenMenuId(null);
-    roleTriggerRef.current?.focus();
-    await changePermission({ kind: 'role', id, role });
+    setRoleError('');
+    setChangingRoleId(id);
+    try {
+      const r = await apiFetchRaw(`/permissions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errObj = data?.error;
+        const errMsg = typeof errObj === 'string' ? errObj
+          : errObj?.message ?? errObj?.detail ?? '修改角色失敗';
+        throw new Error(errMsg);
+      }
+      const labelMap: Record<EditableRole, string> = { member: '共編成員', viewer: '檢視成員' };
+      showToast(`已改為${labelMap[newRole]}`, 'success');
+      loadPermissions(tripId);
+    } catch (err) {
+      setRoleError(`角色未變更：${(err as Error).message}。請重試。`);
+    } finally {
+      setChangingRoleId(null);
+    }
   }
 
   async function confirmRemove() {
-    if (removeTarget && await changePermission({ kind: 'remove', ...removeTarget })) setRemoveTarget(null);
+    if (!removeTarget) return;
+    const { id, email: permEmail } = removeTarget;
+    setRemoveError('');
+    setRemovingId(id);
+    try {
+      const r = await apiFetchRaw(`/permissions/${id}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errObj = data?.error;
+        const errMsg = typeof errObj === 'string' ? errObj
+          : errObj?.message ?? errObj?.detail ?? '移除失敗';
+        throw new Error(errMsg);
+      }
+      showToast(`已移除 ${permEmail}`, 'success');
+      loadPermissions(tripId);
+      setRemoveTarget(null);
+    } catch (err) {
+      setRemoveError(`移除未完成：${(err as Error).message}。成員仍在清單中，請重試。`);
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   async function confirmRevokeInvite() {
-    if (revokeTarget && await changePermission({ kind: 'revoke', email: revokeTarget })) setRevokeTarget(null);
+    if (!revokeTarget) return;
+    const invitedEmail = revokeTarget;
+    setRevokeError('');
+    setRevokingEmail(invitedEmail);
+    try {
+      const r = await apiFetchRaw('/invitations/revoke', {
+        method: 'POST',
+        body: JSON.stringify({ tripId, email: invitedEmail }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errMsg = data?.error?.message ?? '撤銷失敗';
+        throw new Error(errMsg);
+      }
+      showToast(`已撤銷對 ${invitedEmail} 的邀請`, 'success');
+      loadPermissions(tripId);
+      setRevokeTarget(null);
+    } catch (err) {
+      setRevokeError(`撤銷未完成：${(err as Error).message}。邀請仍在清單中，請重試。`);
+    } finally {
+      setRevokingEmail(null);
+    }
   }
 
   if (!tripId) {
     return (
-      <div className="tp-collab-panel" data-testid="collab-panel" ref={panelRef} tabIndex={-1}>
+      <div className="tp-collab-panel" data-testid="collab-panel">
         <style>{SCOPED_STYLES}</style>
         <div className="tp-collab-empty">請先選擇行程</div>
       </div>
@@ -398,32 +501,29 @@ function TripPermissions({ tripId }: CollabPanelProps) {
   }
 
   return (
-    <div className="tp-collab-panel" data-testid="collab-panel" ref={panelRef} tabIndex={-1}>
+    <div className="tp-collab-panel" data-testid="collab-panel">
       <style>{SCOPED_STYLES}</style>
 
       <p className="tp-collab-hint">
-        共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。只有行程擁有者可以管理旅伴、邀請與移除成員。已驗證帳號可直接加入；其他收件者需透過邀請信完成加入。
+        共編成員可<strong>檢視與編輯</strong>此行程，檢視成員只可<strong>檢視</strong>。輸入對方的電子郵件，他們下次登入會在自己的行程列表看到。
       </p>
-
-      {notice && <p role="status">{notice}</p>}
-      {actionError && !removeTarget && !revokeTarget && <p role="alert">{actionError}</p>}
-      {(permError || invitationError || actionError) && <div className="tp-collab-empty">
-        {(permError || invitationError) && <p role="alert">{permError || invitationError}</p>}
-        <button type="button" disabled={busy || permLoading} onClick={() => void loadPermissions()}>重試旅伴清單</button>
-      </div>}
+      {roleError && <ErrorBanner message={roleError} />}
 
       <section className="tp-collab-section">
         <div className="tp-collab-section-head">
           <span className="tp-collab-section-title">已授權成員</span>
-          {permissions.length > 0 && (
+          {!permLoading && !permError && permissions.length > 0 && (
             <span className="tp-collab-section-count">{permissions.length} 人</span>
           )}
         </div>
         {permLoading && <div className="tp-collab-empty">載入中…</div>}
+        {!permLoading && permError && (
+          <div className="tp-collab-empty" role="alert">{permError}</div>
+        )}
         {!permLoading && !permError && permissions.length === 0 && (
           <div className="tp-collab-empty">尚未授權任何成員，可在下方新增。</div>
         )}
-        {permissions.length > 0 && (
+        {!permLoading && !permError && permissions.length > 0 && (
           <div className="tp-collab-list" role="list">
             {permissions.map((p) => {
               // v2.31.35: avatar initial 一律用 displayName 第一字母（與 TripsListPage 一致）。
@@ -432,8 +532,9 @@ function TripPermissions({ tripId }: CollabPanelProps) {
               const initial = initialSource || '?';
               const isOwnerLike = p.role === 'owner';
               const badgeInfo = ROLE_BADGE_INFO[p.role];
-              const editable = authorized && !isOwnerLike;
+              const editable = !isOwnerLike;
               const menuOpen = openMenuId === p.id;
+              const isChanging = changingRoleId === p.id;
               return (
                 <div
                   className="tp-collab-row"
@@ -451,25 +552,16 @@ function TripPermissions({ tripId }: CollabPanelProps) {
                           className={`tp-collab-badge ${badgeInfo.class} tp-collab-badge-trigger`}
                           aria-haspopup="menu"
                           aria-expanded={menuOpen}
-                          onClick={(e) => { roleTriggerRef.current = e.currentTarget; setOpenMenuId(menuOpen ? null : p.id); }}
-                          aria-label={`修改 ${p.email} 的角色，目前為${badgeInfo.label}`}
-                          disabled={disabled}
+                          onClick={() => setOpenMenuId(menuOpen ? null : p.id)}
+                          disabled={isChanging}
                           data-testid={`collab-role-trigger-${p.id}`}
                         >
                           <span className="tp-collab-badge-dot" aria-hidden="true" />
-                          {badgeInfo.label}
+                          {isChanging ? '修改中…' : badgeInfo.label}
                           <span className="tp-collab-badge-caret" aria-hidden="true">▾</span>
                         </button>
                         {menuOpen && (
-                          <div className="tp-collab-role-menu" role="menu" ref={menuRef} aria-label="選擇角色"
-                            onKeyDown={(e) => {
-                              if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
-                              e.preventDefault();
-                              const buttons = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button'));
-                              const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-                              const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : (index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
-                              buttons[next]?.focus();
-                            }}>
+                          <div className="tp-collab-role-menu" role="menu">
                             {(['member', 'viewer'] as const).map((role) => {
                               const selected = p.role === role;
                               const info = ROLE_BADGE_INFO[role];
@@ -509,8 +601,8 @@ function TripPermissions({ tripId }: CollabPanelProps) {
                       type="button"
                       className="tp-collab-remove"
                       aria-label={`移除 ${p.email}`}
-                      disabled={disabled}
-                      onClick={() => setRemoveTarget({ id: p.id, email: p.email })}
+                      disabled={removingId === p.id}
+                      onClick={() => { setRemoveError(''); setRemoveTarget({ id: p.id, email: p.email }); }}
                       data-testid={`collab-remove-${p.id}`}
                     >
                       移除
@@ -523,7 +615,7 @@ function TripPermissions({ tripId }: CollabPanelProps) {
         )}
       </section>
 
-      {pendingInvitations.length > 0 && (
+      {!permLoading && !permError && pendingInvitations.length > 0 && (
         <section className="tp-collab-section" data-testid="collab-pending-section">
           <div className="tp-collab-section-head">
             <span className="tp-collab-section-title">待接受邀請</span>
@@ -555,8 +647,8 @@ function TripPermissions({ tripId }: CollabPanelProps) {
                     type="button"
                     className="tp-collab-remove"
                     aria-label={`撤銷對 ${inv.invitedEmail} 的邀請`}
-                    disabled={disabled}
-                    onClick={() => setRevokeTarget(inv.invitedEmail)}
+                    disabled={revokingEmail === inv.invitedEmail}
+                    onClick={() => { setRevokeError(''); setRevokeTarget(inv.invitedEmail); }}
                     data-testid={`pending-revoke-${inv.invitedEmail}`}
                   >
                     撤銷
@@ -568,11 +660,12 @@ function TripPermissions({ tripId }: CollabPanelProps) {
         </section>
       )}
 
-      {authorized && <section className="tp-collab-section">
+      {!permLoading && !permError && <section className="tp-collab-section">
         <div className="tp-collab-section-head">
           <span className="tp-collab-section-title">新增成員</span>
         </div>
-        <form className="tp-collab-add" onSubmit={(e) => { e.preventDefault(); void handleAdd(); }}>
+        {addError && <ErrorBanner message={addError} testId="collab-add-error" />}
+        <div className="tp-collab-add">
           <div className="tp-collab-add-row">
             <input
               type="email"
@@ -581,19 +674,19 @@ function TripPermissions({ tripId }: CollabPanelProps) {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={busy}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); }}
               aria-label="新成員的 email"
               data-testid="collab-add-email"
             />
             <button
-              type="submit"
+              type="button"
               className="tp-collab-add-btn"
-              disabled={disabled || !email.trim()}
+              disabled={adding || !email.trim()}
+              onClick={handleAdd}
               data-testid="collab-add-submit"
             >
               <Icon name="plus" />
-              <span>{busy ? '處理中…' : '新增'}</span>
+              <span>{adding ? '新增中…' : '新增'}</span>
             </button>
           </div>
           <div className="tp-collab-add-role-row">
@@ -604,8 +697,6 @@ function TripPermissions({ tripId }: CollabPanelProps) {
                 type="button"
                 className={`tp-collab-add-role-pill ${addRole === role ? 'is-selected' : ''}`}
                 onClick={() => setAddRole(role)}
-                disabled={busy}
-                aria-pressed={addRole === role}
                 data-testid={`collab-add-role-${role}`}
               >
                 <span className="tp-collab-badge-dot" aria-hidden="true" />
@@ -613,7 +704,7 @@ function TripPermissions({ tripId }: CollabPanelProps) {
               </button>
             ))}
           </div>
-        </form>
+        </div>
       </section>}
 
       <ConfirmModal
@@ -621,21 +712,23 @@ function TripPermissions({ tripId }: CollabPanelProps) {
         title="移除共編成員"
         message={removeTarget ? `${removeTarget.email} 將失去此行程的存取權。確定移除?` : ''}
         confirmLabel="移除"
-        busy={busy}
+        busy={removingId !== null}
         onConfirm={() => void confirmRemove()}
         onCancel={() => setRemoveTarget(null)}
-        fallbackFocusRef={panelRef}
-      >{actionError && <p role="alert">{actionError}</p>}</ConfirmModal>
+      >
+        {removeError && <ErrorBanner message={removeError} testId="collab-remove-error" />}
+      </ConfirmModal>
       <ConfirmModal
         open={!!revokeTarget}
         title="撤銷邀請"
-        message={revokeTarget ? `對 ${revokeTarget} 的邀請將失效，對方收到的邀請信點下後將無法透過該邀請加入。` : ''}
+        message={revokeTarget ? `對 ${revokeTarget} 的邀請將失效，對方收到的邀請信點下後會看到「邀請已撤銷」。` : ''}
         confirmLabel="撤銷"
-        busy={busy}
+        busy={revokingEmail !== null}
         onConfirm={() => void confirmRevokeInvite()}
         onCancel={() => setRevokeTarget(null)}
-        fallbackFocusRef={panelRef}
-      >{actionError && <p role="alert">{actionError}</p>}</ConfirmModal>
+      >
+        {revokeError && <ErrorBanner message={revokeError} testId="collab-revoke-error" />}
+      </ConfirmModal>
     </div>
   );
 }

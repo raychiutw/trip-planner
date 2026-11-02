@@ -13,28 +13,37 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockContext, mockEnv, mockAuth, mockServiceAuth, seedTrip, seedUser } from './helpers';
-import { onRequestPatch, onRequestGet as getRequest } from '../../functions/api/requests/[id]/index';
-import { onRequestGet as getAiState } from '../../functions/api/trips/[id]/notes/ai-state';
-import { onRequestGet as getNotes } from '../../functions/api/trips/[id]/notes';
-import { onRequestPost as generateNotes } from '../../functions/api/trips/[id]/notes/[type]/generate';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupNotes } from './cleanup-notes';
+import { serviceTokenFor } from './service-token';
 import type { Env } from '../../functions/api/_types';
 
+// 共用 D1：行程、email 用 `s14-hook` 專屬前綴，afterAll 清掉自己的資料
+const PREFIX = 's14-hook';
 let db: D1Database;
 let env: Env;
-const tripId = 'trip-hook-a';
-const ownerEmail = 'owner@hook.test';
+let api: Api;
+let serviceToken: string;
+const TRIP_A = `${PREFIX}-trip-a`;
+const tripId = TRIP_A;
+const ownerEmail = `${PREFIX}-owner@hook.test`;
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   await seedUser(db, ownerEmail);
   await seedTrip(db, { id: tripId, owner: ownerEmail });
+  serviceToken = await serviceTokenFor(db, { clientId: 's14-cli', scopes: ['companion'] });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupNotes(db, PREFIX);
+  await disposeMiniflare();
+});
 
-async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency'): Promise<{ requestId: number; jobId: number }> {
+async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency', tripId = TRIP_A): Promise<{ requestId: number; jobId: number }> {
   const req = await db
     .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING id')
     .bind(tripId, `[行程筆記-${docType}] test`, ownerEmail)
@@ -46,28 +55,27 @@ async function createJobAndRequest(docType: 'lodging-tips' | 'tips' | 'emergency
   return { requestId: req!.id, jobId: job!.id };
 }
 
-async function callPatch(requestId: number, body: Record<string, unknown>, requestEnv = env) {
-  const ctx = mockContext({
-    request: jsonRequest(`https://test/api/requests/${requestId}`, 'PATCH', body),
-    env: requestEnv,
-    // Phase 3：PATCH /requests/:id 由帶 companion scope 的 service token 執行（Claude CLI）
-    auth: mockServiceAuth(),
-    params: { id: String(requestId) },
-  });
-  return callHandler(onRequestPatch, ctx);
+/** Phase 3：PATCH /requests/:id 由帶 companion scope 的 service token 執行（Claude CLI）；`target` 可換成注入故障的 api。 */
+function callPatch(requestId: number, body: Record<string, unknown>, target: Api = api) {
+  return target.request('PATCH', `/api/requests/${requestId}`, { bearer: serviceToken, json: body });
 }
 
-async function readTrip(handler: typeof getAiState | typeof getNotes, id = tripId) {
-  const response = await callHandler(handler, mockContext({
-    request: new Request(`https://test/api/trips/${id}/notes`),
-    env, auth: mockAuth({ email: ownerEmail }), params: { id },
-  }));
+/** 以行程 owner 的身分讀取（HTTP 邊界）。 */
+function asOwner(path: string) {
+  return api.request('GET', path, { as: ownerEmail });
+}
+
+async function readTrip(kind: 'ai-state' | 'notes', id = tripId) {
+  const response = await asOwner(kind === 'notes' ? `/api/trips/${id}/notes` : `/api/trips/${id}/notes/ai-state`);
   return response.json() as Promise<Record<string, unknown>>;
 }
 
-function failDatabaseOnce(operation: 'prepare' | 'batch', match: (sql: string) => boolean = () => true): D1Database {
+const getAiState = 'ai-state' as const;
+const getNotes = 'notes' as const;
+
+function failDatabaseOnce(operation: 'prepare' | 'batch', match: (sql: string) => boolean = () => true): Api {
   let failed = false;
-  return new Proxy(db, {
+  const faultyDb = new Proxy(db, {
     get(target, property) {
       const member = Reflect.get(target, property);
       if (typeof member !== 'function') return member;
@@ -80,17 +88,15 @@ function failDatabaseOnce(operation: 'prepare' | 'batch', match: (sql: string) =
       };
     },
   });
+  return createApi({ env: mockEnv(faultyDb) });
 }
 
 describe('PATCH /requests/:id — notes generation completion hook', () => {
   it('舊 generation 的遲到回報不覆寫新 generation 的筆記', async () => {
-    const id = 'notes-terminal-generations';
+    const id = `${PREFIX}-terminal-generations`;
     await seedTrip(db, { id, owner: ownerEmail });
     const generate = async () => {
-      const response = await callHandler(generateNotes, mockContext({
-        request: jsonRequest(`https://test/api/trips/${id}/notes/tips/generate`, 'POST'),
-        env, auth: mockAuth({ email: ownerEmail }), params: { id, type: 'tips' },
-      }));
+      const response = await api.request('POST', `/api/trips/${id}/notes/tips/generate`, { as: ownerEmail });
       expect(response.status).toBe(202);
       return response.json() as Promise<{ requestId: number; generation: number }>;
     };
@@ -108,16 +114,13 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
     await callPatch(old.requestId, { status: 'completed', reply: lateReply });
     expect((await readTrip(getNotes, id)).pretripNotes).toEqual(saved.pretripNotes);
     expect((await readTrip(getAiState, id)).jobs).toContainEqual(expect.objectContaining({ generation: 2, status: 'completed' }));
-    const late = await callHandler(getRequest, mockContext({
-      request: new Request(`https://test/api/requests/${old.requestId}`), env,
-      auth: mockAuth({ email: ownerEmail }), params: { id: String(old.requestId) },
-    }));
+    const late = await asOwner(`/api/requests/${old.requestId}`);
     expect(await late.json()).toMatchObject({ status: 'failed', terminalReason: 'cancelled', reply: lateReply });
   });
 
   it('筆記寫入暫時失敗可重送完成通知，成功後不重複套用', async () => {
     const { requestId } = await createJobAndRequest('tips');
-    const faulty = mockEnv(failDatabaseOnce('batch'));
+    const faulty = failDatabaseOnce('batch');
     expect((await callPatch(requestId, {
       status: 'completed', reply: JSON.stringify([{ title: '雨具', content: '準備雨衣', section: '裝備' }]),
     }, faulty)).status).toBe(200);
@@ -136,29 +139,23 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
 
   it('停止等待後收尾失敗，遲到的純 status 通知可補做收尾', async () => {
     const { requestId } = await createJobAndRequest('tips');
-    const faulty = mockEnv(failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_note_ai_jobs/.test(sql)));
+    const faulty = failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_note_ai_jobs/.test(sql));
     expect((await callPatch(requestId, { status: 'failed', terminalReason: 'cancelled' }, faulty)).status).toBe(200);
     expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({ requestId, status: 'pending' }));
     expect((await callPatch(requestId, { status: 'completed' })).status).toBe(200);
     expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({ requestId, status: 'failed' }));
-    const request = await callHandler(getRequest, mockContext({
-      request: new Request(`https://test/api/requests/${requestId}`), env,
-      auth: mockAuth({ email: ownerEmail }), params: { id: String(requestId) },
-    }));
+    const request = await asOwner(`/api/requests/${requestId}`);
     expect(await request.json()).toMatchObject({ status: 'failed', terminalReason: 'cancelled' });
   });
 
   it('健檢關聯讀取失敗仍終結 request，並獨立完成筆記', async () => {
     const { requestId } = await createJobAndRequest('tips');
-    const faulty = mockEnv(failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_health_reports/.test(sql)));
+    const faulty = failDatabaseOnce('prepare', (sql) => /SELECT[\s\S]*FROM trip_health_reports/.test(sql));
     const response = await callPatch(requestId, {
       status: 'completed', reply: JSON.stringify([{ title: '登山', content: '攜帶飲水', section: '活動' }]),
     }, faulty);
     expect(response.status).toBe(200);
-    const request = await callHandler(getRequest, mockContext({
-      request: new Request(`https://test/api/requests/${requestId}`), env,
-      auth: mockAuth({ email: ownerEmail }), params: { id: String(requestId) },
-    }));
+    const request = await asOwner(`/api/requests/${requestId}`);
     expect(await request.json()).toMatchObject({ status: 'completed' });
     expect((await readTrip(getAiState)).jobs).toContainEqual(expect.objectContaining({
       docType: 'tips', requestId, status: 'completed',
@@ -339,6 +336,37 @@ describe('PATCH /requests/:id — notes generation completion hook', () => {
 
       const rows = await fetchAudit('trip_pretrip_notes', requestId);
       expect(rows.length).toBe(0);
+    });
+  });
+
+  // 補強：PATCH /requests/:id 的授權（companion service token 或對該 trip 有寫權的使用者）
+  describe('授權', () => {
+    it('非成員的使用者與僅有維運 scope 的 token 都不能回報完成，job 與筆記不變', async () => {
+      const authTrip = `${PREFIX}-auth-1`;
+      await seedTrip(db, { id: authTrip, owner: ownerEmail });
+      const { requestId, jobId } = await createJobAndRequest('tips', authTrip);
+      const body = { status: 'completed', reply: JSON.stringify([{ title: '入侵項目', content: 'x', section: '一般' }]) };
+      const strangerEmail = `${PREFIX}-stranger@hook.test`;
+      await seedUser(db, strangerEmail);
+      const asStranger = await api.request('PATCH', `/api/requests/${requestId}`, { as: strangerEmail, json: body });
+      expect(asStranger.status).toBe(403);
+      const opsOnly = await serviceTokenFor(db, { clientId: 's14-ops', scopes: ['ops:maps'] });
+      const asOps = await api.request('PATCH', `/api/requests/${requestId}`, { bearer: opsOnly, json: body });
+      expect(asOps.status).toBe(403);
+
+      expect(await db.prepare('SELECT status FROM trip_note_ai_jobs WHERE id = ?').bind(jobId).first()).toEqual({ status: 'pending' });
+      expect(await db.prepare('SELECT status FROM trip_requests WHERE id = ?').bind(requestId).first()).not.toEqual({ status: 'completed' });
+      expect(await db.prepare("SELECT COUNT(*) AS n FROM trip_pretrip_notes WHERE trip_id = ? AND title = '入侵項目'").bind(authTrip).first()).toEqual({ n: 0 });
+    });
+
+    it('未帶 token 回 401', async () => {
+      const authTrip = `${PREFIX}-auth-2`;
+      await seedTrip(db, { id: authTrip, owner: ownerEmail });
+      const { requestId } = await createJobAndRequest('tips', authTrip);
+      expect((await api.request('PATCH', `/api/requests/${requestId}`, {
+        headers: { Origin: 'https://trip-planner-dby.pages.dev' }, // 通過 CSRF Origin 檢查，才輪到認證
+        json: { status: 'failed' },
+      })).status).toBe(401);
     });
   });
 });

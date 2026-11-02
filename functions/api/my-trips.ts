@@ -23,6 +23,7 @@
  *     - endDate          （MAX(trip_days.date) — 行程迄日）
  *     - updatedAt        （t.updated_at — 排序 / 同步用；trips 表確有此欄位 migration 0047）
  *     - memberCount      （COUNT(DISTINCT trip_permissions.user_id) — 協作人數）
+ *     - archivedAt       （trips.archived_at — owner-controlled, trip-wide list classification）
  */
 
 import { requireAuth } from './_auth';
@@ -43,6 +44,7 @@ const SELECT_BASE = `
     p.role AS role,
     t.countries AS countries,
     t.updated_at AS updatedAt,
+    t.archived_at AS archivedAt,
     COALESCE((SELECT COUNT(*) FROM trip_days td WHERE td.trip_id = t.id), 0) AS totalDays,
     (SELECT MIN(date) FROM trip_days td WHERE td.trip_id = t.id AND date IS NOT NULL) AS startDate,
     (SELECT MAX(date) FROM trip_days td WHERE td.trip_id = t.id AND date IS NOT NULL) AS endDate,
@@ -66,9 +68,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 偵察面）。內容 gate 只在 per-trip 端點，list 端點得自己 scope。
   const scoped = auth.restrictTrip !== undefined;
   const { results } = await (scoped
-    ? env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? AND p.trip_id = ? ORDER BY p.trip_id`)
+    ? env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? AND p.trip_id = ? ORDER BY t.updated_at DESC, p.trip_id`)
         .bind(auth.userId, auth.restrictTrip)
-    : env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY p.trip_id`)
+    : env.DB.prepare(`${SELECT_BASE} WHERE p.user_id = ? ORDER BY t.updated_at DESC, p.trip_id`)
         .bind(auth.userId)
   ).all();
 

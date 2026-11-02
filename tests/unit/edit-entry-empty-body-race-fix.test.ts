@@ -22,10 +22,6 @@ const EDIT = readFileSync(
   join(__dirname, '../../src/pages/EditEntryPage.tsx'),
   'utf8',
 );
-const MOCKUP = readFileSync(
-  join(__dirname, '../../docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html'),
-  'utf8',
-);
 
 describe('PR12 (A): empty body race guard', () => {
   it('entry body push 前先檢 Object.keys(body).length > 0', () => {
@@ -38,7 +34,7 @@ describe('PR12 (A): empty body race guard', () => {
   });
 
   it('requests.length === 0 → 早 return 不走 success path 寫 originalRef', () => {
-    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+return \{ status: 'saved' \};/);
+    expect(EDIT).toMatch(/if \(requests\.length === 0\) \{\s+setSubmitting\(false\);\s+if \(!hasFormChanges\(\)\) return true;\s+failedAutoSaveRef\.current = draftSignature;\s+return false;/);
   });
 });
 
@@ -57,7 +53,7 @@ describe('PR12 (B) / PR14 / PR18: EditEntryPage handleSave 失敗走 toast', () 
   });
 
   it('catch path 也加 showToast', () => {
-    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';\s+showToast\(msg, 'error', 6000\)/);
+    expect(EDIT).toMatch(/const msg = err instanceof Error \? err\.message : '儲存失敗';[\s\S]*?showToast\(msg, 'error', 6000\)/);
   });
 
   it('body 內 InlineError 拔掉（duplicate of toast）', () => {
@@ -66,13 +62,5 @@ describe('PR12 (B) / PR14 / PR18: EditEntryPage handleSave 失敗走 toast', () 
 
   it('validation InlineError 保留（form-level user 知道哪個欄位錯）', () => {
     expect(EDIT).toMatch(/data-testid="edit-entry-validation"/);
-  });
-});
-
-describe('mockup spec source of truth', () => {
-  it('mockup 含 「儲存失敗 → 重試 + toast error」spec line', () => {
-    expect(MOCKUP).toMatch(/儲存失敗/);
-    expect(MOCKUP).toMatch(/重試/);
-    expect(MOCKUP).toMatch(/toast error/);
   });
 });

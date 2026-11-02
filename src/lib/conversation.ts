@@ -15,6 +15,8 @@ export interface ChatMessage {
   /** ADR-0007：使用者自己按的「停止等待」。是終結但**不是錯誤** —— 畫中性態，
    *  不用 destructive 色（真瀏覽器自測抓到的：原本一律套 is-failed 的紅框紅字）。 */
   terminated?: boolean;
+  /** Stop request could not be confirmed; the AI operation may still be running. */
+  stopUnconfirmed?: boolean;
   /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
@@ -127,14 +129,15 @@ export function rowToMessages(row: RawRequestRow): ChatMessage[] {
   return out.map((message) => ({ ...message, requestId: row.id }));
 }
 
+const messageKey = (message: ChatMessage) => message.requestId
+  ? `${message.requestId}:${message.role}` : `local:${message.id}`;
+
 /** Merge history and local bubbles using request + role, retaining the mounted identity. */
 export function mergeConversation(previous: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
-  const key = (message: ChatMessage) => message.requestId
-    ? `${message.requestId}:${message.role}` : `local:${message.id}`;
-  const known = new Map(previous.map((message) => [key(message), message]));
+  const known = new Map(previous.map((message) => [messageKey(message), message]));
   const merged = new Map<string, ChatMessage>();
   for (const message of [...incoming, ...previous]) {
-    const identity = key(message);
+    const identity = messageKey(message);
     const current = merged.get(identity) ?? known.get(identity);
     if (!current) { merged.set(identity, message); continue; }
     const keepCurrent = (!current.pendingRequestId && !!message.pendingRequestId)
@@ -143,4 +146,18 @@ export function mergeConversation(previous: ChatMessage[], incoming: ChatMessage
     merged.set(identity, { ...(keepCurrent ? current : message), id: current.id });
   }
   return [...merged.values()];
+}
+
+/** Refresh the newest page in place, preserving loaded history and mounted bubble IDs. */
+export function mergeLatestConversation(previous: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
+  const latest = new Map(incoming.map((message) => [messageKey(message), message]));
+  const existing = new Set(previous.map(messageKey));
+  return [
+    ...previous.map((message) => {
+      const fresh = latest.get(messageKey(message));
+      if (!fresh || (!message.pendingRequestId && fresh.pendingRequestId)) return message;
+      return { ...fresh, id: message.id };
+    }),
+    ...incoming.filter((message) => !existing.has(messageKey(message))),
+  ];
 }

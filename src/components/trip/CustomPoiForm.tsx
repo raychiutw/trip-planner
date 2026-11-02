@@ -6,7 +6,7 @@
  * 同一份 form UI/邏輯，避免兩邊 drift。
  *
  * 父層 owns title/coord/hint state（fully controlled），flyToSignal 內部管理
- * （Google 地址解析直接設定座標，flyTo 僅同步地圖視野）。
+ * （typeahead pick 後 fire flyTo → map idle 觸發 onCoordChange）。
  *
  * Layout：
  *   - 桌機 ≥1024px：left form pane 380px / right map pane 1fr (per mockup C)
@@ -18,15 +18,15 @@ import { LocationPickerMap } from './LocationPickerMap';
 import { CategoryPicker } from './CategoryPicker';
 import { usePlacesAutocomplete } from '../../hooks/usePlacesAutocomplete';
 import { useTypeaheadKeyboard } from '../../hooks/useTypeaheadKeyboard';
+import { apiFetchRaw } from '../../lib/apiClient';
+import { isValidCoord } from '../../lib/locationPicker';
 import type { PoiType } from '../../lib/poiCategory';
 
 export type CustomPoiCoord = { lat: number; lng: number };
 
 type Props = {
   title: string;
-  disabled?: boolean;
   onTitleChange: (v: string) => void;
-  onAddressChange?: (value: string) => void;
   coord: CustomPoiCoord | null;
   onCoordChange: (c: CustomPoiCoord | null) => void;
   hintConfirmed: boolean;
@@ -313,9 +313,7 @@ const SCOPED_STYLES = `
 
 export function CustomPoiForm({
   title,
-  disabled = false,
   onTitleChange,
-  onAddressChange,
   coord,
   onCoordChange,
   hintConfirmed,
@@ -331,32 +329,38 @@ export function CustomPoiForm({
 }: Props) {
   const [flyToSignal, setFlyToSignal] =
     useState<{ coord: CustomPoiCoord; zoom?: number } | null>(null);
+  const [addressError, setAddressError] = useState(false);
 
   const typeahead = usePlacesAutocomplete(regionCode ? { regionCode } : undefined);
 
-  const { resolveLocation, cancelResolution } = typeahead;
-  const handleMapCoord = useCallback((next: CustomPoiCoord | null) => {
-    cancelResolution(); onCoordChange(next); onHintConfirmedChange(false);
-  }, [cancelResolution, onCoordChange, onHintConfirmedChange]);
-  const handlePick = useCallback(async (placeId?: string) => {
-    onCoordChange(null); onHintConfirmedChange(false); setFlyToSignal(null);
-    const next = await resolveLocation(placeId);
-    if (!next) return;
-    onCoordChange(next);
-    setFlyToSignal({ coord: next, zoom: 15 });
-  }, [resolveLocation, onCoordChange, onHintConfirmedChange]);
+  const handlePick = useCallback(
+    async (placeId: string) => {
+      setAddressError(false);
+      const closingToken = typeahead.pickSuggestion(placeId);
+      try {
+        const qs = new URLSearchParams({ placeId });
+        if (closingToken) qs.set('sessionToken', closingToken);
+        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
+        if (!res.ok) throw new Error('resolve failed');
+        const data = (await res.json()) as { lat: number; lng: number };
+        if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
+        setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
+      } catch {
+        setAddressError(true);
+      }
+    },
+    [typeahead],
+  );
 
   const typeaheadKb = useTypeaheadKeyboard({
     listId: `${testIdPrefix}-suggestions`,
     options: typeahead.predictions,
-    onDismiss: () => typeahead.pickSuggestion(''),
     onPick: (p) => void handlePick(p.placeId),
   });
 
   return (
     <div
       className="tp-custom-poi-form tp-custom-poi-form-twopane"
-      inert={disabled}
       data-testid={`${testIdPrefix}-twopane`}
     >
       <style>{SCOPED_STYLES}</style>
@@ -377,7 +381,6 @@ export function CustomPoiForm({
             {error && (
               <div
                 className="tp-custom-poi-form-row-error"
-                role="alert"
                 data-testid={`${testIdPrefix}-error`}
               >
                 {error}
@@ -394,7 +397,7 @@ export function CustomPoiForm({
                 id={`${testIdPrefix}-address`}
                 type="text"
                 value={typeahead.query}
-                onChange={(e) => { onAddressChange?.(e.target.value); onCoordChange(null); setFlyToSignal(null); typeahead.setQuery(e.target.value); }}
+                onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                 placeholder="輸入地址縮放地圖（選填）"
                 autoComplete="off"
                 data-testid={`${testIdPrefix}-address-typeahead`}
@@ -429,10 +432,10 @@ export function CustomPoiForm({
                 </div>
               )}
             </div>
-            <div className="tp-custom-poi-form-helper">選擇 Google 地址候選或操作地圖來設定位置；預設地圖中心不是已選位置。</div>
-            {(typeahead.loading || typeahead.resolving) && <p role="status">{typeahead.resolving ? '正在確認地址位置…' : '搜尋地址中…'}</p>}
-            {typeahead.error && <div role="alert">地址搜尋失敗。<button type="button" onClick={() => typeahead.setQuery(typeahead.query)}>重試地址搜尋</button></div>}
-            {typeahead.resolveError && <div role="alert">{typeahead.resolveError}<button type="button" onClick={() => void handlePick()}>重試地址位置</button></div>}
+            <div className="tp-custom-poi-form-helper">
+              選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。
+            </div>
+            {addressError && <div className="tp-custom-poi-form-row-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
           </div>
         </div>
 
@@ -461,16 +464,15 @@ export function CustomPoiForm({
           <span className="tp-custom-poi-form-map-title">在地圖上選位置</span>
           <span
             className="tp-custom-poi-form-map-coord"
-            aria-live="polite"
             data-testid={`${testIdPrefix}-coord-readout`}
           >
-            {coord ? `緯度 ${coord.lat.toFixed(4)}，經度 ${coord.lng.toFixed(4)}` : '尚未選擇位置'}
+            {coord ? `${coord.lat.toFixed(4)}°N ${coord.lng.toFixed(4)}°E` : '—'}
           </span>
         </div>
         <LocationPickerMap
           initialCenter={initialCenter}
           initialZoom={initialZoom}
-          onCoordChange={handleMapCoord}
+          onCoordChange={onCoordChange}
           flyToSignal={flyToSignal}
         />
         <div className="tp-custom-poi-hint">

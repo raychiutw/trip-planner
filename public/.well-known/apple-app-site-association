@@ -1,10 +1,13 @@
 {
+  "webcredentials": {
+    "apps": ["8Z6WVFJ574.com.raychiu.tripline"]
+  },
   "applinks": {
     "apps": [],
     "details": [
       {
         "appID": "8Z6WVFJ574.com.raychiu.tripline",
-        "paths": ["/oauth/callback", "/uat/oauth/callback"]
+        "paths": ["/oauth/callback", "/uat/oauth/callback", "/s/*"]
       }
     ]
   }

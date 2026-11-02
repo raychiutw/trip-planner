@@ -109,7 +109,7 @@ describe('loadTripPrintData — real ?all=1 shape', () => {
     expect(d.notes.flights).toHaveLength(1);
   });
 
-  it('rejects missing notes rather than claiming a complete export', async () => {
+  it('rejects a notes failure rather than presenting partial output as complete', async () => {
     mockApi.mockImplementation((path: string) => {
       if (path.endsWith('/notes')) return Promise.reject(new Error('404'));
       if (path.includes('/days')) return Promise.resolve(RAW_DAYS);

@@ -23,10 +23,10 @@
  *   - No session: 302 to /login?redirect_after=...
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
-import { validateAuthorizeRequest, type ClientAppRow } from '../../../src/server/oauth-server/validate-authorize-request';
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
 import { oauthErrorResponse } from '../_errors';
+import { validateAuthorizeRequest, type ClientAppRow } from '../../../src/server/oauth-server/validate-authorize-request';
 import type { D1Database } from '@cloudflare/workers-types';
 import type { Env } from '../_types';
 import { isMobileClientId, mobileOAuthContract } from '../_mobileOAuth';
@@ -44,7 +44,7 @@ interface ConsentBody {
   decision?: string;
 }
 
-async function parseBody(request: Request): Promise<ConsentBody | null> {
+async function parseBody(request: Request): Promise<ConsentBody> {
   const ct = request.headers.get('content-type') ?? '';
   if (ct.includes('application/x-www-form-urlencoded')) {
     const text = await request.text();
@@ -54,12 +54,9 @@ async function parseBody(request: Request): Promise<ConsentBody | null> {
     return out;
   }
   if (ct.includes('application/json')) {
-    const value: unknown = await request.json();
-    if (!value || typeof value !== 'object' || Array.isArray(value) ||
-        Object.values(value).some((field) => typeof field !== 'string')) return null;
-    return value as ConsentBody;
+    return (await request.json()) as ConsentBody;
   }
-  return null;
+  return {};
 }
 
 /**
@@ -99,18 +96,25 @@ async function safeRedirect(
     // Open-redirect guard — never reflect attacker-supplied redirect_uri.
     return oauthErrorResponse('invalid_request', 'redirect_uri not registered for this client', 400);
   }
-  const params = new URLSearchParams({ error: errorCode });
-  if (state) params.set('state', state);
+  let location: URL;
+  try {
+    location = new URL(redirectUri);
+  } catch {
+    return oauthErrorResponse('invalid_request', 'Invalid redirect_uri', 400);
+  }
+  location.searchParams.delete('code');
+  location.searchParams.set('error', errorCode);
+  if (state) location.searchParams.set('state', state);
+  else location.searchParams.delete('state');
   return new Response(null, {
     status: 302,
-    headers: { Location: `${redirectUri}?${params.toString()}` },
+    headers: { Location: location.toString() },
   });
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const session = await getSessionUser(context.request, context.env, context.waitUntil.bind(context));
-  const body = await parseBody(context.request).catch(() => null);
-  if (!body) return oauthErrorResponse('invalid_request', 'Invalid consent request body', 400);
+  const body = await parseBody(context.request);
 
   if (isMobileClientId(body.client_id ?? '')) {
     const contract = mobileOAuthContract(context.env, context.request);
@@ -149,21 +153,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return oauthErrorResponse('invalid_request', 'Missing client_id', 400);
   }
 
-  // Validate before persisting, using the same policy as the next authorize hop.
-  const client = await context.env.DB
-    .prepare('SELECT client_id, client_type, app_name, redirect_uris, allowed_scopes, status FROM client_apps WHERE client_id = ?')
-    .bind(body.client_id)
-    .first<ClientAppRow>();
-  const result = validateAuthorizeRequest(body, client);
-  if ('code' in result) return oauthErrorResponse(result.code, result.message, 400);
-  const scopes = result.scopes;
+  const client = await context.env.DB.prepare(
+    `SELECT client_id, client_type, app_name, redirect_uris, allowed_scopes, status
+       FROM client_apps WHERE client_id = ?`,
+  ).bind(body.client_id).first<ClientAppRow>();
+  const validated = validateAuthorizeRequest(body, client);
+  if ('code' in validated) {
+    return validated.redirectableToClient
+      ? safeRedirect(context.env.DB, body.client_id, body.redirect_uri, validated.code, body.state)
+      : oauthErrorResponse(validated.code, validated.message, 400);
+  }
 
   // Store consent (idempotent upsert)
   const consentKey = `${session.uid}:${body.client_id}`;
   const adapter = new D1Adapter(context.env.DB, 'Consent');
   await adapter.upsert(
     consentKey,
-    { user_id: session.uid, client_id: body.client_id, scopes, grantedAt: Date.now() },
+    { user_id: session.uid, client_id: body.client_id, scopes: validated.scopes, grantedAt: Date.now() },
     CONSENT_TTL_SEC,
   );
 
@@ -172,7 +178,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     outcome: 'success',
     userId: session.uid,
     clientId: body.client_id,
-    metadata: { scopes, decision: 'allow' },
+    metadata: { scopes: validated.scopes, decision: 'allow' },
   }, context.env);
 
   // Redirect back to authorize with original params — this time will

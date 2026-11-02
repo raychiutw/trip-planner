@@ -13,14 +13,10 @@ export const EVENT = {
   entryUpdated: 'tp-entry-updated',
   /** dispatch detail: `{ tripId, segmentId? }` — travel segment mode / min / source changed. */
   segmentUpdated: 'tp-segment-updated',
-  /** dispatch detail: `{ tripId }` — trip metadata edit (PUT /trips/:id). */
+  /** dispatch detail: `{ tripId }` — trip metadata edit or deletion. */
   tripUpdated: 'tp-trip-updated',
   /** dispatch detail: `{ tripId }` — trip just created (NewTripPage success). */
   tripCreated: 'tp-trip-created',
-  /** dispatch detail: `{ tripId }` — a trip was deleted. */
-  tripDeleted: 'tp-trip-deleted',
-  /** Legacy list invalidation event; preserve callers that already dispatch it. */
-  tripsUpdated: 'tp-trips-updated',
   /** no detail — developer console app just created (DeveloperAppNewPage success). */
   developerAppCreated: 'tp-developer-app-created',
   /** v2.31.81 #5：dispatch detail `{ entryId: number }` — TimelineRail row 點下去

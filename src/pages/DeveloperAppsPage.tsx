@@ -1,10 +1,27 @@
-/** Developer-owned OAuth registry. Creation and one-time secret reveal live on the new-app page. */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback, useEffect, useRef, useState } from 'react';
+/**
+ * DeveloperAppsPage — V2-P4 OAuth client_app management for developers
+ *
+ * Route: /developer/apps
+ * Backend: PR #291 GET/POST /api/dev/apps
+ *
+ * Flow:
+ *   1. List user's client_apps
+ *   2. 「建立新應用」→ form modal (app_name, redirect_uris, client_type, scopes)
+ *   3. Submit → POST /api/dev/apps → 切換成 secret reveal modal
+ *      - 顯示 client_id (永久) + client_secret (一次性，必須立即複製)
+ *      - 確認複製 → 重新 fetch 列表 + 關閉 modal
+ *
+ * 安全 UX：
+ *   - client_secret 只 reveal 一次，明確警示
+ *   - 預設 client_type='public'（PKCE 強制，不需 secret）
+ *   - redirect_uris textarea: HTTPS-only validation 由後端做
+ */
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { ApiError } from '../lib/errors';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -12,6 +29,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -22,35 +40,32 @@ const SCOPED_STYLES = `
 
 /* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
-.tp-list-table {
+.tp-app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.tp-app-card {
+  min-width: 0; padding: 16px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
 }
-.tp-list-row {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px; padding: 14px 20px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-subheadline);
-}
-.tp-list-row > div { min-width: 0; overflow-wrap: anywhere; }
-.tp-list-row:last-child { border-bottom: none; }
-.tp-list-header {
-  background: var(--color-secondary);
-  font-size: var(--font-size-caption2);
-  font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-.tp-app-name { font-weight: 600; }
+.tp-app-name { margin: 0; font-size: var(--font-size-subheadline); font-weight: 600; overflow-wrap: anywhere; }
 .tp-app-cid {
   font-family: 'SF Mono', ui-monospace, monospace;
   font-size: var(--font-size-caption);
   color: var(--color-muted);
+  overflow-wrap: anywhere;
 }
+.tp-app-uri-list { margin-top: 12px; }
+.tp-app-uri-label { color: var(--color-muted); font-size: var(--font-size-caption); font-weight: 600; }
+.tp-app-uri { margin-top: 8px; }
+.tp-app-uri code { display: block; font-size: var(--font-size-caption); overflow-wrap: anywhere; }
+.tp-app-uri .tp-btn { margin-top: 6px; }
+.tp-app-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+.tp-app-created { color: var(--color-muted); font-size: var(--font-size-caption); text-align: right; }
+@media (max-width: 760px) { .tp-app-grid { grid-template-columns: minmax(0, 1fr); } }
 .tp-pill {
   display: inline-flex; padding: 2px 8px;
   border-radius: var(--radius-xs);
@@ -88,6 +103,22 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 .tp-error-banner { color: var(--color-destructive); }
+.tp-dev-permission-banner { max-width: 920px; margin: 16px auto 0; }
+.tp-dev-page-error {
+  padding: 32px 24px; background: var(--color-background);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  text-align: center;
+}
+.tp-dev-page-error-title { margin: 0 0 12px; font-weight: 700; color: var(--color-foreground); }
+.tp-dev-page-error-desc { margin: 0 0 12px; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-dev-page-error-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.tp-dev-page-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-dev-page-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 `;
 
 interface ClientApp {
@@ -114,107 +145,120 @@ function statusPill(status: string): { className: string; label: string } {
 }
 
 export default function DeveloperAppsPage() {
-  const auth = useRequireAuth();
-  const { user } = auth;
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const { user } = useCurrentUser();
   const navigate = useNavigate();
   const [apps, setApps] = useState<ClientApp[] | null>(null);
-  const [error, setError] = useState<'denied' | 'failed' | null>(null);
-  const readRequest = useRef<AbortController | null>(null);
-  const retryRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<'forbidden' | 'failed' | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [copyState, setCopyState] = useState<{ key: string; success: boolean } | null>(null);
+  const loadSequence = useRef(0);
+  const titlebarActionRef = useRef<HTMLButtonElement>(null);
 
-  const loadApps = useCallback(async () => {
-    const retryFocused = document.activeElement === retryRef.current;
-    readRequest.current?.abort();
-    const request = new AbortController();
-    readRequest.current = request;
-    setLoading(true);
+  async function loadApps() {
+    const sequence = ++loadSequence.current;
+    setError(null);
+    setCopyState(null);
     try {
-      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps', { signal: request.signal });
-      if (request.signal.aborted) return;
-      if (!Array.isArray(json?.apps)) throw new Error('invalid registry');
-      const ids = new Set<string>();
-      for (const app of json.apps) {
-        if (!app || typeof app.client_id !== 'string' || !app.client_id || ids.has(app.client_id) ||
-            typeof app.app_name !== 'string' || typeof app.status !== 'string' || typeof app.created_at !== 'string' ||
-            !Array.isArray(app.redirect_uris) || app.redirect_uris.some(uri => typeof uri !== 'string')) {
-          throw new Error('invalid application metadata');
-        }
-        ids.add(app.client_id);
-      }
-      if (retryFocused && (document.activeElement === retryRef.current || document.activeElement === document.body)) {
-        contentRef.current?.focus();
-      }
-      setApps(json.apps);
-      setError(null);
+      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
+      if (sequence === loadSequence.current) setApps(json.apps);
     } catch (err) {
-      if (request.signal.aborted) return;
-      if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
+      if (sequence === loadSequence.current) {
         setApps(null);
-        setError('denied');
-      } else setError('failed');
-    } finally {
-      if (!request.signal.aborted) setLoading(false);
+        setError(err instanceof ApiError && err.status === 403 ? 'forbidden' : 'failed');
+      }
     }
+  }
+
+  useEffect(() => { void loadApps(); }, []);
+
+  // tp-developer-app-created event 觸發 refetch。曾經做過 in-place append 優化
+  // (PR #452) 但有 race：listener 跟 initial fetch 順序不定 + DeveloperAppNew
+  // 假造 created_at/updated_at 跟 server 真值不一致。改 always refetch，犧牲
+  // 一次 GET 換正確性。
+  useEffect(() => {
+    function handleAppCreated() { void loadApps(); }
+    window.addEventListener(EVENT.developerAppCreated, handleAppCreated);
+    return () => window.removeEventListener(EVENT.developerAppCreated, handleAppCreated);
   }, []);
 
-  useEffect(() => {
-    setApps(null);
-    setError(null);
-    setLoading(true);
-    if (!user?.id) return;
-    void loadApps();
-    // Always read the server registry after creation; never fabricate a row.
-    const refresh = () => { void loadApps(); };
-    window.addEventListener(EVENT.developerAppCreated, refresh);
-    return () => {
-      readRequest.current?.abort();
-      window.removeEventListener(EVENT.developerAppCreated, refresh);
-    };
-  }, [user?.id, loadApps]);
+  const actionLabel = retrying ? '載入中…' : error === 'failed' ? '重新載入應用列表' : '建立新應用';
+  async function retryApps() {
+    setRetrying(true);
+    try { await loadApps(); }
+    finally { setRetrying(false); }
+  }
+  function handleTitleBarAction() {
+    if (retrying) return;
+    if (error === 'failed') void retryApps();
+    else navigate('/developer/apps/new');
+  }
+  async function copyUri(key: string, uri: string) {
+    const sequence = loadSequence.current;
+    try {
+      await navigator.clipboard.writeText(uri);
+      if (sequence === loadSequence.current) setCopyState({ key, success: true });
+    } catch {
+      if (sequence === loadSequence.current) setCopyState({ key, success: false });
+    }
+  }
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={!user ? <AuthStatus auth={auth} /> : <>
+      main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
       <TitleBar
         title="應用"
         back={() => navigate('/account')}
-        actions={user && error !== 'denied' &&
+        actions={error !== 'forbidden' ? (
           <button
             type="button"
+            ref={titlebarActionRef}
             className="tp-titlebar-action"
-            onClick={() => navigate('/developer/apps/new')}
-            aria-label="建立新應用"
-            title="建立新應用"
-            data-testid="dev-apps-new"
+            onClick={handleTitleBarAction}
+            aria-label={actionLabel}
+            aria-disabled={retrying}
+            aria-busy={retrying}
+            title={actionLabel}
+            data-testid={!error && !retrying ? 'dev-apps-new' : undefined}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              {(error === 'failed' || retrying) && <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5" />}
+              {!error && !retrying && <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>}
             </svg>
-            <span className="tp-titlebar-action-label">建立新應用</span>
+            <span className="tp-titlebar-action-label">{actionLabel}</span>
           </button>
-        }
+        ) : undefined}
       />
-      <div className="tp-dev-inner" ref={contentRef} tabIndex={-1} aria-label="開發者應用清單">
+      {error === 'forbidden' && <ErrorBanner
+        message="沒有權限查看開發者應用，請返回帳號。"
+        className="tp-dev-permission-banner"
+        testId="dev-apps-error"
+      />}
+      <div className="tp-dev-inner" data-testid="dev-apps-content">
         <p className="tp-page-eyebrow">開發者後台</p>
         <p className="tp-page-meta">管理你的 OAuth client。每個應用程式對應一組 client_id。</p>
 
-        {error && <>
-          <ErrorBanner message={error === 'denied' ? '目前沒有權限查看開發者應用。' : '無法載入應用列表，請重試。'} testId="dev-apps-error" />
-          <button ref={retryRef} type="button" className="tp-btn tp-btn-secondary" disabled={loading} onClick={() => void loadApps()}>重試載入應用</button>
-        </>}
+        {error === 'failed' && <PageErrorState
+          className="tp-dev-page-error"
+          title="無法載入應用列表"
+          message="資料暫時無法取得，請重試。"
+          onRetry={() => { titlebarActionRef.current?.focus(); void retryApps(); }}
+          testId="dev-apps-error"
+        >
+          <div className="tp-dev-page-error-actions">
+            <button type="button" className="tp-btn tp-btn-secondary" onClick={() => navigate('/account')}>返回帳號</button>
+          </div>
+        </PageErrorState>}
 
-        {loading && apps === null && !error && (
+        {apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>
         )}
 
-        {!loading && !error && apps !== null && apps.length === 0 && (
+        {apps !== null && apps.length === 0 && (
           <div className="tp-empty" data-testid="dev-apps-empty">
             <h3>尚未建立任何應用</h3>
             <p>建立第一個 OAuth client 來接入「Sign in with Tripline」。</p>
@@ -229,26 +273,34 @@ export default function DeveloperAppsPage() {
         )}
 
         {apps !== null && apps.length > 0 && (
-          <div className="tp-list-table">
-            <div className="tp-list-row tp-list-header">
-              <div>應用</div>
-              <div>狀態</div>
-              <div>建立日期</div>
-              <div></div>
-            </div>
+          <div className="tp-app-grid">
             {apps.map((app) => {
               const pill = statusPill(app.status);
+              const uris = Array.isArray(app.redirect_uris)
+                ? app.redirect_uris.filter((uri): uri is string => typeof uri === 'string')
+                : [];
               return (
-                <div className="tp-list-row" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
-                  <div>
-                    <div className="tp-app-name">{app.app_name}</div>
-                    <div className="tp-app-cid">{app.client_id}</div>
-                    {app.redirect_uris.map((uri, index) => <div className="tp-app-cid" key={index}>回呼 URI：{uri}</div>)}
+                <article className="tp-app-card" key={app.client_id} data-testid={`dev-apps-row-${app.client_id}`}>
+                  <h2 className="tp-app-name">{app.app_name}</h2>
+                  <div className="tp-app-cid">{app.client_id}</div>
+                  <div className="tp-app-uri-list">
+                    <div className="tp-app-uri-label">重新導向 URI</div>
+                    {uris.length === 0 && <div className="tp-app-uri-label">尚未設定</div>}
+                    {uris.map((uri, index) => {
+                      const key = `${app.client_id}:${index}`;
+                      return <div className="tp-app-uri" key={key}>
+                        <code>{uri}</code>
+                        <button type="button" className="tp-btn tp-btn-secondary" onClick={() => void copyUri(key, uri)} aria-label={`${copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製重新導向 URI'} ${index + 1}，${app.app_name}（${app.client_id}）`} aria-live="polite">
+                          {copyState?.key === key ? (copyState.success ? '已複製' : '複製失敗') : '複製 URI'}
+                        </button>
+                      </div>;
+                    })}
                   </div>
-                  <div><span className={pill.className}>{pill.label}</span></div>
-                  <div>{parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? '時間不明'}</div>
-                  <div></div>
-                </div>
+                  <div className="tp-app-card-bottom">
+                    <span className={pill.className}>{pill.label}</span>
+                    <span className="tp-app-created">建立 {parseUtcDate(app.created_at)?.toLocaleDateString('zh-TW') ?? app.created_at}</span>
+                  </div>
+                </article>
               );
             })}
           </div>

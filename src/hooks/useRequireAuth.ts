@@ -26,14 +26,14 @@ import { useCurrentUser, type UseCurrentUserResult } from './useCurrentUser';
 export function useRequireAuth(): UseCurrentUserResult {
   const result = useCurrentUser();
   const navigate = useNavigate();
-  const { pathname, search, hash } = useLocation();
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     // Wait for the userinfo probe to settle (undefined = still loading)
     if (result.user !== null) return;
-    const redirectAfter = `${pathname}${search}${hash}`;
+    const redirectAfter = `${pathname}${search}`;
     navigate(`/login?redirect_after=${encodeURIComponent(redirectAfter)}`, { replace: true });
-  }, [result.user, pathname, search, hash, navigate]);
+  }, [result.user, pathname, search, navigate]);
 
   return result;
 }

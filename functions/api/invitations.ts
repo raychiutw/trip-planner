@@ -21,6 +21,7 @@ interface InvitationRow {
   trip_id: string;
   trip_title: string;
   invited_email: string;
+  role: string;
   inviter_display_name: string | null;
   inviter_email: string;
   expires_at: string;
@@ -96,6 +97,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          ti.trip_id,
          t.title AS trip_title,
          ti.invited_email,
+         ti.role,
          u.display_name AS inviter_display_name,
          u.email AS inviter_email,
          ti.expires_at,
@@ -126,6 +128,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       tripId: row.trip_id,
       tripTitle: row.trip_title,
       invitedEmail: row.invited_email,
+      role: row.role === 'viewer' ? 'viewer' : 'member',
       inviterDisplayName: row.inviter_display_name,
       inviterEmail: row.inviter_email,
       expiresAt: row.expires_at,

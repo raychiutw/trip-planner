@@ -1,20 +1,36 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedTrip } from './helpers';
-import { onRequestGet as getDay, onRequestPut as putDay } from '../../functions/api/trips/[id]/days/[num]';
+import { mockEnv, seedTrip } from './helpers';
+import { createApi, type Api } from './http';
 
+const OWNER = 'day-replace-owner@test.com';
 let db: D1Database;
-beforeAll(async () => { db = await createTestDb(); });
-afterAll(disposeMiniflare);
+let api: Api;
+const tripIds: string[] = [];
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db) });
+});
+afterAll(async () => {
+  // 共用 D1：只清自己建立的行程（days / entries 等子表走 FK cascade，permissions 要手動清）
+  for (const id of tripIds) {
+    await db.prepare('DELETE FROM trip_permissions WHERE trip_id = ?').bind(id).run(); // 無 FK cascade
+    await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
+});
 
-function context(tripId: string, request: Request, requestDb = db) {
-  return mockContext({ request, env: mockEnv(requestDb), auth: mockAuth(), params: { id: tripId, num: '1' } });
+/** 建立行程並記下 id，afterAll 清掉。 */
+async function seed(tripId: string) {
+  tripIds.push(tripId);
+  await seedTrip(db, { id: tripId, days: 1, owner: OWNER });
 }
-function put(tripId: string, body: unknown, requestDb = db) {
-  return callHandler(putDay, context(tripId, jsonRequest(`https://test/api/trips/${tripId}/days/1`, 'PUT', body), requestDb));
+/** requestApi 預設用正常的 api；注入故障時傳入故障 D1 包成的 api。 */
+function put(tripId: string, body: unknown, requestApi: Api = api) {
+  return requestApi.request('PUT', `/api/trips/${tripId}/days/1`, { as: OWNER, json: body });
 }
 async function read(tripId: string) {
-  const response = await callHandler(getDay, context(tripId, new Request(`https://test/api/trips/${tripId}/days/1`)));
+  const response = await api.get(`/api/trips/${tripId}/days/1`);
   expect(response.status).toBe(200);
   return response.json();
 }
@@ -47,6 +63,11 @@ function failStatement(match: RegExp, occurrence = 1): D1Database {
   } });
 }
 
+/** 以「會在指定 SQL 上拋錯」的 D1 建一個進程內 api；寫入仍走真實 D1，由 SQLite 決定哪些回滾。 */
+function failingApi(match: RegExp, occurrence = 1): Api {
+  return createApi({ env: mockEnv(failStatement(match, occurrence)) });
+}
+
 describe('整天替換的完整性', () => {
   it.each([
     { phase: 'entry', sql: /INSERT INTO trip_entries/, occurrence: 2, count: 2 },
@@ -55,11 +76,11 @@ describe('整天替換的完整性', () => {
     { phase: 'large', sql: /INSERT.*INTO trip_entry_pois/, occurrence: 101, count: 60 },
   ])('$phase 階段失敗仍完整保留 $count 筆舊 entry，重試得到完整新 day', async ({ phase, sql, occurrence, count }) => {
     const tripId = `replace-phase-${phase}`;
-    await seedTrip(db, { id: tripId, days: 1 });
+    await seed(tripId);
     expect((await put(tripId, replacement('原子舊', count))).status).toBe(200);
     const before = await read(tripId);
     expect(before.timeline).toHaveLength(count);
-    expect((await put(tripId, replacement('原子新', count), failStatement(sql, occurrence))).status).toBe(500);
+    expect((await put(tripId, replacement('原子新', count), failingApi(sql, occurrence))).status).toBe(500);
     expect(await read(tripId)).toEqual(before);
     expect((await put(tripId, replacement('原子新', count))).status).toBe(200);
     const after = await read(tripId);
@@ -70,11 +91,11 @@ describe('整天替換的完整性', () => {
 
   it('備選還原階段失敗保留舊 day，重試後只還原一次', async () => {
     const tripId = 'replace-restore-outage';
-    await seedTrip(db, { id: tripId, days: 1 });
+    await seed(tripId);
     expect((await put(tripId, replacement('備選'))).status).toBe(200);
     const before = await read(tripId);
     const body = { date: '2026-09-23', dayOfWeek: '三', label: '保留備選', timeline: [{ name: '備選景點0' }, { name: '備選景點1' }] };
-    expect((await put(tripId, body, failStatement(/INSERT.*INTO trip_entry_pois/, 2))).status).toBe(500);
+    expect((await put(tripId, body, failingApi(/INSERT.*INTO trip_entry_pois/, 2))).status).toBe(500);
     expect(await read(tripId)).toEqual(before);
     expect((await put(tripId, body)).status).toBe(200);
     expect(await read(tripId)).toMatchObject({ version: 2, timeline: [
@@ -94,7 +115,7 @@ describe('整天替換的完整性', () => {
     { hotel: { name: '有問題的飯店', parking: [null] } },
   ])('無效輸入 %j 回 400，保留完整舊內容', async (invalid) => {
     const tripId = `replace-invalid-${crypto.randomUUID()}`;
-    await seedTrip(db, { id: tripId, days: 1 });
+    await seed(tripId);
     expect((await put(tripId, replacement('合法'))).status).toBe(200);
     const before = await read(tripId);
     const response = await put(tripId, { ...replacement('無效'), ...invalid });
@@ -104,7 +125,7 @@ describe('整天替換的完整性', () => {
 
   it('名稱重寫依順序保留各 entry 備選的備註與預訂，不混用相同正選', async () => {
     const tripId = 'replace-restored-metadata';
-    await seedTrip(db, { id: tripId, days: 1 });
+    await seed(tripId);
     const original = replacement('還原');
     original.timeline.forEach((e, i) => { e.stopPois[0]!.name = '共用正選'; e.stopPois[1]!.note = `各自備註${i}`; });
     expect((await put(tripId, original)).status).toBe(200);
@@ -120,10 +141,10 @@ describe('整天替換的完整性', () => {
 
   it('正選寫入故障後保留完整舊 day，解除故障後可重試', async () => {
     const tripId = 'replace-junction-outage';
-    await seedTrip(db, { id: tripId, days: 1 });
+    await seed(tripId);
     expect((await put(tripId, replacement('舊'))).status).toBe(200);
     const before = await read(tripId);
-    const failed = await put(tripId, replacement('新'), failStatement(/INSERT.*INTO trip_entry_pois/));
+    const failed = await put(tripId, replacement('新'), failingApi(/INSERT.*INTO trip_entry_pois/));
     expect(failed.status).toBeGreaterThanOrEqual(500);
     expect(await read(tripId)).toEqual(before);
     expect((await put(tripId, replacement('新'))).status).toBe(200);

@@ -1,27 +1,48 @@
 /**
  * Integration test — PATCH/DELETE /api/trips/:id/entries/:eid
+ * 走 HTTP 邊界（tests/api/http.ts），不直接呼叫 handler。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, seedPoi, getDayId , callHandler } from './helpers';
-import { onRequestGet, onRequestPatch, onRequestDelete } from '../../functions/api/trips/[id]/entries/[eid]';
-import type { Env } from '../../functions/api/_types';
+import { mockEnv, seedTrip, seedEntry, seedPoi, getDayId } from './helpers';
+import { createApi, type Api } from './http';
 
 let db: D1Database;
-let env: Env;
+let api: Api;
 let entryId: number;
+const OWNER = 'entries-owner@test.com';
+const STRANGER = 'entries-stranger@test.com';
+// 匿名的瀏覽器寫入請求會帶 Origin；沒帶會先被 CSRF 檢查擋成 403，到不了 handler 的 401
+const BROWSER_ORIGIN = 'https://trip-planner-dby.pages.dev';
+const tripIds: string[] = [];
+/** 建立行程並記下 id，afterAll 清掉（共用 D1）。 */
+const seed = async (opts: { id: string; days?: number; published?: number }) => {
+  tripIds.push(opts.id);
+  return seedTrip(db, { owner: OWNER, ...opts });
+};
+const patchEntry = (tripId: string, eid: number | string, json: unknown) =>
+  api.request('PATCH', `/api/trips/${tripId}/entries/${eid}`, { as: OWNER, json });
+const readTimes = (eid: number) =>
+  db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(eid).first<{ start_time: string | null; end_time: string | null }>();
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db);
-  await seedTrip(db, { id: 'trip-e' });
-  const dayId = await getDayId(db, 'trip-e', 1);
+  api = createApi({ env: mockEnv(db) });
+  await seed({ id: 's8-entries-e' });
+  const dayId = await getDayId(db, 's8-entries-e', 1);
   const poiId = await seedPoi(db, { name: 'Original POI', type: 'attraction' });
   // v2.29.0: seedEntry poiId 已自動 INSERT trip_entry_pois sort_order=1（backward-compat）
   entryId = await seedEntry(db, dayId, { poiId });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  // 共用 D1：只清自己建立的行程（days / entries 等子表走 FK cascade，permissions 要手動清）
+  for (const id of tripIds) {
+    await db.prepare('DELETE FROM trip_permissions WHERE trip_id = ?').bind(id).run(); // 無 FK cascade
+    await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
+});
 
 describe('GET /api/trips/:id/entries/:eid', () => {
   it('回完整 entry shape（含 time/master/stopPois/entry_pois_version）→ 200', async () => {
@@ -29,13 +50,7 @@ describe('GET /api/trips/:id/entries/:eid', () => {
     // 初始 load 後 entry.startTime/endTime/master 全 undefined → input 空白。
     // Backend SELECT 改 SELECT * 一勞永逸；此 test 鎖住完整 shape 防 regression。
     // migration 0078: entry-level note 已 DROP；「正選備註」改由 master.note 提供。
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-e/entries/${entryId}`, { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await api.get(`/api/trips/s8-entries-e/entries/${entryId}`, { as: OWNER });
     expect(resp.status).toBe(200);
     // json() helper does deepCamel — server SELECT day_id 出去變 dayId。
     const body = await resp.json() as {
@@ -71,50 +86,25 @@ describe('GET /api/trips/:id/entries/:eid', () => {
   it('未認證 + 非 published trip → 403（v2.33.97 sibling endpoint contract align requireTripReadAccess）', async () => {
     // seedTrip 預設 published=1 → anon 可讀 (與 sibling /days /segments 一致)。
     // 非 published trip 才 403 PERM_DENIED。建獨立 trip 避免污染其他 test。
-    await seedTrip(db, { id: 'trip-e-private', published: 0 });
-    const privDayId = await getDayId(db, 'trip-e-private', 1);
+    await seed({ id: 's8-entries-private', published: 0 });
+    const privDayId = await getDayId(db, 's8-entries-private', 1);
     const privEntryId = await seedEntry(db, privDayId);
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-e-private/entries/${privEntryId}`, { method: 'GET' }),
-      env,
-      params: { id: 'trip-e-private', eid: String(privEntryId) },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
+    expect((await api.get(`/api/trips/s8-entries-private/entries/${privEntryId}`)).status).toBe(403);
   });
 
   it('entry 不屬於該 trip → 404', async () => {
-    await seedTrip(db, { id: 'trip-other' });
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-other/entries/${entryId}`, { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-other', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
+    await seed({ id: 's8-entries-other' });
+    expect((await api.get(`/api/trips/s8-entries-other/entries/${entryId}`, { as: OWNER })).status).toBe(404);
   });
 
   it('entry id 不存在 → 404', async () => {
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-e/entries/999999`, { method: 'GET' }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: '999999' },
-    });
-    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
+    expect((await api.get('/api/trips/s8-entries-e/entries/999999', { as: OWNER })).status).toBe(404);
   });
 });
 
 describe('PATCH /api/trips/:id/entries/:eid', () => {
   it('PATCH legacy title request → 400（entry display name no longer writable here）', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        title: 'Updated',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await patchEntry('s8-entries-e', entryId, { title: 'Updated' });
     expect(resp.status).toBe(400);
     const { results } = await db.prepare("PRAGMA table_info('trip_entries')").all<{ name: string }>();
     expect(results.map((r) => r.name)).not.toContain('title');
@@ -123,16 +113,10 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
   it('migration 0078: PATCH 帶 note 連同合法欄位 → note 被 ALLOWED_FIELDS 過濾（不寫 trip_entries）', async () => {
     // 備註已搬到 trip_entry_pois（per-POI），entry-level note 端點不再接受 note。
     // 帶 note + 合法欄位（description）→ 200 但 note 被 whitelist 丟棄（trip_entries 已無此欄位）。
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        description: 'Updated description',
-        note: '應被忽略',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
+    const resp = await patchEntry('s8-entries-e', entryId, {
+      description: 'Updated description',
+      note: '應被忽略',
     });
-    const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string }>();
     expect(row!.description).toBe('Updated description');
@@ -142,130 +126,83 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
   });
 
   it('migration 0078: PATCH 只帶 note（無其他合法欄位）→ 400 無有效欄位可更新', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        note: '只有 note',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await patchEntry('s8-entries-e', entryId, { note: '只有 note' });
     expect(resp.status).toBe(400);
     const body = (await resp.json()) as { error: { code: string } };
     expect(body.error.code).toBe('DATA_VALIDATION');
   });
 
   it('缺 title → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        title: '',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
+    expect((await patchEntry('s8-entries-e', entryId, { title: '' })).status).toBe(400);
+  });
+
+  it('無 trip 寫入權限 → 403，entry 不被改', async () => {
+    const before = await readTimes(entryId);
+    const resp = await api.request('PATCH', `/api/trips/s8-entries-e/entries/${entryId}`, {
+      as: STRANGER,
+      json: { description: '陌生人改的' },
     });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    expect(resp.status).toBe(403);
+    const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string | null }>();
+    expect(row!.description).not.toBe('陌生人改的');
+    expect(await readTimes(entryId)).toEqual(before);
+  });
+
+  it('entry 不屬於路徑上的 trip → 404，entry 不被改', async () => {
+    await seed({ id: 's8-entries-other' });
+    const resp = await patchEntry('s8-entries-other', entryId, { description: '跨 trip 改的' });
+    expect(resp.status).toBe(404);
+    const row = await db.prepare('SELECT description FROM trip_entries WHERE id = ?').bind(entryId).first<{ description: string | null }>();
+    expect(row!.description).not.toBe('跨 trip 改的');
   });
 
   it('未認證 → 401', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', { title: 'x' }),
-      env,
-      params: { id: 'trip-e', eid: String(entryId) },
+    const resp = await api.request('PATCH', `/api/trips/s8-entries-e/entries/${entryId}`, {
+      json: { title: 'x' },
+      headers: { Origin: BROWSER_ORIGIN },
     });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(401);
+    expect(resp.status).toBe(401);
   });
 
   // v2.26.0 (migration 0056) — start_time / end_time 拆分；v2.29.0 time col DROPPED。
   it('PATCH start_time + end_time → 寫入兩欄', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        start_time: '12:00',
-        end_time: '13:30',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    const resp = await callHandler(onRequestPatch, ctx);
+    const resp = await patchEntry('s8-entries-e', entryId, { start_time: '12:00', end_time: '13:30' });
     expect(resp.status).toBe(200);
-    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).start_time).toBe('12:00');
-    expect((row as Record<string, unknown>).end_time).toBe('13:30');
+    const row = await readTimes(entryId);
+    expect(row!.start_time).toBe('12:00');
+    expect(row!.end_time).toBe('13:30');
   });
 
   it('PATCH 只給 start_time → end_time 從現值繼承', async () => {
     // 先設一個基礎 end_time
     await db.prepare('UPDATE trip_entries SET end_time = ? WHERE id = ?').bind('15:00', entryId).run();
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        start_time: '14:00',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).start_time).toBe('14:00');
-    expect((row as Record<string, unknown>).end_time).toBe('15:00');
+    expect((await patchEntry('s8-entries-e', entryId, { start_time: '14:00' })).status).toBe(200);
+    const row = await readTimes(entryId);
+    expect(row!.start_time).toBe('14:00');
+    expect(row!.end_time).toBe('15:00');
   });
 
   it('PATCH legacy time "HH:MM-HH:MM" → parse 拆成 start_time / end_time', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        time: '09:30-10:45',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).start_time).toBe('09:30');
-    expect((row as Record<string, unknown>).end_time).toBe('10:45');
+    expect((await patchEntry('s8-entries-e', entryId, { time: '09:30-10:45' })).status).toBe(200);
+    const row = await readTimes(entryId);
+    expect(row!.start_time).toBe('09:30');
+    expect(row!.end_time).toBe('10:45');
   });
 
   it('PATCH legacy time "HH:MM" → start_time = HH:MM, end_time = NULL', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        time: '08:00',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
-    const row = await db.prepare('SELECT start_time, end_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).start_time).toBe('08:00');
-    expect((row as Record<string, unknown>).end_time).toBeNull();
+    expect((await patchEntry('s8-entries-e', entryId, { time: '08:00' })).status).toBe(200);
+    const row = await readTimes(entryId);
+    expect(row!.start_time).toBe('08:00');
+    expect(row!.end_time).toBeNull();
   });
 
   it('PATCH 無效 start_time format → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        start_time: '25:99',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    expect((await patchEntry('s8-entries-e', entryId, { start_time: '25:99' })).status).toBe(400);
   });
 
   it('PATCH start_time >= end_time → 400', async () => {
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        start_time: '14:00',
-        end_time: '13:00',
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    expect((await patchEntry('s8-entries-e', entryId, { start_time: '14:00', end_time: '13:00' })).status).toBe(400);
   });
 
   it('PATCH 只給 start_time（晚於既有 end_time）→ effective merge 後 400', async () => {
@@ -273,35 +210,47 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
     await db.prepare('UPDATE trip_entries SET start_time = ?, end_time = ? WHERE id = ?')
       .bind('12:00', '13:30', entryId).run();
 
-    const ctx = mockContext({
-      request: jsonRequest(`https://test.com/api/trips/trip-e/entries/${entryId}`, 'PATCH', {
-        start_time: '15:00', // 比 oldRow.end_time(13:30) 晚 → inverted
-      }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(entryId) },
-    });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
+    // 比 oldRow.end_time(13:30) 晚 → inverted
+    expect((await patchEntry('s8-entries-e', entryId, { start_time: '15:00' })).status).toBe(400);
 
     // 沒被寫進去
-    const row = await db.prepare('SELECT start_time FROM trip_entries WHERE id = ?').bind(entryId).first();
-    expect((row as Record<string, unknown>).start_time).toBe('12:00');
+    const row = await readTimes(entryId);
+    expect(row!.start_time).toBe('12:00');
   });
 });
 
 describe('DELETE /api/trips/:id/entries/:eid', () => {
   it('刪除 entry → 200', async () => {
-    const dayId = await getDayId(db, 'trip-e', 2);
+    const dayId = await getDayId(db, 's8-entries-e', 2);
     const eid = await seedEntry(db, dayId);
-    const ctx = mockContext({
-      request: new Request(`https://test.com/api/trips/trip-e/entries/${eid}`, { method: 'DELETE', headers: { Origin: 'https://trip-planner-dby.pages.dev' } }),
-      env,
-      auth: mockAuth({ email: 'user@test.com' }),
-      params: { id: 'trip-e', eid: String(eid) },
+    const resp = await api.request('DELETE', `/api/trips/s8-entries-e/entries/${eid}`, {
+      as: OWNER,
+      headers: { Origin: BROWSER_ORIGIN },
     });
-    const resp = await callHandler(onRequestDelete, ctx);
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first();
     expect(row).toBeNull();
+  });
+  it('無 trip 寫入權限 → 403，entry 仍在', async () => {
+    const dayId = await getDayId(db, 's8-entries-e', 2);
+    const eid = await seedEntry(db, dayId);
+    const resp = await api.request('DELETE', `/api/trips/s8-entries-e/entries/${eid}`, {
+      as: STRANGER,
+      headers: { Origin: BROWSER_ORIGIN },
+    });
+    expect(resp.status).toBe(403);
+    expect(await db.prepare('SELECT id FROM trip_entries WHERE id = ?').bind(eid).first()).not.toBeNull();
+  });
+
+  it('entry 不屬於路徑上的 trip → 404，entry 仍在', async () => {
+    const dayId = await getDayId(db, 's8-entries-e', 2);
+    const eid = await seedEntry(db, dayId);
+    await seed({ id: 's8-entries-other' });
+    const resp = await api.request('DELETE', `/api/trips/s8-entries-other/entries/${eid}`, {
+      as: OWNER,
+      headers: { Origin: BROWSER_ORIGIN },
+    });
+    expect(resp.status).toBe(404);
+    expect(await db.prepare('SELECT id FROM trip_entries WHERE id = ?').bind(eid).first()).not.toBeNull();
   });
 });

@@ -9,12 +9,13 @@
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
- *   ?invitation=token → 登入成功後自動 POST /api/invitations/accept → redirect 該 trip
+ *   ?invitation=token → 登入後接受邀請；失敗回原邀請頁顯示結果
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { apiFetchRaw } from '../lib/apiClient';
+import { AuthError, getNewApiAuth } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
@@ -30,10 +31,6 @@ const SCOPED_STYLES = `
   /* .tp-login-home 的定位基準。沒有這行，絕對定位會往上找到 viewport 或任何
      帶 transform 的祖先，左上角就跑掉了。 */
   position: relative;
-}
-.tp-login-label-row {
-  display: flex; justify-content: space-between; align-items: baseline;
-  font-size: var(--font-size-footnote); font-weight: 600;
 }
 .tp-login-form-side {
   width: 100%;
@@ -141,7 +138,7 @@ const SCOPED_STYLES = `
 }
 .tp-bs-footnote {
   font-size: var(--font-size-caption2);
-  opacity: 0.6;
+  opacity: 0.8; /* #1423：0.6 落在 hero 底上只有 3.7–3.9；0.8 ≥ 4.9，仍是頁面最淡的一行 */
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
@@ -183,6 +180,12 @@ const SCOPED_STYLES = `
 }
 
 /* .tp-form / .tp-form-row 移到 css/tokens.css；LoginPage 用 .tp-form--auth 拉高觸控尺寸。 */
+.tp-login-password-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.tp-login-password-header label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+}
 /* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
 .tp-divider {
@@ -220,6 +223,12 @@ const SCOPED_STYLES = `
   font-weight: 600; text-decoration: none;
 }
 .tp-login-footer a:hover { text-decoration: underline; }
+.tp-login-privacy {
+  border-top: 1px solid var(--color-border);
+  margin-top: 16px;
+  padding-top: 18px;
+  font-size: var(--font-size-caption);
+}
 `;
 
 interface ApiError {
@@ -248,22 +257,17 @@ export default function LoginPage() {
   const verified = params.get('verified') === '1';
   const verifyError = params.get('verify_error');
   const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
-  /** V2 共編：登入完成後接受邀請 + 導頁到該 trip。失敗 graceful → 走 default redirect。 */
   const invitationToken = params.get('invitation');
+  const invitationPath = invitationToken ? `/invite?token=${encodeURIComponent(invitationToken)}` : null;
+  const googleRedirect = invitationPath ?? redirectAfter;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const inFlight = useRef(false);
-  const active = useRef(true);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const lockHeadingRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    active.current = true;
-    return () => { active.current = false; };
-  }, []);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
+  const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
+  const isLocked = lockedRetryAfter !== null;
   // v2.33.47 round 7b LOW: lazy init via useState — 之前 mount-effect read 後
   // 才 setFailureCount，first paint 顯 0 然後 warning banner 突然冒出。lazy
   // init 直接從 sessionStorage 起手避免 flash。
@@ -307,48 +311,68 @@ export default function LoginPage() {
     try { sessionStorage.removeItem('tp_login_fail_count'); } catch { /* ignore */ }
   }
 
+  /**
+   * 送出帳密。旗標 VITE_NEW_API_AUTH 關閉（預設）：同源 POST /api/oauth/login（cookie session）。
+   * 開啟：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。兩條路都回同形狀，後續導向與錯誤文案共用。
+   * 網路層錯誤照舊 throw，由呼叫端 catch 顯示「網路連線失敗」。
+   */
+  async function submitCredentials(
+    trimmedEmail: string,
+    pwd: string,
+  ): Promise<{ ok: true } | { ok: false; code: string; retryAfter: string | null }> {
+    const auth = getNewApiAuth();
+    if (auth) {
+      try {
+        await auth.login(trimmedEmail, pwd);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {
+          return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
+        }
+        throw err;
+      }
+    }
+    const res = await apiFetchRaw('/oauth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: trimmedEmail, password: pwd }),
+    });
+    if (res.ok) return { ok: true };
+    const errJson = (await res.json().catch(() => null)) as ApiError | null;
+    return { ok: false, code: errJson?.error?.code ?? 'UNKNOWN', retryAfter: res.headers.get('Retry-After') };
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (inFlight.current || lockedRetryAfter !== null) return;
-    inFlight.current = true;
     setBannerError(null);
     setSubmitting(true);
     try {
-      const res = await apiFetchRaw('/oauth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      if (!active.current) return;
-      if (res.ok) {
+      const outcome = await submitCredentials(email.trim(), password);
+      if (outcome.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
-        if (invitationToken) {
+        if (invitationPath) {
           try {
             const acceptRes = await apiFetchRaw('/invitations/accept', {
               method: 'POST',
               body: JSON.stringify({ token: invitationToken }),
             });
             if (acceptRes.ok) {
-              const data = (await acceptRes.json()) as { ok?: boolean; tripId?: string };
-              if (!active.current) return;
-              if (data?.ok !== true || typeof data.tripId !== 'string' || !data.tripId) throw new Error('Invalid invitation result');
+              const data = (await acceptRes.json()) as { tripId: string };
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
-            // Login succeeded; recover the invitation independently.
+            navigate(invitationPath);
+            return;
           } catch {
-            // The invite page can retry without losing the original token.
+            navigate(invitationPath);
+            return;
           }
-          if (active.current) navigate(`/invite?token=${encodeURIComponent(invitationToken)}`);
-          return;
         }
-        if (active.current) navigate(redirectAfter ?? '/trips');
+        navigate(redirectAfter ?? '/trips');
         return;
       }
 
-      const errJson = (await res.json().catch(() => null)) as ApiError | null;
-      if (!active.current) return;
-      const code = errJson?.error?.code ?? 'UNKNOWN';
+      const code = outcome.code;
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
           setBannerError('請輸入電子郵件與密碼');
@@ -358,19 +382,17 @@ export default function LoginPage() {
           setBannerError('電子郵件或密碼錯誤');
           break;
         case 'LOGIN_RATE_LIMITED': {
-          const retryAfter = res.headers.get('Retry-After');
-          const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
-          setLockedRetryAfter(Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 1800);
+          const retryAfter = outcome.retryAfter;
+          setLockedRetryAfter(retryAfter ? Number(retryAfter) : 1800);
           break;
         }
         default:
           setBannerError('登入失敗，請稍後再試');
       }
     } catch {
-      if (active.current) setBannerError('網路連線失敗，請檢查後再試');
+      setBannerError('網路連線失敗，請檢查後再試');
     } finally {
-      inFlight.current = false;
-      if (active.current) setSubmitting(false);
+      setSubmitting(false);
     }
   }
 
@@ -402,12 +424,8 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockedRetryAfter !== null]);
 
-  const isLocked = lockedRetryAfter !== null;
-  const wasLocked = useRef(false);
   useEffect(() => {
-    if (isLocked) lockHeadingRef.current?.focus();
-    else if (wasLocked.current) emailRef.current?.focus();
-    wasLocked.current = isLocked;
+    if (isLocked) lockoutHeadingRef.current?.focus();
   }, [isLocked]);
 
   // Lockout view — single-column (no brand hero, full-bleed alarming UX)
@@ -442,13 +460,11 @@ export default function LoginPage() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h1 ref={lockHeadingRef} tabIndex={-1} className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
+          <h1 ref={lockoutHeadingRef} tabIndex={-1} className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
           <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-subheadline)', margin: '0 0 16px' }}>
             為了保護帳號安全，我們暫時鎖定了登入功能。
           </p>
           <div
-            role="timer"
-            aria-label="距離可再次登入的時間"
             data-testid="login-locked-countdown"
             style={{
               fontFamily: "'SF Mono', ui-monospace, monospace",
@@ -493,13 +509,13 @@ export default function LoginPage() {
         </div>
 
         {verified && (
-          <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
+          <div className="tp-banner tp-banner-success" role="status" data-testid="login-banner-verified">
             電子郵件驗證成功！請登入。
           </div>
         )}
 
         {verifyError && (
-          <div className="tp-banner tp-banner-warning" data-testid="login-banner-verify-error">
+          <div className="tp-banner tp-banner-warning" role="alert" data-testid="login-banner-verify-error">
             {verifyError === 'expired' && '驗證連結已過期，請重新申請或註冊。'}
             {verifyError === 'used' && '此驗證連結已使用過。'}
             {verifyError === 'missing_token' && '驗證連結無效。'}
@@ -517,11 +533,10 @@ export default function LoginPage() {
 
         {bannerError && <ErrorBanner message={bannerError} testId="login-banner-error" />}
 
-        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} aria-busy={submitting} noValidate>
+        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
             <label htmlFor="login-email">電子郵件</label>
             <input
-              ref={emailRef}
               id="login-email"
               type="email"
               autoComplete="email"
@@ -532,7 +547,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="tp-form-row">
-            <div className="tp-login-label-row">
+            <div className="tp-login-password-header">
               <label htmlFor="login-password">密碼</label>
               <a href="/login/forgot" className="tp-hint-link" data-testid="login-forgot-link">忘記密碼？</a>
             </div>
@@ -562,7 +577,7 @@ export default function LoginPage() {
             <div className="tp-divider">或</div>
             <a
               className="tp-btn tp-btn-secondary"
-              href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
+              href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
               data-testid="login-google"
             >
               <GoogleLogo />
@@ -572,7 +587,8 @@ export default function LoginPage() {
         )}
 
         <div className="tp-login-footer">
-          沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
+          沒有帳號？<a href={invitationToken ? `/signup?invitation=${encodeURIComponent(invitationToken)}` : '/signup'} data-testid="login-signup-link">建立帳號</a>
+          <div className="tp-login-privacy"><a href="/privacy?from=login" target="_blank" rel="noreferrer">隱私權政策</a></div>
         </div>
         </div>
       </div>

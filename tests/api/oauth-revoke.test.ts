@@ -1,162 +1,138 @@
 /**
- * POST /api/oauth/revoke unit test — V2-P5 RFC 7009
+ * POST /api/oauth/revoke — V2-P5 RFC 7009
+ * 走 HTTP 邊界（tests/api/http.ts）：原本檢查 mock 的 DELETE 呼叫形狀，
+ * 改成直接讀真實 D1 的 oauth_models 看 token 資料列有沒有被刪。
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestPost } from '../../functions/api/oauth/revoke';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
+import { hashPassword } from '../../src/server/password';
+import { D1Adapter } from '../../src/server/oauth-d1-adapter';
 
-interface MockEnv {
-  DB?: { prepare: ReturnType<typeof vi.fn> };
-}
+// 專用 client id：共用 D1 下只動自己的資料列
+const CLIENT = 'revoke-http-client';
+const OTHER = 'revoke-http-other';
+const CONFIDENTIAL = 'revoke-http-confidential';
+const CLIENTS = [CLIENT, OTHER, CONFIDENTIAL];
 
-function makeStmt(firstResult: unknown = null) {
-  return {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
-  };
-}
+let db: D1Database;
+let api: Api;
 
-const PUBLIC_CLIENT = {
-  client_id: 'mobile',
-  client_type: 'public' as const,
-  client_secret_hash: null,
-  status: 'active',
-};
-
-function makeContext(body: Record<string, string>, env: MockEnv): Parameters<typeof onRequestPost>[0] {
-  const formBody = new URLSearchParams(body).toString();
-  return {
-    request: new Request('https://x.com/api/oauth/revoke', {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: formBody,
-    }),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestPost>[0];
-}
-
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db) });
+  const secretHash = await hashPassword('revoke-secret-1');
+  for (const [id, type, hash] of [[CLIENT, 'public', null], [OTHER, 'public', null], [CONFIDENTIAL, 'confidential', secretHash]] as const) {
+    await db
+      .prepare(`INSERT OR REPLACE INTO client_apps (client_id, client_type, client_secret_hash, app_name, redirect_uris, allowed_scopes, status)
+        VALUES (?, ?, ?, ?, '["https://client.test/cb"]', '["openid"]', 'active')`)
+      .bind(id, type, hash, id)
+      .run();
+  }
 });
 
-afterEach(() => {
-  vi.useRealTimers();
+afterAll(async () => {
+  for (const id of CLIENTS) {
+    await db.prepare("DELETE FROM oauth_models WHERE json_extract(payload, '$.client_id') = ?").bind(id).run();
+    await db.prepare('DELETE FROM client_apps WHERE client_id = ?').bind(id).run();
+  }
+  await disposeMiniflare();
 });
 
+function revoke(fields: Record<string, string>) {
+  return api.fetch(new Request('https://x.com/api/oauth/revoke', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(fields).toString(),
+  }));
+}
+
+async function seedToken(model: 'AccessToken' | 'RefreshToken', id: string, clientId: string, grantId: string) {
+  await new D1Adapter(db, model).upsert(id, { client_id: clientId, user_id: 'revoke-user', scopes: ['openid'], grantId }, 600);
+}
+
+async function exists(model: 'AccessToken' | 'RefreshToken', id: string): Promise<boolean> {
+  const row = await db.prepare('SELECT id FROM oauth_models WHERE name = ? AND id = ?').bind(model, id).first();
+  return row !== null;
+}
 
 describe('POST /api/oauth/revoke', () => {
   it('400 invalid_request when token missing', async () => {
-    const env: MockEnv = { DB: { prepare: vi.fn() } };
-    const res = await onRequestPost(makeContext({ client_id: 'c' }, env));
+    const res = await revoke({ client_id: CLIENT });
     expect(res.status).toBe(400);
-    const json = await res.json() as { error: string };
-    expect(json.error).toBe('invalid_request');
+    expect((await res.json() as { error: string }).error).toBe('invalid_request');
   });
 
   it('401 invalid_client when client_id unknown', async () => {
-    const stmt = makeStmt(null);
-    const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(stmt) } };
-    const res = await onRequestPost(makeContext({ token: 't', client_id: 'unknown' }, env));
+    const res = await revoke({ token: 't', client_id: 'revoke-http-unknown' });
     expect(res.status).toBe(401);
   });
 
   it('200 silent when token unknown (RFC 7009 anti-scanning)', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
-      if (sql.includes('SELECT payload')) return makeStmt(null); // not found in either store
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ token: 'unknown', client_id: 'mobile' }, env));
+    const res = await revoke({ token: 'revoke-http-no-such-token', client_id: CLIENT });
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
   it('200 + DELETE access_token row when found', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
-      if (sql.includes('SELECT payload')) {
-        return makeStmt({
-          payload: JSON.stringify({
-            client_id: 'mobile',
-            user_id: 'u',
-            scopes: ['openid'],
-            grantId: 'g1',
-          }),
-          expires_at: Date.now() + 60_000,
-        });
-      }
-      if (sql.includes('DELETE FROM oauth_models')) return makeStmt();
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ token: 'tok', client_id: 'mobile' }, env));
+    await seedToken('AccessToken', 'revoke-access-1', CLIENT, 'revoke-grant-1');
+    expect(await exists('AccessToken', 'revoke-access-1')).toBe(true);
+    const res = await revoke({ token: 'revoke-access-1', client_id: CLIENT });
     expect(res.status).toBe(200);
-
-    const deleteCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
-    );
-    expect(deleteCall).toBeDefined();
+    expect(await exists('AccessToken', 'revoke-access-1')).toBe(false);
   });
 
-  it('200 silent when token belongs to different client (anti-leak)', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
-      if (sql.includes('SELECT payload')) {
-        // Token exists but belongs to client OTHER than 'mobile'
-        return makeStmt({
-          payload: JSON.stringify({
-            client_id: 'other-client',
-            user_id: 'u',
-            scopes: ['openid'],
-            grantId: 'g',
-          }),
-          expires_at: Date.now() + 60_000,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ token: 'tok', client_id: 'mobile' }, env));
+  it('200 silent when token belongs to different client (anti-leak) and the row survives', async () => {
+    await seedToken('AccessToken', 'revoke-access-other', OTHER, 'revoke-grant-other');
+    const res = await revoke({ token: 'revoke-access-other', client_id: CLIENT });
     expect(res.status).toBe(200);
-    // DELETE should NOT be called because client_id mismatch
-    const deleteCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
-    );
-    expect(deleteCall).toBeFalsy();
+    // 不可刪別的 client 的 token
+    expect(await exists('AccessToken', 'revoke-access-other')).toBe(true);
   });
 
   it('honors token_type_hint=refresh_token (look up RefreshToken first)', async () => {
-    const lookupOrder: string[] = [];
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
-      if (sql.includes('SELECT payload')) {
-        // Bind args identify which adapter is being used
-        return {
-          bind: vi.fn().mockImplementation(function(this: { lastArgs?: unknown[] }, ...args: unknown[]) {
-            lookupOrder.push(args[0] as string);
-            return this;
-          }),
-          first: vi.fn().mockResolvedValue(null),
-          run: vi.fn().mockResolvedValue({ meta: { changes: 0 } }),
-        };
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    await onRequestPost(makeContext({
-      token: 't', client_id: 'mobile', token_type_hint: 'refresh_token',
-    }, env));
-
-    // First lookup should be RefreshToken (per hint)
-    expect(lookupOrder[0]).toBe('RefreshToken');
-    // Then fall back to AccessToken
-    expect(lookupOrder[1]).toBe('AccessToken');
+    // 同一個 token 字串同時存在 AccessToken 與 RefreshToken（不同 grant），
+    // 只有被優先查到的那一種會被撤銷，由資料列的存廢看出查詢順序。
+    await seedToken('AccessToken', 'revoke-dup', CLIENT, 'revoke-grant-access-side');
+    await seedToken('RefreshToken', 'revoke-dup', CLIENT, 'revoke-grant-refresh-side');
+    expect((await revoke({ token: 'revoke-dup', client_id: CLIENT, token_type_hint: 'refresh_token' })).status).toBe(200);
+    expect(await exists('RefreshToken', 'revoke-dup')).toBe(false);
+    expect(await exists('AccessToken', 'revoke-dup')).toBe(true);
+    // 沒有 hint 時預設先查 AccessToken
+    await seedToken('RefreshToken', 'revoke-dup', CLIENT, 'revoke-grant-refresh-side');
+    expect((await revoke({ token: 'revoke-dup', client_id: CLIENT })).status).toBe(200);
+    expect(await exists('AccessToken', 'revoke-dup')).toBe(false);
+    expect(await exists('RefreshToken', 'revoke-dup')).toBe(true);
   });
+
+  it('falls back to the other token store when the hint misses (RFC 7009 §4.1.2)', async () => {
+    await seedToken('AccessToken', 'revoke-fallback', CLIENT, 'revoke-grant-fallback');
+    const res = await revoke({ token: 'revoke-fallback', client_id: CLIENT, token_type_hint: 'refresh_token' });
+    expect(res.status).toBe(200);
+    expect(await exists('AccessToken', 'revoke-fallback')).toBe(false);
+  });
+
+  it('revoking a refresh_token also revokes the access tokens of the same grant only', async () => {
+    await seedToken('RefreshToken', 'revoke-refresh-fam', CLIENT, 'revoke-grant-fam');
+    await seedToken('AccessToken', 'revoke-access-fam', CLIENT, 'revoke-grant-fam');
+    await seedToken('AccessToken', 'revoke-access-bystander', CLIENT, 'revoke-grant-bystander');
+    const res = await revoke({ token: 'revoke-refresh-fam', client_id: CLIENT, token_type_hint: 'refresh_token' });
+    expect(res.status).toBe(200);
+    expect(await exists('RefreshToken', 'revoke-refresh-fam')).toBe(false);
+    expect(await exists('AccessToken', 'revoke-access-fam')).toBe(false);
+    expect(await exists('AccessToken', 'revoke-access-bystander')).toBe(true);
+  });
+
+  it('confidential client: wrong or missing secret → 401 and the token survives; correct secret revokes', async () => {
+    await seedToken('AccessToken', 'revoke-conf-token', CONFIDENTIAL, 'revoke-grant-conf');
+    const wrong = await revoke({ token: 'revoke-conf-token', client_id: CONFIDENTIAL, client_secret: 'wrong-secret' });
+    expect(wrong.status).toBe(401);
+    const missing = await revoke({ token: 'revoke-conf-token', client_id: CONFIDENTIAL });
+    expect(missing.status).toBe(401);
+    expect(await exists('AccessToken', 'revoke-conf-token')).toBe(true);
+    const ok = await revoke({ token: 'revoke-conf-token', client_id: CONFIDENTIAL, client_secret: 'revoke-secret-1' });
+    expect(ok.status).toBe(200);
+    expect(await exists('AccessToken', 'revoke-conf-token')).toBe(false);
+  }, 60_000);
 });

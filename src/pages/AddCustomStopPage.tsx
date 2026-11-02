@@ -9,17 +9,17 @@
  * UX (per docs/design-sessions/2026-05-18-add-custom-stop/mobile-fullpage.html):
  *   - 標題 (required)
  *   - 地址或地標 typeahead (optional, flyTo affordance)
- *   - LocationPickerMap with center pin + idle listener + arrow-key a11y
+ *   - LocationPickerMap with center pin + user-initiated selection + arrow-key a11y
  *   - 「已調整到正確位置」hint checkbox (non-blocking nudge)
  *   - 開始時間 / 停留分鐘 / 備註
  *   - 完成 → POST entries + recompute-travel + navigate back
  */
-import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { apiFetch } from '../lib/apiClient';
+import { useTripMeta, useTripDays, NO_DESTINATIONS } from '../hooks/useTripRead';
+import { apiFetchRaw } from '../lib/apiClient';
 import { createEntry } from '../lib/entryMutations';
 import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
@@ -27,8 +27,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
-import CustomPoiDraftGuard from '../components/trip/CustomPoiDraftGuard';
-import { useEntryTarget } from '../hooks/useEntryTarget';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { LocationPickerMap } from '../components/trip/LocationPickerMap';
@@ -320,21 +319,11 @@ const SCOPED_STYLES = `
 `;
 
 export default function AddCustomStopPage() {
-  const { tripId } = useParams();
-  return <CustomStopEditor key={tripId} />;
-}
-
-function CustomStopEditor() {
   const auth = useRequireAuth();
   const params = useParams<{ tripId: string }>();
   const tripId = params.tripId;
   const [searchParams, setSearchParams] = useSearchParams();
-  const dayNum = searchParams.has('day') ? Number(searchParams.get('day')) : NaN;
-  const target = useEntryTarget({ tripId, dayNum, selectFirst: false });
-  const inFlight = useRef(false);
-  const saved = useRef(false);
-  const active = useRef(true);
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  const dayNum = Number(searchParams.get('day'));
   const handleBack = useNavigateBack(tripId ? `/trip/${encodeURIComponent(tripId)}` : '/trips');
 
   // 2026-07-07: chips 切天 → URL replaceState（對齊 AddStopPage handlePickDay）。
@@ -346,38 +335,22 @@ function CustomStopEditor() {
     setSearchParams(sp, { replace: true });
   }, [dayNum, searchParams, setSearchParams]);
 
-  const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
+  // `?all=1` 回 timeline，讓我們取得 prev entry coord 做 picker pre-fill；timeline 空（day 還沒 stop）
+  // 時 fallback 走 destinations。兩個讀取都成功才交出資料（與原本 Promise.all 同語意）。
+  // v2.32.1：destinations 載入中為 null、任何一個失敗退回 []（fallback chain 走 Tokyo 最後安全網），
+  // 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap 用 Tokyo initialCenter mount 後被鎖死。
+  // 行為差異：原本 effect 依賴 [tripId, dayNum]，切天 chip 會重抓；現在依 path（不含 dayNum）每個行程只抓一次，
+  // currentDay 由快取的 timeline 推導。這頁建立後就導走，頁面存活期間 timeline 不會被別處改動，所以可接受。
+  const readEnabled = Number.isFinite(dayNum);
+  const daysRead = useTripDays<DayApiRow>(tripId, { all: true, enabled: readEnabled });
+  const metaRead = useTripMeta<{ destinations?: TripDestApi[] }>(tripId, readEnabled);
+  const bothReady = daysRead.status === 'ready' && metaRead.status === 'ready';
   // 2026-07-07 day picker：全 days 列表（chips 切天用）。null = 未載入不 render 列。
-  const [allDays, setAllDays] = useState<DayApiRow[] | null>(null);
-  // v2.32.1 fix: 初值 null 區分「未載入」與「載入後 0 個」，避免 LocationPickerMap
-  // 用 Tokyo fallback initialCenter mount 後被鎖死。
-  const [destinations, setDestinations] = useState<TripDestApi[] | null>(null);
-
-  useEffect(() => {
-    if (!tripId || !Number.isFinite(dayNum)) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        // v2.33.107 #1: `?all=1` 回 timeline 讓我們取得 prev entry coord 做
-        // picker pre-fill；若 timeline 空（day 還沒 stop）fallback 走 destinations。
-        const [days, tripBody] = await Promise.all([
-          apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days?all=1`),
-          apiFetch<{ destinations?: TripDestApi[] }>(`/trips/${encodeURIComponent(tripId)}`),
-        ]);
-        if (cancelled) return;
-        setCurrentDay(days.find((d) => d.dayNum === dayNum) ?? null);
-        setAllDays(days);
-        setDestinations(tripBody?.destinations ?? []);
-      } catch {
-        // v2.32.1: network fail → 標 [] 讓 fallback chain 走 Tokyo（最後安全網），
-        // 避免 null 永遠卡 render
-        if (!cancelled) setDestinations([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tripId, dayNum]);
+  const allDays: DayApiRow[] | null = bothReady ? daysRead.data : null;
+  const currentDay: DayApiRow | null = bothReady ? (daysRead.data?.find((d) => d.dayNum === dayNum) ?? null) : null;
+  const destinations: TripDestApi[] | null = bothReady
+    ? (metaRead.data?.destinations ?? NO_DESTINATIONS)
+    : daysRead.status === 'error' || metaRead.status === 'error' ? NO_DESTINATIONS : null;
 
   /**
    * v2.33.107 #1: prev-entry coord pre-fill — 取 currentDay.timeline 最後一個 entry
@@ -416,30 +389,39 @@ function CustomStopEditor() {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState(false);
+  const allowLeaveRef = useRef(false);
 
   const typeahead = usePlacesAutocomplete();
 
-  const { resolveLocation, cancelResolution } = typeahead;
-  const handleMapCoord = useCallback((next: Coord | null) => {
-    cancelResolution(); setPickedCoord(next); setHintConfirmed(false);
-  }, [cancelResolution]);
-  const handlePickSuggestion = useCallback(async (placeId?: string) => {
-    setPickedCoord(null); setFlyToSignal(null);
-    const next = await resolveLocation(placeId);
-    if (!next || !active.current) return;
-    setPickedCoord(next); setFlyToSignal({ coord: next, zoom: 15 });
-  }, [resolveLocation]);
+  const handlePickSuggestion = useCallback(
+    async (placeId: string) => {
+      setAddressError(false);
+      const closingToken = typeahead.pickSuggestion(placeId);
+      try {
+        const qs = new URLSearchParams({ placeId });
+        if (closingToken) qs.set('sessionToken', closingToken);
+        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
+        if (!res.ok) throw new Error('resolve failed');
+        const data = (await res.json()) as { lat: number; lng: number };
+        if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
+        setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
+      } catch {
+        setAddressError(true);
+      }
+    },
+    [typeahead],
+  );
 
   // v2.31.94 a11y: ARIA combobox keyboard nav (Arrow/Enter/Escape) for typeahead.
   const typeaheadKb = useTypeaheadKeyboard({
     listId: 'add-custom-stop-suggestions',
     options: typeahead.predictions,
-    onDismiss: () => typeahead.pickSuggestion(''),
     onPick: (p) => void handlePickSuggestion(p.placeId),
   });
 
   const handleConfirm = useCallback(async () => {
-    if (inFlight.current || !tripId || !target.day) return;
+    if (submitting || !tripId || !Number.isFinite(dayNum)) return;
     setSubmitError(null);
 
     if (!title.trim()) {
@@ -450,9 +432,11 @@ function CustomStopEditor() {
       setSubmitError('請先在地圖上選擇位置');
       return;
     }
+    if (duration && (!Number.isInteger(Number(duration)) || Number(duration) <= 0)) {
+      setSubmitError('停留時間請輸入正整數分鐘');
+      return;
+    }
 
-    if (duration && (!Number.isSafeInteger(Number(duration)) || Number(duration) < 0)) { setSubmitError('停留時間請輸入零或正整數分鐘'); return; }
-    inFlight.current = true;
     setSubmitting(true);
     try {
       const noteParts = [duration && `${duration} 分`, note.trim()].filter(Boolean);
@@ -465,23 +449,41 @@ function CustomStopEditor() {
         source: 'custom',
       };
       const r = await createEntry(tripId, dayNum, body);
-      if (!active.current) return;
       if (!r.ok) throw new Error(`儲存失敗 (${r.status})`);
-      saved.current = true;
       showToast('已加入自訂景點', 'success');
+      allowLeaveRef.current = true;
       handleBack();
     } catch (err) {
-      if (active.current) setSubmitError(err instanceof Error ? err.message : '儲存失敗');
+      setSubmitError(err instanceof Error ? err.message : '儲存失敗');
     } finally {
-      inFlight.current = false;
-      if (active.current) setSubmitting(false);
+      setSubmitting(false);
     }
-  }, [tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack, target.day]);
+  }, [submitting, tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack]);
 
-  const dirty = !!(title || typeahead.query || pickedCoord || startTime || duration || note || hintConfirmed);
-  const discard = () => { setTitle(''); setPickedCoord(null); setFlyToSignal(null); setStartTime(''); setDuration(''); setNote(''); setHintConfirmed(false); typeahead.reset(); };
+  // 未送出的表單草稿離頁前先確認，包含地址與時間欄位。
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const dirty = title.trim() !== '' || typeahead.query.trim() !== '' || pickedCoord !== null || note.trim() !== '' || startTime !== '' || duration !== '' || hintConfirmed;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    dirty && !allowLeaveRef.current && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (blocker.state === 'blocked') setDiscardOpen(true);
+  }, [blocker.state]);
+  const handleBackGuarded = useCallback(() => {
+    if (dirty) setDiscardOpen(true);
+    else handleBack();
+  }, [dirty, handleBack]);
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
 
-  if (!auth.user) return <AuthStatus auth={auth} />;
+  if (!auth.user) return null;
   if (!tripId || !Number.isFinite(dayNum)) {
     return (
       <AppShell
@@ -506,7 +508,7 @@ function CustomStopEditor() {
       label="完成"
       busyLabel="加入中⋯"
       busy={submitting}
-      disabled={submitting || !target.day || !title.trim() || !pickedCoord}
+      disabled={submitting || !title.trim() || !pickedCoord}
       onClick={() => void handleConfirm()}
       testId="add-custom-stop-confirm"
     />
@@ -520,10 +522,8 @@ function CustomStopEditor() {
         main={
           <div className="tp-custom-stop-shell" data-testid="add-custom-stop-page">
             <style>{SCOPED_STYLES}</style>
-            <TitleBar title="自訂景點" back={handleBack} backLabel="返回" actions={titleBarActions} />
+            <TitleBar title="自訂景點" back={handleBackGuarded} backLabel="返回" actions={titleBarActions} />
             <div className="tp-custom-stop-day-meta">{dayLabel}</div>
-            {target.status === 'error' && <div role="alert">{target.error}<button onClick={target.retry}>重試日期</button></div>}
-            {target.status === 'success' && !target.day && <p role="alert">請選擇有效日期後再加入景點。</p>}
 
             {/* 2026-07-07 day picker chips — 可切換加入哪天（對齊 AddStopPage）。 */}
             {allDays && allDays.length > 0 && (
@@ -543,7 +543,6 @@ function CustomStopEditor() {
                       role="tab"
                       aria-selected={isActive}
                       className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
-                      disabled={submitting}
                       onClick={() => handlePickDay(d.dayNum)}
                       data-testid={`add-custom-stop-daypicker-chip-${d.dayNum}`}
                     >
@@ -556,12 +555,12 @@ function CustomStopEditor() {
             )}
 
             {submitError && (
-              <div className="tp-custom-stop-error" role="alert" data-testid="add-custom-stop-error">
+              <div className="tp-custom-stop-error" data-testid="add-custom-stop-error">
                 {submitError}
               </div>
             )}
 
-            <div className="tp-custom-stop-form" inert={submitting}>
+            <div className="tp-custom-stop-form">
               <div className="tp-custom-stop-field">
                 <label className="tp-custom-stop-label tp-custom-stop-label-required" htmlFor="cs-title">
                   標題
@@ -587,7 +586,7 @@ function CustomStopEditor() {
                     type="text"
                     className="tp-custom-stop-input"
                     value={typeahead.query}
-                    onChange={(e) => { setPickedCoord(null); setFlyToSignal(null); typeahead.setQuery(e.target.value); }}
+                    onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                     placeholder="輸入地址縮放地圖（選填）"
                     autoComplete="off"
                     data-testid="add-custom-stop-address-typeahead"
@@ -622,15 +621,12 @@ function CustomStopEditor() {
                     </div>
                   )}
                 </div>
-                <div className="tp-custom-stop-help">選擇 Google 地址候選或操作地圖來設定位置；預設地圖中心不是已選位置。</div>
-                {(typeahead.loading || typeahead.resolving) && <p role="status">{typeahead.resolving ? '正在確認地址位置…' : '搜尋地址中…'}</p>}
-                {typeahead.error && <div role="alert">地址搜尋失敗。<button onClick={() => typeahead.setQuery(typeahead.query)}>重試地址搜尋</button></div>}
-                {typeahead.resolveError && <div role="alert">{typeahead.resolveError}<button onClick={() => void handlePickSuggestion()}>重試地址位置</button></div>}
-                {pickedCoord && <p role="status">已選位置：緯度 {pickedCoord.lat.toFixed(4)}，經度 {pickedCoord.lng.toFixed(4)}</p>}
+                <div className="tp-custom-stop-help">選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。</div>
+                {addressError && <div className="tp-custom-stop-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
               </div>
 
               <div className="tp-custom-stop-field">
-                <label className="tp-custom-stop-label">位置 *</label>
+                <div className="tp-custom-stop-label">位置 *</div>
                 {/* v2.32.1 fix: destinations 還沒載完先 placeholder，避免地圖鎖
                     Tokyo fallback center。 */}
                 {destinations === null ? (
@@ -641,7 +637,7 @@ function CustomStopEditor() {
                   <LocationPickerMap
                     initialCenter={initialCenter}
                     initialZoom={14}
-                    onCoordChange={handleMapCoord}
+                    onCoordChange={setPickedCoord}
                     flyToSignal={flyToSignal}
                   />
                 )}
@@ -672,12 +668,12 @@ function CustomStopEditor() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="cs-duration">停留（分鐘）</label>
+                    <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 4 }}>停留（分鐘）</div>
                     <input
-                      id="cs-duration"
+                      aria-label="停留時間（分鐘）"
                       type="number"
-                      min="0"
-                      step="1"
+                      min={1}
+                      step={1}
                       className="tp-input-short"
                       value={duration}
                       onChange={(e) => setDuration(e.target.value)}
@@ -706,7 +702,22 @@ function CustomStopEditor() {
         }
         bottomNav={<GlobalBottomNav authed={auth.user !== null} />}
       />
-      <CustomPoiDraftGuard hasPending={() => !saved.current && dirty} onDiscard={discard} busy={submitting} />
+      <ConfirmModal
+        open={discardOpen}
+        title="捨棄未儲存的景點？"
+        message="你已經填了一些內容，離開會清空這個還沒加入的自訂景點。"
+        confirmLabel="捨棄"
+        cancelLabel="繼續編輯"
+        onConfirm={() => {
+          setDiscardOpen(false);
+          if (blocker.state === 'blocked') blocker.proceed();
+          else { allowLeaveRef.current = true; handleBack(); }
+        }}
+        onCancel={() => {
+          setDiscardOpen(false);
+          if (blocker.state === 'blocked') blocker.reset();
+        }}
+      />
     </>
   );
 }

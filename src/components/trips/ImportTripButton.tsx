@@ -70,7 +70,7 @@ export default function ImportTripButton() {
         className="tp-titlebar-action"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        aria-label="匯入行程 JSON"
+        aria-label={busy ? '匯入中…' : '匯入行程 JSON'}
         title="匯入行程 JSON"
         data-testid="trips-import-trigger"
       >

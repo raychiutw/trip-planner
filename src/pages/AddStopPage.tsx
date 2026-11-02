@@ -27,8 +27,7 @@
  *   - onClose / onAdded 走 useNavigateBack(routes.tripsSelected(id)) explicit URL + dispatch tp-entry-updated
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -50,14 +49,13 @@ import {
   type RegionOption,
 } from '../lib/poiSearchHelpers';
 import OperationShell from '../components/shell/OperationShell';
-import CustomPoiDraftGuard from '../components/trip/CustomPoiDraftGuard';
-import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
-import { usePoiFavorites } from '../hooks/usePoiFavorites';
-import { useEntryTarget, type EntryTargetDay as DayApiRow } from '../hooks/useEntryTarget';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { useTripDestinations, useTripDays } from '../hooks/useTripRead';
+import { usePoiFavorites } from '../hooks/usePoiFavorites';
+import { usePoiSelection } from '../hooks/usePoiSelection';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
 import { CustomPoiForm } from '../components/trip/CustomPoiForm';
@@ -75,51 +73,17 @@ interface TripDestApiLite {
   lng?: number | null;
 }
 
-interface PoiFavoriteRow {
+interface DayApiRow {
   id: number;
-  poiId: number;
-  poiName: string;
-  poiAddress: string | null;
-  poiType: string;
-  poiLat?: number | null;
-  poiLng?: number | null;
-  // v2.31.17: backend SELECT 補 p.rating，favorites card 顯 ★ N.N。
-  poiRating?: number | null;
+  dayNum: number;
+  date?: string | null;
+  dayOfWeek?: string | null;
 }
-
-
 
 // v2.33.34: PoiCardTone / Tab / REGION_OPTIONS / CATEGORY_TABS / matchCategory /
 // normalizeSearchResults / poiTone / poiMeta 全 extract 到
 // src/lib/poiSearchHelpers.ts (shared with ChangePoiPage)。
 type AddStopCategory = PoiSearchCategory;
-
-function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
-  // v2.31.80：移除 ?? item.poi_* dead defensive fallback。`/api/poi-favorites`
-  // 用 functions/api/_utils.json() 經 deepCamel，response 永遠是 camelCase
-  // (poiId / poiName / poiAddress / poiType / poiRating)。snake_case 路徑
-  // 從未生效，留著只是製造混淆。
-  if (!Array.isArray(data)) return [];
-  return data.flatMap((row) => {
-    if (!row || typeof row !== 'object') return [];
-    const item = row as Record<string, unknown>;
-    const id = Number(item.id);
-    const poiId = Number(item.poiId);
-    const poiName = item.poiName;
-    if (!Number.isFinite(id) || typeof poiName !== 'string' || !poiName.trim()) return [];
-    const poiAddress = item.poiAddress;
-    const poiType = item.poiType;
-    const poiRating = typeof item.poiRating === 'number' ? item.poiRating : undefined;
-    return [{
-      id,
-      poiId: Number.isFinite(poiId) ? poiId : 0,
-      poiName,
-      poiAddress: typeof poiAddress === 'string' ? poiAddress : null,
-      poiType: typeof poiType === 'string' ? poiType : 'poi',
-      poiRating,
-    }];
-  });
-}
 
 // v2.33.34: poiTone + poiMeta moved to src/lib/poiSearchHelpers.ts
 
@@ -238,7 +202,7 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-tab:hover { color: var(--color-foreground); }
 .tp-add-stop-tab.is-active {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   border-bottom-color: var(--color-accent);
 }
 
@@ -638,11 +602,6 @@ const SCOPED_STYLES = `
 `;
 
 export default function AddStopPage() {
-  const { tripId } = useParams();
-  return <AddStopEditor key={tripId} />;
-}
-
-function AddStopEditor() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
   // #1162：走 useStackSearchParams（非裸 useSearchParams）—— 裸 setter 會把
@@ -654,7 +613,7 @@ function AddStopEditor() {
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const dayNumParam = searchParams.get('day');
-  const dayNum = dayNumParam === null ? NaN : Number(dayNumParam);
+  const dayNum = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
 
   // v2.32.2 fix: 初值從 URL param 讀，讓 `/add-stop?tab=custom` direct URL 進來
   // 直接 land 在自訂 tab（之前 hardcoded 'search'，URL param 被忽略）。
@@ -668,31 +627,26 @@ function AddStopEditor() {
   const [region, setRegion] = useState<RegionOption>('全部地區');
   const [regionMenuOpen, setRegionMenuOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [selectedSearch, setSelectedSearch] = useState<Set<string>>(new Set());
+  const selection = usePoiSelection<string | number>(tab, 'new', true);
+  const selectedSearch = useMemo(() => new Set(selection.selected.map((item) => String(item.key))), [selection.selected]);
+  const selectedSaved = useMemo(() => new Set(selection.selected.map((item) => Number(item.key))), [selection.selected]);
 
   // Region 不再 auto-fire search — Nominatim 公共 endpoint 1 req/s 限制，
   // 每次開頁面 / 退到 1 字 都會 burn quota。改成 user 主動輸入才查；region
   // 顯示在 empty state 推薦 chip 讓 user 點擊觸發。
-  const { results: searchResults, searching, status: searchStatus, error: searchError, retry: retrySearch } = usePoiSearch({
+  const { state: searchState, retry: retrySearch } = usePoiSearch({
     enabled: tab === 'search',
     query: query.trim(),
     region: regionToApiParam(region),
     limit: 20,
     normalise: normalizeSearchResults,
   });
+  const searchResults = searchState.results;
 
-  const { favorites, status: favoritesStatus, error: favoritesError, retry: retryFavorites } = usePoiFavorites(tab === 'favorites');
-  const poiFavorites = useMemo(() => favorites === null ? null : normalizePoiFavorites(favorites), [favorites]);
-  const savedLoading = favoritesStatus === 'loading';
-  const [selectedSaved, setSelectedSaved] = useState<Set<number>>(new Set());
+  const { state: favoritesState, retry: retryFavorites } = usePoiFavorites(tab === 'favorites');
+  const poiFavorites = favoritesState.rows;
 
   const [customTitle, setCustomTitle] = useState('');
-  const [customAddress, setCustomAddress] = useState('');
-  const [discardTab, setDiscardTab] = useState<Tab | null>(null);
-  const savedCustom = useRef(false);
-  const inFlight = useRef(false);
-  const active = useRef(true);
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [customTime, setCustomTime] = useState('');
   const [customDuration, setCustomDuration] = useState('');
   const [customNote, setCustomNote] = useState('');
@@ -702,34 +656,23 @@ function AddStopEditor() {
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
   // 自訂 stop 無 Google 來源 → 預設 'attraction'，使用者用 CategoryPicker 可改。
   const [customCategory, setCustomCategory] = useState<PoiType>('attraction');
-  const customDirty = !!(customTitle || customAddress || customTime || customDuration || customNote || customCoord || customHintConfirmed || customCategory !== 'attraction');
-  const discardCustom = () => { setCustomTitle(''); setCustomAddress(''); setCustomTime(''); setCustomDuration(''); setCustomNote(''); setCustomCoord(null); setCustomHintConfirmed(false); setCustomCategory('attraction'); setCustomError(null); };
-
   // 搜尋結果 per-result 分類覆寫（place_id → 使用者選的分類）。預設＝Google 自動推導。
   const [searchCatOverride, setSearchCatOverride] = useState<Record<string, PoiType>>({});
-  const selectionKey = JSON.stringify([tripId, dayNum, tab, query, region, category]);
-  const selectionVisit = useMemo(() => ({selectionKey}), [selectionKey]);
-  const currentSelection = useRef(selectionVisit);
-  currentSelection.current = selectionVisit;
-  const [selectionScope, setSelectionScope] = useState(selectionKey);
-  // Clear the previous intent before React commits the new picker view.
-  if (selectionScope !== selectionKey) {
-    setSelectionScope(selectionKey);
-    setSelectedSearch(new Set());
-    setSelectedSaved(new Set());
-    setSearchCatOverride({});
-  }
-
-  // v2.32.1 fix: 初值改 null 區分「未載入」與「載入後 0 個」
-  const [customDestinations, setCustomDestinations] = useState<TripDestApiLite[] | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const target = useEntryTarget({tripId, dayNum, enabled: !!auth.user, selectFirst: false});
-  const allDays = target.days;
-  const currentDay = target.day;
-  const hasDay = currentDay !== null;
+  // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
+  // 衍生（不另外 setState 避免兩條 state truth）。
+  // 失敗時維持 null（label 退回 DAY NN）。
+  const allDays = useTripDays<DayApiRow>(tripId, { enabled: !!auth.user }).data;
+
+  const currentDay = useMemo<DayApiRow | null>(() => {
+    if (!allDays || !Number.isFinite(dayNum)) return null;
+    return allDays.find((d) => d.dayNum === dayNum) ?? null;
+  }, [allDays, dayNum]);
+
+  const hasDay = Number.isFinite(dayNum);
 
   // v2.31.99: switch day via chip row → URL replaceState 不開新 history entry
   const handlePickDay = useCallback((next: number) => {
@@ -742,43 +685,26 @@ function AddStopEditor() {
   // v2.31.94: 自訂 tab 在 mobile (≤1023px) 上 redirect 到 fullpage route，避免 IME
   // occlusion 把 280px map 整個遮蓋。Desktop 仍走 inline tab。
   useEffect(() => {
-    if (tab !== 'custom' || !tripId || !hasDay) return;
+    if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
     if (typeof window === 'undefined' || !window.matchMedia) return;
     if (!window.matchMedia('(max-width: 1023px)').matches) return;
     navigate(
       `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
       { replace: true },
     );
-  }, [tab, tripId, dayNum, navigate, hasDay]);
+  }, [tab, tripId, dayNum, navigate]);
 
   // v2.31.94: 自訂 tab 需要 trip destinations 當 map default center fallback chain
   // v2.32.1 fix: 從 tab-gated 改 mount-gated — LocationPickerMap 鎖 mount 時
   // initialCenter，等切到 custom tab 才 fetch 就太晚。
-  useEffect(() => {
-    if (!auth.user || !tripId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const tripBody = await apiFetch<{ destinations?: TripDestApiLite[] }>(
-          `/trips/${encodeURIComponent(tripId)}`,
-        );
-        if (cancelled) return;
-        setCustomDestinations(tripBody?.destinations ?? []);
-      } catch {
-        // network fail → 標 [] 讓 fallback chain 走 Tokyo（已是最後一道安全網）
-        if (!cancelled) setCustomDestinations([]);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [auth.user, tripId]);
+  // 失敗退回 []（fallback chain 走 Tokyo 最後一道安全網）；載入中為 null。
+  const customDestinations = useTripDestinations<TripDestApiLite>(tripId, !!auth.user);
 
   // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
   function toggleSearch(id: string) {
-    setSelectedSearch((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+    selection.toggle(id, id);
+    if (selectedSearch.has(id)) {
         // 取消選取時清掉 per-result 分類覆寫，避免再次選取時殘留舊的手動選擇
         // （重新選取應回到 auto-derived 預設）。
         setSearchCatOverride((m) => {
@@ -787,20 +713,11 @@ function AddStopEditor() {
           delete cleaned[id];
           return cleaned;
         });
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    }
   }
 
   function toggleSaved(id: number) {
-    setSelectedSaved((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    selection.toggle(id, id);
   }
 
   const totalSelected = useMemo(() => {
@@ -828,12 +745,11 @@ function AddStopEditor() {
   }, [customDestinations]);
 
   const handleConfirm = useCallback(async () => {
-    if (inFlight.current || !tripId || !hasDay) return;
+    if (submitting || !tripId || !Number.isFinite(dayNum)) return;
     setSubmitError(null);
 
     type Body = {
       name: string;
-      poiId?: number;
       time?: string;
       note?: string;
       lat?: number;
@@ -850,23 +766,25 @@ function AddStopEditor() {
         setCustomError('請輸入標題');
         return;
       }
-      if (customDuration && (!Number.isSafeInteger(Number(customDuration)) || Number(customDuration) < 0)) { setCustomError('停留時間請輸入零或正整數分鐘'); return; }
       // v2.31.94: 自訂 stop 必須有 map pin 座標，否則 entry 會 silent drop from map
       if (!customCoord || !isValidCustomCoord(customCoord)) {
         setCustomError('請先在地圖上選擇位置');
         return;
       }
+      if (customDuration && (!Number.isInteger(Number(customDuration)) || Number(customDuration) <= 0)) {
+        setCustomError('停留時間請輸入正整數分鐘');
+        return;
+      }
     }
 
-    inFlight.current = true;
     setSubmitting(true);
     try {
       let payloads: Body[] = [];
-      let selectionIds: Array<string | number> = [];
+      let payloadKeys: Array<string | number> = [];
 
       if (tab === 'search') {
         const selected = searchResults.filter((r) => selectedSearch.has(r.place_id));
-        selectionIds = selected.map(row => row.place_id);
+        payloadKeys = selected.map((r) => r.place_id);
         // 2026-07-08：加 Google 景點時抓 Place Details，把營業時間 + 價位寫進備註
         // （訂位 Google 無此欄位 → 留白由 user 在編輯景點頁補）。graceful：resolve
         // 失敗（rate limit / 404 / kill switch）不 enrich，buildPoiNote fallback 地址。
@@ -893,14 +811,16 @@ function AddStopEditor() {
           };
         });
       } else if (tab === 'favorites') {
-        const selected = (poiFavorites ?? []).filter(row => selectedSaved.has(row.id));
-        selectionIds = selected.map(row => row.id);
+        const selected = poiFavorites.filter((r) => selectedSaved.has(r.id));
+        payloadKeys = selected.map((r) => r.id);
         payloads = selected
           .map((r) => ({
             name: r.poiName,
-            poiId: r.poiId,
             note: r.poiAddress ?? undefined,
+            lat: r.poiLat ?? undefined,
+            lng: r.poiLng ?? undefined,
             source: 'favorite',
+            poi_type: mapGooglePrimaryTypeToPoiType(r.poiType),
           }));
       } else {
         if (!customCoord) return; // 已前置驗證，此處供 TS 收斂
@@ -920,32 +840,30 @@ function AddStopEditor() {
 
       // #1261：每筆走 entry 變更 module（emit + day-scope 重算在 module，helper single-flight 合併）。
       const results = await Promise.all(payloads.map((body) => createEntry(tripId, dayNum, body)));
-      const savedIds = new Set(selectionIds.filter((_, index) => results[index]?.ok));
-      const saved = results.filter(result => result.ok);
-      void Promise.all(saved.map(result => result.recompute)).then(outcomes => {
-        if (outcomes.some(ok => !ok)) showToast('景點已儲存，部分交通時間待更新', 'info');
+      results.forEach((result, index) => {
+        const key = payloadKeys[index];
+        if (result.ok && key !== undefined) selection.remove(key);
       });
-      if (!active.current || currentSelection.current !== selectionVisit) return;
-      if (tab === 'search') setSelectedSearch(previous => new Set([...previous].filter(id => !savedIds.has(id))));
-      if (tab === 'favorites') setSelectedSaved(previous => new Set([...previous].filter(id => !savedIds.has(id))));
+      const recomputed = await Promise.all(results.filter((result) => result.ok).map((result) => result.recompute));
+      if (recomputed.some((ok) => !ok)) {
+        showToast('景點已儲存，但車程更新失敗，重新整理後再試', 'info', 5000);
+      }
       const failed = results.filter((r) => !r.ok);
       if (failed.length > 0) {
         setSubmitError(`${failed.length}/${payloads.length} 個項目儲存失敗，請重試`);
         return;
       }
-      if (tab === 'custom') savedCustom.current = true;
-      showToast(`已加入 ${payloads.length} 個景點`, 'success');
+      if (recomputed.every(Boolean)) showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
     } catch (err) {
-      if (active.current) setSubmitError(err instanceof Error ? err.message : '儲存失敗');
+      setSubmitError(err instanceof Error ? err.message : '儲存失敗');
     } finally {
-      inFlight.current = false;
-      if (active.current) setSubmitting(false);
+      setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selectionVisit, hasDay]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, customCoord, customCategory, searchCatOverride, tripId, dayNum, selection]);
 
-  if (!auth.user) return <AuthStatus auth={auth} />;
+  if (!auth.user) return null;
   // v2.31.99: tripId 必填，但 dayNum 改成 optional — 沒帶 ?day=N 時 chip row
   // 上方讓 user 選一天再 unlock form（取代既有 invalid-params blocking page）。
   if (!tripId) {
@@ -968,9 +886,6 @@ function AddStopEditor() {
   return (
     <>
       <ToastContainer />
-      <CustomPoiDraftGuard hasPending={() => !savedCustom.current && customDirty} onDiscard={discardCustom} busy={submitting} />
-      <ConfirmModal open={discardTab !== null} title="捨棄未儲存的景點？" message="切換來源會清空這個自訂景點。" confirmLabel="捨棄" cancelLabel="繼續編輯" busy={submitting}
-        onCancel={() => setDiscardTab(null)} onConfirm={() => { if (discardTab) { discardCustom(); setTab(discardTab); setDiscardTab(null); } }} />
       <OperationShell
         shellClassName="tp-add-stop-page-shell"
         testId="add-stop-page"
@@ -979,9 +894,6 @@ function AddStopEditor() {
         scopedStyles={SCOPED_STYLES}
       >
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
-            {target.error && <div role="alert">{target.error} <button type="button" onClick={target.retry}>重試載入日期</button></div>}
-            {target.status === 'loading' && <div role="status">日期載入中…</div>}
-            {allDays?.length === 0 && <div role="status">該行程沒有天數</div>}
 
             {/* v2.31.99 day picker chip row — 沒帶 ?day=N 進來時讓 user 選；帶了
                 也仍顯，可隨時切換。Day metadata 還在 fetch 時不 render
@@ -1003,7 +915,6 @@ function AddStopEditor() {
                       role="tab"
                       aria-selected={isActive}
                       className={`tp-add-stop-daypicker-chip ${isActive ? 'is-active' : ''}`}
-                      disabled={submitting}
                       onClick={() => handlePickDay(d.dayNum)}
                       data-testid={`add-stop-daypicker-chip-${d.dayNum}`}
                     >
@@ -1032,8 +943,7 @@ function AddStopEditor() {
                   role="tab"
                   aria-selected={tab === t.key}
                   className={`tp-add-stop-tab ${tab === t.key ? 'is-active' : ''}`}
-                  disabled={submitting}
-                  onClick={() => { if (tab === 'custom' && t.key !== tab && customDirty) setDiscardTab(t.key); else setTab(t.key); }}
+                  onClick={() => { selection.clear(); setSearchCatOverride({}); setTab(t.key); }}
                   data-testid={`add-stop-tab-${t.key}`}
                 >
                   {t.label}
@@ -1085,6 +995,8 @@ function AddStopEditor() {
                             <button
                               type="button"
                               onClick={() => {
+                                selection.clear();
+                                setSearchCatOverride({});
                                 setRegion(opt);
                                 setRegionMenuOpen(false);
                               }}
@@ -1105,7 +1017,7 @@ function AddStopEditor() {
                         className="tp-add-stop-search-input"
                         placeholder="搜尋景點、餐廳、住宿⋯"
                         value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(e) => { selection.clear(); setSearchCatOverride({}); setQuery(e.target.value); }}
                         data-testid="add-stop-search-input"
                       />
                     </div>
@@ -1128,24 +1040,28 @@ function AddStopEditor() {
                       </p>
                     </div>
                   )}
-                  {searchStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{searchError} <button type="button" onClick={retrySearch}>重試搜尋</button></div>}
-            {searching && <div role="status" className="tp-add-stop-empty">搜尋中⋯</div>}
+                  {searchState.status === 'loading' && <div className="tp-add-stop-empty" role="status">搜尋中⋯</div>}
+                  {searchState.status === 'error' && (
+                    <div className="tp-add-stop-empty" role="alert" aria-label="搜尋失敗">
+                      搜尋失敗，請重試 <button type="button" onClick={retrySearch} aria-label="重新搜尋">重新搜尋</button>
+                    </div>
+                  )}
                   {/* v2.31.55 fix：landing empty state 之前 gate 在
                     * `poiFavorites && poiFavorites.length > 0`，但 poiFavorites
                     * 只在 user 切到「收藏」 tab 才 fetch（line 664-681 lazy load），
                     * 搜尋 tab 預設 null → 永遠不 render → user 看到 blank page
                     * 完全沒 hint「該做什麼」。decouple 條件，搜尋 tab + query 空
                     * 一律顯示 hint。 */}
-                  {!searching && query.trim().length === 0 && category === 'all' && (
-                    <div role="status" className="tp-add-stop-empty">
+                  {searchState.status === 'idle' && query.trim().length === 0 && category === 'all' && (
+                    <div className="tp-add-stop-empty">
                       輸入關鍵字搜尋，或切到「收藏」 tab 從你儲存的 POI 加入
                     </div>
                   )}
-                  {!searching && query.trim().length === 0 && category !== 'all' && (
+                  {searchState.status === 'idle' && query.trim().length === 0 && category !== 'all' && (
                     <div className="tp-add-stop-empty">輸入「{CATEGORY_TABS.find((c) => c.key === category)?.label}」 相關關鍵字開始搜尋</div>
                   )}
-                  {searchStatus === 'success' && searchResults.length === 0 && (
-                    <div role="status" className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
+                  {searchState.status === 'success' && searchResults.length === 0 && (
+                    <div className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
                   )}
                   {searchResults.length > 0 && (() => {
                     const filtered = searchResults.filter((r) => matchCategory(r.category, category));
@@ -1154,7 +1070,7 @@ function AddStopEditor() {
                     }
                     return (
                       <>
-                        <h3 aria-live="polite" className="tp-add-stop-result-title">
+                        <h3 className="tp-add-stop-result-title">
                           {query.trim().length >= 2 ? '搜尋結果' : '熱門景點'} · {region}
                         </h3>
                         <div className="tp-add-stop-grid">
@@ -1226,16 +1142,20 @@ function AddStopEditor() {
 
               {tab === 'favorites' && (
                 <>
-                  {favoritesStatus === 'error' && <div role="alert" className="tp-add-stop-empty">{favoritesError} <button type="button" onClick={retryFavorites}>重試載入收藏</button></div>}
-                  {savedLoading && <div role="status" className="tp-add-stop-empty">載入收藏⋯</div>}
-                  {!savedLoading && poiFavorites !== null && poiFavorites.length === 0 && (
-                    <div role="status" className="tp-add-stop-empty">
+                  {favoritesState.status === 'loading' && <div className="tp-add-stop-empty" role="status">載入收藏⋯</div>}
+                  {favoritesState.status === 'error' && (
+                    <div className="tp-add-stop-empty" role="alert" aria-label="載入收藏失敗">
+                      載入收藏失敗，請重試 <button type="button" onClick={retryFavorites} aria-label="重試載入收藏">重試載入收藏</button>
+                    </div>
+                  )}
+                  {favoritesState.status === 'ready' && poiFavorites.length === 0 && (
+                    <div className="tp-add-stop-empty">
                       <div className="tp-add-stop-empty-icon"><Icon name="heart" /></div>
                       <div className="tp-add-stop-empty-title">還沒收藏景點</div>
                       <div className="tp-add-stop-empty-desc">在探索頁或地圖上點收藏地點，下次行程就能直接從這裡加入。</div>
                     </div>
                   )}
-                  {poiFavorites !== null && poiFavorites.length > 0 && (() => {
+                  {favoritesState.status === 'ready' && poiFavorites.length > 0 && (() => {
                     const filtered = poiFavorites.filter((r) => matchCategory(r.poiType, category));
                     if (filtered.length === 0) {
                       return <div className="tp-add-stop-empty">符合類別篩選的收藏為 0，試著切到「為你推薦」看全部</div>;
@@ -1307,8 +1227,6 @@ function AddStopEditor() {
                 <form onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
                   <CustomPoiForm
                     title={customTitle}
-                    disabled={submitting}
-                    onAddressChange={setCustomAddress}
                     onTitleChange={(v) => { setCustomTitle(v); setCustomError(null); }}
                     coord={customCoord}
                     onCoordChange={setCustomCoord}
@@ -1337,6 +1255,8 @@ function AddStopEditor() {
                               id="add-stop-custom-duration"
                               className="tp-input-short"
                               type="number"
+                              min={1}
+                              step={1}
                               inputMode="numeric"
                               value={customDuration}
                               onChange={(e) => setCustomDuration(e.target.value)}
@@ -1391,7 +1311,7 @@ function AddStopEditor() {
                   disabled={!confirmEnabled}
                   data-testid="add-stop-confirm"
                 >
-                  {submitting ? '加入中⋯' : '完成'}
+                  {submitting ? '加入中⋯' : '加入景點'}
                 </button>
               </div>
             </div>

@@ -1,12 +1,12 @@
 /**
  * Regression locks for the v2.44.x audit high-severity bug-fix batch.
  *
- * Behavioral where cheap (rate-limit 429 enforcement, cache datetime format);
- * source-level for the rest (each lock pins the exact fix so it can't silently
- * regress). One block per finding.
+ * Behavioral where cheap (cache datetime format; /api/route 的 429 enforcement 在
+ * tests/api/route-audit-fixes.integration.test.ts 走 HTTP)；source-level for the rest
+ * (each lock pins the exact fix so it can't silently regress). One block per finding.
  */
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { readTimelineRailSources } from './__helpers__/railSources';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,53 +14,9 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
-// ---- Rate-limit enforcement: /api/route returns 429 when bucket exhausted ----
-const mockBump = vi.fn(async () => ({ ok: true, count: 1 }));
-vi.mock('../../functions/api/_rate_limit', () => ({
-  bumpRateLimit: (...a: unknown[]) => mockBump(...a),
-  clientIp: () => '9.9.9.9',
-  RATE_LIMITS: {
-    ROUTE_PER_IP: { maxAttempts: 100, windowMs: 1, lockoutMs: 1 },
-    POI_SEARCH_PER_IP: { maxAttempts: 200, windowMs: 1, lockoutMs: 1 },
-    REPORTS_PER_IP: { maxAttempts: 200, windowMs: 1, lockoutMs: 1 },
-  },
-}));
-vi.mock('../../functions/api/_maps_lock', () => ({ assertGoogleAvailable: vi.fn(async () => undefined) }));
-const mockComputeRoute = vi.fn();
-vi.mock('../../src/server/maps/google-client', () => ({ computeRoute: (...a: unknown[]) => mockComputeRoute(...a) }));
-
-import { onRequestGet } from '../../functions/api/route';
-
-function routeCtx(): any {
-  return {
-    request: new Request('http://localhost/api/route?from=139.7,35.6&to=139.8,35.7'),
-    env: { DB: {}, GOOGLE_MAPS_API_KEY: 'k' },
-  };
-}
-
-beforeEach(() => {
-  mockBump.mockReset();
-  mockBump.mockResolvedValue({ ok: true, count: 1 });
-  mockComputeRoute.mockReset();
-  mockComputeRoute.mockResolvedValue({ polyline: '_p~iF~ps|U', distanceMeters: 100, durationSeconds: 60 });
-});
-
 describe('rate-limit enforcement (regression: bumpRateLimit result was discarded)', () => {
-  it('GET /api/route returns 429 + Retry-After when locked, and never calls computeRoute', async () => {
-    mockBump.mockResolvedValueOnce({ ok: false, retryAfter: 3600, count: 101 });
-    const res: Response = await onRequestGet(routeCtx());
-    expect(res.status).toBe(429);
-    expect(res.headers.get('Retry-After')).toBe('3600');
-    const body = await res.json();
-    expect(body.error.code).toBe('RATE_LIMITED');
-    expect(mockComputeRoute).not.toHaveBeenCalled();
-  });
-
-  it('GET /api/route proceeds to computeRoute when not locked', async () => {
-    await onRequestGet(routeCtx());
-    expect(mockComputeRoute).toHaveBeenCalledOnce();
-  });
-
+  // /api/route 的 429 / 放行行為已改走 HTTP 邊界：
+  // tests/api/route-audit-fixes.integration.test.ts
   it('poi-search and reports also capture + enforce the bumpRateLimit result', () => {
     for (const f of ['functions/api/poi-search.ts', 'functions/api/reports.ts', 'functions/api/route.ts']) {
       const src = read(f);
@@ -116,21 +72,11 @@ describe('audit fix source locks', () => {
     expect(mod).not.toMatch(/\{ dayId:/);
   });
 
-  it('daily-report queries trip_requests (not the non-existent requests table)', () => {
-    const src = read('scripts/daily-report.js');
-    expect(src).toMatch(/FROM trip_requests WHERE created_at/);
-    expect(src).not.toMatch(/FROM requests WHERE created_at/);
-  });
-
   it('rollback gates updated_at by TABLE_COLUMNS membership (no SQL error on permission/relation tables)', () => {
     const src = read('functions/api/trips/[id]/audit/[aid]/rollback.ts');
     expect(src).toMatch(/TABLE_COLUMNS\[safeTable\]\.includes\('updated_at'\)/);
     // insert->delete rollback now checks it actually deleted a row
     expect(src).toMatch(/delResult\.meta\.changes === 0/);
-  });
-
-  it('cron alertTelegram falls back to TELEGRAM_BOT_HOME_TOKEN', () => {
-    expect(read('scripts/_lib/cron-shared.ts')).toMatch(/TELEGRAM_BOT_HOME_TOKEN \|\| process\.env\.TELEGRAM_BOT_TOKEN/);
   });
 
   it('_poi find-or-create persists place_id (INSERT column + COALESCE backfill)', () => {
@@ -180,10 +126,6 @@ describe('audit fix source locks — medium tier', () => {
     expect(src).not.toMatch(/customDate: l\.expiresAt == null \? '' : new Date\(l\.expiresAt\)\.toISOString/);
   });
 
-  it('daily-check normalizes D1 naive datetime to UTC before stuck-cutoff compare', () => {
-    expect(read('scripts/daily-check.js')).toMatch(/createdUtc = r\.created_at\.includes\('T'\)/);
-  });
-
   it('requests notes dedup scopes the SELECT by ai_source', () => {
     const src = read('functions/api/_noteAi.ts');
     expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \? AND origin = 'ai'/);
@@ -229,12 +171,6 @@ describe('audit fix source locks — batch 3', () => {
     const src = read('src/components/shared/AlertPanel.tsx');
     expect(src).toMatch(/\.tp-alert-panel\.is-warning \{[\s\S]*var\(--color-warning-bg\)/);
     expect(src).not.toMatch(/border-color: rgb\(244, 140, 6\)/);
-  });
-
-  it('backfill-poi-addresses exec uses direct argv (no sh -c shell injection)', () => {
-    const src = read('scripts/backfill-poi-addresses.ts');
-    expect(src).toMatch(/function exec\(argv: string\[\]\)/);
-    expect(src).not.toMatch(/Bun\.spawnSync\(\['sh', '-c'/);
   });
 
 

@@ -28,6 +28,8 @@ const SCOPED_STYLES = `
   display: flex;
   gap: 2px;
   padding: 6px;
+  box-sizing: border-box;
+  max-width: 100%; /* #1445 F15：不超出 .app-shell-bottom-nav 夾好的視窗寬 */
   border-radius: var(--radius-full);
   /* 材質沿革（同一處來回三次，參數才是重點）：
    *   1. secondary 62% cream → owner 2026-07-20「像實心白條」
@@ -51,8 +53,7 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 2px;
-  width: 62px; min-height: 46px;
-  padding-block: 5px;
+  flex: 0 1 62px; min-width: 0; width: 62px; min-height: 46px; /* 可縮：窄視窗下四個分頁一起縮小 */
   border-radius: var(--radius-full);
   background: transparent;
   border: none;
@@ -77,7 +78,7 @@ const SCOPED_STYLES = `
   /* mockup .ph-tab：10px/700（膠囊窄，字級降至 10px 對齊 iOS 26 tab 形制）。
    * 10px = var(--font-size-eyebrow)（token gate 要求，見 pr2-tokens 測）。 */
   font-size: var(--font-size-eyebrow);
-  line-height: 1.2;
+  line-height: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
   /* 透明 nav（owner ⑥）：label 在雜底上靠淡陰影可讀。 */

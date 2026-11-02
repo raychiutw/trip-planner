@@ -5,10 +5,11 @@
  * onBlur 即觸發背景 PATCH，視覺以 `SaveStatus` indicator 取代 button reassurance。
  *
  * 行為：
- *   - patch(updates) → merge into pendingPatch + 重置 debounce timer
+ *   - scopeKey 分開保存各 entity 的 pending、版本與結果；切換後舊回覆只更新舊 scope
+ *   - patch(updates) → merge into current scope pending + 重置 debounce timer
  *   - flush() → 立即清 timer + 走 save flow（onBlur / form submit / unmount caller）
  *   - cancel() → 清 timer + 丟 pendingPatch（用於 cancel button 路徑）
- *   - save success → bump version; later edits remain queued; saved feedback only when drained
+ *   - save success → bump version；只消耗已送批次，沒有新 pending 才顯示 'saved'
  *   - 409 STALE_ENTRY → onStale() refresh version + retry once with same patch
  *   - 其他 error → 'error' + 保留 patch 等 manual retry
  *   - offline (networkBus) → 'offline' + 保留 patch，online 重連時 flush 重送
@@ -17,19 +18,17 @@
  *
  * 不負責：
  *   - LocalStorage offline queue（A8 task 另作）
- *   - beforeunload guard（caller 自己 wire）— hook 提供 state.hasPending 供 caller 判斷
+ *   - beforeunload guard（caller 自己 wire）— hook 提供 hasUnsaved() 供 caller 判斷
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { registerNetworkCallbacks } from '../lib/networkBus';
 import { ApiError } from '../lib/errors';
 
 export type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'offline';
 
-export type SaveResult = { status: 'saved' } | { status: 'error'; error: string } | { status: 'offline' } | { status: 'superseded' };
-
 export interface UseAutosaveOptions<T> {
-  /** Stable identity of the edited entity; changing it starts an isolated lifetime. */
-  entityKey?: string;
+  /** Stable identity of the entity and field group being saved. */
+  scopeKey: string;
   /** 初始 entity version（OCC）。若 entity 沒 version 欄位 → omit；hook skip OCC。 */
   initialVersion?: number;
   /** Debounce ms。Default 800. */
@@ -53,160 +52,260 @@ export interface UseAutosaveReturn<T> {
   error: string | null;
   /** 有 pending update 等 save。caller 可用來 beforeunload guard。 */
   hasPending: boolean;
+  /** Current accepted edits not yet confirmed saved, including an in-flight batch. */
+  hasUnsaved: () => boolean;
   /** Schedule debounced save with field updates. */
   patch: (updates: Partial<T>) => void;
-  /** Drain accepted edits; report saved only after all batches succeed. */
-  flush: () => Promise<SaveResult>;
+  /** Force save on blur/submit; true only when this call's accepted edits are saved. */
+  flush: () => Promise<boolean>;
   /** Discard pending updates (clear timer + drop merged patch). */
   cancel: () => void;
   /** 手動 retry — 失敗後 user click「重試」 button。 */
-  retry: () => Promise<SaveResult>;
+  retry: () => Promise<void>;
 }
 
-interface SaveScope<T> {
-  key: string | undefined;
-  version: number | undefined;
+interface SaveScope<T extends object> {
+  key: string;
   pending: Partial<T>;
-  flight: Promise<SaveResult> | null;
+  acceptedRevision: number;
+  savedRevision: number;
+  sendingRevision: number;
+  discardGeneration: number;
+  version: number | undefined;
+  inFlight: Promise<boolean> | null;
   timer: ReturnType<typeof setTimeout> | null;
   savedTimer: ReturnType<typeof setTimeout> | null;
-  active: boolean;
   state: SaveState;
   error: string | null;
 }
 
-function createScope<T>(key: string | undefined, version: number | undefined): SaveScope<T> {
-  return { key, version, pending: {}, flight: null, timer: null, savedTimer: null,
-    active: true, state: 'idle', error: null };
-}
+export function useAutosave<T extends object>(
+  options: UseAutosaveOptions<T>,
+): UseAutosaveReturn<T> {
+  const { scopeKey, initialVersion, debounceMs = 800, save, onStale, savedDisplayMs = 2000 } = options;
+  // ponytail: scopes live for this hook instance; evict clean scopes if one mounted row visits unbounded entities.
+  const scopesRef = useRef<Map<string, SaveScope<T>>>(new Map());
+  let renderScope = scopesRef.current.get(scopeKey);
+  if (!renderScope) {
+    renderScope = {
+      key: scopeKey, pending: {}, acceptedRevision: 0, savedRevision: 0, sendingRevision: 0, discardGeneration: 0,
+      version: initialVersion, inFlight: null, timer: null, savedTimer: null,
+      state: 'idle', error: null,
+    };
+    scopesRef.current.set(scopeKey, renderScope);
+  }
+  const activeScopeRef = useRef(renderScope);
+  const [state, setState] = useState<SaveState>(renderScope.state);
+  const [error, setError] = useState<string | null>(renderScope.error);
+  const [hasPending, setHasPending] = useState(Object.keys(renderScope.pending).length > 0);
+  const isOnlineRef = useRef(true);
+  const isMountedRef = useRef(true);
+  const performSaveRef = useRef<((scope: SaveScope<T>) => Promise<boolean>) | null>(null);
 
-function clearTimer<T>(scope: SaveScope<T>, key: 'timer' | 'savedTimer') {
-  if (scope[key] !== null) clearTimeout(scope[key]);
-  scope[key] = null;
-}
+  const publish = useCallback((scope: SaveScope<T>) => {
+    if (!isMountedRef.current || activeScopeRef.current !== scope) return;
+    setState(scope.state);
+    setError(scope.error);
+    setHasPending(Object.keys(scope.pending).length > 0);
+  }, []);
 
-export function useAutosave<T extends object>(options: UseAutosaveOptions<T>): UseAutosaveReturn<T> {
-  const { entityKey, initialVersion, debounceMs = 800, savedDisplayMs = 2000, save, onStale } = options;
-  // A scope owns its queue, batch, version and feedback. New entities never share them.
-  const [scope, setScope] = useState(() => createScope<T>(entityKey, initialVersion));
-  if (scope.key !== entityKey) setScope(createScope<T>(entityKey, initialVersion));
-  const [, render] = useState(0);
-  const online = useRef(true);
-  const publish = useCallback((state: SaveState, error: string | null = null) => {
-    if (!scope.active) return;
-    scope.state = state;
-    scope.error = error;
-    render(n => n + 1);
-  }, [scope]);
+  const clearDebounceTimer = useCallback((scope: SaveScope<T>) => {
+    if (scope.timer !== null) clearTimeout(scope.timer);
+    scope.timer = null;
+  }, []);
+  const clearSavedTimer = useCallback((scope: SaveScope<T>) => {
+    if (scope.savedTimer !== null) clearTimeout(scope.savedTimer);
+    scope.savedTimer = null;
+  }, []);
 
-  const performSave = useCallback((): Promise<SaveResult> => {
-    if (!scope.active) return Promise.resolve({ status: 'superseded' });
-    if (scope.flight) return scope.flight;
-    if (!Object.keys(scope.pending).length) return Promise.resolve({ status: 'saved' });
-    if (!online.current) {
-      publish('offline');
-      return Promise.resolve({ status: 'offline' });
+  useLayoutEffect(() => {
+    if (activeScopeRef.current === renderScope) return;
+    activeScopeRef.current = renderScope;
+    publish(renderScope);
+    if (Object.keys(renderScope.pending).length > 0 && !renderScope.inFlight &&
+        renderScope.timer === null && isOnlineRef.current) {
+      renderScope.timer = setTimeout(() => {
+        renderScope.timer = null;
+        void performSaveRef.current?.(renderScope);
+      }, debounceMs);
     }
-    const batch = scope.pending;
+  }, [renderScope, debounceMs, publish]);
+
+  const performSave = useCallback(async (scope: SaveScope<T>): Promise<boolean> => {
+    const body = scope.pending;
+    if (Object.keys(body).length === 0) return true;
+    if (scope.inFlight) return false;
+    if (!isOnlineRef.current) {
+      scope.state = 'offline';
+      publish(scope);
+      return false;
+    }
+
+    const bodyRevision = scope.acceptedRevision;
+    const discardGeneration = scope.discardGeneration;
+    scope.sendingRevision = bodyRevision;
     scope.pending = {};
-    clearTimer(scope, 'savedTimer');
-    publish('saving');
-    // Defer execution until the shared promise has been installed, even for sync throws.
-    const task = Promise.resolve().then(async (): Promise<SaveResult> => {
-      try {
-        let result: Record<string, unknown>;
-        try {
-          result = await save(batch, scope.version);
-        } catch (error) {
-          if (!scope.active) return { status: 'superseded' };
-          if (!(error instanceof ApiError) || error.code !== 'STALE_ENTRY' || !onStale) throw error;
-          const version = await onStale();
-          if (!scope.active) return { status: 'superseded' };
-          scope.version = version;
-          // The retry consumes only this batch, never edits accepted while it waits.
-          result = await save(batch, scope.version);
-        }
-        if (!scope.active) return { status: 'superseded' };
-        if (typeof result.version === 'number') scope.version = result.version;
-        publish(Object.keys(scope.pending).length ? 'pending' : 'saved');
-        if (scope.state === 'saved') scope.savedTimer = setTimeout(() => {
-          scope.savedTimer = null;
-          if (scope.state === 'saved') publish('idle');
-        }, savedDisplayMs);
-        return { status: 'saved' };
-      } catch (error) {
-        if (!scope.active) return { status: 'superseded' };
-        scope.pending = { ...batch, ...scope.pending };
-        clearTimer(scope, 'timer');
-        const message = error instanceof Error ? error.message : '儲存失敗';
-        publish('error', message);
-        return { status: 'error', error: message };
-      } finally {
-        scope.flight = null;
+    let resolveInFlight!: (saved: boolean) => void;
+    scope.inFlight = new Promise<boolean>((resolve) => { resolveInFlight = resolve; });
+    scope.state = 'saving';
+    scope.error = null;
+    clearSavedTimer(scope);
+    publish(scope);
+
+    let saveSucceeded = false;
+    const complete = (result: Record<string, unknown>) => {
+      if (typeof result.version === 'number') scope.version = result.version;
+      if (scope.discardGeneration !== discardGeneration) {
+        scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'idle';
+        publish(scope);
+        return false;
       }
-    });
-    scope.flight = task;
-    return task;
-  }, [scope, publish, save, onStale, savedDisplayMs]);
+      scope.savedRevision = bodyRevision;
+      saveSucceeded = true;
+      scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'saved';
+      if (scope.state === 'saved' && isMountedRef.current) {
+        scope.savedTimer = setTimeout(() => {
+          if (scope.state === 'saved') scope.state = 'idle';
+          scope.savedTimer = null;
+          publish(scope);
+        }, savedDisplayMs);
+      }
+      publish(scope);
+      return true;
+    };
+    const fail = (reason: unknown, fallback: string) => {
+      if (scope.discardGeneration !== discardGeneration) {
+        scope.state = Object.keys(scope.pending).length > 0 ? 'pending' : 'idle';
+        publish(scope);
+        return false;
+      }
+      clearDebounceTimer(scope);
+      scope.pending = { ...body, ...scope.pending };
+      scope.state = 'error';
+      scope.error = reason instanceof Error ? reason.message : fallback;
+      publish(scope);
+      return false;
+    };
 
-  const saveLatest = useRef(performSave);
-  saveLatest.current = performSave;
-  const schedule = useCallback(() => {
-    clearTimer(scope, 'timer');
-    scope.timer = setTimeout(async () => {
-      scope.timer = null;
-      if (!scope.active) return;
-      const outcome = await saveLatest.current();
-      if (scope.active && outcome.status === 'saved' && Object.keys(scope.pending).length && scope.timer === null) schedule();
-    }, debounceMs);
-  }, [scope, debounceMs]);
+    try {
+      return complete(await save(body, scope.version));
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'STALE_ENTRY' && onStale) {
+        try {
+          scope.version = await onStale();
+          // The retry owns only body; edits accepted during either request stay pending.
+          return complete(await save(body, scope.version));
+        } catch (retryErr) {
+          return fail(retryErr, '儲存衝突，請重新整理');
+        }
+      }
+      return fail(err, '儲存失敗');
+    } finally {
+      scope.inFlight = null;
+      resolveInFlight(saveSucceeded);
+      if (
+        (saveSucceeded || scope.discardGeneration !== discardGeneration) && isMountedRef.current &&
+        Object.keys(scope.pending).length > 0 && isOnlineRef.current && scope.timer === null
+      ) {
+        scope.timer = setTimeout(() => {
+          scope.timer = null;
+          void performSave(scope);
+        }, debounceMs);
+      }
+    }
+  }, [save, onStale, savedDisplayMs, debounceMs, clearDebounceTimer, clearSavedTimer, publish]);
+  performSaveRef.current = performSave;
 
-  const patch = useCallback((updates: Partial<T>) => {
-    if (!scope.active || !Object.keys(updates).length) return;
+  const patch = useCallback((updates: Partial<T>): void => {
+    const scope = activeScopeRef.current;
+    if (scope.key !== scopeKey) return;
     scope.pending = { ...scope.pending, ...updates };
-    clearTimer(scope, 'savedTimer');
-    publish(scope.flight ? 'saving' : online.current ? 'pending' : 'offline');
-    schedule();
-  }, [scope, publish, schedule]);
+    scope.acceptedRevision += 1;
+    scope.state = scope.state === 'saving' || scope.state === 'offline' ? scope.state : 'pending';
+    publish(scope);
+    clearDebounceTimer(scope);
+    scope.timer = setTimeout(() => {
+      scope.timer = null;
+      void performSave(scope);
+    }, debounceMs);
+  }, [scopeKey, debounceMs, publish, clearDebounceTimer, performSave]);
 
-  const flush = useCallback(async (): Promise<SaveResult> => {
-    do {
-      if (!scope.active) return { status: 'superseded' };
-      clearTimer(scope, 'timer');
-      const outcome = await performSave();
-      if (outcome.status !== 'saved') return outcome;
-    } while (scope.flight || Object.keys(scope.pending).length);
-    clearTimer(scope, 'timer');
-    return { status: 'saved' };
-  }, [scope, performSave]);
+  const flush = useCallback(async (): Promise<boolean> => {
+    const scope = activeScopeRef.current;
+    if (scope.key !== scopeKey) return false;
+    const targetRevision = scope.acceptedRevision;
+    while (scope.savedRevision < targetRevision) {
+      clearDebounceTimer(scope);
+      const inFlight = scope.inFlight;
+      if (inFlight) {
+        if (!(await inFlight)) return false;
+      } else if (Object.keys(scope.pending).length === 0 || !(await performSave(scope))) {
+        return false;
+      }
+    }
+    return activeScopeRef.current === scope;
+  }, [scopeKey, clearDebounceTimer, performSave]);
 
-  const cancel = useCallback(() => {
-    if (!scope.active) return;
-    clearTimer(scope, 'timer');
-    clearTimer(scope, 'savedTimer');
+  const hasUnsaved = useCallback((): boolean => {
+    const scope = activeScopeRef.current;
+    return scope.key === scopeKey && scope.acceptedRevision > scope.savedRevision;
+  }, [scopeKey]);
+
+  const cancel = useCallback((): void => {
+    const scope = activeScopeRef.current;
+    if (scope.key !== scopeKey) return;
+    clearDebounceTimer(scope);
+    scope.discardGeneration += 1;
     scope.pending = {};
-    publish(scope.flight ? 'saving' : 'idle');
-  }, [scope, publish]);
+    if (scope.inFlight) scope.savedRevision = Math.max(scope.savedRevision, scope.sendingRevision);
+    scope.acceptedRevision = scope.savedRevision;
+    scope.state = 'idle';
+    scope.error = null;
+    publish(scope);
+  }, [scopeKey, clearDebounceTimer, publish]);
 
-  useEffect(() => registerNetworkCallbacks(
-    () => { online.current = false; if (!scope.flight) publish('offline'); },
-    () => {
-      online.current = true;
-      if (Object.keys(scope.pending).length) void flush();
-      else if (scope.state === 'offline') publish('idle');
-    },
-  ), [scope, publish, flush]);
+  const retry = useCallback(async (): Promise<void> => {
+    const scope = activeScopeRef.current;
+    if (scope.key !== scopeKey) return;
+    scope.error = null;
+    publish(scope);
+    await performSave(scope);
+  }, [scopeKey, performSave, publish]);
 
   useEffect(() => {
-    scope.active = true; // React StrictMode repeats setup after cleanup.
-    return () => {
-      scope.active = false;
-      clearTimer(scope, 'timer');
-      clearTimer(scope, 'savedTimer');
-    };
-  }, [scope]);
+    const unsub = registerNetworkCallbacks(
+      () => {
+        isOnlineRef.current = false;
+        const scope = activeScopeRef.current;
+        if (scope.state === 'pending' || scope.state === 'error' || scope.state === 'idle') {
+          scope.state = 'offline';
+          publish(scope);
+        }
+      },
+      () => {
+        isOnlineRef.current = true;
+        const scope = activeScopeRef.current;
+        if (Object.keys(scope.pending).length > 0) void performSaveRef.current?.(scope);
+        else if (scope.state === 'offline') {
+          scope.state = 'idle';
+          publish(scope);
+        }
+      },
+    );
+    return unsub;
+  }, [publish]);
 
-  return { state: scope.state, error: scope.error,
-    hasPending: !!scope.flight || Object.keys(scope.pending).length > 0,
-    patch, flush, cancel, retry: flush };
+  useEffect(() => {
+    isMountedRef.current = true;
+    const scopes = scopesRef.current;
+    return () => {
+      isMountedRef.current = false;
+      for (const scope of scopes.values()) {
+        clearDebounceTimer(scope);
+        clearSavedTimer(scope);
+      }
+    };
+  }, [clearDebounceTimer, clearSavedTimer]);
+
+  return { state, error, hasPending, hasUnsaved, patch, flush, cancel, retry };
 }

@@ -1,45 +1,63 @@
+/**
+ * OAuth token 生命週期 — 走 HTTP 邊界（tests/api/http.ts）
+ * 授權碼換 token、refresh 輪替、重放撤銷家族，全部從 /api/oauth/token 進、
+ * 用換到的 bearer 讀受保護的行程驗證 token 真的能／不能用；狀態直接讀真實 D1 的 oauth_models。
+ * 共用 D1 下只動自己的 client（lifecycle-client / unrelated-client）與專用行程。
+ */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, seedTrip } from './helpers';
-import { onRequest } from '../../functions/api/_middleware';
-import { onRequestPost as tokenPost } from '../../functions/api/oauth/token';
-import { onRequestGet as tripGet } from '../../functions/api/trips/[id]';
+import { createApi } from './http';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
+
+const CLIENTS = ['lifecycle-client', 'unrelated-client'];
+const OWN_TOKENS = "name IN ('AccessToken', 'RefreshToken') AND json_extract(payload, '$.client_id') IN ('lifecycle-client', 'unrelated-client')";
+const OWNER_EMAIL = 'token-owner@test.com';
 
 let db: D1Database;
 let ownerId: string;
 beforeAll(async () => {
   db = await createTestDb();
-  ownerId = (await seedTrip(db, { id: 'token-private-trip', owner: 'token-owner@test.com', published: 0 })).ownerUserId;
-  for (const client of ['lifecycle-client', 'unrelated-client']) {
-    await db.prepare(`INSERT INTO client_apps (client_id, client_type, app_name, redirect_uris, allowed_scopes, status)
+  ownerId = (await seedTrip(db, { id: 'token-private-trip', owner: OWNER_EMAIL, published: 0 })).ownerUserId;
+  for (const client of CLIENTS) {
+    await db.prepare(`INSERT OR REPLACE INTO client_apps (client_id, client_type, app_name, redirect_uris, allowed_scopes, status)
       VALUES (?, 'public', ?, ?, ?, 'active')`).bind(client, client, JSON.stringify(['https://client.test/cb']), JSON.stringify(['openid', 'profile', 'trips:read'])).run();
   }
 });
-afterAll(disposeMiniflare);
-beforeEach(async () => {
-  await db.prepare('DELETE FROM oauth_models').run();
-  await db.prepare('DELETE FROM rate_limit_buckets').run();
+afterAll(async () => {
+  await cleanup();
+  for (const client of CLIENTS) await db.prepare('DELETE FROM client_apps WHERE client_id = ?').bind(client).run();
+  await db.prepare("DELETE FROM trip_permissions WHERE trip_id = 'token-private-trip'").run();
+  await db.prepare("DELETE FROM trip_days WHERE trip_id = 'token-private-trip'").run();
+  await db.prepare("DELETE FROM trips WHERE id = 'token-private-trip'").run();
+  await disposeMiniflare();
 });
+beforeEach(cleanup);
 
-async function through(request: Request, handler: PagesFunction, requestDb = db, params: Record<string, string> = {}) {
-  const base = { request, env: mockEnv(requestDb), data: {}, params, waitUntil: () => {}, passThroughOnException: () => {}, functionPath: '' };
-  return onRequest({ ...base, next: () => handler({ ...base } as never) } as never);
+async function cleanup() {
+  // 授權碼、access／refresh token 都帶 client_id；只清自己的 client
+  await db.prepare("DELETE FROM oauth_models WHERE json_extract(payload, '$.client_id') IN ('lifecycle-client', 'unrelated-client')").run();
+  await db.prepare("DELETE FROM rate_limit_buckets WHERE bucket_key LIKE 'oauth-token:%'").run();
+}
+
+/** 以指定的 D1（可能是注入故障／交錯的 proxy）打進程內的 api。 */
+function apiOver(requestDb: D1Database = db) {
+  return createApi({ env: mockEnv(requestDb) });
+}
+function tokenRequest(fields: Record<string, string>, requestDb = db) {
+  return apiOver(requestDb).fetch(new Request('https://test.com/api/oauth/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(fields),
+  }));
 }
 function exchange(code: string, extra: Record<string, string> = {}, requestDb = db) {
-  return through(new Request('https://test.com/api/oauth/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'authorization_code', client_id: 'lifecycle-client', code, redirect_uri: 'https://client.test/cb', ...extra }),
-  }), tokenPost as PagesFunction, requestDb);
+  return tokenRequest({ grant_type: 'authorization_code', client_id: 'lifecycle-client', code, redirect_uri: 'https://client.test/cb', ...extra }, requestDb);
 }
 function rotate(refreshToken: string, extra: Record<string, string> = {}, requestDb = db) {
-  return through(new Request('https://test.com/api/oauth/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'refresh_token', client_id: 'lifecycle-client', refresh_token: refreshToken, ...extra }),
-  }), tokenPost as PagesFunction, requestDb);
+  return tokenRequest({ grant_type: 'refresh_token', client_id: 'lifecycle-client', refresh_token: refreshToken, ...extra }, requestDb);
 }
 function readPrivateTrip(token: string) {
-  return through(new Request('https://test.com/api/trips/token-private-trip', { headers: { Authorization: `Bearer ${token}` } }), tripGet as PagesFunction, db, { id: 'token-private-trip' });
+  return apiOver().get('/api/trips/token-private-trip', { bearer: token });
 }
 async function grant(code: string, extra: Record<string, unknown> = {}) {
   await new D1Adapter(db, 'AuthorizationCode').upsert(code, {
@@ -137,7 +155,7 @@ describe('OAuth token issuance through D1 and real authorization middleware', ()
     await grant('half-pair-code');
     const failed = await exchange('half-pair-code', {}, failModelWrite('RefreshToken'));
     expect(failed.status).toBeGreaterThanOrEqual(500);
-    const candidates = await db.prepare("SELECT id FROM oauth_models WHERE name = 'AccessToken'").all<{ id: string }>();
+    const candidates = await db.prepare(`SELECT id FROM oauth_models WHERE name = 'AccessToken' AND json_extract(payload, '$.client_id') IN ('lifecycle-client', 'unrelated-client')`).all<{ id: string }>();
     for (const candidate of candidates.results ?? []) expect((await readPrivateTrip(candidate.id)).status).not.toBe(200);
     expect((await new D1Adapter(db, 'AuthorizationCode').find('half-pair-code'))?.consumed).toBeTruthy();
     expect((await exchange('half-pair-code')).status).toBe(400);
@@ -151,7 +169,7 @@ describe('OAuth token issuance through D1 and real authorization middleware', ()
     expect(issued).toMatchObject({ scope: 'trips:read', expires_in: 3600 });
     expect((await readPrivateTrip(issued.access_token)).status).toBe(200);
     expect(await new D1Adapter(db, 'RefreshToken').find(issued.refresh_token)).toMatchObject({ scopes: ['trips:read'], user_id: ownerId });
-    const count = await db.prepare("SELECT count(*) AS n FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')").first<{ n: number }>();
+    const count = await db.prepare(`SELECT count(*) AS n FROM oauth_models WHERE ${OWN_TOKENS}`).first<{ n: number }>();
     expect(count?.n).toBe(2);
   });
 
@@ -246,7 +264,7 @@ describe('OAuth refresh lifecycle through the actual token endpoint', () => {
       }
     }
     expect((await readPrivateTrip(initial.access_token)).status).not.toBe(200);
-    expect((await db.prepare("SELECT id FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')").all()).results).toEqual([]);
+    expect((await db.prepare(`SELECT id FROM oauth_models WHERE ${OWN_TOKENS}`).all()).results).toEqual([]);
   });
 
   it('reuse before the winner stores its pair cannot resurrect a revoked family', async () => {
@@ -269,7 +287,7 @@ describe('OAuth refresh lifecycle through the actual token endpoint', () => {
     finally { release(); }
     expect((await winner).status).toBe(400);
     expect((await readPrivateTrip(initial.access_token)).status).not.toBe(200);
-    expect((await db.prepare("SELECT id FROM oauth_models WHERE name IN ('AccessToken', 'RefreshToken')").all()).results).toEqual([]);
+    expect((await db.prepare(`SELECT id FROM oauth_models WHERE ${OWN_TOKENS}`).all()).results).toEqual([]);
   });
 
   it.each(['$.consumed', 'AccessToken', 'RefreshToken', '$.grantId'])('rotation failure at %s preserves isolation and never reactivates consumption', async (stage) => {

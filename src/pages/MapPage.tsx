@@ -1,32 +1,20 @@
 /**
- * MapPage — fullscreen map view (Funliday-style navigation).
+ * MapPage — trip map with a floating day strip and a separate card rail.
  *
- *  /trip/:tripId/map                  → day 1 by default
+ *  /trip/:tripId/map                  → 總覽 by default
  *  /trip/:tripId/map?day=N            → specific day
  *  /trip/:tripId/map?day=all          → overview (all days, per-day dayColor polyline)
  *  /trip/:tripId/stop/:entryId/map    → focus that entry (auto-detects day)
  *
- *  ┌────────────────────────────────────────────┐
- *  │ ← 返回   總覽 · 7/29 – 8/4  |  DAY NN ...  │  52px topbar
- *  ├────────────────────────────────────────────┤
- *  │                                            │
- *  │          TpMap (flyTo activeEntry       │  flex-1
- *  │          or fitBounds in overview)         │
- *  ├────────────────────────────────────────────┤
- *  │ 總覽 · 7天  DAY 01 · 7/29  DAY 02 · ···   │  day tabs (snap-scroll)
- *  ├────────────────────────────────────────────┤
- *  │ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ···           │  entry cards (snap-scroll)
- *  │ │D1 10:45│ │D1 12:10│ │D2 13:00│ ···      │  (D{N} prefix only in overview)
- *  │ └────┘ └────┘ └────┘ └────┘                │
- *  └────────────────────────────────────────────┘
+ *  TitleBar → map viewport (floating day strip) → entry card rail → mobile navigation.
+ *  The map viewport ends above the card rail to expose Google's native attribution.
  */
 
-import AuthStatus from '../components/shared/AuthStatus';
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
-import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
+import { useTripSelection } from '../hooks/useMyTrips';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
 import { dayColor, dayTextColor } from '../lib/dayPalette';
 import { findEntryInDays } from '../lib/mapDay';
@@ -50,33 +38,51 @@ const TpMap = lazyWithRetry(() => import('../components/trip/TpMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {
-  /* rev2 owner 2026-07-19：地圖頁改 full-bleed —— 地圖填滿、day tab 浮頂、POI 卡浮底、
-   * 都疊在地圖上（無白帶）。原 flex column（地圖 body → day tab → POI 白帶堆疊）改為
-   * relative 定位容器 + 絕對定位浮層。height:100% 填 main content-area（AppShell 已為
-   * bottom-nav 留 padding，浮層 bottom 相對 wrap 即在 nav 之上）。 */
+  /* Map viewport ends above the card rail so Google's native attribution stays visible. */
   height: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
   background: var(--color-background);
   overflow: hidden;
 }
 .map-page-body {
-  position: absolute;
-  /* owner 2026-07-19：地圖從 titlebar **下方**開始填（非跑到 titlebar 下），否則 Google
-   * TOP_LEFT 的 +/- 縮放鍵被浮動 titlebar 蓋。仍 full-bleed（填滿 titlebar 以下、無白帶）、
-   * day tab 仍浮頂、POI 仍浮底；縮放鍵在 titlebar 下方正常露出。 */
-  top: var(--titlebar-h, 64px);
-  left: 0; right: 0;
-  bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
+  position: relative;
+  flex: 1;
+  min-height: 0;
   z-index: 0;
 }
-.map-page-list-link {
-  position: absolute; top: calc(var(--titlebar-h, 64px) + 64px); left: 12px;
-  z-index: 5; padding: 10px 12px; min-height: 44px; border-radius: var(--radius-md);
-  background: var(--color-background); color: var(--color-accent-text); font-size: var(--font-size-footnote);
-}
 .map-page-body > * { width: 100%; height: 100%; }
-.map-page-body > .tp-map-fabs { bottom: 24px; }
-.map-page-wrap > .tp-titlebar { position: relative; z-index: 3; }
+.map-page-body > .tp-map-fabs { bottom: 42px; width: max-content; height: max-content; }
+.map-page-wrap > .tp-titlebar { position: relative; z-index: 3; flex: none; }
+
+/* Map-load failure: selected prototype A. Keep Day tabs and entry cards usable. */
+.map-page-body .tp-page-error {
+  position: absolute;
+  top: 70px;
+  left: 12px; right: 12px;
+  padding: 14px;
+  color: var(--color-destructive);
+  background: var(--color-destructive-bg);
+  border: 1px solid color-mix(in srgb, var(--color-destructive) 24%, transparent);
+  border-radius: 8px;
+  max-height: calc(100% - 170px);
+  overflow-y: auto;
+}
+.map-page-body .tp-page-error-title { margin: 0 0 5px; font-weight: 700; }
+.map-page-body .tp-page-error-desc { margin: 0 0 12px; }
+.map-page-body .tp-page-error-btn,
+.map-page-body .tp-page-error-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--spacing-tap-min);
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.map-page-body .tp-page-error-btn { border: 1px solid var(--color-destructive); background: var(--color-destructive); color: var(--color-accent-foreground); margin-right: 8px; cursor: pointer; }
+.map-page-body .tp-page-error-link { border: 1px solid var(--color-destructive); background: var(--color-background); color: var(--color-destructive); }
 
 /* ===== Loading state — shimmer canvas + accent spinner（mockup Section 20） ===== */
 .map-page-loading {
@@ -158,11 +164,19 @@ const SCOPED_STYLES = `
   z-index: 5;
   max-width: calc(100% - 24px);
 }
+/* #1445 F21：深色下底圖仍是淺色（owner 決定地圖不隨主題），低 tint 玻璃讓標籤字（muted）疊在亮圖磚上
+ * 讀不清，整條還偏青綠。最壞情況是白底圖：標籤 4.5:1 需底色 ≳0.88 不透明，這裡取 90%。
+ * 「降低透明度」時整條轉不透明（--tabbar-tint 在 body 上的降級值被這條更近的宣告蓋住，所以要自己再給一次）。 */
+body.dark .map-page-wrap > .tp-map-day-tabs {
+  --tabbar-tint: color-mix(in srgb, var(--color-background) 90%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  body.dark .map-page-wrap > .tp-map-day-tabs { --tabbar-tint: var(--color-secondary); }
+}
 .map-page-cards {
-  position: absolute;
-  /* Leave the provider attribution visible and reserve the right control column. */
-  bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px) + 24px);
-  left: 0; right: 72px;
+  position: relative;
+  flex: none;
+  margin-top: 10px;
   z-index: 5;
   /* 無白帶（原 .tp-map-entry-cards 的 background + border-top 在此清掉）。 */
   background: transparent;
@@ -174,9 +188,9 @@ const SCOPED_STYLES = `
 }
 /* POI 卡改玻璃（浮在地圖上、非白底）：夠不透明 + blur + 邊界 + 陰影，對齊 day tab 玻璃質感。 */
 .map-page-cards .tp-map-entry-card {
-  background: color-mix(in srgb, var(--color-background) 88%, transparent);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  /* recipe：tokens.css 的 .tp-glass（class 掛在 MapEntryCard）。#1445 F6：卡片列一次 N 張（production 38 張），
+   * 每張各一層 backdrop-filter 與「玻璃宜少用」相悖，也是繪製成本；底色維持 88% tint，不再各自模糊（none）。 */
+  --glass-alpha: 88%; --glass-filter: none;
   border: 1px solid color-mix(in srgb, var(--color-foreground) 10%, transparent);
   box-shadow: 0 8px 24px rgba(42, 31, 24, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
@@ -187,11 +201,6 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
 }
 
-@media (max-height: 500px) {
-  .map-page-body > .tp-map-fabs { flex-direction: row; }
-  .map-page-cards { right: 122px; max-height: calc((100% - var(--titlebar-h, 64px) - var(--nav-overlay-h, 0px) - env(safe-area-inset-bottom, 0px)) / 2 - 48px); overflow-y: auto; }
-}
-
 @media (max-width: 760px) {
   .map-page-cards .tp-map-entry-card { flex: 0 0 200px; }
 }
@@ -200,7 +209,7 @@ const SCOPED_STYLES = `
  * 单張卡片撐開寬度即可（GooglePoiCard 自帶玻璃樣式）。
  *
  * owner 2026-07-22：「地圖單獨模式選 Google POI 開啟的顯示區域要置中」。
- * 外層 .map-page-cards 是 absolute + left:0/right:0 撐滿欄寬，這張是單張 block
+ * 外層 .map-page-cards 撐滿欄寬，這張是單張 block
  * 卡、又有 max-width:420px，沒有 auto margin 就會貼左。旁邊那排行程 POI 卡是
  * 刻意靠左的橫向 strip（owner 先前「夠寬靠左」），不受影響 —— 只有這個單卡插槽置中。 */
 .map-page-google-poi-slot {
@@ -235,25 +244,20 @@ interface DayTab {
 /* ===== Component ===== */
 
 export default function MapPage() {
-  const { tripId, entryId } = useParams();
-  return <TripMapPage key={`${tripId}:${entryId ?? ''}`} />;
-}
-
-function TripMapPage() {
   const { tripId, entryId: entryIdStr } = useParams<{ tripId: string; entryId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { trip, allDays, loading, error } = useTripContext();
+  const { user } = useCurrentUser();
+  const { trips } = useTripSelection(user?.id, { explicitTripId: tripId });
 
-  const auth = useCurrentUser();
-  const { user } = auth;
-  const { trips, setActiveTrip } = useAccessibleTripSelection(user?.id, tripId);
-
+  /* trip 切換：清單餵給 <TripTitleSwitcher/>（標題即切換器，owner 2026-07-21）。
+   * 開合與 outside-click 由該元件自理，本頁不再持有 menu state。
+   * pickTrip → navigate /trip/:newId/map（整頁切換 trip context）。 */
   const pickTrip = useCallback((newTripId: string) => {
     if (newTripId === tripId) return;
-    setActiveTrip(newTripId);
     navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
-  }, [tripId, navigate, setActiveTrip]);
+  }, [tripId, navigate]);
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
 
@@ -287,13 +291,17 @@ function TripMapPage() {
     return 'overview';
   }, [allDays, urlEntryId, searchParams]);
 
-  const activeTab = initialTab;
+  const [activeTab, setActiveTab] = useState<'overview' | number>(initialTab);
   const isOverview = activeTab === 'overview';
 
   // Section 4.10：MapFabs 需要 google.maps.Map instance；TpMap 透過 onMapReady prop
   // 在 mount 時 surface ref，unmount 時 reset 為 null。
   const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
 
+  // Keep activeTab synced with URL on first load
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   /* --- Pins: overview vs single day --- */
   const overviewData = useMemo(() => {
@@ -301,9 +309,12 @@ function TripMapPage() {
   }, [isOverview, allDays]);
 
   const currentDay = !isOverview && typeof activeTab === 'number' ? allDays?.[activeTab] : undefined;
-  const singleDayData = useMemo(() => currentDay ? extractPinsFromDay(currentDay) : { pins: [], missingCount: 0 }, [currentDay]);
+  const singleDayData = useMemo(() => {
+    if (!currentDay) return { pins: [], missingCount: 0 };
+    return extractPinsFromDay(currentDay);
+  }, [currentDay]);
   const singleDayPins = singleDayData.pins;
-  const missingCount = overviewData?.missingCount ?? singleDayData.missingCount;
+  const missingCount = isOverview ? (overviewData?.missingCount ?? 0) : singleDayData.missingCount;
 
   // Flat pins passed to TpMap (overview aggregates all days)
   const mapPins: MapPin[] = useMemo(() => {
@@ -329,10 +340,7 @@ function TripMapPage() {
     return m;
   }, [overviewData]);
 
-  const [selection, setSelection] = useState<{ tab: 'overview' | number; id: number } | null>(null);
-  const candidateId = selection?.tab === activeTab ? selection.id : urlEntryId;
-  const activeEntryId = candidateId != null && cardEntryPins.some(pin => pin.id === candidateId)
-    ? candidateId : isOverview ? null : (cardEntryPins[0]?.id ?? null);
+  const [activeEntryId, setActiveEntryId] = useState<number | null>(urlEntryId);
 
   // owner 2026-07-21「地圖點選 Google POI」：Google 原生 POI 圖示（非我們自己的
   // 行程 pin）被點擊時顯示的底部卡片（對齊 Flutter TripMapScreen 的
@@ -340,16 +348,29 @@ function TripMapPage() {
   // 空白處也清掉。
   const [selectedGooglePoi, setSelectedGooglePoi] = useState<GooglePoiClick | null>(null);
   const clearSelectedGooglePoi = useCallback(() => setSelectedGooglePoi(null), []);
-  useEffect(clearSelectedGooglePoi, [activeTab, clearSelectedGooglePoi]);
+
+  // Keep a pin selected from overview when entering its day; otherwise use the
+  // first card. Overview without an explicit entry stays unfocused for fitBounds.
+  useEffect(() => {
+    if (urlEntryId != null && cardEntryPins.some((p) => p.id === urlEntryId)) {
+      setActiveEntryId(urlEntryId);
+      return;
+    }
+    setActiveEntryId((current) => {
+      if (isOverview) return null;
+      return current != null && cardEntryPins.some((p) => p.id === current)
+        ? current
+        : (cardEntryPins[0]?.id ?? null);
+    });
+  }, [activeTab, urlEntryId, cardEntryPins, isOverview]);
 
   /* --- Switch tab --- */
   const handleTabClick = useCallback((tab: 'overview' | number) => {
-    setSelection(null);
-    setSelectedGooglePoi(null);
+    setActiveTab(tab);
     const dayParam = tab === 'overview' ? 'all' : String(tab);
     // Strip entry segment when switching tab via URL
     if (urlEntryId != null) {
-      navigate(`/trip/${encodeURIComponent(tripId ?? '')}/map?day=${dayParam}`);
+      navigate(`/trip/${tripId}/map?day=${dayParam}`);
     } else {
       const next = new URLSearchParams(searchParams);
       next.set('day', dayParam);
@@ -380,10 +401,9 @@ function TripMapPage() {
     const cards = Array.from(container.querySelectorAll<HTMLElement>('[data-card-entry-id]'));
     if (cards.length === 0) return;
 
-    let observing = true;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!observing || scrollingProgrammatically.current) return;
+        if (scrollingProgrammatically.current) return;
         // Pick the most-visible card (threshold ≥ 0.6 means pretty centred)
         const mostVisible = entries
           .filter((e) => e.isIntersecting && e.intersectionRatio > 0.5)
@@ -391,7 +411,7 @@ function TripMapPage() {
         if (mostVisible) {
           const id = Number((mostVisible.target as HTMLElement).dataset.cardEntryId);
           if (Number.isFinite(id)) {
-            setSelection(prev => prev?.tab === activeTab && prev.id === id ? prev : { tab: activeTab, id });
+            setActiveEntryId((prev) => (prev === id ? prev : id));
           }
         }
       },
@@ -399,29 +419,47 @@ function TripMapPage() {
     );
 
     cards.forEach((c) => observer.observe(c));
-    return () => { observing = false; observer.disconnect(); };
+    return () => observer.disconnect();
     // selectedGooglePoi 納入 deps：顯示 GooglePoiCard 時 entry-cards 容器（ref={cardsRef}）
     // 被三元換掉、關閉後是全新 DOM 節點；沒有這個 dep，observer 不重建仍觀察舊的脫離節點，
     // 卡片捲動 → active entry / day tab 同步（scroll-spy）在 POI 卡開關一輪後失效。
   }, [cardEntryPins, activeTab, selectedGooglePoi]);
 
-  /* The URL owns the day; explicit selection owns the pin within that day. */
+  /* --- Card click → scroll into view + set active + sync day nav (v2.31.81 #1) --- */
   const handleCardClick = useCallback((entryId: number) => {
-    const targetTab = isOverview ? (entryDayMap.get(entryId) ?? activeTab) : activeTab;
-    if (targetTab !== activeTab) handleTabClick(targetTab);
+    setActiveEntryId((prev) => (prev === entryId ? prev : entryId));
+    // 選行程自己的 stop 時，若正顯示 Google POI 卡則清掉（對齊 Flutter _selectStop
+    // 同時清 _selectedGooglePoi 的行為 — 兩種底部卡互斥）。
     setSelectedGooglePoi(null);
-    setSelection({ tab: targetTab, id: entryId });
-  }, [activeTab, isOverview, entryDayMap, handleTabClick]);
-
-  useEffect(() => {
-    const targetId = activeEntryId ?? cardEntryPins[0]?.id;
-    const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${targetId}"]`);
+    // v2.31.81 #1：overview 模式 user 點 map pin 時，day nav 沒切到該 entry 的
+    // 那一天 — 用 entryDayMap 反查 dayNum，call handleTabClick 同步。
+    if (isOverview) {
+      const targetDay = entryDayMap.get(entryId);
+      if (typeof targetDay === 'number') {
+        handleTabClick(targetDay);
+      }
+    }
+    const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${entryId}"]`);
     if (!el) return;
     scrollingProgrammatically.current = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    setTimeout(() => { scrollingProgrammatically.current = false; }, 400);
+  }, [isOverview, entryDayMap, handleTabClick]);
+
+  /* --- On tab change / initial mount: scroll active card into centre BEFORE IO stabilises --- */
+  useEffect(() => {
+    if (cardEntryPins.length === 0) return;
+    const targetId = activeEntryId ?? cardEntryPins[0]!.id;
+    const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${targetId}"]`);
+    if (!el || !cardsRef.current) return;
+    scrollingProgrammatically.current = true;
     el.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-    const timer = setTimeout(() => { scrollingProgrammatically.current = false; }, 300);
-    return () => { clearTimeout(timer); scrollingProgrammatically.current = false; };
-  }, [activeEntryId, cardEntryPins, selectedGooglePoi]);
+    const t = setTimeout(() => { scrollingProgrammatically.current = false; }, 300);
+    return () => clearTimeout(t);
+    // selectedGooglePoi 納入 deps：同上，POI 卡關閉後 entry-cards 重新掛載，需重跑一次
+    // 把 active 卡捲回中央（新節點的 cardsRef 才對得上）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, cardEntryPins.length, selectedGooglePoi]);
 
   // MapPage 是 /trip/:id/map(從行程詳情下鑽的 trip-scoped 地圖)→ 顯 back 回行程詳情
   // 是 HIG drill-down 語意(見下方 TitleBar back)。〔2026-04-29 v2.17.14「地圖不需要回前頁」
@@ -436,7 +474,7 @@ function TripMapPage() {
         // v2.31.81：title bar 對齊 ChatPage 格式 — 左 trip name，右 icon-only picker。
         title={
           <TripTitleSwitcher
-            label={trip?.title || trip?.name || '地圖'}
+            label={trip?.title || trip?.name || tripId || '地圖'}
             trips={trips ?? []}
             activeTripId={tripId ?? null}
             onPick={pickTrip}
@@ -448,7 +486,6 @@ function TripMapPage() {
       />
 
       <main className="map-page-body">
-        {user === undefined && <AuthStatus auth={auth} />}
         {loading ? (
           <div className="map-page-loading" role="status" aria-busy="true" aria-live="polite">
             <div className="map-page-loading-stack">
@@ -456,14 +493,21 @@ function TripMapPage() {
               <p className="map-page-loading-text">地圖載入中…</p>
             </div>
           </div>
-        ) : error || mapPins.length === 0 ? (
+        ) : error ? (
+          <div className="map-page-empty" role="alert">
+            <div className="map-page-empty-card">
+              <p className="map-page-empty-title">無法載入此行程地圖</p>
+              <p className="map-page-empty-text">{error}</p>
+            </div>
+          </div>
+        ) : mapPins.length === 0 ? (
           <div className="map-page-empty">
-            <div className="map-page-empty-card" role={error ? 'alert' : undefined}>
+            <div className="map-page-empty-card">
               <span className="map-page-empty-icon" aria-hidden="true">
                 <Icon name="map" />
               </span>
-              <p className="map-page-empty-title">{error ? '行程資料載入失敗' : missingCount > 0 ? '景點尚無可用座標' : isOverview ? '這趟行程尚無景點' : '此日尚無景點'}</p>
-              <p className="map-page-empty-text">{error ? '請回到行程列表重新載入。' : missingCount > 0 ? '仍可在行程列表查看這些景點。' : '切換其他日期、或回到行程加入景點。'}</p>
+              <p className="map-page-empty-title">{missingCount > 0 ? '景點尚未設定位置' : isOverview ? '這趟行程尚無景點' : '此日尚無景點'}</p>
+              <p className="map-page-empty-text">{missingCount > 0 ? '回到行程補上位置，或切換其他日期。' : '切換其他日期、或回到行程加入景點。'}</p>
             </div>
           </div>
         ) : (
@@ -489,19 +533,16 @@ function TripMapPage() {
               onMarkerClick={handleCardClick}
               onPoiClick={setSelectedGooglePoi}
               onMapClick={clearSelectedGooglePoi}
-              /* owner ⑦ 補修（2026-07-20 prod QA）：預設 TOP_LEFT 的 Google 縮放鍵被
-               * 浮頂 day tab 膠囊蓋住（實測 + 鍵 y67-107 vs 膠囊 y68-112 全覆蓋）。
-               * full-bleed 地圖上緣被 day tab、下緣被 POI 卡、右下被 MapFabs 佔用 →
-               * 右側垂直中段是唯一乾淨區，改用官方 RIGHT_CENTER（非 hack Google 內部 class）。 */
-              zoomControlPosition="RIGHT_CENTER"
+              /* The shorter viewport keeps Google's footer above the cards. Put official
+               * zoom controls opposite the right-side MapFabs so both remain usable. */
+              zoomControlPosition="LEFT_CENTER"
+              errorAction={<Link className="tp-page-error-link" to={tripId ? `/trips?selected=${encodeURIComponent(tripId)}` : '/trips'}>查看行程</Link>}
             />
           </Suspense>
         )}
-        {/* Section 4.10：右下 FAB stack — 圖層切換 + 我的位置 */}
-        <MapFabs map={googleMap} />
+        {/* Map controls require a loaded map; disabled controls otherwise cover the error action at narrow widths. */}
+        {googleMap && <MapFabs map={googleMap} />}
       </main>
-
-      <Link aria-label="查看行程列表" className="map-page-list-link" to={`/trip/${encodeURIComponent(tripId ?? '')}`}>查看行程列表</Link>
 
       {dayTabs.length > 1 && (
         <nav
@@ -541,7 +582,7 @@ function TripMapPage() {
         <div className="tp-map-entry-cards map-page-cards" ref={cardsRef} role="list">
           {cardEntryPins.length === 0 ? (
             <div className="map-page-card-empty">
-              {error ? '無法取得景點' : missingCount > 0 ? '無可顯示的地圖標記' : isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
+              {missingCount > 0 ? '景點尚未設定位置' : isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
             </div>
           ) : (
             cardEntryPins.map((pin) => {

@@ -8,29 +8,23 @@
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-101432.md
  * Mockup: docs/design-sessions/2026-05-30-trip-print-document.html (Variant A)
  */
-import AuthStatus from '../components/shared/AuthStatus';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import TripPrintDocument from '../components/print/TripPrintDocument';
 import ShareLinkModal from '../components/share/ShareLinkModal';
-import { useBrowserPrint } from '../hooks/useBrowserPrint';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { loadTripPrintData, type TripPrintData } from '../lib/tripPrintData';
 import { PRINT_CSS } from '../lib/tripPrintStyles';
 
 export default function TripPrintPage() {
-  const auth = useRequireAuth();
+  useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
-  return auth.user ? <PrintPreview key={tripId} tripId={tripId} /> : <AuthStatus auth={auth} />;
-}
-
-function PrintPreview({tripId}: {tripId: string | undefined}) {
   const navigate = useNavigate();
-  const browserPrint = useBrowserPrint();
-  const [attempt, setAttempt] = useState(0);
   const [data, setData] = useState<TripPrintData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [printStatus, setPrintStatus] = useState<'sent' | 'error' | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
@@ -38,27 +32,40 @@ function PrintPreview({tripId}: {tripId: string | undefined}) {
     let alive = true;
     setData(null);
     setError(null);
+    setPrintStatus(null);
     loadTripPrintData(tripId)
       .then((d) => { if (alive) setData(d); })
       .catch(() => { if (alive) setError('行程載入失敗，請稍後重試'); });
     return () => { alive = false; };
-  }, [tripId, attempt]);
+  }, [tripId, loadAttempt]);
 
   // PR14 convention: explicit back URL, never a silent history pop.
   const onClose = useCallback(() => {
     navigate(`/trips?selected=${encodeURIComponent(tripId ?? '')}`);
   }, [navigate, tripId]);
 
+  const onPrint = useCallback(() => {
+    if (!data) return;
+    try {
+      window.print();
+      setPrintStatus('sent');
+    } catch {
+      setPrintStatus('error');
+    }
+  }, [data]);
+
   return (
     <div className="tp-print-page">
       <style>{PRINT_CSS}</style>
       <div className="tp-print-toolbar">
-        <span className="tp-print-route">列印預覽</span>
+        <span className="tp-print-route" role={printStatus === 'error' ? 'alert' : 'status'}>
+          {printStatus === 'error' ? '列印失敗，請重試' : printStatus === 'sent' ? '已送出列印指令' : '列印預覽'}
+        </span>
         <button
           type="button"
           className="tp-print-btn tp-print-btn-primary"
-          onClick={browserPrint.print}
-          disabled={!data || browserPrint.busy}
+          onClick={onPrint}
+          disabled={!data}
           data-testid="trip-print-do"
         >
           <Icon name="printer" /> 列印
@@ -67,7 +74,7 @@ function PrintPreview({tripId}: {tripId: string | undefined}) {
           type="button"
           className="tp-print-btn tp-print-btn-ghost"
           onClick={() => setShareOpen(true)}
-          disabled={!data || browserPrint.busy}
+          disabled={!data}
           data-testid="trip-print-share"
         >
           <Icon name="copy" /> 分享連結
@@ -82,13 +89,14 @@ function PrintPreview({tripId}: {tripId: string | undefined}) {
         </button>
       </div>
 
-      {browserPrint.message && <div className="tp-print-feedback" role={browserPrint.error ? 'alert' : 'status'}>{browserPrint.message}</div>}
       {tripId && <ShareLinkModal tripId={tripId} open={shareOpen} onClose={() => setShareOpen(false)} />}
 
       {error ? (
-        <div className="tp-print-state" role="alert" data-testid="trip-print-error">{error} <button type="button" className="tp-print-btn" onClick={() => setAttempt(value => value + 1)}>重新載入列印資料</button></div>
+        <div className="tp-print-state" data-testid="trip-print-error" role="alert">
+          {error} <button type="button" className="tp-print-btn tp-print-btn-ghost" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>重試載入</button>
+        </div>
       ) : !data ? (
-        <div className="tp-print-state" role="status" data-testid="trip-print-loading">載入中…</div>
+        <div className="tp-print-state" data-testid="trip-print-loading">載入中…</div>
       ) : (
         <TripPrintDocument data={data} />
       )}

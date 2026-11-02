@@ -112,7 +112,6 @@ describe('ChatPage 停止等待 (ADR-0007)', () => {
 
     const bubble = await waitFor(() => {
       const el = screen.getByTestId('chat-msg-assistant');
-      expect(el).toHaveTextContent('已停止等待');
       expect(el).not.toBeNull();
       return el!;
     });

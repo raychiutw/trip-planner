@@ -65,6 +65,8 @@ describe('ForgotPasswordPage', () => {
 
     await waitFor(() => expect(screen.queryByTestId('forgot-banner-warning')).toBeTruthy());
     expect(screen.getByTestId('forgot-banner-warning').textContent).toContain('網路');
+    expect(screen.getByTestId('forgot-email')).toBeTruthy();
+    expect(screen.queryByText(/查看你的信箱/)).toBeNull();
   });
 
   it('trims email before POST', async () => {
@@ -81,5 +83,19 @@ describe('ForgotPasswordPage', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string) as { email: string };
     expect(body.email).toBe('u@x.com');
+  });
+
+  it('deduplicates a pending request', async () => {
+    vi.useRealTimers();
+    let resolve!: (value: Response) => void;
+    const fetchMock = vi.fn(() => new Promise<Response>((done) => { resolve = done; }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
+    fireEvent.change(screen.getByTestId('forgot-email'), { target: { value: 'u@x.com' } });
+    fireEvent.submit(screen.getByTestId('forgot-submit').closest('form')!);
+    fireEvent.submit(screen.getByTestId('forgot-submit').closest('form')!);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await waitFor(() => expect(screen.getByText(/查看你的信箱/)).toBeTruthy());
   });
 });

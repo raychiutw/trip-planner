@@ -26,7 +26,7 @@ describe('v2.31.55 AddStopPage landing empty state', () => {
   it('搜尋 tab + category=all + query 空 empty state 不再 gate 在 poiFavorites', () => {
     // 條件式 conjunctive group：searching=false + query.trim().length===0 + category==='all'
     // 後面直接 render 「輸入關鍵字搜尋」，不再有 `poiFavorites && poiFavorites.length > 0` gate
-    const block = SRC.match(/!searching && query\.trim\(\)\.length === 0 && category === 'all'[^\n]*\n[\s\S]{0,300}?輸入關鍵字搜尋/);
+    const block = SRC.match(/searchState\.status === 'idle' && query\.trim\(\)\.length === 0 && category === 'all'[^\n]*\n[\s\S]{0,300}?輸入關鍵字搜尋/);
     expect(block).not.toBeNull();
     // 確認該段 block 之前/條件式內沒有 poiFavorites 字樣（gate 已移除）
     if (block) {

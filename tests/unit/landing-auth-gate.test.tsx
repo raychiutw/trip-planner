@@ -27,10 +27,17 @@ import { AUTH_HINT_KEY, readAuthHint, writeAuthHint } from '../../src/lib/authHi
 
 /**
  * /trips 的替身必須跟真的一樣呼叫 useCurrentUser —— 真實的 TripsListPage 走
- * useRequireAuth()，而那個 hook 內部就是 useCurrentUser。這件事對「樂觀判斷猜錯」
- * 的案例是關鍵：LandingPage 一旦轉址就 unmount，它自己的 userinfo 請求會被
- * AbortController 取消，永遠等不到回應 —— hint 的校正**必然**發生在目標頁那端。
- * 替身若只是一個靜態 div，測到的就不是產品真正的行為。
+ * useRequireAuth()，而那個 hook 內部就是 useCurrentUser。
+ *
+ * hint 校正的機制：`writeAuthHint()` 掛在 fetchCurrentUser() 自己的
+ * .then/.catch（見 src/hooks/useCurrentUser.ts），跟任何 hook instance 是否
+ * 還掛載無關 —— LandingPage mount 時觸發的那次 fetch，就算它自己已經因為轉址
+ * unmount，也照樣會落地並寫 hint（改用共享 in-flight promise、不再靠
+ * AbortController 取消）。所以 hint 校正**不是**靠 TripsStub 才發生的。
+ *
+ * TripsStub 呼叫 useCurrentUser() 真正驗證的是「使用者轉址後看到的畫面本身
+ * 是否正確」：真實的 TripsListPage 用同一個 hook 決定要不要顯示內容，替身若
+ * 只是一個靜態 div，測到的就不是產品真正會不會正確渲染的行為。
  */
 function TripsStub() {
   useCurrentUser();
@@ -127,7 +134,7 @@ describe('LandingPage — 已登入者不渲染行銷頁', () => {
     renderLanding();
     // 首次 paint 仍照 hint 轉址（這就是樂觀的意思）
     expect(screen.getByTestId('trips-page')).toBeTruthy();
-    // 校正由目標頁的 auth guard 完成（LandingPage 此時已 unmount）。
+    // fetch 回應落地後 writeAuthHint(false) 清掉錯誤的樂觀 hint（見 useCurrentUser.ts）。
     await waitFor(() => expect(readAuthHint()).toBe(false));
   });
 

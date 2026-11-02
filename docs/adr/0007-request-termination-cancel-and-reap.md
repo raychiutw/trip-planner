@@ -52,3 +52,19 @@
 筆記期限由 job 的 `timeout_at` 判斷，在讀取 AI state、建立下一代、及處理尚未終結 request 的非 failed 更新時檢查。收尾只更新該 request 的 job，不以舊 generation 覆寫新筆記。
 
 100 分鐘判斷留在 SQLite，寫入時再比對觀察到的活動時間；worker 若已恢復活動，就不套用這次逾時。mint 的自動終結只更新仍在等待的 request；檢查 Consent 期間若已有終結回報，保留該回報。各入口仍先執行原本權限檢查，mint 重試始終拒發 terminal request 的 token。worker 90 分鐘上限不在此流程修改。
+
+## 更新（2026-10-27）：contained 路徑改為 `claude -p`
+
+contained `/tp-request` 不再是常駐 tmux REPL + watcher：每輪是一個 `claude -p` process，結束即處理完（最多 `PRINT_MAX_ROUNDS`=3 輪 × 單輪 30 分鐘逾時，約 91 分鐘）。上文「session 的 `tripHasPending()` 自己 kill-session」的機制只剩 plain tmux session（`/tp-daily-check`）還適用；`ORPHAN_MAX_AGE_MS`（90 分鐘）仍是 `cleanupOrphans` 的上限，所以「牆鐘必須大於它」的不變量不變（由 `request-worker.test.ts` 鎖住），contained 路徑最壞情況（3 輪都跑滿）約 91 分鐘，仍小於 100 分鐘牆鐘，但餘裕只有幾分鐘；通常一輪數秒到數分鐘就結束。
+
+第一層收屍的範圍也收窄了：只收「該輪開始時就在隊列」（已被嘗試過）的請求，之後才到的新請求留給下一個 tick；原因 `timed_out` 只給真的逾時，其餘一律 `error`。細節見 `scripts/tp-request-contained/README.md`。
+
+
+## 補充（2026-10-31 自 GLOSSARY 併入）
+
+這幾條原本寫在詞彙表裡，是終結行為的約定而不是詞彙：
+
+- **第一次確立的終結狀態與原因不被後來的通知改寫。** request 先終結，健檢與筆記再各自獨立收尾；收尾時關聯查詢或寫入暫時失敗，可重送終結通知補做。
+- **已保存的健檢 findings 不重新解析成空資料；遲到的回覆不復活 request**，筆記沿用既有的 generation 與人工資料保護。
+- **對話端把「停止等待」當中性態，真正的失敗保留失敗態。** 完成但沒有 reply 也不再等待；終結後仍以原 request 身分接收遲到回覆，合併進原泡泡、不重新鎖住輸入框。
+- **未完成的回報要能自己補回。** 定期及切回頁面時補讀可見的未完成請求；暫時的讀取失敗保留已知狀態並重試。

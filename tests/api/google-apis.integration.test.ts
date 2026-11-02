@@ -5,71 +5,64 @@
  *   - GET /api/poi-search — Places Text Search (with D1 24h cache)
  *   - GET /api/route — Routes API (DRIVE mode)
  *
- * Strategy: vi.mock '../../src/server/maps/google-client' 避免實打 Google API（cost + flaky）。
- * 測 validation / rate limit / cache hit-miss / kill switch / 500 上游錯誤 / polyline decode。
+ * 走 HTTP 邊界（tests/api/http.ts）；Google 是外部邊界，用 tests/api/google-stub.ts
+ * 攔截 global fetch —— 不 mock google-client 模組，所以 field mask、method、金鑰 header、
+ * request body 與對回應的處理都是真實 google-client 的行為，並在這裡明確斷言。
+ * 共用 D1：專屬 IP（rate-limit bucket）與 `s10-` 前綴的 query（快取列），結束時清掉。
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, callHandler } from './helpers';
+import { mockEnv } from './helpers';
+import { createApi, type Api } from './http';
+import { stubGoogle, jsonOk } from './google-stub';
+import { invalidateLockCache } from '../../functions/api/_maps_lock';
 import type { Env } from '../../functions/api/_types';
-
-// Mock google-client — handlers import via this exact path
-vi.mock('../../src/server/maps/google-client', () => ({
-  // 2026-07-29：poi-search 改呼叫 searchPlacesPage（回 { results, nextPageToken }）
-  // 以支援探索頁的「捲到底載更多」。searchPlaces 薄包裝仍在，供不需分頁的呼叫端用。
-  searchPlacesPage: vi.fn(),
-  searchPlaces: vi.fn(),
-  computeRoute: vi.fn(),
-}));
-
-// Re-import after mock so handlers + tests get mocked versions
-const { onRequestGet: poiSearchHandler } = await import('../../functions/api/poi-search');
-const { onRequestGet: routeHandler } = await import('../../functions/api/route');
-const { searchPlacesPage, computeRoute } = await import('../../src/server/maps/google-client');
 
 let db: D1Database;
 let env: Env;
+let api: Api;
+const google = stubGoogle();
+
+const SEARCH_IP = '203.0.113.101';
+const ROUTE_IP = '203.0.113.102';
+const API_KEY = 'test-api-key';
 
 beforeAll(async () => {
   db = await createTestDb();
-  env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-api-key' });
+  env = mockEnv(db, { GOOGLE_MAPS_API_KEY: API_KEY });
+  api = createApi({ env });
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  google.restore();
+  await db.prepare("DELETE FROM pois_search_cache WHERE query_text LIKE 's10-%'").run();
+  await db.prepare("DELETE FROM rate_limit_buckets WHERE bucket_key LIKE 'poi-search:ip:203.0.113.%' OR bucket_key LIKE 'route:ip:203.0.113.%'").run();
+  await db.prepare("DELETE FROM app_settings WHERE key IN ('google_maps_locked', 'google_maps_locked_reason')").run();
+  invalidateLockCache();
+  await disposeMiniflare();
+});
 
 beforeEach(() => {
-  vi.mocked(searchPlacesPage).mockReset();
-  vi.mocked(computeRoute).mockReset();
+  google.reset();
 });
 
-function callPoiSearch(searchParams: string, ipHeader = '1.2.3.4') {
-  return callHandler(poiSearchHandler, mockContext({
-    request: new Request(`https://test/api/poi-search?${searchParams}`, {
-      method: 'GET',
-      headers: { 'CF-Connecting-IP': ipHeader },
-    }),
-    env,
-    params: {},
-  }));
+function callPoiSearch(searchParams: string, ip = SEARCH_IP) {
+  return api.get(`/api/poi-search?${searchParams}`, { headers: { 'CF-Connecting-IP': ip } });
 }
 
-function callRoute(searchParams: string, ipHeader = '5.6.7.8') {
-  return callHandler(routeHandler, mockContext({
-    request: new Request(`https://test/api/route?${searchParams}`, {
-      method: 'GET',
-      headers: { 'CF-Connecting-IP': ipHeader },
-    }),
-    env,
-    params: {},
-  }));
+function callRoute(searchParams: string, ip = ROUTE_IP) {
+  return api.get(`/api/route?${searchParams}`, { headers: { 'CF-Connecting-IP': ip } });
 }
 
-describe('GET /api/poi-search — validation + rate limit + mock', () => {
+const placesPage = (places: unknown[], nextPageToken?: string) => jsonOk({ places, nextPageToken });
+
+describe('GET /api/poi-search — validation + rate limit + Google 請求', () => {
   it('query < 2 字元 → 400 DATA_VALIDATION', async () => {
     const res = await callPoiSearch('q=a');
     expect(res.status).toBe(400);
     const body = await res.json() as { error: { code: string; detail?: string } };
     expect(body.error.code).toBe('DATA_VALIDATION');
+    expect(google.calls).toHaveLength(0);
   });
 
   it('query > 200 字元 → 400 DATA_VALIDATION', async () => {
@@ -84,78 +77,156 @@ describe('GET /api/poi-search — validation + rate limit + mock', () => {
     expect(res.status).toBe(400);
   });
 
-  it('正常 query → call searchPlacesPage + 200 response + X-Cache=MISS', async () => {
-    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ nextPageToken: null, results: [
+  it('正常 query → call Places searchText + 200 response + X-Cache=MISS', async () => {
+    google.respond(() => placesPage([
       {
-        place_id: 'ChIJxxx',
-        name: '東京鐵塔',
-        address: '東京都港区芝公園',
-        lat: 35.6586,
-        lng: 139.7454,
-        category: 'TOURIST_ATTRACTION',
-        country: 'JP',
-        country_name: '日本',
+        id: 'ChIJxxx',
+        displayName: { text: '東京鐵塔' },
+        formattedAddress: '東京都港区芝公園',
+        location: { latitude: 35.6586, longitude: 139.7454 },
+        primaryType: 'TOURIST_ATTRACTION',
+        addressComponents: [{ shortText: 'JP', longText: '日本', types: ['country'] }],
         rating: 4.4,
       },
-    ] });
-    const res = await callPoiSearch('q=東京鐵塔&region=JP&limit=5');
+    ]));
+    const res = await callPoiSearch('q=s10-東京鐵塔&region=JP&limit=5');
     expect(res.status).toBe(200);
     expect(res.headers.get('X-Cache')).toBe('MISS');
-    const body = await res.json() as { results: Array<{ name: string }> };
+    const body = await res.json() as { results: Array<{ name: string; place_id: string; country: string }> };
     expect(body.results.length).toBe(1);
     expect(body.results[0].name).toBe('東京鐵塔');
-    expect(vi.mocked(searchPlacesPage)).toHaveBeenCalledTimes(1);
+    expect(body.results[0].place_id).toBe('ChIJxxx');
+    expect(body.results[0].country).toBe('JP');
+
+    // 送給 Google 的請求：POST searchText、金鑰在 header（不在 URL）、field mask 含 nextPageToken
+    expect(google.calls).toHaveLength(1);
+    const call = google.calls[0]!;
+    expect(call.method).toBe('POST');
+    expect(call.url).toBe('https://places.googleapis.com/v1/places:searchText');
+    expect(call.url).not.toContain(API_KEY);
+    expect(call.headers.get('X-Goog-Api-Key')).toBe(API_KEY);
+    const mask = call.headers.get('X-Goog-FieldMask')!.split(',');
+    expect(mask).toEqual(expect.arrayContaining(['nextPageToken', 'places.id', 'places.displayName', 'places.location']));
+    expect(call.body).toMatchObject({ textQuery: 's10-東京鐵塔', maxResultCount: 5, languageCode: 'zh-TW', regionCode: 'jp' });
+    expect(call.body).not.toHaveProperty('pageToken');
+    // 回應內容不洩漏金鑰
+    expect(JSON.stringify(body)).not.toContain(API_KEY);
+  });
+
+  it('第二次相同查詢 → 命中 D1 快取（X-Cache=HIT），不再打 Google', async () => {
+    google.respond(() => placesPage([
+      { id: 'ChIJcache', displayName: { text: '快取地點' }, location: { latitude: 1, longitude: 2 } },
+    ]));
+    const first = await callPoiSearch('q=s10-快取命中&region=JP');
+    expect(first.headers.get('X-Cache')).toBe('MISS');
+    // waitUntil 的快取寫入由 http.ts 在回應前等完
+    const second = await callPoiSearch('q=s10-快取命中&region=JP');
+    expect(second.headers.get('X-Cache')).toBe('HIT');
+    expect(google.calls).toHaveLength(1);
+    const body = await second.json() as { results: Array<{ name: string }>; nextPageToken: string | null };
+    expect(body.results[0].name).toBe('快取地點');
+    expect(body.nextPageToken).toBeNull();
   });
 
   it('limit clamp 到 [1, 20]', async () => {
-    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
-    await callPoiSearch('q=test&limit=999');
-    const [, , , limit] = vi.mocked(searchPlacesPage).mock.calls[0]!;
-    expect(limit).toBe(20);
+    google.respond(() => placesPage([]));
+    await callPoiSearch('q=s10-limit-high&limit=999');
+    expect(google.calls[0]!.body!.maxResultCount).toBe(20);
+    await callPoiSearch('q=s10-limit-low&limit=0');
+    // limit=0 走預設 10（parseInt 結果為 0 → falsy → 10）
+    expect(google.calls[1]!.body!.maxResultCount).toBe(10);
+    await callPoiSearch('q=s10-limit-neg&limit=-5');
+    expect(google.calls[2]!.body!.maxResultCount).toBe(1);
   });
 
   it('回應帶 nextPageToken，讓前端知道還有沒有下一頁', async () => {
-    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: 'TOK_2' });
-    const res = await callPoiSearch('q=分頁測試&region=JP');
+    google.respond(() => placesPage([], 'TOK_2'));
+    const res = await callPoiSearch('q=s10-分頁測試&region=JP');
     const body = await res.json() as { nextPageToken: string | null };
     expect(body.nextPageToken).toBe('TOK_2');
   });
 
-  it('帶 pageToken 時把它傳給 searchPlacesPage 且不寫快取（否則第 2 頁會污染首次搜尋）', async () => {
-    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
-    await callPoiSearch('q=快取污染測試&region=JP&pageToken=TOK_2');
-    const call = vi.mocked(searchPlacesPage).mock.calls[0]!;
-    expect(call[5]).toBe('TOK_2');
+  it('帶 pageToken 時把它傳給 Google 且不寫快取（否則第 2 頁會污染首次搜尋）', async () => {
+    google.respond(() => placesPage([], undefined));
+    await callPoiSearch('q=s10-快取污染測試&region=JP&pageToken=TOK_2');
+    expect(google.calls[0]!.body!.pageToken).toBe('TOK_2');
 
     // 同一組 (q, region) 再打一次「首次搜尋」—— 若第 2 頁寫進了快取，這裡會是 HIT
-    // 且拿到第 2 頁內容。應為 MISS。
-    vi.mocked(searchPlacesPage).mockResolvedValueOnce({ results: [], nextPageToken: null });
-    const res2 = await callPoiSearch('q=快取污染測試&region=JP');
+    // 且拿到第 2 頁內容。應為 MISS，且真的再打了一次 Google。
+    const res2 = await callPoiSearch('q=s10-快取污染測試&region=JP');
     expect(res2.headers.get('X-Cache')).toBe('MISS');
+    expect(google.calls).toHaveLength(2);
+    expect(google.calls[1]!.body).not.toHaveProperty('pageToken');
   });
 
-  it('searchPlacesPage throw → handler 不 catch（test framework catches raw Error）', async () => {
-    // Production middleware (Cloudflare Pages) catches uncaught Error → 500。
-    // Test 不 simulate middleware；確認 handler 對 google-client 上游錯誤不額外 try/catch。
-    vi.mocked(searchPlacesPage).mockRejectedValueOnce(new Error('Google 503'));
-    await expect(callPoiSearch('q=test-err&region=JP')).rejects.toThrow('Google 503');
+  it('Google 回 503 → 502 MAPS_UPSTREAM_FAILED（走 middleware 的結構化錯誤）', async () => {
+    // 回應本體是合法的結果 JSON，只有狀態碼是 503 —— 只認狀態碼的實作才不會被本體誤導
+    google.respond(() => jsonOk({
+      places: [{ id: 'ChIJerr', displayName: { text: '不該被採用' }, location: { latitude: 1, longitude: 2 } }],
+    }, 503));
+    const res = await callPoiSearch('q=s10-test-err&region=JP');
+    expect(res.status).toBe(502);
+    const body = await res.json() as { error: { code: string } };
+    expect(body.error.code).toBe('MAPS_UPSTREAM_FAILED');
+  });
+
+  it('GOOGLE_MAPS_API_KEY 缺失 → 502，且不打 Google', async () => {
+    const noKey = createApi({ env: mockEnv(db, { GOOGLE_MAPS_API_KEY: '' }) });
+    const res = await noKey.get('/api/poi-search?q=s10-no-key', { headers: { 'CF-Connecting-IP': SEARCH_IP } });
+    expect(res.status).toBe(502);
+    expect(google.calls).toHaveLength(0);
+  });
+
+  it('kill switch 啟用 → 503 MAPS_LOCKED，且不打 Google', async () => {
+    await db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('google_maps_locked', 'true')").run();
+    invalidateLockCache();
+    try {
+      const res = await callPoiSearch('q=s10-locked');
+      expect(res.status).toBe(503);
+      const body = await res.json() as { error: { code: string } };
+      expect(body.error.code).toBe('MAPS_LOCKED');
+      expect(google.calls).toHaveLength(0);
+    } finally {
+      await db.prepare("DELETE FROM app_settings WHERE key = 'google_maps_locked'").run();
+      invalidateLockCache();
+    }
+  });
+
+  it('同一 IP 超過上限 → 429 RATE_LIMITED + Retry-After，且不打 Google', async () => {
+    const ip = '203.0.113.103';
+    await db.prepare(
+      `INSERT INTO rate_limit_buckets (bucket_key, count, window_start, locked_until) VALUES (?, ?, ?, ?)
+       ON CONFLICT(bucket_key) DO UPDATE SET count = excluded.count, locked_until = excluded.locked_until`,
+    ).bind(`poi-search:ip:${ip}`, 1001, Date.now(), Date.now() + 3600_000).run();
+    const res = await callPoiSearch('q=s10-rate', ip);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(google.calls).toHaveLength(0);
   });
 });
 
-describe('GET /api/route — validation + mock', () => {
+describe('GET /api/route — validation + Google 請求', () => {
   it('缺 from / to → 400 DATA_VALIDATION', async () => {
     const res = await callRoute('from=139.7,35.6');
     expect(res.status).toBe(400);
     const body = await res.json() as { error: { code: string; detail?: string } };
     expect(body.error.code).toBe('DATA_VALIDATION');
+    expect(google.calls).toHaveLength(0);
   });
 
-  it('正常 coords → call computeRoute + 200 + decode polyline + duration / distance', async () => {
-    vi.mocked(computeRoute).mockResolvedValueOnce({
-      polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@', // sample encoded polyline
-      duration_seconds: 1234,
-      distance_meters: 56789,
-    });
+  it('座標超出範圍 → 400', async () => {
+    const res = await callRoute('from=999,35.6&to=139.8,35.7');
+    expect(res.status).toBe(400);
+  });
+
+  it('正常 coords → call computeRoutes + 200 + decode polyline + duration / distance', async () => {
+    google.respond(() => jsonOk({
+      routes: [{
+        polyline: { encodedPolyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@' }, // sample encoded polyline
+        duration: '1234s',
+        distanceMeters: 56789,
+      }],
+    }));
     const res = await callRoute('from=139.7,35.6&to=139.8,35.7');
     expect(res.status).toBe(200);
     const body = await res.json() as {
@@ -165,27 +236,56 @@ describe('GET /api/route — validation + mock', () => {
     };
     expect(Array.isArray(body.polyline)).toBe(true);
     expect(body.polyline.length).toBeGreaterThan(0);
+    // Google 範例 polyline 的第一個點是 (38.5, -120.2)
+    expect(body.polyline[0]).toEqual([38.5, -120.2]);
     expect(body.duration).toBe(1234);
     expect(body.distance).toBe(56789);
-    expect(vi.mocked(computeRoute)).toHaveBeenCalledTimes(1);
-    // mode 應為 DRIVE (v2.30.0 default)
-    const [, , , mode] = vi.mocked(computeRoute).mock.calls[0]!;
-    expect(mode).toBe('DRIVE');
+
+    expect(google.calls).toHaveLength(1);
+    const call = google.calls[0]!;
+    expect(call.method).toBe('POST');
+    expect(call.url).toBe('https://routes.googleapis.com/directions/v2:computeRoutes');
+    expect(call.url).not.toContain(API_KEY);
+    expect(call.headers.get('X-Goog-Api-Key')).toBe(API_KEY);
+    expect(call.headers.get('X-Goog-FieldMask')).toBe('routes.polyline.encodedPolyline,routes.distanceMeters,routes.duration');
+    // mode 應為 DRIVE (v2.30.0 default)；from=lng,lat → latitude/longitude 不可對調
+    expect(call.body).toMatchObject({
+      travelMode: 'DRIVE',
+      origin: { location: { latLng: { latitude: 35.6, longitude: 139.7 } } },
+      destination: { location: { latLng: { latitude: 35.7, longitude: 139.8 } } },
+    });
+    expect(JSON.stringify(body)).not.toContain(API_KEY);
   });
 
-  it('computeRoute throw → handler 不 catch', async () => {
-    vi.mocked(computeRoute).mockRejectedValueOnce(new Error('Routes API 503'));
-    await expect(callRoute('from=139.7,35.6&to=139.8,35.7')).rejects.toThrow('Routes API 503');
+  it('Google 回 503 → 502 MAPS_UPSTREAM_FAILED', async () => {
+    google.respond(() => jsonOk({
+      routes: [{ polyline: { encodedPolyline: '_p~iF~ps|U' }, duration: '100s', distanceMeters: 500 }],
+    }, 503));
+    const res = await callRoute('from=139.7,35.6&to=139.8,35.7');
+    expect(res.status).toBe(502);
+    const body = await res.json() as { error: { code: string } };
+    expect(body.error.code).toBe('MAPS_UPSTREAM_FAILED');
   });
 
   it('Cache-Control: public, max-age=86400 (24h edge cache)', async () => {
-    vi.mocked(computeRoute).mockResolvedValueOnce({
-      polyline: '_p~iF~ps|U',
-      duration_seconds: 100,
-      distance_meters: 500,
-    });
+    google.respond(() => jsonOk({
+      routes: [{ polyline: { encodedPolyline: '_p~iF~ps|U' }, duration: '100s', distanceMeters: 500 }],
+    }));
     const res = await callRoute('from=139.7,35.6&to=139.8,35.7');
     expect(res.headers.get('Cache-Control')).toMatch(/public.*86400/);
+  });
+
+  it('kill switch 啟用 → 503 MAPS_LOCKED，且不打 Google', async () => {
+    await db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('google_maps_locked', 'true')").run();
+    invalidateLockCache();
+    try {
+      const res = await callRoute('from=139.7,35.6&to=139.8,35.7');
+      expect(res.status).toBe(503);
+      expect(google.calls).toHaveLength(0);
+    } finally {
+      await db.prepare("DELETE FROM app_settings WHERE key = 'google_maps_locked'").run();
+      invalidateLockCache();
+    }
   });
 });
 

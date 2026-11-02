@@ -55,6 +55,8 @@ export const APP_SHELL_STYLES = `
 .app-shell-sheet {
   background: var(--color-tertiary);
 }
+/* 深色下 sheet（tertiary）內的 muted／destructive 文字局部提亮：定義在 css/tokens.css
+ * 的 body.dark .app-shell-sheet 規則（#1423；色值一律以 tokens.css 為準）。 */
 
 /* Pull-to-refresh visual indicator. iOS Safari 對 inner scroll container 沒 native
  * pull-to-refresh，自己 implement。indicator 在 main 頂端，translate by pullPx。 */
@@ -134,6 +136,10 @@ export const APP_SHELL_STYLES = `
   left: 50%;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   z-index: var(--z-sticky-nav);
+  /* #1445 F15：fixed + left:50% 的可用寬度只剩半個視窗，膠囊內容（4 × 62px）會往兩側溢出。
+   * max-content 維持原本寬度；max-width 夾在視窗內，200% 縮放（195px）時四個分頁縮小而不被切掉。 */
+  width: max-content;
+  max-width: calc(100vw - 16px);
   transform: translateX(-50%);
   transition: transform var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2, 0.8, 0.2, 1));
   /* v2.56.12：tab 改透明（⑥）+ 功能頁全版鋪到底（v2.56.9）後，這個 fixed overlay 直接壓在
@@ -152,7 +158,6 @@ export const APP_SHELL_STYLES = `
  * （root tab 常駐，只有鍵盤才收）。translateX(-50%) 保持水平置中。 */
 :root[data-kb-open="1"] .app-shell-bottom-nav {
   transform: translate(-50%, calc(100% + 24px));
-  visibility: hidden;
   pointer-events: none;
 }
 

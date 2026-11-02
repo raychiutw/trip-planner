@@ -25,8 +25,7 @@
  *   - 取消走 useNavigateBack(routes.tripsSelected(id)) explicit URL，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -37,6 +36,7 @@ import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
+import { deleteDay } from '../lib/tripMutations';
 import OperationShell from '../components/shell/OperationShell';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
@@ -47,6 +47,7 @@ import { TripSelect } from '../components/TripSelect';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { handleSearchOptionKeys } from '../lib/searchOptionKeys';
 import type { PoiSearchResult } from '../types/poi';
 
 interface DestinationRow {
@@ -682,11 +683,6 @@ function destNamesEqual(a: DestinationRow[], b: DestinationRow[]): boolean {
 }
 
 export default function EditTripPage() {
-  const {tripId} = useParams<{tripId: string}>();
-  return <TripEditor key={tripId} />;
-}
-
-function TripEditor() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
   const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
@@ -708,17 +704,20 @@ function TripEditor() {
 
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
+  const addDestinationButtonRef = useRef<HTMLButtonElement>(null);
+  const focusAddDestinationRef = useRef(false);
   const [destQuery, setDestQuery] = useState('');
-  const { results: poiResults, searching: poiSearching, status: poiStatus, error: poiSearchError, retry: retryPoiSearch } = usePoiSearch({
+  const { state: poiSearch, retry: retryPoiSearch } = usePoiSearch({
     enabled: showSearch,
     query: destQuery,
     limit: 10,
-    normalise: (raw) => {
-      const arr = (raw as { results?: PoiSearchResult[] })?.results ?? [];
-      return Array.isArray(arr) ? arr : [];
-    },
   });
-
+  useEffect(() => {
+    if (!showSearch && focusAddDestinationRef.current) {
+      addDestinationButtonRef.current?.focus();
+      focusAddDestinationRef.current = false;
+    }
+  }, [showSearch]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -727,26 +726,16 @@ function TripEditor() {
   // v2.33.0: days management — immediate-mutation pattern (cascade delete 不可
   // 復原，atomic 比 queue-and-commit 安全)。「儲存變更」只管 scalar fields。
   const [days, setDays] = useState<DaySummary[] | null>(null);
+  const [daysLoadError, setDaysLoadError] = useState(false);
   const [daysMutating, setDaysMutating] = useState(false);
-  const daysFocusRef = useRef<HTMLLabelElement>(null);
-  const shiftTitleId = useId();
-  const [daysError, setDaysError] = useState<string | null>(null);
-  const [daysMutationError, setDaysMutationError] = useState<string | null>(null);
-  const dayOwner = useMemo(() => ({active: true, busy: false, read: 0}), []);
-  useEffect(() => {
-    dayOwner.active = true;
-    return () => { dayOwner.active = false; dayOwner.read++; };
-  }, [dayOwner]);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const refetchDays = useCallback(async () => {
     if (!tripId) return false;
-    const read = ++dayOwner.read;
     try {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`);
       if (!res.ok) throw new Error(`days fetch failed: ${res.status}`);
       const data = (await res.json()) as DaySummaryRow[];
-      if (!dayOwner.active || read !== dayOwner.read) return false;
       setDays(
         data.map((d) => ({
           id: d.id,
@@ -757,13 +746,16 @@ function TripEditor() {
           totalKm: computeTotalKm(d.timeline),
         })),
       );
-      setDaysError(null);
+      setDaysLoadError(false);
       return true;
-    } catch {
-      if (dayOwner.active && read === dayOwner.read) setDaysError('無法更新行程天數，請重試讀取；已儲存的操作不會重送。');
+    } catch (err) {
+      // 非阻擋：days fetch fail 只影響 days section，scalar form 仍可用
+      console.error('refetchDays failed', err);
+      setDays(null);
+      setDaysLoadError(true);
       return false;
     }
-  }, [tripId, dayOwner]);
+  }, [tripId]);
 
   // GET trip on mount / tripId change
   useEffect(() => {
@@ -815,47 +807,67 @@ function TripEditor() {
     void refetchDays();
   }, [auth.user, tripId, refetchDays]);
 
-  const commitDays = useCallback(async (
-    suffix: string, init: RequestInit, success: string | ((result: {removedEntryCount?: number}) => string),
-    onCommitted?: () => void,
-  ) => {
-    if (!tripId || dayOwner.busy || daysError) return;
-    dayOwner.busy = true; setDaysMutating(true); setDaysMutationError(null);
+  const handleAddDay = useCallback(async (position: 'start' | 'end') => {
+    if (!tripId || daysMutating) return;
+    setDaysMutating(true);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days${suffix}`, {
-        credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, ...init,
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position }),
       });
-      const result = await res.json().catch(() => ({})) as {removedEntryCount?: number; error?: {message?: string}};
-      if (!dayOwner.active) return;
-      if (!res.ok) throw new Error(result.error?.message ?? '日期變更失敗，請稍後再試');
-      // Acknowledgement is final: refresh failure must never repeat a destructive write.
-      const refreshed = await refetchDays();
-      if (!dayOwner.active) return;
-      onCommitted?.();
-      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, {detail: {tripId}}));
-      if (refreshed) showToast(typeof success === 'string' ? success : success(result), 'success');
-      else showToast('變更已儲存，天數清單尚未更新；請重試讀取', 'info');
-    } catch (error) {
-      if (dayOwner.active) {
-        const message = error instanceof Error ? error.message : '日期變更失敗';
-        setDaysMutationError(message); showToast(message, 'error');
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '新增天數失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
       }
+      const refreshed = await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(refreshed ? (position === 'start' ? '已在最前加入一天' : '已在最後加入一天') : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '新增天數失敗', 'error');
     } finally {
-      dayOwner.busy = false;
-      if (dayOwner.active) setDaysMutating(false);
+      setDaysMutating(false);
     }
-  }, [tripId, dayOwner, daysError, refetchDays]);
+  }, [tripId, daysMutating, refetchDays]);
 
-  const handleAddDay = useCallback((position: 'start' | 'end') => commitDays('', {
-    method: 'POST', body: JSON.stringify({position}),
-  }, position === 'start' ? '已在最前加入一天' : '已在最後加入一天'), [commitDays]);
-
-  const handleRestoreDay = useCallback((date: string) => commitDays('', {
-    method: 'POST', body: JSON.stringify({position: 'insert', date}),
-  }, `已加回 ${formatShortDate(date)}`), [commitDays]);
+  // v2.33.7: 加回中間天 gap（例如刪 Day 3 後 5/2、5/4，中間 5/3 用 dashed
+  // placeholder 顯示，user 點即可加回）
+  const handleRestoreDay = useCallback(async (date: string) => {
+    if (!tripId || daysMutating) return;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: 'insert', date }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '加回天數失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      const refreshed = await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(refreshed ? `已加回 ${formatShortDate(date)}` : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '加回天數失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, daysMutating, refetchDays]);
 
   const handleRequestDelete = useCallback((day: DaySummary) => {
-    setDaysMutationError(null);
     setPendingDelete({
       dayNum: day.dayNum,
       date: day.date,
@@ -870,16 +882,39 @@ function TripEditor() {
 
   const handleOpenShift = useCallback(() => {
     if (!days || days.length === 0 || !days[0]?.date) return;
-    setDaysMutationError(null);
     setShiftNewDate(days[0].date);
     setShiftModalOpen(true);
   }, [days]);
 
   const handleConfirmShift = useCallback(async () => {
-    if (!shiftNewDate || shiftNewDate === days?.[0]?.date) return;
-    await commitDays('/shift', {method: 'POST', body: JSON.stringify({startDate: shiftNewDate})},
-      `出發日期已變更為 ${formatShortDate(shiftNewDate)}`, () => setShiftModalOpen(false));
-  }, [shiftNewDate, days, commitDays]);
+    if (!tripId || daysMutating || !shiftNewDate) return;
+    setDaysMutating(true);
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/shift`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startDate: shiftNewDate }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = '平移失敗，請稍後再試。';
+        try {
+          const data = JSON.parse(text) as { error?: { message?: string } };
+          if (data?.error?.message) message = data.error.message;
+        } catch { /* not JSON */ }
+        throw new Error(message);
+      }
+      const refreshed = await refetchDays();
+      window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
+      showToast(refreshed ? `出發日期已變更為 ${formatShortDate(shiftNewDate)}` : '日期變更已送出，但無法重新讀取；請重試讀取。', refreshed ? 'success' : 'info');
+      setShiftModalOpen(false);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : '平移失敗', 'error');
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, daysMutating, shiftNewDate, refetchDays]);
 
   // 平移日期 modal 收斂到統一引擎：body scroll-lock + Escape（變更中鎖）+ focus-trap。
   const {
@@ -888,16 +923,27 @@ function TripEditor() {
     handlePanelKeyDown: shiftPanelKeyDown,
   } = useSheetBehavior(shiftModalOpen, () => setShiftModalOpen(false), {
     canDismiss: !daysMutating,
-    fallbackFocusRef: daysFocusRef,
   });
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!pendingDelete) return;
+    if (!tripId || !pendingDelete || daysMutating) return;
     const dayNum = pendingDelete.dayNum;
-    await commitDays(`/${dayNum}`, {method: 'DELETE'}, result =>
-      result.removedEntryCount ? `Day ${dayNum} 已刪除（連同 ${result.removedEntryCount} 個景點）` : `Day ${dayNum} 已刪除`,
-      () => setPendingDelete(null));
-  }, [pendingDelete, commitDays]);
+    setDaysMutating(true);
+    try {
+      const result = await deleteDay(tripId, dayNum);
+      if (!result.ok) { showToast(result.message, 'error'); return; }
+      const removed = result.data.removedEntryCount;
+      const refreshed = await refetchDays();
+      showToast(
+        refreshed ? (removed > 0 ? `Day ${dayNum} 已刪除（連同 ${removed} 個景點）` : `Day ${dayNum} 已刪除`)
+          : '刪除已送出，但無法重新讀取日期；請重試讀取。',
+        refreshed ? 'success' : 'info',
+      );
+      setPendingDelete(null);
+    } finally {
+      setDaysMutating(false);
+    }
+  }, [tripId, pendingDelete, daysMutating, refetchDays]);
 
   // Region change hint logic — only show if (a) destinations names changed
   // vs original AND (b) user hasn't manually edited title since open AND (c)
@@ -914,6 +960,7 @@ function TripEditor() {
   );
 
   function selectPoi(poi: PoiSearchResult) {
+    focusAddDestinationRef.current = true;
     if (destinations.some((d) => d.place_id === poi.place_id)) {
       setShowSearch(false); setDestQuery('');
       return;
@@ -1050,7 +1097,7 @@ function TripEditor() {
     return () => clearTimeout(timer);
   }, [isDirty, submitting, title, description, lang, published, destinations]);
 
-  if (!auth.user) return <AuthStatus auth={auth} />;
+  if (!auth.user) return null;
 
   if (!tripId) {
     return (
@@ -1152,6 +1199,7 @@ function TripEditor() {
                     <div className="tp-edit-dest-add-wrap">
                       {!showSearch ? (
                         <button
+                          ref={addDestinationButtonRef}
                           type="button"
                           className="tp-edit-dest-add-btn"
                           onClick={() => setShowSearch(true)}
@@ -1161,9 +1209,14 @@ function TripEditor() {
                           <span>加入目的地</span>
                         </button>
                       ) : (
-                        <div className="tp-edit-dest-search-wrap">
+                        <div className="tp-edit-dest-search-wrap" onKeyDown={(event) => handleSearchOptionKeys(event, () => setDestQuery(''))}>
                           <input
                             type="text"
+                            role="combobox"
+                            aria-label="搜尋目的地"
+                            aria-autocomplete="list"
+                            aria-expanded={poiSearch.status !== 'idle'}
+                            aria-controls={poiSearch.status !== 'idle' ? 'edit-trip-dest-dropdown' : undefined}
                             value={destQuery}
                             onChange={(e) => setDestQuery(e.target.value)}
                             placeholder="搜尋景點、城市、地址⋯"
@@ -1171,18 +1224,22 @@ function TripEditor() {
                             autoComplete="off"
                             data-testid="edit-trip-dest-search-input"
                           />
-                          {destQuery.trim().length >= 2 && (
-                            <div className="tp-edit-dest-dropdown" role={poiStatus === 'success' && poiResults.length > 0 ? 'listbox' : undefined} aria-label="目的地搜尋結果" data-testid="edit-trip-dest-dropdown">
-                              {poiSearching && <div className="tp-edit-dest-status">搜尋中⋯</div>}
-                              {!poiSearching && poiSearchError && <div className="tp-edit-dest-status" role="alert">{poiSearchError} <button type="button" onClick={retryPoiSearch}>重試搜尋</button></div>}
-                              {poiStatus === 'success' && poiResults.length === 0 && (
+                          {poiSearch.status !== 'idle' && (
+                            <div id="edit-trip-dest-dropdown" className="tp-edit-dest-dropdown" role={poiSearch.status === 'success' && poiSearch.results.length > 0 ? 'listbox' : undefined} data-testid="edit-trip-dest-dropdown">
+                              {poiSearch.status === 'loading' && <div className="tp-edit-dest-status" role="status">搜尋中⋯</div>}
+                              {poiSearch.status === 'error' && <div className="tp-edit-dest-status" role="alert">
+                                {poiSearch.error === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'}
+                                <button type="button" className="tp-dest-retry" onClick={retryPoiSearch}>重試搜尋</button>
+                              </div>}
+                              {poiSearch.status === 'success' && poiSearch.results.length === 0 && (
                                 <div className="tp-edit-dest-status">沒找到結果，試試別的關鍵字</div>
                               )}
-                              {!poiSearching && poiResults.length > 0 && poiResults.map((p) => (
+                              {poiSearch.status === 'success' && poiSearch.results.map((p) => (
                                 <button
                                   key={p.place_id}
                                   type="button"
                                   role="option"
+                                  aria-selected={false}
                                   className="tp-edit-dest-result"
                                   onClick={() => selectPoi(p)}
                                   data-testid={`edit-trip-dest-result-${p.place_id}`}
@@ -1201,10 +1258,16 @@ function TripEditor() {
                   {/* v2.33.0: 行程天數（取代 v2.32.5 之前的 read-only date section）。
                       增/減天即時呼叫 backend；移除有 entries 的天 → ConfirmModal。 */}
                   <div className="tp-edit-row" data-testid="edit-trip-days-section">
-                    <label ref={daysFocusRef} tabIndex={-1}>行程天數</label>
-                    {daysError && <div role="alert">{daysError} <button type="button" onClick={() => void refetchDays()}>重試讀取天數</button></div>}
+                    <label>行程天數</label>
                     {days === null ? (
-                      !daysError && <div className="tp-edit-loading" data-testid="edit-trip-days-loading">載入中⋯</div>
+                      daysLoadError ? (
+                        <div className="tp-edit-loading" role="alert">
+                          無法取得最新行程日期。
+                          <button type="button" className="tp-edit-day-shift-btn" onClick={() => void refetchDays()}>
+                            重新讀取行程日期
+                          </button>
+                        </div>
+                      ) : <div className="tp-edit-loading" data-testid="edit-trip-days-loading">載入中⋯</div>
                     ) : (
                       <>
                         <p className="tp-edit-date-helper" style={{ marginBottom: 8 }}>
@@ -1220,7 +1283,7 @@ function TripEditor() {
                             type="button"
                             className="tp-edit-day-shift-btn"
                             onClick={handleOpenShift}
-                            disabled={daysMutating || !!daysError}
+                            disabled={daysMutating}
                             data-testid="edit-trip-day-shift-btn"
                           >
                             <span className="tp-edit-day-shift-label">
@@ -1234,7 +1297,7 @@ function TripEditor() {
                           type="button"
                           className="tp-edit-day-add-card"
                           onClick={() => handleAddDay('start')}
-                          disabled={daysMutating || !!daysError}
+                          disabled={daysMutating}
                           data-testid="edit-trip-day-prepend"
                         >
                           <span className="plus"><Icon name="plus" /></span>
@@ -1265,7 +1328,7 @@ function TripEditor() {
                                   type="button"
                                   className={`tp-edit-day-remove ${d.entryCount > 0 ? 'has-entries-warning' : ''}`}
                                   onClick={() => handleRequestDelete(d)}
-                                  disabled={daysMutating || !!daysError || arr.length <= 1}
+                                  disabled={daysMutating || arr.length <= 1}
                                   aria-label={`移除 Day ${d.dayNum}${d.entryCount > 0 ? `（會刪除 ${d.entryCount} 個景點）` : ''}`}
                                   data-testid={`edit-trip-day-remove-${d.dayNum}`}
                                 >
@@ -1285,7 +1348,7 @@ function TripEditor() {
                                     key={`gap-${gapDate}`}
                                     className="tp-edit-day-gap"
                                     onClick={() => handleRestoreDay(gapDate)}
-                                    disabled={daysMutating || !!daysError}
+                                    disabled={daysMutating}
                                     data-testid={`edit-trip-day-gap-${gapDate}`}
                                     aria-label={`加回 ${formatShortDate(gapDate)}（${chineseDayOfWeek(gapDate)}）`}
                                   >
@@ -1305,7 +1368,7 @@ function TripEditor() {
                           type="button"
                           className="tp-edit-day-add-card"
                           onClick={() => handleAddDay('end')}
-                          disabled={daysMutating || !!daysError}
+                          disabled={daysMutating}
                           data-testid="edit-trip-day-append"
                         >
                           <span className="plus"><Icon name="plus" /></span>
@@ -1404,30 +1467,24 @@ function TripEditor() {
               : `Day ${pendingDelete.dayNum}${pendingDelete.date ? `（${formatShortDate(pendingDelete.date)}）` : ''}目前是空的。確認移除？`
             : ''
         }
-        warning={
-          pendingDelete && pendingDelete.entryCount > 0
-            ? '後續天數的 Day 編號會往前遞補（日期保留，可能會留下空檔的日子）。'
-            : undefined
-        }
+        warning={pendingDelete && days && pendingDelete.dayNum < days.length
+          ? '後續天數的 Day 編號會往前遞補（日期保留，可能會留下空檔的日子）。'
+          : undefined}
         confirmLabel={pendingDelete ? `刪除 Day ${pendingDelete.dayNum}` : '刪除'}
         busy={daysMutating}
-        fallbackFocusRef={daysFocusRef}
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(null)}
-      >
-        {daysMutationError && <div role="alert">{daysMutationError}</div>}
-      </ConfirmModal>
+      />
       {/* v2.33.8 / v2.33.9 fix: 整體平移行程 modal (本 component 自己定義
           backdrop，避免依賴 ConfirmModal SCOPED_STYLES) */}
       {shiftModalOpen && days && days[0]?.date && (
         <div ref={shiftBackdropRef} className="tp-shift-backdrop" role="presentation" onClick={daysMutating ? undefined : () => setShiftModalOpen(false)} data-testid="edit-trip-shift-modal-backdrop">
-          <div ref={shiftPanelRef} tabIndex={-1} className="tp-shift-modal" role="dialog" aria-modal="true" aria-labelledby={shiftTitleId} onClick={(e) => e.stopPropagation()} onKeyDown={shiftPanelKeyDown} data-testid="edit-trip-shift-modal">
-            <h2 id={shiftTitleId} className="tp-shift-modal-title">變更出發日期</h2>
+          <div ref={shiftPanelRef} tabIndex={-1} className="tp-shift-modal" role="dialog" aria-modal="true" aria-labelledby="edit-trip-shift-title" onClick={(e) => e.stopPropagation()} onKeyDown={shiftPanelKeyDown} data-testid="edit-trip-shift-modal">
+            <h2 id="edit-trip-shift-title" className="tp-shift-modal-title">變更出發日期</h2>
             <label className="tp-shift-modal-label" htmlFor="edit-trip-shift-date">出發日期</label>
             <div data-testid="edit-trip-shift-date-input">
               <TripDatePicker
                 id="edit-trip-shift-date"
-                disabled={daysMutating}
                 value={shiftNewDate}
                 onChange={setShiftNewDate}
                 ariaLabel="變更出發日期"
@@ -1440,16 +1497,17 @@ function TripEditor() {
                 const oldEnd = days[days.length - 1]!.date ?? oldStart;
                 const delta = daysBetween(oldStart, shiftNewDate);
                 const newEnd = shiftDateByDays(oldEnd, delta);
-                return `${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
+                const impact = delta === 0 ? '日期不變'
+                  : `${days.length} 天日期將${delta > 0 ? '往後' : '往前'}平移 ${Math.abs(delta)} 天；景點與每日時段保留`;
+                return `${impact}。${formatShortDate(oldStart)}（${chineseDayOfWeek(oldStart)}）– ${formatShortDate(oldEnd)}（${chineseDayOfWeek(oldEnd)}） → ${formatShortDate(shiftNewDate)}（${chineseDayOfWeek(shiftNewDate)}）– ${formatShortDate(newEnd)}（${chineseDayOfWeek(newEnd)}）`;
               })()}
             </div>
-            {daysMutationError && <div role="alert">{daysMutationError}</div>}
             <div className="tp-shift-modal-actions">
               <button
                 type="button"
                 className="tp-shift-modal-btn tp-shift-modal-cancel"
                 onClick={() => setShiftModalOpen(false)}
-                disabled={daysMutating || !!daysError}
+                disabled={daysMutating}
               >
                 取消
               </button>

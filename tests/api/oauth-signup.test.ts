@@ -1,225 +1,220 @@
-/* TODO v2.20.1 — V2 cutover (migration 0046+0047) 改 schema：trips.owner / trip_permissions.email / saved_pois.email columns dropped。本檔 pin 舊 schema SQL 字串斷言，需語意級 rewrite。 */
 /**
- * POST /api/oauth/signup unit test — V2-P2
- */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { onRequestPost } from '../../functions/api/oauth/signup';
-import { AppError, errorResponse } from '../../functions/api/_errors';
-
-interface MockEnv {
-  SESSION_SECRET?: string;
-  DB?: { prepare: ReturnType<typeof vi.fn> };
-}
-
-function makeStmt(firstResult: unknown = null, runError?: Error) {
-  const stmt = {
-    bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(firstResult),
-    run: vi.fn().mockImplementation(() => runError ? Promise.reject(runError) : Promise.resolve({ meta: { changes: 1 } })),
-  };
-  return stmt;
-}
-
-function makeContext(body: unknown, env: MockEnv): Parameters<typeof onRequestPost>[0] {
-  return {
-    request: new Request('https://x.com/api/oauth/signup', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    }),
-    env: env as unknown as never,
-    params: {} as unknown as never,
-    data: {} as unknown as never,
-    next: () => Promise.resolve(new Response()),
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  } as unknown as Parameters<typeof onRequestPost>[0];
-}
-
-/**
- * Mirror _middleware.ts try/catch: AppError → errorResponse(err).
+ * POST /api/oauth/signup — V2-P2
+ * 走 HTTP 邊界（tests/api/http.ts）；原本檢查 mock DB 呼叫形狀的斷言，改讀真實 D1 的資料變化
+ * （users、auth_identities、auth_audit_log、rate_limit_buckets、trip_permissions、trip_invitations）。
  *
- * 2026-07-20 起註冊必須帶 `privacyConsent: true`（owner：建立帳號要同意個資條款）。
- * 這裡預設補上，讓本檔既有的案例維持「只驗自己關心的那件事」——
- * 它們測的是 email 正規化、重複註冊、邀請碼等，不是同意流程。
- * 傳入的 body 可以覆寫這個預設（`invoke({ ..., privacyConsent: false })`）。
- *
- * 同意檢查排在 email／password 驗證**之後**，所以刻意送壞 email／短密碼的
- * 案例不受影響，仍會停在各自的錯誤碼上。
+ * 2026-07-20 起註冊必須帶 `privacyConsent: true`。`signup()` 預設補上，讓本檔案例只驗自己關心的事；
  * 同意 gate 本身的測試在 `tests/api/signup-consent.test.ts`。
  */
-async function invoke(body: unknown, env: MockEnv): Promise<Response> {
-  const withConsent = body !== null && typeof body === 'object'
-    ? { privacyConsent: true, ...(body as Record<string, unknown>) }
-    : body;
-  try {
-    return await onRequestPost(makeContext(withConsent, env));
-  } catch (err) {
-    if (err instanceof AppError) return errorResponse(err);
-    throw err;
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createTestDb, disposeMiniflare } from './setup';
+import { mockEnv } from './helpers';
+import { createApi } from './http';
+import { sha256Base64 } from '../../functions/api/_utils';
+import { hashInvitationToken } from '../../src/server/invitation-token';
+
+const SECRET = 'session-secret-test-32-chars-long';
+const PREFIX = 'oauth-signup-test';
+const emailOf = (name: string) => `${PREFIX}-${name}@example.com`;
+
+let db: D1Database;
+let seq = 0;
+const ips: string[] = [];
+const emails = new Set<string>();
+const tripIds: string[] = [];
+const tokenHashes: string[] = [];
+
+beforeAll(async () => {
+  db = await createTestDb();
+}, 30_000);
+
+afterAll(async () => {
+  for (const email of emails) {
+    const user = await db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+    if (user) {
+      await db.prepare('DELETE FROM trip_permissions WHERE user_id = ?').bind(user.id).run();
+      await db.prepare('DELETE FROM auth_audit_log WHERE user_id = ?').bind(user.id).run();
+      await db.prepare('DELETE FROM auth_identities WHERE user_id = ?').bind(user.id).run();
+    }
   }
+  for (const ip of ips) await db.prepare('DELETE FROM auth_audit_log WHERE ip_hash = ?').bind(await sha256Base64(ip)).run();
+  for (const h of tokenHashes) await db.prepare('DELETE FROM trip_invitations WHERE token_hash = ?').bind(h).run();
+  for (const id of tripIds) await db.prepare('DELETE FROM trips WHERE id = ?').bind(id).run();
+  for (const email of emails) await db.prepare('DELETE FROM users WHERE email = ?').bind(email).run();
+  for (const ip of ips) await db.prepare('DELETE FROM rate_limit_buckets WHERE bucket_key = ?').bind(`signup:${ip}`).run();
+  await disposeMiniflare();
+});
+
+const api = () => createApi({ env: mockEnv(db, { SESSION_SECRET: SECRET }) });
+
+function freshIp(): string {
+  const ip = `10.77.0.${++seq}`;
+  ips.push(ip);
+  return ip;
 }
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
-});
+async function signup(body: Record<string, unknown> | null, ip = freshIp()): Promise<Response> {
+  const email = body && typeof body.email === 'string' ? body.email : null;
+  if (email) emails.add(email.trim().toLowerCase());
+  const payload = body === null ? undefined : { privacyConsent: true, ...body };
+  return api().request('POST', 'https://x.com/api/oauth/signup', {
+    json: payload,
+    headers: { 'CF-Connecting-IP': ip },
+  });
+}
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+async function errorCode(res: Response): Promise<string> {
+  return ((await res.json()) as { error: { code: string } }).error.code;
+}
 
+async function userByEmail(email: string) {
+  return db.prepare('SELECT id, email, display_name FROM users WHERE email = ?').bind(email)
+    .first<{ id: string; email: string; display_name: string | null }>();
+}
+
+async function seedInvitation(opts: { invitedEmail: string; expiresAt: string }) {
+  const n = ++seq;
+  const tripId = `${PREFIX}-trip-${n}`;
+  const inviterEmail = emailOf(`inviter-${n}`);
+  emails.add(inviterEmail);
+  const inviterId = `${PREFIX}-inviter-${n}`;
+  await db.prepare('INSERT INTO users (id, email, display_name) VALUES (?, ?, ?)').bind(inviterId, inviterEmail, 'inviter').run();
+  await db.prepare('INSERT INTO trips (id, name, title, owner_user_id, published) VALUES (?, ?, ?, ?, 1)').bind(tripId, '沖繩 5 日', '沖繩 5 日', inviterId).run();
+  tripIds.push(tripId);
+  const raw = `raw-invite-token-${n}`;
+  const hash = await hashInvitationToken(raw, SECRET);
+  tokenHashes.push(hash);
+  await db
+    .prepare('INSERT INTO trip_invitations (token_hash, trip_id, invited_email, invited_by, expires_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(hash, tripId, opts.invitedEmail, inviterId, opts.expiresAt)
+    .run();
+  return { tripId, raw, hash };
+}
+
+const future = () => new Date(Date.now() + 7 * 86400_000).toISOString();
+const past = () => new Date(Date.now() - 5 * 86400_000).toISOString();
 
 describe('POST /api/oauth/signup', () => {
   it('400 SIGNUP_INVALID_EMAIL when email missing or invalid', async () => {
-    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
-    const r1 = await invoke({ password: 'longenough' }, env);
+    const r1 = await signup({ password: 'longenough' });
     expect(r1.status).toBe(400);
-    expect((await r1.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
+    expect(await errorCode(r1)).toBe('SIGNUP_INVALID_EMAIL');
 
-    const r2 = await invoke({ email: 'not-an-email', password: 'longenough' }, env);
+    const r2 = await signup({ email: 'not-an-email', password: 'longenough' });
     expect(r2.status).toBe(400);
-    expect((await r2.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
+    expect(await errorCode(r2)).toBe('SIGNUP_INVALID_EMAIL');
   });
 
   it('400 SIGNUP_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
-    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
-    const res = await invoke({ email: 'a@b.com', password: 'short' }, env);
+    const email = emailOf('short');
+    const res = await signup({ email, password: 'short' });
     expect(res.status).toBe(400);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_PASSWORD_TOO_SHORT');
+    expect(await errorCode(res)).toBe('SIGNUP_PASSWORD_TOO_SHORT');
+    expect(await userByEmail(email)).toBeNull();
   });
 
   it('409 SIGNUP_EMAIL_TAKEN when email already in users', async () => {
-    const stmt = makeStmt({ id: 'existing-uid' }); // SELECT users WHERE email returns existing
-    const env: MockEnv = {
-      SESSION_SECRET: 's',
-      DB: { prepare: vi.fn().mockReturnValue(stmt) },
-    };
-    const res = await invoke({ email: 'taken@example.com', password: 'longenough' }, env);
+    const email = emailOf('taken');
+    const first = await signup({ email, password: 'longenough' });
+    expect(first.status).toBe(201);
+    const res = await signup({ email, password: 'longenough' });
     expect(res.status).toBe(409);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_EMAIL_TAKEN');
-  });
+    expect(await errorCode(res)).toBe('SIGNUP_EMAIL_TAKEN');
+    const count = await db.prepare('SELECT COUNT(*) AS n FROM users WHERE email = ?').bind(email).first<{ n: number }>();
+    expect(count!.n).toBe(1);
+  }, 30_000);
 
-  it('happy path: 201 + INSERT users + INSERT auth_identities + Set-Cookie', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null); // not taken
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 'session-secret-test-32-chars-long',
-      DB: { prepare: dbPrepare },
-    };
-    const res = await invoke({
-      email: 'new@example.com',
-      password: 'a-secure-password-1234',
-      displayName: 'New User',
-    }, env);
+  it('happy path: 201 + users + auth_identities（雜湊密碼）+ Set-Cookie', async () => {
+    const email = emailOf('new');
+    const res = await signup({ email, password: 'a-secure-password-1234', displayName: 'New User' });
 
     expect(res.status).toBe(201);
     const json = await res.json() as { ok: boolean; userId: string; email: string; requiresVerification: boolean };
     expect(json.ok).toBe(true);
-    expect(json.email).toBe('new@example.com');
+    expect(json.email).toBe(email);
     expect(json.requiresVerification).toBe(true);
     expect(typeof json.userId).toBe('string');
 
     expect(res.headers.get('Set-Cookie')).toMatch(/tripline_session=/);
 
-    // Verify INSERT calls happened
-    const calls = dbPrepare.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((s) => s.includes('INSERT INTO users'))).toBe(true);
-    expect(calls.some((s) => s.includes('INSERT INTO auth_identities'))).toBe(true);
+    const user = await userByEmail(email);
+    expect(user!.id).toBe(json.userId);
+    expect(user!.display_name).toBe('New User');
+    const identity = await db
+      .prepare('SELECT provider, provider_user_id, password_hash, password_algo FROM auth_identities WHERE user_id = ?')
+      .bind(json.userId)
+      .first<{ provider: string; provider_user_id: string; password_hash: string; password_algo: string }>();
+    expect(identity!.provider).toBe('local');
+    expect(identity!.provider_user_id).toBe(email);
+    expect(identity!.password_algo).toBe('pbkdf2');
+    expect(identity!.password_hash).toBeTruthy();
+    expect(identity!.password_hash).not.toContain('a-secure-password-1234');
   }, 30_000); // PBKDF2 600k iter takes time
 
   it('email lowercased + trimmed before INSERT', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 'session-secret-test',
-      DB: { prepare: dbPrepare },
-    };
-    await invoke({
-      email: '  Mixed.Case@EXAMPLE.com  ',
-      password: 'password123',
-    }, env);
-
-    // Find the user-lookup stmt by SQL pattern (rate limit calls now precede it)
-    const userLookupIdx = dbPrepare.mock.calls.findIndex(
-      (c) => typeof c[0] === 'string' && (c[0] as string).includes('SELECT id FROM users'),
-    );
-    expect(userLookupIdx).toBeGreaterThanOrEqual(0);
-    const lookupStmt = dbPrepare.mock.results[userLookupIdx].value;
-    expect(lookupStmt.bind).toHaveBeenCalledWith('mixed.case@example.com');
+    const res = await signup({ email: `  ${PREFIX}-Mixed.Case@EXAMPLE.com  `, password: 'password123' });
+    expect(res.status).toBe(201);
+    expect(await userByEmail(`${PREFIX}-mixed.case@example.com`)).not.toBeNull();
   }, 30_000);
 
   it('UNIQUE constraint race condition → 409 SIGNUP_EMAIL_TAKEN', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) {
-        return makeStmt(null, new Error('UNIQUE constraint failed: users.email'));
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = {
-      SESSION_SECRET: 's',
-      DB: { prepare: dbPrepare },
-    };
-    const res = await invoke({
-      email: 'race@example.com',
-      password: 'longenough',
-    }, env);
-    expect(res.status).toBe(409);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_EMAIL_TAKEN');
-  }, 30_000);
+    // 兩個同 email 的請求同時送出：只會有一個建立帳號，另一個必須是 409（不是 500）
+    const email = emailOf('race');
+    const [a, b] = await Promise.all([
+      signup({ email, password: 'longenough' }),
+      signup({ email, password: 'longenough' }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    const loser = a.status === 409 ? a : b;
+    expect(await errorCode(loser)).toBe('SIGNUP_EMAIL_TAKEN');
+    const count = await db.prepare('SELECT COUNT(*) AS n FROM users WHERE email = ?').bind(email).first<{ n: number }>();
+    expect(count!.n).toBe(1);
+  }, 60_000);
 
   it('429 SIGNUP_RATE_LIMITED when IP bucket locked', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) {
-        return makeStmt({
-          bucket_key: 'signup:unknown',
-          count: 4,
-          window_start: Date.now(),
-          locked_until: Date.now() + 60_000,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'a@b.com',
-      password: 'longenough',
-    }, env);
+    const ip = freshIp();
+    await db
+      .prepare('INSERT INTO rate_limit_buckets (bucket_key, count, window_start, locked_until) VALUES (?, ?, ?, ?)')
+      .bind(`signup:${ip}`, 4, Date.now(), Date.now() + 60_000)
+      .run();
+    const email = emailOf('limited');
+    const res = await signup({ email, password: 'longenough' }, ip);
     expect(res.status).toBe(429);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('SIGNUP_RATE_LIMITED');
+    expect(await errorCode(res)).toBe('SIGNUP_RATE_LIMITED');
     expect(res.headers.get('Retry-After')).toBeTruthy();
     expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+    expect(await userByEmail(email)).toBeNull();
   });
 
   it('Bumps signup ipKey bucket on every valid attempt (anti spam)', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
-      if (sql.includes('SELECT id FROM users')) return makeStmt({ id: 'existing' }); // dup → 409
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'taken@example.com',
-      password: 'longenough',
-    }, env);
-    // dup email → 409, but rate limit bucket should still be bumped
+    const email = emailOf('bump');
+    const ip = freshIp();
+    expect((await signup({ email, password: 'longenough' }, ip)).status).toBe(201);
+    // 同 IP 再註冊同 email → 409，但 rate limit bucket 仍要被累加（單一 ipKey bucket，沒有 per-email）
+    const res = await signup({ email, password: 'longenough' }, ip);
     expect(res.status).toBe(409);
-    // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
-    const inserts = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string'
-        && c[0].includes('INTO rate_limit_buckets')
-        && c[0].includes('ON CONFLICT'),
-    );
-    expect(inserts.length).toBe(1); // single ipKey bucket (no per-email for signup)
-  });
+    const bucket = await db.prepare('SELECT count FROM rate_limit_buckets WHERE bucket_key = ?')
+      .bind(`signup:${ip}`).first<{ count: number }>();
+    expect(bucket!.count).toBe(2);
+  }, 30_000);
+
+  it('稽核：成功與 email_taken 各寫一筆 auth_audit_log，email 只存遮罩版', async () => {
+    const email = emailOf('audit');
+    const ip = freshIp();
+    const ok = await signup({ email, password: 'longenough' }, ip);
+    const { userId } = await ok.json() as { userId: string };
+    await signup({ email, password: 'longenough' }, ip);
+
+    const rows = await db
+      .prepare("SELECT outcome, failure_reason, user_id, metadata FROM auth_audit_log WHERE event_type = 'signup' AND ip_hash = ?")
+      .bind(await sha256Base64(ip))
+      .all<{ outcome: string; failure_reason: string | null; user_id: string | null; metadata: string }>();
+    const success = rows.results!.find((r) => r.outcome === 'success');
+    const failure = rows.results!.find((r) => r.failure_reason === 'email_taken');
+    expect(success!.user_id).toBe(userId);
+    expect(failure).toBeTruthy();
+    for (const r of rows.results!) expect(r.metadata).not.toContain(email);
+  }, 30_000);
 });
 
 /**
@@ -227,167 +222,84 @@ describe('POST /api/oauth/signup', () => {
  * email match）。失敗（過期 / mismatch）不擋 signup，response 含 invitationError。
  */
 describe('POST /api/oauth/signup with invitationToken', () => {
-  const TEST_SECRET = 'session-secret-test-32-chars-long';
-
-  it('happy path: 201 + joinedTrip + INSERT trip_permissions + UPDATE invitation accepted', async () => {
-    let permissionInsertSeen = false;
-    let invitationUpdateSeen = false;
-
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'newperson@x.com',
-          expires_at: '2026-05-04T00:00:00Z',
-          accepted_at: null,
-        });
-      }
-      if (sql.includes('SELECT title FROM trips')) {
-        return makeStmt({ title: '沖繩 5 日' });
-      }
-      if (sql.includes('INSERT OR IGNORE INTO trip_permissions')) {
-        permissionInsertSeen = true;
-        return makeStmt();
-      }
-      if (sql.includes('UPDATE trip_invitations')) {
-        invitationUpdateSeen = true;
-        return makeStmt();
-      }
-      return makeStmt();
-    });
-    const dbBatch = vi.fn().mockResolvedValue([{ meta: { changes: 1 } }, { meta: { changes: 1 } }]);
-    const env: MockEnv = {
-      SESSION_SECRET: TEST_SECRET,
-      DB: { prepare: dbPrepare, batch: dbBatch } as unknown as MockEnv['DB'],
-    };
-    const res = await invoke({
-      email: 'newperson@x.com',
-      password: 'longenough',
-      invitationToken: 'raw-invite-token',
-    }, env);
+  it('happy path: 201 + joinedTrip + trip_permissions + invitation accepted', async () => {
+    const email = emailOf('invitee');
+    const inv = await seedInvitation({ invitedEmail: email, expiresAt: future() });
+    const res = await signup({ email, password: 'longenough', invitationToken: inv.raw });
 
     expect(res.status).toBe(201);
     const json = await res.json() as {
-      ok: boolean;
+      userId: string;
       joinedTrip: { id: string; title: string } | null;
       invitationError: string | null;
     };
-    expect(json.joinedTrip).toEqual({ id: 'trip-1', title: '沖繩 5 日' });
+    expect(json.joinedTrip).toEqual({ id: inv.tripId, title: '沖繩 5 日' });
     expect(json.invitationError).toBeNull();
-    expect(permissionInsertSeen).toBe(true);
-    expect(invitationUpdateSeen).toBe(true);
-  });
+
+    const perm = await db.prepare('SELECT role FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+      .bind(inv.tripId, json.userId).first<{ role: string }>();
+    expect(perm!.role).toBe('member');
+    const accepted = await db.prepare('SELECT accepted_at, accepted_by FROM trip_invitations WHERE token_hash = ?')
+      .bind(inv.hash).first<{ accepted_at: string | null; accepted_by: string | null }>();
+    expect(accepted!.accepted_at).toBeTruthy();
+    expect(accepted!.accepted_by).toBe(json.userId);
+  }, 30_000);
 
   it('expired invitation: 201 signup success + invitationError=INVITATION_EXPIRED + joinedTrip=null', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'newperson@x.com',
-          expires_at: '2026-04-20T00:00:00Z', // expired
-          accepted_at: null,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'newperson@x.com',
-      password: 'longenough',
-      invitationToken: 'expired-token',
-    }, env);
+    const email = emailOf('expired');
+    const inv = await seedInvitation({ invitedEmail: email, expiresAt: past() });
+    const res = await signup({ email, password: 'longenough', invitationToken: inv.raw });
 
     expect(res.status).toBe(201);
-    const json = await res.json() as {
-      joinedTrip: unknown;
-      invitationError: string;
-    };
+    const json = await res.json() as { userId: string; joinedTrip: unknown; invitationError: string };
     expect(json.joinedTrip).toBeNull();
     expect(json.invitationError).toBe('INVITATION_EXPIRED');
-  });
+    const perm = await db.prepare('SELECT 1 AS x FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+      .bind(inv.tripId, json.userId).first();
+    expect(perm).toBeNull();
+    const row = await db.prepare('SELECT accepted_at FROM trip_invitations WHERE token_hash = ?')
+      .bind(inv.hash).first<{ accepted_at: string | null }>();
+    expect(row!.accepted_at).toBeNull();
+  }, 30_000);
 
   it('email mismatch: 201 signup success + invitationError=INVITATION_EMAIL_MISMATCH + joinedTrip=null', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      if (sql.includes('FROM trip_invitations')) {
-        return makeStmt({
-          trip_id: 'trip-1',
-          invited_email: 'someone-else@x.com', // different
-          expires_at: '2026-05-04T00:00:00Z',
-          accepted_at: null,
-        });
-      }
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'newperson@x.com',
-      password: 'longenough',
-      invitationToken: 'wrong-email-token',
-    }, env);
+    const email = emailOf('mismatch');
+    const inv = await seedInvitation({ invitedEmail: 'someone-else@x.com', expiresAt: future() });
+    const res = await signup({ email, password: 'longenough', invitationToken: inv.raw });
 
     expect(res.status).toBe(201);
-    const json = await res.json() as { invitationError: string; joinedTrip: unknown };
+    const json = await res.json() as { userId: string; invitationError: string; joinedTrip: unknown };
     expect(json.invitationError).toBe('INVITATION_EMAIL_MISMATCH');
     expect(json.joinedTrip).toBeNull();
-  });
+    const perm = await db.prepare('SELECT 1 AS x FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+      .bind(inv.tripId, json.userId).first();
+    expect(perm).toBeNull();
+  }, 30_000);
 
   it('invalid token: 201 signup success + invitationError=INVITATION_INVALID', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      if (sql.includes('FROM trip_invitations')) return makeStmt(null);
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'newperson@x.com',
-      password: 'longenough',
-      invitationToken: 'bogus',
-    }, env);
+    const res = await signup({ email: emailOf('bogus'), password: 'longenough', invitationToken: 'bogus' });
 
     expect(res.status).toBe(201);
     const json = await res.json() as { invitationError: string };
     expect(json.invitationError).toBe('INVITATION_INVALID');
-  });
+  }, 30_000);
 
   it('no invitationToken: backward compat — joinedTrip + invitationError both null/undefined', async () => {
-    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
-      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
-      if (sql.includes('INSERT INTO users')) return makeStmt();
-      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
-      return makeStmt();
-    });
-    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
-    const res = await invoke({
-      email: 'newperson@x.com',
-      password: 'longenough',
-    }, env);
+    const email = emailOf('plain');
+    const inv = await seedInvitation({ invitedEmail: email, expiresAt: future() });
+    const res = await signup({ email, password: 'longenough' });
 
     expect(res.status).toBe(201);
-    const json = await res.json() as { joinedTrip: unknown; invitationError: unknown };
-    // both nullish OK
+    const json = await res.json() as { userId: string; joinedTrip: unknown; invitationError: unknown };
     expect(json.joinedTrip ?? null).toBeNull();
     expect(json.invitationError ?? null).toBeNull();
 
-    // Did NOT touch trip_invitations
-    const inviteCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('FROM trip_invitations'),
-    );
-    expect(inviteCall).toBeFalsy();
-  });
+    // 沒帶 token 就不該動到既有邀請：仍未被接受、沒有權限列
+    const row = await db.prepare('SELECT accepted_at FROM trip_invitations WHERE token_hash = ?')
+      .bind(inv.hash).first<{ accepted_at: string | null }>();
+    expect(row!.accepted_at).toBeNull();
+    const perm = await db.prepare('SELECT 1 AS x FROM trip_permissions WHERE trip_id = ? AND user_id = ?')
+      .bind(inv.tripId, json.userId).first();
+    expect(perm).toBeNull();
+  }, 30_000);
 });

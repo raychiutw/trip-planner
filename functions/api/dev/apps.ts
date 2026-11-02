@@ -21,7 +21,6 @@ import { parseJsonBody, rawJson } from '../_utils';
 import { requireSessionUser } from '../_session';
 import { hashPassword } from '../../../src/server/password';
 import { AppError } from '../_errors';
-import { SELF_SERVICE_SCOPES } from '../../../src/lib/oauthScopes';
 import { validateRedirectUris } from '../../../src/server/oauth-server/validate-redirect-uris';
 import type { Env } from '../_types';
 
@@ -80,7 +79,7 @@ function generateClientSecret(): string {
  *
  * Allowlist whitelist：companion / ops:* 必須 ops 手動 INSERT D1 才能擁有。
  */
-const ALLOWED_USER_SCOPES = new Set<string>(SELF_SERVICE_SCOPES);
+const ALLOWED_USER_SCOPES = new Set(['openid', 'profile', 'email', 'offline_access']);
 export function validateScopes(scopes: unknown): string[] {
   if (!Array.isArray(scopes)) return DEFAULT_SCOPES;
   if (scopes.length === 0) return DEFAULT_SCOPES;
@@ -193,13 +192,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
  * redirect_uris / allowed_scopes JSON column is corrupt — one bad row falls
  * back to [] instead of 500-ing the whole list.
  */
-function safeParseArray(value: unknown): unknown {
-  if (typeof value !== 'string') return value;
+function safeParseArray(value: unknown): string[] {
+  let parsed: unknown;
   try {
-    return JSON.parse(value) as unknown;
+    parsed = typeof value === 'string' ? JSON.parse(value) as unknown : value;
   } catch {
     return [];
   }
+  return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -224,5 +224,4 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   return rawJson({ apps });
 };
-
 

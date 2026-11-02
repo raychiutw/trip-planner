@@ -230,6 +230,23 @@ describe('TravelPill — interactive auto-save (v2.55.45 多方式)', () => {
     });
   });
 
+  it('儲存失敗時關閉會保留交通編輯，重試成功後才關閉', async () => {
+    apiFetchRawMock
+      .mockResolvedValueOnce(new Response('暫時無法儲存', { status: 503 }))
+      .mockResolvedValueOnce(new Response('仍無法儲存', { status: 503 }))
+      .mockResolvedValue(new Response(JSON.stringify({ id: 42, mode: 'walking', version: 1 }), { status: 200 }));
+    render(<TravelPill segment={baseSegment} tripId="trip-1" />);
+    fireEvent.click(screen.getByTestId('travel-pill'));
+    fireEvent.click(screen.getByTestId('travel-method-walking'));
+    await waitFor(() => expect(apiFetchRawMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByTestId('travel-dialog-close'));
+    await waitFor(() => expect(screen.getByText('重試儲存')).toBeInTheDocument());
+    expect(screen.getByTestId('travel-pill-dialog')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('重試儲存'));
+    await waitFor(() => expect(screen.queryByTestId('travel-pill-dialog')).not.toBeInTheDocument());
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(3);
+  });
+
   it('Esc 鍵 → 關 dialog (async)', async () => {
     render(<TravelPill segment={baseSegment} tripId="trip-1" />);
     fireEvent.click(screen.getByTestId('travel-pill'));

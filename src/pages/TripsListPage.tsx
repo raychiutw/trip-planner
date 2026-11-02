@@ -20,17 +20,15 @@
  *     metadata，但那支對一般使用者降級成 published-only，行程改為不公開後
  *     名稱全空 → 卡片顯示 tripId。單一來源即可。
  */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { readTripView } from '../lib/tripViewState';
-import { rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
-import { apiFetchRaw } from '../lib/apiClient';
-import { EVENT } from '../lib/events';
+import { archiveTrip, unarchiveTrip, deleteTrip } from '../lib/tripMutations';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -50,7 +48,7 @@ import TripPage, { type TripPageHandle } from './TripPage';
 import { useTripPageHandle } from '../contexts/TripPageHandleContext';
 import { useTripMainPortal } from '../contexts/TripMainPortalContext';
 import { TRIP_MAIN_PORTAL_ID } from '../lib/tripStackRoutes';
-import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
+import { useTripSelection, type MyTrip } from '../hooks/useMyTrips';
 
 const SCOPED_STYLES = `
 /* Terracotta preview v2 Section 16 parity: desktop 240px auto-fill cards,
@@ -65,7 +63,9 @@ const SCOPED_STYLES = `
 .tp-trips-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  /* #1445：底部至少讓出浮動 tab bar 的高度（原固定 64px 比 tab bar 佔位少 8px，矮螢幕捲到底時
+   * 最後一張「新增行程」卡被蓋住）。 */
+  padding: 24px 16px max(64px, calc(var(--nav-overlay-h, 0px) + 16px));
 }
 
 /* heading 改用統一 <TitleBar>。.tp-trips-heading 已退役。 */
@@ -245,6 +245,8 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-trips-tab:hover { color: var(--color-foreground); }
+/* Dark track is --color-hover (#48484A); --color-muted is only 3.54:1 on it. */
+body.dark .tp-trips-tab:not(.is-active) { color: var(--color-foreground); }
 .tp-trips-tab.is-active {
   background: var(--color-background);
   /* W15 a11y：原 --color-accent(#A97A4A) 在 #FFFBF5 上僅 3.65:1（<4.5，axe serious）。
@@ -471,26 +473,7 @@ body.dark .tp-trips-sort {
 .tp-trips-error { color: var(--color-destructive); }
 `;
 
-interface TripInfo {
-  tripId: string;
-  name: string;
-  owner?: string;
-  /** 2026-05-07：owner.users.display_name（API LEFT JOIN）給 trip card avatar
-   *  initial 顯示「帳號名稱」第一字母，不是 email[0]。null/undefined →
-   *  fallback email local part 或 email[0]。 */
-  ownerDisplayName?: string | null;
-  title?: string | null;
-  countries?: string | null;
-  published?: number | boolean;
-  /* mockup-parity-qa-fixes: API 透過 functions/api/_utils.ts deepCamel() 把 SQL snake_case 轉
-   * camelCase。既有 day_count/start_date/member_count interface 是 stale bug — runtime 永遠
-   * undefined，導致 eyebrow 不顯示「· N 天」、card meta 缺日期。改 camelCase 對齊實際 response。 */
-  dayCount?: number;
-  startDate?: string | null;
-  endDate?: string | null;
-  memberCount?: number;
-  archivedAt?: string | null;
-}
+type TripInfo = MyTrip;
 
 /**
  * destinationTone — 行程卡「依目的地三色切換」(v2.54.8)。
@@ -569,8 +552,8 @@ function cardMeta(trip: TripInfo): string {
 // 供 TripStackLayout 共用（owner「第三欄開啟後第二欄 header actions 消失」）。
 
 export default function TripsListPage() {
-  const auth = useRequireAuth();
-  const { user } = auth;
+  useRequireAuth();
+  const { user } = useCurrentUser();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
   // v2.39.0: 分享連結 modal — 由 card ⋯ / 行程頁 ⋯ 的「分享連結」開啟。
@@ -579,28 +562,35 @@ export default function TripsListPage() {
   const selectedFromUrl = searchParams.get('selected');
   const { openModal: openNewTrip } = useNewTrip();
 
-  const { trips, status: tripsStatus, retry: retryTrips, activeTripId, setActiveTrip } = useAccessibleTripSelection(
-    user?.id, selectedFromUrl,
-  );
-  const [deletedTripIds, setDeletedTripIds] = useState<Set<string>>(() => new Set());
+  const { trips: sharedTrips, status: tripsStatus, activeTripId, setActiveTrip } =
+    useTripSelection(user?.id, { explicitTripId: selectedFromUrl });
   const myTrips = useMemo<TripInfo[]>(
-    () => (trips ?? []).filter((trip) => !deletedTripIds.has(trip.tripId))
-      .map((trip) => ({ ...trip, dayCount: trip.dayCount ?? trip.totalDays })),
-    [trips, deletedTripIds],
+    () => sharedTrips?.map((trip) => ({ ...trip, dayCount: trip.dayCount ?? trip.totalDays })) ?? [],
+    [sharedTrips],
   );
+  const error = tripsStatus === 'error' && !sharedTrips ? '無法載入你的行程清單。' : null;
+
+  // v2.31.89：embedded TitleBar「切換行程」改 dropdown picker（對齊 ChatPage UX）。
+  const [tripPickerOpen, setTripPickerOpen] = useState(false);
+  const tripPickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!tripPickerOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (tripPickerRef.current && !tripPickerRef.current.contains(e.target as Node)) {
+        setTripPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [tripPickerOpen]);
 
   // Section 4.7：filter subtab + sort + search expanding bar — pure client-side
   // 操作 myTrips 已知子集合，避免重新打 /api。
   // mockup-parity-qa-fixes: 加「已歸檔」第 4 顆 filter tab
   const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'collab' | 'archived'>('all');
   const [sortBy, setSortBy] = useState<'updated' | 'start' | 'name'>('updated');
-  const listRef = useRef<HTMLDivElement>(null);
-  const listScrollKey = `/trips:list:${user?.id ?? ''}`;
-  const returningFromTrip = useRef<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const allFilterRef = useRef<HTMLButtonElement>(null);
   const userEmail = (user?.email ?? '').toLowerCase();
 
   // userEmail 空（未登入）時一律不算「我的」。少了 !!userEmail 這道，未登入時
@@ -642,7 +632,7 @@ export default function TripsListPage() {
         return av < bv ? -1 : av > bv ? 1 : 0;
       });
     }
-    // 'updated' 預設保留 myIds 順序（API 已 most-recent-first）
+    // 'updated' 預設保留 /my-trips 順序（API 已 most-recent-first）
     return list;
   }, [myTrips, filterTab, sortBy, searchTerm, isOwnedByUser]);
 
@@ -654,15 +644,9 @@ export default function TripsListPage() {
     return { all: active.length, mine, collab: active.length - mine, archived };
   }, [myTrips, isOwnedByUser]);
 
-  // The explicit URL remains the detail target even when absent from the
-  // summaries. Only an implicit choice is validated against the list.
-  const tripsLoaded = tripsStatus === 'success';
-  // #1140 item 7：聊天/地圖/行程三 tab 共用同一個 active trip（`ActiveTripContext`，persist
-  // `LS_KEY_TRIP_PREF`）。行程 tab 無 ?selected 時優先回到 active trip（與聊天/GlobalMapPage
-  // 同源），不再各自 fallback 到 visibleTrips[0] → 切 tab 不會變不同行程。
+  // 明確 URL 優先；無 URL 的偏好及 fallback 由共用 selection hook 決定。
   const effectiveSelectedId = selectedFromUrl ?? activeTripId;
 
-  // The shared selection hook synchronizes explicit targets to active trip.
   // v2.55.x：進 /trips 沒帶 ?selected 時，還原「上次檢視」的行程 + 天（Q1「記住上次行程+位置」）。
   // 來源用 tripViewState（TripPage 實際檢視時才寫）而非 activeTripId —— 兩者語意不同：tripView
   // 是「上次看的行程」、activeTripId 是「目前選定行程」(chat 目標，選卡片即設)，可各自不同；還原
@@ -670,33 +654,32 @@ export default function TripsListPage() {
   // 等 trips 載入後只跑一次（ref guard）；已帶 ?selected 則不覆蓋；關掉行程後同一 mount 不再彈回。
   // 只在桌機還原：bug 1 是「點選左側行程」語意，桌機 /trips 是清單+右側嵌入行程，還原只是填右側、
   // 左側清單仍在；手機 /trips 是「清單 XOR 全螢幕行程」，還原會把 Trips 分頁整個吞進上次行程 →
-  // 清單難以觸及，故手機不自動還原。用 visibleTrips 驗證（非 myTrips）：只還原「當前可見」的行程，
-  // 避免把其他行程的 day-hash 套進已封存或不可見的行程。
+  // 清單難以觸及，故手機不自動還原。用可存取清單驗證；搜尋與分類只控制卡片呈現，
+  // 不改變 active trip 和上次閱讀位置。
   const didRestoreViewRef = useRef(false);
   useEffect(() => {
     if (didRestoreViewRef.current) return;
     if (!isDesktop) return; // 手機不自動還原（見上）；resize 到桌機再跑
     if (selectedFromUrl) { didRestoreViewRef.current = true; return; }
-    if (!tripsLoaded) return; // loading/failure cannot validate restoration
+    if (tripsStatus !== 'ready' || myTrips.length === 0) return;
     didRestoreViewRef.current = true;
     const last = readTripView();
     // #1140 item 7：優先還原 active trip（與聊天/地圖同源、三 tab 一致）；tripViewState 只在
     // 它指向同一條 active trip 時用來沿用「上次看的那天」（day-hash），否則不帶 day。active trip
-    // 不在可見清單才退回 tripViewState 的上次行程。
-    const activeVisible = !!activeTripId && visibleTrips.some((t) => t.tripId === activeTripId);
-    const lastVisible = !!last && visibleTrips.some((t) => t.tripId === last.tripId);
-    const restoreId = activeVisible ? activeTripId : (lastVisible ? last!.tripId : null);
+    // 不在可存取清單才退回 tripViewState 的上次行程。
+    const activeAccessible = !!activeTripId && myTrips.some((t) => t.tripId === activeTripId);
+    const lastAccessible = !!last && myTrips.some((t) => t.tripId === last.tripId);
+    const restoreId = activeAccessible ? activeTripId : (lastAccessible ? last!.tripId : null);
     if (!restoreId) return;
     const hash = last && last.tripId === restoreId && last.dayNum > 0 ? `#day${last.dayNum}` : '';
     navigate(`/trips?selected=${encodeURIComponent(restoreId)}${hash}`, { replace: true });
-  }, [tripsLoaded, visibleTrips, selectedFromUrl, navigate, isDesktop, activeTripId]);
+  }, [myTrips, selectedFromUrl, navigate, isDesktop, activeTripId, tripsStatus]);
 
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
   // 訊息送錯 trip。（activeTripId/setActiveTrip 已在上面 effectiveSelectedId 前取得。）
   function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
     e.preventDefault();
-    if (listRef.current) rememberScroll(listScrollKey, listRef.current);
     setActiveTrip(tripId);
     const next = new URLSearchParams(searchParams);
     next.set('selected', tripId);
@@ -730,6 +713,34 @@ export default function TripsListPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ tripId: string; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ tripId: string; label: string; archived: boolean } | null>(null);
+  const [archiving, setArchiving] = useState(false);
+
+  const handleMenuArchive = useCallback((tripId: string) => {
+    const trip = myTrips.find((candidate) => candidate.tripId === tripId);
+    if (!trip || trip.ownerUserId !== user?.id) return;
+    setArchiveTarget({ tripId, label: trip.title || trip.name || tripId, archived: trip.archivedAt != null });
+  }, [myTrips, user?.id]);
+
+  const handleConfirmArchive = useCallback(async () => {
+    if (!archiveTarget || archiving) return;
+    const { tripId, archived, label } = archiveTarget;
+    setArchiving(true);
+    try {
+      const result = archived ? await unarchiveTrip(tripId) : await archiveTrip(tripId);
+      if (!result.ok) { showToast(result.message, 'error'); return; }
+      setArchiveTarget(null);
+      showToast(`已${archived ? '取消歸檔' : '歸檔'}「${label}」`, 'success');
+      requestAnimationFrame(() => {
+        const target = document.querySelector<HTMLElement>(
+          selectedFromUrl ? '[data-testid="trips-embedded-menu-trigger"]' : '[data-testid="trips-list-tab-archived"]',
+        );
+        target?.focus();
+      });
+    } finally {
+      setArchiving(false);
+    }
+  }, [archiveTarget, archiving, selectedFromUrl]);
 
   const handleMenuDelete = useCallback(
     (tripId: string) => {
@@ -746,14 +757,9 @@ export default function TripsListPage() {
       const { tripId, label } = deleteTarget;
       setDeleting(true);
       try {
-        const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
-        if (r.status === 403) throw new Error('僅行程擁有者或管理者可刪除');
-        if (r.status === 404) throw new Error('行程不存在');
-        if (!r.ok) throw new Error('刪除失敗，請稍後再試');
+        const result = await deleteTrip(tripId);
+        if (!result.ok) { showToast(result.message, 'error'); return; }
         showToast(`已刪除「${label}」`, 'success');
-        // Keep the card removed while the shared list refresh is in flight.
-        setDeletedTripIds((previous) => new Set(previous).add(tripId));
-        window.dispatchEvent(new CustomEvent(EVENT.tripDeleted, { detail: { tripId } }));
         // Clear ?selected= if user just deleted the open trip
         if (selectedFromUrl === tripId) {
           const next = new URLSearchParams(searchParams);
@@ -761,8 +767,6 @@ export default function TripsListPage() {
           setSearchParams(next, { replace: true });
         }
         setDeleteTarget(null);
-      } catch (err) {
-        showToast((err as Error).message, 'error');
       } finally {
         setDeleting(false);
       }
@@ -770,8 +774,7 @@ export default function TripsListPage() {
     [deleteTarget, selectedFromUrl, searchParams, setSearchParams],
   );
 
-  const loading = tripsStatus === 'loading' && !trips;
-  const error = tripsStatus === 'error' ? '無法載入你的行程清單。' : null;
+  const loading = tripsStatus === 'loading' && !sharedTrips;
 
   // Heading meta 已棄用 — mockup 規定 TitleBar 單行 chrome 不放 meta。
   // 行程數隱性，user 看 cards 自然知道；toolbar 子 tabs / search / 排序 留 future PR。
@@ -780,22 +783,8 @@ export default function TripsListPage() {
   // (滿版)。Cards 隱藏。/trip/:id 路由不再使用。
   const showEmbeddedTrip = !!effectiveSelectedId && !!selectedFromUrl;
 
-  useLayoutEffect(() => {
-    if (showEmbeddedTrip) { returningFromTrip.current = effectiveSelectedId; return; }
-    if (loading || !listRef.current) return;
-    const target = returningFromTrip.current;
-    returningFromTrip.current = null;
-    if (target) {
-      const card = document.getElementById(`trip-card-${target}`);
-      (card ?? allFilterRef.current)?.focus({ preventScroll: true });
-    }
-    const saved = recallScroll(listScrollKey);
-    if (saved != null) restoreScrollTo(saved, 45, listRef.current);
-  }, [showEmbeddedTrip, effectiveSelectedId, loading, listScrollKey]);
-
   const cardGridMain = (
     <>
-      <ToastContainer />
       <ConfirmModal
         open={deleteTarget !== null}
         title="確定刪除行程？"
@@ -805,7 +794,7 @@ export default function TripsListPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-      <div ref={listRef} className="tp-trips-shell" data-testid="trips-list-page" onScroll={event => rememberScroll(listScrollKey, event.currentTarget)}>
+      <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
           account={<AccountCircle />}
@@ -832,12 +821,9 @@ export default function TripsListPage() {
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
           )}
 
-          {error && <>
-            <ErrorBanner message={error} testId="trips-list-error" />
-            <button type="button" className="min-h-[44px] text-accent" onClick={() => void retryTrips()}>重試載入行程</button>
-          </>}
+          {error && <ErrorBanner message={error} testId="trips-list-error" />}
 
-          {!loading && myTrips.length > 0 && (
+          {!loading && !error && myTrips.length > 0 && (
             <div className="tp-trips-toolbar" data-testid="trips-list-toolbar">
               <div className="tp-trips-tabs" role="group" aria-label="行程分類">
                 {([
@@ -849,7 +835,6 @@ export default function TripsListPage() {
                   <button
                     key={tab.key}
                     type="button"
-                    ref={tab.key === 'all' ? allFilterRef : undefined}
                     aria-pressed={filterTab === tab.key}
                     className={`tp-trips-tab ${filterTab === tab.key ? 'is-active' : ''}`}
                     onClick={() => setFilterTab(tab.key)}
@@ -892,7 +877,6 @@ export default function TripsListPage() {
                   <>
                     <input
                       type="text"
-                      ref={searchInputRef}
                       placeholder="搜尋行程名稱或地區"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -938,18 +922,16 @@ export default function TripsListPage() {
 
           {!loading && !error && myTrips.length > 0 && visibleTrips.length === 0 && (
             <div className="tp-trips-loading" data-testid="trips-list-empty-filtered">
-              {filterTab === 'archived' && tabCounts.archived === 0 && !searchTerm.trim()
+              {filterTab === 'archived'
                 ? '目前沒有已歸檔行程。歸檔行程會在這裡顯示。'
                 : '沒有符合條件的行程。試著切換分類或調整搜尋字。'}
-              <button
+              {filterTab === 'archived' && (
+                <button
                   type="button"
-                  onClick={() => {
-                    setFilterTab('all'); setSearchTerm('');
-                    (searchInputRef.current ?? allFilterRef.current)?.focus({ preventScroll: true });
-                  }}
+                  onClick={() => setFilterTab('all')}
                   data-testid="trips-list-archived-reset"
                   style={{
-                    marginLeft: 8, minHeight: 44,
+                    marginLeft: 8,
                     background: 'transparent',
                     border: 0,
                     // #1156：底是頁面色（.tp-trips-loading 用 --color-background）而非
@@ -959,8 +941,9 @@ export default function TripsListPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {filterTab === 'archived' && !searchTerm.trim() ? '回到全部' : '清除篩選'}
+                  回到全部
                 </button>
+              )}
             </div>
           )}
 
@@ -990,7 +973,6 @@ export default function TripsListPage() {
                       onClick={(e) => handleCardClick(t.tripId, e)}
                       className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
                       data-tone={destinationTone(t.countries)}
-                      id={`trip-card-${t.tripId}`}
                       data-testid={`trips-list-card-${t.tripId}`}
                       aria-current={isActive ? 'true' : undefined}
                     >
@@ -1010,6 +992,8 @@ export default function TripsListPage() {
                     </button>
                     <TripCardMenu
                       tripId={t.tripId}
+                      onArchive={t.ownerUserId === user?.id ? handleMenuArchive : undefined}
+                      archived={t.archivedAt != null}
                       onCollab={handleMenuCollab}
                       onEdit={handleMenuEdit}
                       onHealthCheck={handleMenuHealthCheck}
@@ -1037,9 +1021,19 @@ export default function TripsListPage() {
   );
 
   function clearSelected() {
+    /* Capture the trip id user was viewing BEFORE we drop ?selected — used
+     * to restore keyboard focus to the originating card after re-render
+     * (back-btn unmounts → focus would otherwise fall to <body>). */
+    const targetId = effectiveSelectedId;
     const next = new URLSearchParams(searchParams);
     next.delete('selected');
     setSearchParams(next, { replace: false });
+    if (targetId && typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        const card = document.querySelector(`[data-testid="trips-list-card-${targetId}"]`);
+        if (card instanceof HTMLElement) card.focus();
+      });
+    }
   }
 
   const embeddedTrip = showEmbeddedTrip
@@ -1053,8 +1047,8 @@ export default function TripsListPage() {
       <TitleBar
         title={
           <TripTitleSwitcher
-            label={embeddedTrip?.title || embeddedTrip?.name || (tripsLoaded ? effectiveSelectedId : '載入中…')}
-            trips={visibleTrips}
+            label={embeddedTrip?.title || embeddedTrip?.name || (tripsStatus === 'ready' ? effectiveSelectedId : '載入中…')}
+            trips={myTrips}
             activeTripId={effectiveSelectedId ?? null}
             onPick={(id) => {
               setActiveTrip(id);
@@ -1090,6 +1084,8 @@ export default function TripsListPage() {
             </button>
             <TripActionsMenu
               tripId={effectiveSelectedId}
+              onArchive={embeddedTrip?.ownerUserId === user?.id ? () => handleMenuArchive(effectiveSelectedId) : undefined}
+              archived={embeddedTrip?.archivedAt != null}
               tripPageRef={tripPageRef}
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}
               onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
@@ -1117,13 +1113,26 @@ export default function TripsListPage() {
 
   return (
     <>
+      <ToastContainer />
+      <ConfirmModal
+        open={archiveTarget !== null}
+        title={archiveTarget?.archived ? '取消歸檔行程？' : '歸檔行程？'}
+        message={archiveTarget?.archived
+          ? `「${archiveTarget.label}」會回到所有旅伴的「全部」清單。`
+          : `「${archiveTarget?.label ?? ''}」會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。`}
+        confirmLabel={archiveTarget?.archived ? '取消歸檔' : '歸檔'}
+        confirmTone="primary"
+        busy={archiving}
+        onConfirm={handleConfirmArchive}
+        onCancel={() => setArchiveTarget(null)}
+      />
       {/* SCOPED_STYLES 必須 hoist 到頂層 — embedded mode 不渲染 cardGridMain，
         * 注入在 cardGridMain 內就失效。 */}
       <style>{SCOPED_STYLES}</style>
       <AppShell
         sidebar={<DesktopSidebarConnected />}
-        main={user ? main : <AuthStatus auth={auth} />}
-        sheetPortalId={user && showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
+        main={main}
+        sheetPortalId={showEmbeddedTrip ? 'trip-sheet-portal' : undefined}
         bottomNav={<GlobalBottomNav authed={user !== null} />}
       />
       {shareTripId && (

@@ -38,7 +38,7 @@ export interface Env {
   SESSION_IP_HASH_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
-  /** Separate verified HTTPS app-link callback, configured per environment. */
+  /** 獨立驗證過的 HTTPS app-link callback，依環境各自設定。 */
   MOBILE_OAUTH_CALLBACK_URL?: string;
   // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)
   OAUTH_SIGNING_PRIVATE_KEY?: string;

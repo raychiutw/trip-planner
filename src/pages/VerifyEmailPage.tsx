@@ -7,13 +7,12 @@
  * Flow:
  *   1. Mount: read token from query → idle state 顯示「點此完成驗證」button
  *   2. User click button → POST `/api/oauth/verify` with body { token }
- *   3. Success → explicit login link /login?verified=1
- *   4. Error → 顯示對應訊息 + 提供登入／重試／回首頁
- *   5. No-JS fallback: noscript <form> 直接 POST /api/oauth/verify
+ *   3. Success → 提供 /login?verified=1 的明確入口
+ *   4. Error → 顯示對應訊息 + 提供重試／重寄／登入出口
  *
  * Defense vs 舊 GET-with-side-effect (v2.33.59):
  *   - Email client image-preview 不會 silent consume
- *   - Token 不留 browser history (URL 改為 SPA path，POST body 帶 token)
+ *   - POST body 帶 token，結果導向登入時不再將 token 帶入下一頁
  *   - Referer leak 透過 POST body 不放 URL
  *
  * v2.33.114 — 拔 auto-POST，require user gesture:
@@ -24,7 +23,7 @@
  *   誤導訊息（rayschiu@fetci.com 2026-05-25 QA 復現）。改用 button click =
  *   require user gesture，scanner headless render 不會自動 click button。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetchRaw } from '../lib/apiClient';
 
@@ -33,7 +32,7 @@ type ErrorCode = 'missing_token' | 'expired' | 'used' | 'server_error' | 'networ
 
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
   missing_token: '驗證連結缺少 token 參數，可能是連結被截斷。',
-  expired: '驗證連結已過期。請使用最新驗證信，或先登入帳號。',
+  expired: '驗證連結已過期，請重新申請驗證信。',
   used: '此驗證連結已經使用過了，可直接登入。',
   server_error: '系統暫時無法驗證，請稍後再試。',
   network: '網路連線錯誤，請檢查網路後再試。',
@@ -41,29 +40,16 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
-  const token = (searchParams.get('token') ?? '').trim();
-  return <Verification key={token} token={token} />;
+  const token = searchParams.get('token') ?? '';
+  return <VerifyEmailFlow key={token} token={token} />;
 }
 
-function Verification({ token }: { token: string }) {
-  const active = useRef(true);
-  const inFlight = useRef(false);
-  useEffect(() => {
-    active.current = true;
-    return () => { active.current = false; };
-  }, []);
+function VerifyEmailFlow({ token }: { token: string }) {
   // v2.33.114: missing_token 在 mount 時就 derive 進 initial state（避免 useEffect setState 副作用）
   const [status, setStatus] = useState<Status>(token ? 'idle' : 'error');
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(token ? null : 'missing_token');
 
-  const resultRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    if (status === 'success' || status === 'error') resultRef.current?.focus();
-  }, [status]);
-
   async function performVerify(): Promise<void> {
-    if (!token || inFlight.current) return;
-    inFlight.current = true;
     setStatus('verifying');
     setErrorCode(null);
     try {
@@ -72,22 +58,18 @@ function Verification({ token }: { token: string }) {
         body: JSON.stringify({ token }),
         headers: { 'content-type': 'application/json' },
       });
-      const data = (await res.json().catch(() => null)) as { ok?: unknown; error?: unknown } | null;
-      if (!active.current) return;
-      if (res.ok && data?.ok === true) {
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (res.ok && data.ok) {
         setStatus('success');
       } else {
         setStatus('error');
-        const code = data?.error;
-        setErrorCode(typeof code === 'string' && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code)
-          ? code as ErrorCode : 'server_error');
+        setErrorCode(data.error && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, data.error)
+          ? data.error as ErrorCode
+          : 'server_error');
       }
     } catch {
-      if (!active.current) return;
       setStatus('error');
       setErrorCode('network');
-    } finally {
-      inFlight.current = false;
     }
   }
 
@@ -134,8 +116,8 @@ function Verification({ token }: { token: string }) {
               style={{
                 padding: '12px 28px',
                 borderRadius: 'var(--radius-full)',
-                background: 'var(--color-accent)',
-                color: '#fff',
+                background: 'var(--color-accent-fill)',
+                color: 'var(--color-accent-foreground)',
                 border: 'none',
                 fontWeight: 700,
                 fontSize: 15,
@@ -148,20 +130,20 @@ function Verification({ token }: { token: string }) {
         ) : null}
 
         {status === 'verifying' ? (
-          <p style={{ color: 'var(--color-muted)', margin: 0 }} role="status" data-testid="verify-email-status-verifying">
+          <p role="status" style={{ color: 'var(--color-muted)', margin: 0 }} data-testid="verify-email-status-verifying">
             驗證中…
           </p>
         ) : null}
 
         {status === 'success' ? (
           <>
-            <p style={{ color: 'var(--color-priority-low-dot)', fontWeight: 700, margin: 0 }}
-               ref={resultRef} tabIndex={-1} role="status" data-testid="verify-email-status-success">
+            <p role="status" style={{ color: 'var(--color-priority-low-dot)', fontWeight: 700, margin: 0 }}
+               data-testid="verify-email-status-success">
               ✓ Email 驗證成功！
             </p>
-            <p style={{ color: 'var(--color-muted)', marginTop: 12, fontSize: 14 }}>
-              <Link to="/login?verified=1">前往登入</Link>
-            </p>
+            <Link to="/login?verified=1" style={{ display: 'inline-block', marginTop: 20, padding: '10px 18px', borderRadius: 'var(--radius-full)', background: 'var(--color-accent-fill)', color: 'var(--color-accent-foreground)', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
+              前往登入
+            </Link>
           </>
         ) : null}
 
@@ -169,22 +151,37 @@ function Verification({ token }: { token: string }) {
           <>
             <p
               style={{ color: 'var(--color-priority-high-dot)', margin: 0, lineHeight: 1.5 }}
-              ref={resultRef}
-              tabIndex={-1}
               role="alert"
               data-testid={`verify-email-status-error-${errorCode}`}
             >
               {ERROR_MESSAGES[errorCode]}
             </p>
             <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {errorCode === 'used' || errorCode === 'expired' || errorCode === 'missing_token' ? (
+              {errorCode === 'expired' || errorCode === 'missing_token' ? (
+                <Link
+                  to="/signup/check-email"
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    fontSize: 14,
+                  }}
+                  data-testid="verify-email-resend-link"
+                >
+                  重新取得驗證信
+                </Link>
+              ) : null}
+              {errorCode === 'used' ? (
                 <Link
                   to="/login"
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
                     fontWeight: 700,
                     textDecoration: 'none',
                     fontSize: 14,
@@ -201,8 +198,8 @@ function Verification({ token }: { token: string }) {
                   style={{
                     padding: '10px 18px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'var(--color-accent)',
-                    color: '#fff',
+                    background: 'var(--color-accent-fill)',
+                    color: 'var(--color-accent-foreground)',
                     border: 'none',
                     fontWeight: 700,
                     fontSize: 14,
@@ -233,29 +230,6 @@ function Verification({ token }: { token: string }) {
           </>
         ) : null}
 
-        {/* No-JS fallback: form auto-submits via attribute, JS bypasses with apiFetchRaw above */}
-        <noscript>
-          <form action="/api/oauth/verify" method="POST" style={{ marginTop: 20 }}>
-            <input type="hidden" name="token" value={token} />
-            <button
-              type="submit"
-              style={{
-                padding: '12px 24px',
-                borderRadius: 'var(--radius-full)',
-                background: 'var(--color-accent)',
-                color: '#fff',
-                border: 'none',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              點此驗證
-            </button>
-            <p style={{ marginTop: 12, color: 'var(--color-muted)', fontSize: 13 }}>
-              你目前未啟用 JavaScript — 請手動點按上方按鈕完成驗證。
-            </p>
-          </form>
-        </noscript>
       </div>
     </div>
   );

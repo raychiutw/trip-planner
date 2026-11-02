@@ -10,24 +10,35 @@
  * 一個沒實作的欄位，也就是 version 當初的走法）擋不住 —— 本檔只讀 runtime，讀不到
  * 註解。要擋那個方向得去解析 health.ts 的 docblock，那是另一條測試。
  * 這是這個 endpoint 唯一會真的執行 handler 的測試。
+ * 走 HTTP 邊界（tests/api/http.ts）：公開端點，不需認證；D1 故障用會拋錯的 DB 注入 env。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, callHandler } from './helpers';
-import { onRequestGet } from '../../functions/api/health';
+import { mockEnv } from './helpers';
+import { createApi } from './http';
 import type { Env } from '../../functions/api/_types';
 
-/** D1 outage：任何 query 直接拋 —— checkD1 的 catch 看到的就是這個。 */
-const throwingDb = {
-  prepare: () => {
-    throw new Error('D1_ERROR: Network connection lost');
-  },
-} as unknown as D1Database;
+/**
+ * D1 outage：每個 query 都 reject —— checkD1 的 catch 看到的就是這個。
+ * 和真實 D1 一致：prepare/bind 本身不拋，執行時才失敗；
+ * middleware 寫 api_logs 的 waitUntil 也會 reject，但不影響回應。
+ */
+const failingStatement = {
+  bind: () => failingStatement,
+  first: () => Promise.reject(new Error('D1_ERROR: Network connection lost')),
+  run: () => Promise.reject(new Error('D1_ERROR: Network connection lost')),
+  all: () => Promise.reject(new Error('D1_ERROR: Network connection lost')),
+};
+const throwingDb = { prepare: () => failingStatement } as unknown as D1Database;
 
 /** D1 回得來但形狀不對（row 存在、沒有 ok=1）—— 走 checkD1 不拋的那條 fail。 */
-const wrongShapeDb = {
-  prepare: () => ({ first: async () => null }),
-} as unknown as D1Database;
+const emptyStatement = {
+  bind: () => emptyStatement,
+  first: async () => null,
+  run: async () => ({ success: true, meta: { changes: 0 } }),
+  all: async () => ({ results: [] }),
+};
+const wrongShapeDb = { prepare: () => emptyStatement } as unknown as D1Database;
 
 describe('GET /api/health — 回應形狀', () => {
   let db: D1Database;
@@ -40,8 +51,7 @@ describe('GET /api/health — 回應形狀', () => {
 
   const call = async (overrides: Partial<Env> = {}) => {
     const env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'x'.repeat(20), ...overrides });
-    const ctx = mockContext({ request: new Request('https://x/api/health'), env });
-    const resp = await callHandler(onRequestGet, ctx);
+    const resp = await createApi({ env }).get('/api/health');
     return { resp, body: (await resp.json()) as Record<string, unknown> };
   };
 

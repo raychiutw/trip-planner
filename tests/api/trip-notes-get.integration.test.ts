@@ -13,25 +13,23 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { callHandler, jsonRequest, mockAuth, mockContext, mockEnv, seedTrip, seedUser } from './helpers';
-import { onRequestGet as getAggregator } from '../../functions/api/trips/[id]/notes';
-import { onRequestGet as getFlights } from '../../functions/api/trips/[id]/notes/flights';
-import { onRequestGet as getLodgings } from '../../functions/api/trips/[id]/notes/lodgings';
-import { onRequestGet as getReservations } from '../../functions/api/trips/[id]/notes/reservations';
-import { onRequestGet as getPretrip } from '../../functions/api/trips/[id]/notes/pretrip';
-import { onRequestGet as getEmergency } from '../../functions/api/trips/[id]/notes/emergency';
+import { mockEnv, seedTrip, seedUser } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTripNotes } from './cleanup-trip-notes';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
-const tripFull = 'trip-notes-full';
-const tripEmpty = 'trip-notes-empty';
-const ownerEmail = 'owner@notes.test';
-const strangerEmail = 'stranger@notes.test';
+let api: Api;
+const tripFull = 's13-notes-get-full';
+const tripEmpty = 's13-notes-get-empty';
+const ownerEmail = 'owner@s13-notes-get.test';
+const strangerEmail = 'stranger@s13-notes-get.test';
 
 beforeAll(async () => {
   db = await createTestDb();
   env = mockEnv(db);
+  api = createApi({ env });
   await seedUser(db, ownerEmail);
   await seedUser(db, strangerEmail);
 
@@ -105,21 +103,19 @@ beforeAll(async () => {
   }
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTripNotes(db, ['s13-notes-get-%'], ['%@s13-notes-get.test']);
+  await disposeMiniflare();
+});
 
-async function callGet(handler: typeof getAggregator, tripId: string, email: string) {
-  const ctx = mockContext({
-    request: jsonRequest(`https://test/api/trips/${tripId}/notes`, 'GET'),
-    env,
-    auth: mockAuth({ email }),
-    params: { id: tripId },
-  });
-  return callHandler(handler, ctx);
+function callGet(section: string, tripId: string, email: string) {
+  const suffix = section ? `/${section}` : '';
+  return api.get(`/api/trips/${tripId}/notes${suffix}`, { as: email });
 }
 
 describe('GET /api/trips/:id/notes — aggregator', () => {
   it('full trip → 5 section 全有資料', async () => {
-    const res = await callGet(getAggregator, tripFull, ownerEmail);
+    const res = await callGet('', tripFull, ownerEmail);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.flights.length).toBe(2);
@@ -130,7 +126,7 @@ describe('GET /api/trips/:id/notes — aggregator', () => {
   });
 
   it('empty trip → 5 section 都 []', async () => {
-    const res = await callGet(getAggregator, tripEmpty, ownerEmail);
+    const res = await callGet('', tripEmpty, ownerEmail);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.flights).toEqual([]);
@@ -141,7 +137,7 @@ describe('GET /api/trips/:id/notes — aggregator', () => {
   });
 
   it('camelCase 對齊 — pretripNotes / emergencyContacts 而非 pretrip_notes / emergency_contacts', async () => {
-    const res = await callGet(getAggregator, tripFull, ownerEmail);
+    const res = await callGet('', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect('pretripNotes' in body).toBe(true);
     expect('emergencyContacts' in body).toBe(true);
@@ -150,7 +146,7 @@ describe('GET /api/trips/:id/notes — aggregator', () => {
   });
 
   it('row 內欄位 camelCase — sortOrder / aiGenerated / aiSource / flightNo / bookingNo', async () => {
-    const res = await callGet(getAggregator, tripFull, ownerEmail);
+    const res = await callGet('', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect('sortOrder' in body.flights[0]).toBe(true);
     expect('flightNo' in body.flights[0]).toBe(true);
@@ -163,21 +159,21 @@ describe('GET /api/trips/:id/notes — aggregator', () => {
   });
 
   it('flights ORDER BY sort_order — CI 120 (sort=0) 排在 CI 123 (sort=1) 前', async () => {
-    const res = await callGet(getAggregator, tripFull, ownerEmail);
+    const res = await callGet('', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect(body.flights[0].flightNo).toBe('CI 120');
     expect(body.flights[1].flightNo).toBe('CI 123');
   });
 
   it('PERM_DENIED — 非授權 user 拒絕', async () => {
-    const res = await callGet(getAggregator, tripFull, strangerEmail);
+    const res = await callGet('', tripFull, strangerEmail);
     expect(res.status).toBe(403);
   });
 });
 
 describe('GET /api/trips/:id/notes/flights — per-section', () => {
   it('return { items: [...] } shape', async () => {
-    const res = await callGet(getFlights, tripFull, ownerEmail);
+    const res = await callGet('flights', tripFull, ownerEmail);
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(Array.isArray(body.items)).toBe(true);
@@ -186,7 +182,7 @@ describe('GET /api/trips/:id/notes/flights — per-section', () => {
   });
 
   it('empty trip → items=[]', async () => {
-    const res = await callGet(getFlights, tripEmpty, ownerEmail);
+    const res = await callGet('flights', tripEmpty, ownerEmail);
     const body = await res.json() as any;
     expect(body.items).toEqual([]);
   });
@@ -194,7 +190,7 @@ describe('GET /api/trips/:id/notes/flights — per-section', () => {
 
 describe('GET /api/trips/:id/notes/lodgings — per-section', () => {
   it('return lodging row', async () => {
-    const res = await callGet(getLodgings, tripFull, ownerEmail);
+    const res = await callGet('lodgings', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect(body.items[0].name).toContain('里士滿');
     expect(body.items[0].bookingNo).toBe('BK-7281');
@@ -203,7 +199,7 @@ describe('GET /api/trips/:id/notes/lodgings — per-section', () => {
 
 describe('GET /api/trips/:id/notes/reservations — per-section', () => {
   it('return reservation row', async () => {
-    const res = await callGet(getReservations, tripFull, ownerEmail);
+    const res = await callGet('reservations', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect(body.items[0].kind).toBe('restaurant');
     expect(body.items[0].title).toBe('そば処 鶴亀庵');
@@ -212,7 +208,7 @@ describe('GET /api/trips/:id/notes/reservations — per-section', () => {
 
 describe('GET /api/trips/:id/notes/pretrip — per-section + ai_source filter context', () => {
   it('return 3 pretrip notes', async () => {
-    const res = await callGet(getPretrip, tripFull, ownerEmail);
+    const res = await callGet('pretrip', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect(body.items.length).toBe(3);
     expect(body.items[0].title).toBe('貨幣');
@@ -224,7 +220,7 @@ describe('GET /api/trips/:id/notes/pretrip — per-section + ai_source filter co
 
 describe('GET /api/trips/:id/notes/emergency — per-section', () => {
   it('return 3 emergency contacts ordered', async () => {
-    const res = await callGet(getEmergency, tripFull, ownerEmail);
+    const res = await callGet('emergency', tripFull, ownerEmail);
     const body = await res.json() as any;
     expect(body.items.length).toBe(3);
     expect(body.items[0].kind).toBe('embassy');
@@ -233,7 +229,7 @@ describe('GET /api/trips/:id/notes/emergency — per-section', () => {
   });
 
   it('PERM_DENIED — 非授權 user', async () => {
-    const res = await callGet(getEmergency, tripFull, strangerEmail);
+    const res = await callGet('emergency', tripFull, strangerEmail);
     expect(res.status).toBe(403);
   });
 });

@@ -1,6 +1,12 @@
 /**
  * ops-scope-gate — 移除全域 admin 授權回歸鎖（Phase 1 建立，Phase 3 收緊）
  *
+ * 走 HTTP 邊界：真實 bearer（服務 token 的 user_id 為 null；使用者 token 綁 user）→ middleware →
+ * handler。原本直接呼叫 hasOpsScope / requireScope，改成打真正用到它們的 /api/admin/* 維運端點：
+ *   ops:maps → GET  /api/admin/maps-settings
+ *   ops:poi  → GET  /api/admin/backfill-status
+ *   ops:cache→ POST /api/admin/cache-cleanup
+ *
  * 驗證：
  *  - hasOpsScope / requireScope：只有 service token 帶對應 ops scope 才過；
  *    user-session 即使自帶 scopes 也不過（無偽造路徑）；Phase 3 已移除舊 admin
@@ -12,149 +18,140 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockAuth, mockEnv, seedTrip, seedPoi, callHandler, jsonRequest } from './helpers';
-import { hasOpsScope, requireScope } from '../../functions/api/_auth';
-import { onRequestPatch, onRequestDelete } from '../../functions/api/pois/[id]';
-import { onRequestGet as auditGet } from '../../functions/api/trips/[id]/audit';
-import type { AuthData } from '../../functions/api/_types';
+import { mockEnv, seedTrip, seedPoi } from './helpers';
+import { createApi, type Api } from './http';
+import { serviceTokenFor } from './service-token';
+import { cleanupTrips } from './cleanup-trips';
 
-/** service-token auth — userId=null（mockAuth 用 ...overrides 覆寫回 null）。 */
-function svcToken(scopes: string[], clientId = 'cli'): AuthData {
-  return mockAuth({
-    email: `service:${clientId}`,
-    userId: null,
-    isServiceToken: true,
-    scopes,
-    clientId,
-  });
-}
+const BASE = 'https://x.com';
+let db: D1Database;
+let api: Api;
+
+beforeAll(async () => {
+  db = await createTestDb();
+  api = createApi({ env: mockEnv(db) });
+});
+
+afterAll(async () => {
+  await db.prepare("DELETE FROM audit_log WHERE table_name = 'pois' AND changed_by = 'service:cli'").run();
+  await cleanupTrips(db, ['ops-gate-%'], ['ops-gate-%']);
+  await disposeMiniflare();
+});
+
+const svc = (scopes: string[], clientId = 'cli') => serviceTokenFor(db, { clientId, scopes });
+const mapsSettings = (bearer: string) => api.get(`${BASE}/api/admin/maps-settings`, { bearer });
+const backfillStatus = (bearer: string) => api.get(`${BASE}/api/admin/backfill-status`, { bearer });
 
 describe('hasOpsScope (Phase 1 ops-scope gate)', () => {
-  it('service token with matching ops scope → true; non-matching → false', () => {
-    const auth = svcToken(['ops:maps']);
-    expect(hasOpsScope(auth, 'ops:maps')).toBe(true);
-    expect(hasOpsScope(auth, 'ops:poi')).toBe(false);
+  it('service token with matching ops scope → true; non-matching → false', async () => {
+    const token = await svc(['ops:maps']);
+    expect((await mapsSettings(token)).status).toBe(200);
+    expect((await backfillStatus(token)).status).toBe(403); // ops:poi 不是它的
   });
 
-  it('legacy admin scope 不再雙接受 → false for all ops (Phase 3 已移除過渡)', () => {
+  it('legacy admin scope 不再雙接受 → false for all ops (Phase 3 已移除過渡)', async () => {
     // Phase 1 過渡期 admin scope 雙接受任何 ops；Phase 3 移除 `|| scopes.includes('admin')`，
     // 舊 token 若只帶 admin scope 不再被當維運身份 — 必須重新 provision 細粒度 ops scope。
-    const auth = svcToken(['admin']);
-    expect(hasOpsScope(auth, 'ops:maps')).toBe(false);
-    expect(hasOpsScope(auth, 'ops:poi')).toBe(false);
-    expect(hasOpsScope(auth, 'ops:trips:read')).toBe(false);
+    const token = await svc(['admin']);
+    expect((await mapsSettings(token)).status).toBe(403);
+    expect((await backfillStatus(token)).status).toBe(403);
+    const cache = await api.request('POST', `${BASE}/api/admin/cache-cleanup`, { bearer: token });
+    expect(cache.status).toBe(403);
   });
 
-  it('user session never passes even with scopes present (no forge)', () => {
-    const auth = mockAuth({ scopes: ['ops:maps'] }); // isServiceToken=false
-    expect(hasOpsScope(auth, 'ops:maps')).toBe(false);
+  it('user session never passes even with scopes present (no forge)', async () => {
+    // 使用者 token（綁 user_id）即使 scopes 含 ops:maps，也不是服務 token
+    const res = await api.get(`${BASE}/api/admin/maps-settings`, { as: 'ops-gate-user@test.com', scopes: ['ops:maps'] });
+    expect(res.status).toBe(403);
   });
 
-  it('service token without scopes → false; null auth → false', () => {
-    expect(hasOpsScope(svcToken([] as string[]), 'ops:maps')).toBe(false);
-    expect(hasOpsScope(mockAuth({ isServiceToken: true, userId: null }), 'ops:maps')).toBe(false);
-    expect(hasOpsScope(null, 'ops:maps')).toBe(false);
+  it('service token without scopes → false; null auth → false', async () => {
+    expect((await mapsSettings(await svc([]))).status).toBe(403);
+    // 匿名（沒有 auth）
+    expect((await api.get(`${BASE}/api/admin/maps-settings`)).status).toBe(401);
   });
 });
 
 describe('requireScope', () => {
-  it('returns auth when service token has the ops scope', () => {
-    const auth = svcToken(['ops:cache']);
-    expect(requireScope({ data: { auth } }, 'ops:cache')).toBe(auth);
+  it('returns auth when service token has the ops scope', async () => {
+    const token = await svc(['ops:cache']);
+    const res = await api.request('POST', `${BASE}/api/admin/cache-cleanup`, { bearer: token });
+    expect(res.status).toBe(200);
+    expect(typeof ((await res.json()) as { deleted: number }).deleted).toBe('number');
   });
 
-  it('throws when scope missing or caller is a user session', () => {
-    expect(() => requireScope({ data: { auth: svcToken(['ops:maps']) } }, 'ops:poi')).toThrow();
-    expect(() => requireScope({ data: { auth: mockAuth({}) } }, 'ops:maps')).toThrow();
+  it('throws when scope missing or caller is a user session', async () => {
+    expect((await backfillStatus(await svc(['ops:maps']))).status).toBe(403);
+    const user = await api.get(`${BASE}/api/admin/maps-settings`, { as: 'ops-gate-user@test.com' });
+    expect(user.status).toBe(403);
   });
 });
 
 describe('F1 — master POI write gated by ops:poi', () => {
-  let db: D1Database;
-  beforeAll(async () => { db = await createTestDb(); });
-  afterAll(disposeMiniflare);
+  async function poiName(id: number): Promise<string | undefined> {
+    return (await db.prepare('SELECT name FROM pois WHERE id = ?').bind(id).first<{ name: string }>())?.name;
+  }
 
   it('service token with ops:poi can PATCH master POI without tripId', async () => {
-    const poiId = await seedPoi(db, { name: 'Old Name' });
-    const res = await callHandler(onRequestPatch as never, {
-      request: jsonRequest(`https://x/api/pois/${poiId}`, 'PATCH', { name: 'New Name' }),
-      env: mockEnv(db),
-      params: { id: String(poiId) },
-      data: { auth: svcToken(['ops:poi']) },
+    const poiId = await seedPoi(db, { name: 'ops-gate-Old Name' });
+    const res = await api.request('PATCH', `${BASE}/api/pois/${poiId}`, {
+      bearer: await svc(['ops:poi']),
+      json: { name: 'ops-gate-New Name' },
     });
     expect(res.status).toBe(200);
-    expect((await res.json()).name).toBe('New Name');
+    expect(((await res.json()) as { name: string }).name).toBe('ops-gate-New Name');
+    expect(await poiName(poiId)).toBe('ops-gate-New Name');
   });
 
   it('service token WITHOUT ops:poi (only ops:maps) is rejected from PATCH without tripId', async () => {
-    const poiId = await seedPoi(db, { name: 'X' });
-    const res = await callHandler(onRequestPatch as never, {
-      request: jsonRequest(`https://x/api/pois/${poiId}`, 'PATCH', { name: 'Y' }),
-      env: mockEnv(db),
-      params: { id: String(poiId) },
-      data: { auth: svcToken(['ops:maps']) },
+    const poiId = await seedPoi(db, { name: 'ops-gate-X' });
+    const res = await api.request('PATCH', `${BASE}/api/pois/${poiId}`, {
+      bearer: await svc(['ops:maps']),
+      json: { name: 'ops-gate-Y' },
     });
     expect(res.status).not.toBe(200); // 走非維運分支 → 缺 tripId → DATA_VALIDATION
+    expect(res.status).toBe(400);
+    expect(await poiName(poiId)).toBe('ops-gate-X');
   });
 
   it('service token with ops:poi can DELETE master POI', async () => {
-    const poiId = await seedPoi(db, { name: 'ToDelete' });
-    const res = await callHandler(onRequestDelete as never, {
-      request: jsonRequest(`https://x/api/pois/${poiId}`, 'DELETE'),
-      env: mockEnv(db),
-      params: { id: String(poiId) },
-      data: { auth: svcToken(['ops:poi']) },
-    });
+    const poiId = await seedPoi(db, { name: 'ops-gate-ToDelete' });
+    const res = await api.request('DELETE', `${BASE}/api/pois/${poiId}`, { bearer: await svc(['ops:poi']) });
     expect(res.status).toBe(200);
+    expect(await poiName(poiId)).toBeUndefined();
   });
 
   it('user (no ops scope) is rejected from DELETE master POI', async () => {
-    const poiId = await seedPoi(db, { name: 'Z' });
-    const res = await callHandler(onRequestDelete as never, {
-      request: jsonRequest(`https://x/api/pois/${poiId}`, 'DELETE'),
-      env: mockEnv(db),
-      params: { id: String(poiId) },
-      data: { auth: mockAuth({ email: 'user@test.com' }) },
-    });
+    const poiId = await seedPoi(db, { name: 'ops-gate-Z' });
+    const res = await api.request('DELETE', `${BASE}/api/pois/${poiId}`, { as: 'ops-gate-user@test.com' });
     expect(res.status).not.toBe(200); // PERM_DENIED
+    expect(res.status).toBe(403);
+    expect(await poiName(poiId)).toBe('ops-gate-Z');
   });
 });
 
 describe('D4 — audit history gated by owner (hasWritePermission)', () => {
-  let db: D1Database;
+  const TRIP = 'ops-gate-audit';
   beforeAll(async () => {
-    db = await createTestDb();
-    await seedTrip(db, { id: 'trip-audit', owner: 'owner@test.com' });
+    await seedTrip(db, { id: TRIP, owner: 'ops-gate-owner@test.com' });
   });
-  afterAll(disposeMiniflare);
 
   it('owner can read audit history', async () => {
-    const res = await callHandler(auditGet as never, {
-      request: new Request('https://x/api/trips/trip-audit/audit'),
-      env: mockEnv(db),
-      params: { id: 'trip-audit' },
-      data: { auth: mockAuth({ email: 'owner@test.com' }) },
-    });
+    const res = await api.get(`${BASE}/api/trips/${TRIP}/audit`, { as: 'ops-gate-owner@test.com' });
     expect(res.status).toBe(200);
   });
 
   it('stranger (no permission row) cannot read audit', async () => {
-    const res = await callHandler(auditGet as never, {
-      request: new Request('https://x/api/trips/trip-audit/audit'),
-      env: mockEnv(db),
-      params: { id: 'trip-audit' },
-      data: { auth: mockAuth({ email: 'stranger@test.com' }) },
-    });
+    const res = await api.get(`${BASE}/api/trips/${TRIP}/audit`, { as: 'ops-gate-stranger@test.com' });
     expect(res.status).not.toBe(200);
+    expect(res.status).toBe(403);
   });
 
   it('service token (no trip permission) cannot read audit — no admin bypass', async () => {
-    const res = await callHandler(auditGet as never, {
-      request: new Request('https://x/api/trips/trip-audit/audit'),
-      env: mockEnv(db),
-      params: { id: 'trip-audit' },
-      data: { auth: svcToken(['ops:trips:read']) },
+    const res = await api.get(`${BASE}/api/trips/${TRIP}/audit`, {
+      bearer: await svc(['ops:trips:read', 'trips:read', 'trips:write']),
     });
     expect(res.status).not.toBe(200);
+    expect(res.status).toBe(403);
   });
 });

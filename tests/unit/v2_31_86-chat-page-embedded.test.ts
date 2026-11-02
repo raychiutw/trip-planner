@@ -24,7 +24,9 @@ describe('v2.31.86 #4: ChatPage embedded + lockTripId props', () => {
     expect(chatSrc).toMatch(/\{!embedded && <TitleBar/);
   });
 
-  // Embedded content and absence of nested shell run in chat-active-trip-selection.test.tsx.
+  it('ChatPage embedded mode return main 不 wrap AppShell', () => {
+    expect(chatSrc).toMatch(/if \(embedded\) return main;/);
+  });
 
   it('TripSheet chat tab embed ChatPage with embedded + lockTripId', () => {
     expect(sheetSrc).toMatch(/import\('\.\.\/\.\.\/pages\/ChatPage'\)/);

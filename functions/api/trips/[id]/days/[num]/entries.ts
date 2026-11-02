@@ -1,4 +1,4 @@
-import { hasWritePermission, requireAuth} from '../../../../_auth';
+import { requireAuth, requireTripWrite } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { createEntry } from '../../../../_entryWrite';
 import { resolveEntryTimes } from '../../../../_time';
@@ -21,9 +21,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
   const changedBy = auth.email;
 
-  if (!await hasWritePermission(db, auth, id)) {
-    throw new AppError('PERM_DENIED');
-  }
+  await requireTripWrite(db, auth, id);
 
   const day = await db
     .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')
@@ -70,21 +68,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const masterNote =
     typeof body.note === 'string' && body.note.trim() !== '' ? body.note.trim() : null;
 
-  // Existing POIs follow the same validated reference contract as replacement.
-  let poiId: number | undefined;
-  if ('poiId' in body) {
-    if (typeof body.poiId !== 'number' || !Number.isSafeInteger(body.poiId) || body.poiId <= 0) {
-      throw new AppError('DATA_VALIDATION', 'poiId 須為正整數');
-    }
-    const existing = await db.prepare('SELECT id FROM pois WHERE id = ?').bind(body.poiId).first();
-    if (!existing) throw new AppError('DATA_NOT_FOUND', '找不到景點');
-    poiId = body.poiId;
-  }
-
   // #1257 entry intake：POI resolve、INSERT、正選、version、resort、audit、補償全在 createEntry。
   const { row } = await createEntry(db, {
     dayId,
-    poi: poiId !== undefined ? {id: poiId} : {
+    poi: {
       data: {
         name,
         type: (body.poi_type as string) || 'attraction',

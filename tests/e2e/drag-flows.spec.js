@@ -116,6 +116,21 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
 });
 
 test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
+  test('menu step reorder saves the new order and returns focus to the moved entry', async ({ page }) => {
+    let savedOrder;
+    await page.route('**/api/trips/*/entries/batch', async (route) => {
+      savedOrder = route.request().postDataJSON().updates.map((entry) => entry.id);
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+    await page.goto(`/trips?selected=${TRIP_ID}`);
+    const rail = page.locator('.tp-rail').filter({ has: page.getByTestId('timeline-rail-row-101') });
+    await rail.getByTestId('timeline-rail-menu-101').click();
+    await rail.getByTestId('timeline-rail-move-down-101').click();
+    await expect.poll(() => savedOrder?.slice(0, 2)).toEqual([102, 101]);
+    await expect(rail.locator('[data-testid^="timeline-rail-row-"]').first()).toHaveAttribute('data-testid', 'timeline-rail-row-102');
+    await expect(rail.getByTestId('timeline-rail-menu-101')).toBeFocused();
+  });
+
   test('Tab focuses timeline grip handle; Space initiates drag (dnd-kit built-in)', async ({ page }) => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();

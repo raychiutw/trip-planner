@@ -110,3 +110,6 @@ day3.json
 
 # funnel-guard kill-switch（incident response，本機不入 repo）
 scripts/funnel-guard/.disabled
+
+# 對照組的消毒副本（本機產物）
+.control-group/

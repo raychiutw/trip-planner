@@ -17,8 +17,7 @@
  * 正確來源是 `/api/my-trips` —— `FROM trip_permissions WHERE p.user_id = ?`，
  * 純看權限、不看 published，這才是「我的行程」的定義。
  *
- * 用 source-grep 而非 render 測試：要鎖的是「打哪一支 API」這個契約，
- * 而它在兩個不同層（hook 與 page）各出現一次，grep 比搭兩套 render harness 直接。
+ * 共用 hook 的來源守衛保留；頁面行為由 active-trip-continuity 瀏覽器測試覆蓋。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

@@ -19,6 +19,7 @@ const MOCK_TRIPS_LIST = [
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
+    role: 'owner',
     countries: '["JP"]',
     published: 1,
     lang: 'zh-TW',
@@ -33,6 +34,7 @@ const MOCK_TRIPS_LIST = [
     name: '釜山三日遊',
     owner: 'Demo',
     title: '2026 釜山三日遊',
+    role: 'owner',
     countries: '["KR"]',
     published: 1,
     lang: 'zh-TW',
@@ -665,8 +667,6 @@ const MOCK_CONNECTED_APPS = [
  * @param {import('@playwright/test').Page} page
  */
 async function setupApiMocks(page) {
-  // These fixtures replace HTTP effects; never load a live SDK with the test key.
-  await page.route(/https:\/\/maps\.googleapis\.com\//, route => route.abort());
   const savedPois = initialSavedPois();
   // V2 cutover: tripIdeas removed — concept retired in migration 0046
   const sessions = MOCK_SESSIONS.map((s) => ({ ...s }));
@@ -706,7 +706,7 @@ async function setupApiMocks(page) {
   // 這個 mock 就成了唯一還在假設舊契約的地方 —— e2e 因此看不到標題。
   //
   // 真實 /api/my-trips 本來就帶 name/title/countries/totalDays/startDate/
-  // endDate/memberCount，mock 照實回才不會再與 prod 脫節。
+  // endDate/memberCount/role，mock 照實回才不會再與 prod 脫節。
   await page.route(/\/api\/my-trips$/, (route) => {
     route.fulfill({
       status: 200,
@@ -722,30 +722,21 @@ async function setupApiMocks(page) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ current_sid: sessions.find(s => s.is_current)?.sid ?? null, sessions }),
+        body: JSON.stringify({ sessions }),
       });
     }
     if (request.method() === 'DELETE' && path === '/api/account/sessions') {
-      const revoked = sessions.filter(s => !s.is_current).length;
       const current = sessions.find((s) => s.is_current);
       sessions.splice(0, sessions.length, ...(current ? [current] : []));
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     }
     if (request.method() === 'DELETE') {
       const sid = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = sessions.findIndex((s) => s.sid === sid);
       if (idx >= 0) sessions.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_sid: sid }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
-  });
-
-  await page.route('**/api/account/ai-authorization', async route => {
-    const id = 'tripline-tp-request';
-    if (route.request().method() === 'POST' && !connectedApps.some(app => app.client_id === id)) {
-      connectedApps.push({ client_id: id, app_name: 'Tripline AI', app_logo_url: null, app_description: null, homepage_url: null, status: 'active', scopes: ['openid', 'profile'], granted_at: Date.now() });
-    }
-    return route.fulfill({ json: { authorized: connectedApps.some(app => app.client_id === id) } });
   });
 
   await page.route(/\/api\/account\/connected-apps(?:\/[^/]+)?$/, async (route) => {
@@ -762,7 +753,7 @@ async function setupApiMocks(page) {
       const clientId = decodeURIComponent(path.split('/').pop() ?? '');
       const idx = connectedApps.findIndex((app) => app.client_id === clientId);
       if (idx >= 0) connectedApps.splice(idx, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, revoked_client_id: clientId }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     }
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });
@@ -830,6 +821,24 @@ async function setupApiMocks(page) {
 
   // /api/trip-ideas route removed — endpoint retired in V2 cutover (migration 0046)。
   // 任何 e2e 仍 hit 此 path 應該得到 default 404 (Worker handler not found)。
+
+  // 共編成員與待回覆邀請（#1445 設計審查守門要看到「新增成員」表單，成員清單載入失敗時表單不渲染）。
+  // 資料量比照 production 共編頁的真實樣態（擁有者 + 2 位成員），版面高度才與真實使用者看到的一致。
+  await page.route(/\/api\/permissions(?:\?.*)?$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' });
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 1, email: 'owner@example.com', displayName: 'Owner', tripId: 'okinawa-trip-2026-Ray', role: 'owner' },
+        { id: 2, email: 'member-a@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+        { id: 3, email: 'member-b@example.com', displayName: null, tripId: 'okinawa-trip-2026-Ray', role: 'member' },
+      ]),
+    });
+  });
+  await page.route(/\/api\/invitations(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }),
+  }));
 
   await page.route(/\/api\/trips/, (route) => {
     const url = route.request().url();
@@ -976,6 +985,7 @@ async function setupApiMocks(page) {
 module.exports = {
   setupApiMocks,
   MOCK_TRIPS_LIST,
+  MOCK_USER,
   MOCK_TRIP_META_OKINAWA,
   MOCK_TRIP_META_BUSAN,
   MOCK_DAYS_OKINAWA,

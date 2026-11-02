@@ -138,6 +138,8 @@ const infoSheetContent = readFileSync(resolve(ROOT, 'src/components/trip/InfoShe
 
 describe('InfoSheet — sheet 邊緣清晰度', () => {
   it('InfoSheet sheet background 使用 94% 而非 88%（opacity bump）', () => {
-    expect(infoSheetContent).toMatch(/color-mix\(in srgb,\s*var\(--color-secondary\)\s*94%/);
+    // 毛玻璃面 module 化後底色參數化：底色取 secondary、不透明度 94%（recipe 在 tokens.css 的 .tp-glass）。
+    expect(infoSheetContent).toMatch(/'--glass-base':\s*'var\(--color-secondary\)'/);
+    expect(infoSheetContent).toMatch(/'--glass-alpha':\s*'94%'/);
   });
 });

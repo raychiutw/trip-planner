@@ -7,7 +7,7 @@
  * → navigate /signup/check-email?email=...
  *
  * Error handling:
- *   - SIGNUP_INVALID_EMAIL / SIGNUP_PASSWORD_TOO_SHORT → inline field error
+ *   - SIGNUP_INVALID_EMAIL / SIGNUP_INVALID_PASSWORD → inline field error
  *   - SIGNUP_EMAIL_TAKEN → suggest /login or /forgot-password
  *   - SIGNUP_RATE_LIMITED → 429 banner with retry-after countdown
  *   - Network failure → generic banner
@@ -46,6 +46,11 @@ ${AUTH_LAYOUT_STYLES}
   line-height: 1.6; cursor: pointer;
 }
 .tp-signup-consent a { color: var(--color-accent-text); }
+.tp-signup-consent-hint {
+  margin: -10px 0 0;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+}
 
 .tp-auth-card {
   width: 100%; max-width: 440px;
@@ -127,17 +132,12 @@ export default function SignupPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ kind: 'error' | 'warning'; node: React.ReactNode } | null>(null);
-
-  const inFlight = useRef(false);
-  const active = useRef(true);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    active.current = true;
-    return () => { active.current = false; };
-  }, []);
+  const submissionRef = useRef(false);
+
   useEffect(() => {
     if (emailError) emailRef.current?.focus();
     else if (passwordError) passwordRef.current?.focus();
@@ -146,13 +146,17 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (inFlight.current) return;
-    if (!privacyConsent) { consentRef.current?.focus(); return; }
-    inFlight.current = true;
+    if (submissionRef.current) return;
+    if (!privacyConsent) {
+      consentRef.current?.focus();
+      return;
+    }
+    submissionRef.current = true;
     setEmailError(null);
     setPasswordError(null);
     setBanner(null);
     setSubmitting(true);
+    let completed = false;
 
     try {
       const res = await apiFetchRaw('/oauth/signup', {
@@ -167,51 +171,51 @@ export default function SignupPage() {
         }),
       });
 
-      if (!active.current) return;
       if (res.ok) {
         const json = (await res.json()) as SignupOk;
-        if (!active.current) return;
-        // Delivery is best-effort; check-email owns resend if it fails or stalls.
+        // Sending the email is best-effort; a slow mail service must not hold navigation.
         void apiFetchRaw('/oauth/send-verification', {
           method: 'POST',
           body: JSON.stringify({ email: json.email }),
         }).catch(() => {});
         // V2 共編：若 signup 同時 accept 了 invitation → 直接帶到該 trip
         if (json.joinedTrip?.id) {
+          completed = true;
           navigate(`/trips?selected=${encodeURIComponent(json.joinedTrip.id)}`);
           return;
         }
-        // signup 成功但 invitation 失敗 → check-email flow + 帶 errCode 給該頁顯示 toast
+        // Signup 已建立 session；邀請未完成時回到原 token，讓邀請頁呈現實際結果並可重試。
+        if (invitationToken && json.invitationError) {
+          completed = true;
+          navigate(`/invite?token=${encodeURIComponent(invitationToken)}`);
+          return;
+        }
         const checkEmailQuery = new URLSearchParams({ email: json.email });
-        if (json.invitationError) checkEmailQuery.set('invitationError', json.invitationError);
+        completed = true;
         navigate(`/signup/check-email?${checkEmailQuery.toString()}`);
         return;
       }
 
       const errJson = (await res.json().catch(() => null)) as ApiError | null;
-      if (!active.current) return;
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'SIGNUP_INVALID_EMAIL':
           setEmailError('電子郵件格式無效');
           break;
-        case 'SIGNUP_PASSWORD_TOO_SHORT':
         case 'SIGNUP_INVALID_PASSWORD':
+        case 'SIGNUP_PASSWORD_TOO_SHORT':
           setPasswordError('密碼至少 8 字元');
           break;
         case 'SIGNUP_PASSWORD_FORMAT':
-          setPasswordError('密碼格式不符');
-          break;
-        case 'SIGNUP_CONSENT_REQUIRED':
-          setPrivacyConsent(false);
-          consentRef.current?.focus();
+          setPasswordError('密碼格式無法使用，請更換密碼後再試');
           break;
         case 'SIGNUP_EMAIL_TAKEN':
+          setEmailError('此電子郵件已註冊');
           setBanner({
             kind: 'error',
             node: (
               <span>
-                此電子郵件已註冊。<a href="/login">改用登入</a> 或{' '}
+                <a href={invitationToken ? `/login?invitation=${encodeURIComponent(invitationToken)}` : '/login'}>改用登入</a> 或{' '}
                 <a href="/login/forgot">忘記密碼</a>。
               </span>
             ),
@@ -234,11 +238,12 @@ export default function SignupPage() {
           setBanner({ kind: 'error', node: <span>註冊失敗，請稍後再試。</span> });
       }
     } catch {
-      if (!active.current) return;
       setBanner({ kind: 'error', node: <span>網路連線失敗，請檢查後再試。</span> });
     } finally {
-      inFlight.current = false;
-      if (active.current) setSubmitting(false);
+      if (!completed) {
+        submissionRef.current = false;
+        setSubmitting(false);
+      }
     }
   }
 
@@ -258,9 +263,9 @@ export default function SignupPage() {
 
         {banner && (
           <div
-            className={`tp-banner tp-banner-${banner.kind}`}
             ref={bannerRef}
             tabIndex={-1}
+            className={`tp-banner tp-banner-${banner.kind}`}
             role="alert"
             data-testid={`signup-banner-${banner.kind}`}
           >
@@ -268,29 +273,28 @@ export default function SignupPage() {
           </div>
         )}
 
-        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} aria-busy={submitting} noValidate>
+        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
             <label htmlFor="signup-email">電子郵件</label>
             <input
               ref={emailRef}
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? "signup-email-error" : undefined}
               id="signup-email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(null); }}
               data-testid="signup-email"
+              aria-invalid={emailError ? true : undefined}
+              aria-describedby={emailError ? 'signup-email-error' : undefined}
             />
-            {emailError && <InlineError id="signup-email-error" message={emailError} testId="signup-email-error" />}
+            {emailError && <div id="signup-email-error"><InlineError message={emailError} testId="signup-email-error" /></div>}
           </div>
 
           <div className="tp-form-row">
             <label htmlFor="signup-password">密碼</label>
             <input
               ref={passwordRef}
-              aria-invalid={!!passwordError}
               id="signup-password"
               type="password"
               autoComplete="new-password"
@@ -298,13 +302,14 @@ export default function SignupPage() {
               minLength={8}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(null); }}
               data-testid="signup-password"
-              aria-describedby={`signup-password-hint${passwordError ? " signup-password-error" : ""}`}
+              aria-invalid={passwordError ? true : undefined}
+              aria-describedby={passwordError ? 'signup-password-hint signup-password-error' : 'signup-password-hint'}
             />
             {/* §9.3：密碼規則改常駐 helper（原只在 placeholder，打字即消失）。 */}
             <p id="signup-password-hint" className="tp-hint" data-testid="signup-password-hint">密碼至少 8 字元</p>
-            {passwordError && <InlineError id="signup-password-error" message={passwordError} testId="signup-password-error" />}
+            {passwordError && <div id="signup-password-error"><InlineError message={passwordError} testId="signup-password-error" /></div>}
           </div>
 
           <div className="tp-form-row">
@@ -325,27 +330,27 @@ export default function SignupPage() {
           <div className="tp-signup-consent">
             <input
               ref={consentRef}
-              required
-              aria-describedby="signup-consent-hint"
               id="signup-privacy-consent"
               type="checkbox"
               checked={privacyConsent}
               onChange={(e) => setPrivacyConsent(e.target.checked)}
               data-testid="signup-privacy-consent"
+              aria-describedby={!privacyConsent ? 'signup-consent-hint' : undefined}
             />
             <label htmlFor="signup-privacy-consent">
               我已閱讀並同意
               {' '}
-              <a href="/privacy" target="_blank" rel="noreferrer">個資條款與隱私權政策</a>
+              <a href="/privacy?from=signup" target="_blank" rel="noreferrer">個資條款與隱私權政策</a>
             </label>
           </div>
 
-          <p id="signup-consent-hint" className="tp-hint">需同意個資條款與隱私權政策才能建立帳號。</p>
+          {!privacyConsent && <p id="signup-consent-hint" className="tp-signup-consent-hint" data-testid="signup-consent-hint">請先同意個資條款與隱私權政策，才能建立帳號。</p>}
 
           <button
             type="submit"
             className="tp-btn tp-btn-primary"
             disabled={submitting || !privacyConsent}
+            aria-describedby={!privacyConsent ? 'signup-consent-hint' : undefined}
             data-testid="signup-submit"
           >
             {submitting ? '建立中…' : '建立帳號'}
@@ -353,7 +358,7 @@ export default function SignupPage() {
         </form>
 
         <div className="tp-auth-footer">
-          已有帳號？<a href="/login">直接登入</a>
+          已有帳號？<a href={invitationToken ? `/login?invitation=${encodeURIComponent(invitationToken)}` : '/login'}>直接登入</a>
         </div>
         </div>
       </div>

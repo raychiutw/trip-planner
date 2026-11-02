@@ -40,7 +40,7 @@
 
 ## 詞彙
 
-指稱這些東西時**一律用 `CONTEXT.md`「介面與互動」段**的名字：操作面板（不叫右欄／第三欄）、行程 sheet、bottom sheet、對話框、行內警示、堆疊層級、root tab / Day tab / trip switcher。單獨寫「sheet」有歧義。
+指稱這些東西時**一律用 `GLOSSARY.md`「介面與互動」段**的名字：操作面板（不叫右欄／第三欄）、行程 sheet、bottom sheet、對話框、行內警示、堆疊層級、root tab / Day tab / trip switcher。單獨寫「sheet」有歧義。
 
 ## 版面 SoT
 

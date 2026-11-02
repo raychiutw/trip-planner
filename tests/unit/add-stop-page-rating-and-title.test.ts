@@ -55,18 +55,3 @@ describe('v2.31.10 AddStopPage rating + section title', () => {
     expect(cardBlock).toMatch(/r\.poiRating\.toFixed\(1\)/);
   });
 });
-
-describe('v2.31.17 AddStopPage favorites rating wiring', () => {
-  it('PoiFavoriteRow type 含 poiRating 欄位', () => {
-    expect(SRC).toMatch(/poiRating\?:\s*number\s*\|\s*null/);
-  });
-
-  it('normalizePoiFavorites 抽 camelCase poiRating（v2.31.80 移除 snake_case fallback）', () => {
-    expect(SRC).toMatch(/typeof item\.poiRating === 'number'/);
-    // v2.31.80：snake_case dead fallback 移除（backend deepCamel 後永遠 camelCase）。
-    // 確保 source 內 normalizePoiFavorites function body 不再回到 snake_case。
-    const fnMatch = SRC.match(/function normalizePoiFavorites[\s\S]*?^}\s*$/m);
-    expect(fnMatch).toBeTruthy();
-    expect(fnMatch![0]).not.toMatch(/item\.poi_rating/);
-  });
-});

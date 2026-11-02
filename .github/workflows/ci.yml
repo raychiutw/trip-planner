@@ -1,9 +1,9 @@
 name: CI
 on:
   pull_request:
-    branches: [master, uat]
+    branches: [master]
   push:
-    branches: [master, uat]
+    branches: [master]
 
 # v2.33.66 round 16 HIGH-1: minimal default permissions; supply-chain compromise
 # under npm ci / npm test 拿不到 RW GITHUB_TOKEN。CI 純讀 repo + 跑 test，無寫需求。
@@ -15,14 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # v2.33.66 round 16 LOW-1: pin SHA + version comment (per OpenSSF Scorecard)
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
 
       - name: Install dependencies
         run: npm ci
+
+      # T19：契約（contracts/openapi.json）與已提交的 src/api/schema.d.ts 必須一致；
+      # 契約改動沒重新產生型別就在這裡失敗，產生出的型別變動再由下面的 tsc 在編譯期擋住壞掉的呼叫端。
+      - name: API contract (generated types in sync)
+        run: npm run check:api-contract
 
       - name: TypeScript check (frontend)
         run: npx tsc --noEmit

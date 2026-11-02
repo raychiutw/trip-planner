@@ -59,15 +59,13 @@ describe('AddEntryPage — EditEntryPage-shape layout', () => {
     expect(ADD_ENTRY_SRC).toMatch(/`\/trip\/\$\{encodeURIComponent\(tripId\)\}\/stop\/0\/change-poi\?mode=new&day=\$\{dayNum\}&tab=\$\{tab\}`/);
   });
 
-  it('Buttons disabled when dayNum invalid (defensive)', () => {
-    expect(ADD_ENTRY_SRC).toMatch(/disabled=\{!Number\.isFinite\(dayNum\)\}/);
-  });
-
   it('Preview sections (備選 / 時間 / 移動方式) greyed 提示 user 完成後可編', () => {
     expect(ADD_ENTRY_SRC).toContain('備選');
     expect(ADD_ENTRY_SRC).toContain('時間');
     expect(ADD_ENTRY_SRC).toContain('移動方式');
-    expect(ADD_ENTRY_SRC).toContain('opacity: 0.6');
+    // #1423：次要感由 --color-muted 文字色承擔，不再用 opacity 灰階——opacity 會把 muted 文字的對比
+    // 一併稀釋到 2.5–2.9（WCAG 1.4.3 要 4.5）。
+    expect(ADD_ENTRY_SRC).not.toContain('opacity: 0.6');
   });
 });
 
@@ -76,7 +74,10 @@ describe('ChangePoiPage — v2.32.0 mode=new branch', () => {
     expect(CHANGE_POI_SRC).toMatch(/mode:\s*'master'\s*\|\s*'alternate'\s*\|\s*'new'/);
   });
 
-
+  it('解析 ?day=N → newDayNum', () => {
+    expect(CHANGE_POI_SRC).toMatch(/const newDayParam = searchParams\.get\('day'\)/);
+    expect(CHANGE_POI_SRC).toMatch(/const newDayNum = newDayParam \? parseInt\(newDayParam, 10\) : NaN/);
+  });
 
   it('pageTitle / submitLabel 對應 new 模式', () => {
     expect(CHANGE_POI_SRC).toContain("mode === 'new' ? '新增景點'");

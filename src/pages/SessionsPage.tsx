@@ -11,12 +11,11 @@
  *   - 「登出其他全部裝置」mass revoke（除當前外）
  *   - 異地裝置警示（不同 ip_hash_prefix → 警示樣式）— optional V2-P6 future
  */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
-import { ApiError } from '../lib/errors';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -24,6 +23,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { writeAuthHint } from '../lib/authHint';
 
@@ -85,13 +85,25 @@ const SCOPED_STYLES = `
   font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tp-pill-current { background: var(--color-success-bg); color: var(--color-foreground); }
+.tp-pill-current { background: var(--color-success-bg); color: var(--color-foreground); flex-shrink: 0; white-space: nowrap; }
 .tp-device-detail {
   font-size: var(--font-size-caption); color: var(--color-muted);
   margin-top: 2px;
 }
 
-.tp-time { font-size: var(--font-size-footnote); color: var(--color-muted); }
+.tp-time { font-size: var(--font-size-footnote); color: var(--color-foreground); }
+.tp-time-absolute { margin-top: 2px; color: var(--color-muted); font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .tp-sessions-shell { padding-bottom: 96px; }
+  .tp-row:not(.tp-row-header) { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .tp-row:not(.tp-row-header) .tp-time { grid-column: 1; grid-row: 2; margin-left: 48px; }
+  .tp-row-action { grid-column: 2; grid-row: 1 / 3; }
+  .tp-row-header { display: none; }
+  .tp-sessions-load-frame .tp-row-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .tp-sessions-load-frame .tp-row-header div:last-child { display: none; }
+  .tp-device-info { min-width: 0; }
+  .tp-device-name, .tp-device-detail { overflow-wrap: anywhere; }
+}
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */
 
@@ -107,6 +119,9 @@ const SCOPED_STYLES = `
  * 全 codebase 只有本檔 :330 真的 render 這個 class —— LoginPage / ResetPasswordPage 也各有
  * 一份同名規則但沒有對應 JSX，那兩份已在本次刪除（見 #1157）。 */
 .tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent-text-on-tonal); }
+/* #1445 F1：banner 內的文字連結沿用 banner 的字色（accent-text-on-tonal，與底色成對）+ 底線。
+ * 原本是瀏覽器預設藍 #0000EE，手動選「深色」（UA 仍是淺色 color-scheme）時疊深底只有 1.63:1。 */
+.tp-banner-info a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 .tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
 .tp-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
 
@@ -114,6 +129,16 @@ const SCOPED_STYLES = `
   padding: 32px; text-align: center;
   color: var(--color-muted);
 }
+.tp-sessions-load-error { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 32px 24px; text-align: center; }
+.tp-sessions-load-error-title { flex-basis: 100%; margin: 0; font-size: var(--font-size-headline); font-weight: 700; }
+.tp-sessions-load-error-desc { flex-basis: 100%; margin: 0 0 4px; font-size: var(--font-size-footnote); color: var(--color-muted); }
+.tp-sessions-load-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border-control); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-sessions-load-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* PR-O 2026-04-26：登出區搬到頁面最下方（user 指示）+ 簡化為純 logout button。
  * 深淺模式 toggle 仍留在帳號頁但移到 logout 上方，跟 logout 共用同一容器。 */
@@ -160,7 +185,7 @@ interface SessionRow {
 
 function relativeTime(iso: string): string {
   const d = parseUtcDate(iso);
-  if (!d || !Number.isFinite(d.getTime())) return '時間不明';
+  if (!d) return iso;
   const ms = Date.now() - d.getTime();
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return '剛才';
@@ -172,88 +197,83 @@ function relativeTime(iso: string): string {
   return `${day} 天前`;
 }
 
-type RevokeScope = { kind: 'session'; sid: string } | { kind: 'others' } | { kind: 'current' };
-
-function readSessions(value: { current_sid: string | null; sessions: SessionRow[] }): SessionRow[] {
-  if (!value || !(value.current_sid === null || typeof value.current_sid === 'string') || !Array.isArray(value.sessions)) throw new Error('invalid sessions');
-  const ids = new Set<string>();
-  for (const row of value.sessions) {
-    if (!row || typeof row.sid !== 'string' || !row.sid || ids.has(row.sid) ||
-        typeof row.is_current !== 'boolean' || row.is_current !== (row.sid === value.current_sid) ||
-        !(row.ua_summary === null || typeof row.ua_summary === 'string') ||
-        !(row.ip_hash_prefix === null || typeof row.ip_hash_prefix === 'string') ||
-        typeof row.created_at !== 'string' || typeof row.last_seen_at !== 'string') throw new Error('invalid session');
-    ids.add(row.sid);
-  }
-  return value.sessions;
+function localDateTime(iso: string): string {
+  const date = parseUtcDate(iso);
+  return date ? new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  }).format(date) : iso;
 }
 
 export default function SessionsPage() {
-  const auth = useRequireAuth();
-  const { user } = auth;
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   const navigate = useNavigate();
+  const { user } = useCurrentUser();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
-  const [readError, setReadError] = useState<string | null>(null);
-  const [readAttempt, setReadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<RevokeScope | null>(null);
-  const pendingRef = useRef(false);
-  const lifetime = useRef(0);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [announcement, setAnnouncement] = useState('');
+  const [loadError, setLoadError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const loadPending = useRef(false);
+  const retryRequested = useRef(false);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [revokingSid, setRevokingSid] = useState<string | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
   const [revokeAllConfirmOpen, setRevokeAllConfirmOpen] = useState(false);
-  useLayoutEffect(() => () => { lifetime.current++; }, [user?.id]);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const controller = new AbortController();
-    setReadError(null);
-    setSessions(null);
-    apiFetch<{ current_sid: string | null; sessions: SessionRow[] }>('/account/sessions', { signal: controller.signal })
-      .then(value => {
-        const rows = readSessions(value);
-        if (!controller.signal.aborted) setSessions(rows);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setReadError('無法載入登入裝置，請重試。');
-      });
-    return () => controller.abort();
-  }, [user?.id, readAttempt]);
-
-  async function revoke(scope: RevokeScope) {
-    if (pendingRef.current || !user) return;
-    if (scope.kind === 'session' && !sessions?.some(row => row.sid === scope.sid && !row.is_current)) return;
-    if (scope.kind === 'others' && !sessions?.some(row => !row.is_current)) return;
-    pendingRef.current = true;
-    const operation = lifetime.current;
-    const trigger = document.activeElement;
-    setPending(scope);
+  async function load() {
+    if (loadPending.current) return;
+    loadPending.current = true;
+    setLoading(true);
     setError(null);
-    setAnnouncement('');
     try {
-      if (scope.kind === 'current') {
-        const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
-        if (!response.ok) throw await ApiError.fromResponse(response);
-        if (operation !== lifetime.current) return;
-        writeAuthHint(false);
-        navigate('/login', { replace: true });
-      } else {
-        const path = scope.kind === 'session' ? `/account/sessions/${encodeURIComponent(scope.sid)}` : '/account/sessions';
-        const result = await apiFetch<{ ok: boolean; revoked_sid?: string; revoked?: number }>(path, { method: 'DELETE' });
-        if (operation !== lifetime.current) return;
-        if (result?.ok !== true || (scope.kind === 'session'
-          ? result.revoked_sid !== scope.sid
-          : !Number.isSafeInteger(result.revoked) || result.revoked! < 0)) throw new Error('unconfirmed revocation');
-        setSessions(prev => prev?.filter(row => scope.kind === 'session' ? row.sid !== scope.sid : row.is_current) ?? null);
-        setAnnouncement(scope.kind === 'session' ? '已登出選取的裝置。' : '已登出其他裝置，目前裝置不受影響。');
-        if (scope.kind === 'others') setRevokeAllConfirmOpen(false);
-        else if (document.activeElement === trigger || document.activeElement === document.body) contentRef.current?.focus({ preventScroll: true });
+      const json = await apiFetch<{ sessions: SessionRow[] }>('/account/sessions');
+      setSessions(json.sessions);
+      setLoadError(false);
+      if (retryRequested.current) {
+        retryRequested.current = false;
+        requestAnimationFrame(() => {
+          pageRef.current?.querySelector<HTMLButtonElement>('[data-testid="titlebar"] button[aria-label="返回"]')?.focus();
+        });
       }
     } catch {
-      if (operation !== lifetime.current) return;
-      setError(scope.kind === 'session' ? '登出此裝置失敗，請稍後再試。' : scope.kind === 'others' ? '登出其他裝置失敗，請稍後再試。' : '登出目前裝置失敗，請稍後再試。');
+      setSessions(null);
+      setLoadError(true);
     } finally {
-      if (operation === lifetime.current) { pendingRef.current = false; setPending(null); }
+      loadPending.current = false;
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function revokeOne(sid: string) {
+    setRevokingSid(sid);
+    try {
+      await apiFetch(`/account/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+      setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
+      setError(null);
+    } catch {
+      setError('登出此裝置失敗，請稍後再試。');
+    } finally {
+      setRevokingSid(null);
+    }
+  }
+
+  // 兩階段：requestRevokeAllOthers 開 ConfirmModal、revokeAllOthers 真的執行。
+  async function revokeAllOthers() {
+    setRevokeAllConfirmOpen(false);
+    setRevokingAll(true);
+    try {
+      await apiFetch('/account/sessions', { method: 'DELETE' });
+      // The server confirmed the revoke; remove only non-current rows locally.
+      setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
+      setError(null);
+    } catch {
+      setError('登出其他裝置失敗，請稍後再試。');
+    } finally {
+      setRevokingAll(false);
     }
   }
 
@@ -263,9 +283,9 @@ export default function SessionsPage() {
     <AppShell
       sidebar={<DesktopSidebarConnected />}
       bottomNav={<GlobalBottomNav authed={user !== null} />}
-      main={!user ? <AuthStatus auth={auth} /> : <>
+      main={<>
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-sessions-shell" data-testid="sessions-page">
+      <div className="tp-sessions-shell" data-testid="sessions-page" ref={pageRef}>
       <TitleBar
         title="登入裝置"
         back={() => navigate('/account')}
@@ -273,9 +293,8 @@ export default function SessionsPage() {
           <button
             type="button"
             className="tp-titlebar-action"
-            onClick={() => { setError(null); setRevokeAllConfirmOpen(true); }}
-            disabled={pending !== null}
-            aria-label="登出其他全部裝置"
+            onClick={() => setRevokeAllConfirmOpen(true)}
+            disabled={revokingAll}
             title="登出其他全部裝置"
             data-testid="sessions-revoke-all"
           >
@@ -284,17 +303,34 @@ export default function SessionsPage() {
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            <span className="tp-titlebar-action-label">{pending?.kind === 'others' ? '登出中…' : '登出其他裝置'}</span>
+            <span className="tp-titlebar-action-label">{revokingAll ? '登出中…' : '登出其他裝置'}</span>
           </button>
         )}
       />
-      <div className="tp-sessions-inner" ref={contentRef} tabIndex={-1} aria-label="登入裝置清單">
-        <span role="status" className="sr-only">{announcement}</span>
+      <div className="tp-sessions-inner">
         <p className="tp-page-eyebrow">帳號</p>
         {user?.email && <p className="tp-page-meta" data-testid="sessions-user-email">{user.email}</p>}
 
-        {sessions === null && !readError && (
+        {sessions === null && !loadError && (
           <div className="tp-loading" data-testid="sessions-loading">載入中…</div>
+        )}
+
+        {loadError && (
+          <div className="tp-list tp-sessions-load-frame">
+            <div className="tp-row tp-row-header">
+              <div>裝置</div><div>上次活動</div><div></div>
+            </div>
+            <PageErrorState
+              className="tp-sessions-load-error"
+              title="無法載入登入裝置"
+              message="目前無法確認登入裝置；登入狀態尚未改變。"
+              retryLabel={loading ? '載入中…' : '重新載入裝置'}
+              onRetry={() => { retryRequested.current = true; void load(); }}
+              testId="sessions-load-error"
+            >
+              <button type="button" className="tp-btn" onClick={() => navigate('/account')}>返回帳號</button>
+            </PageErrorState>
+          </div>
         )}
 
         {sessions !== null && sessions.length === 0 && (
@@ -337,7 +373,7 @@ export default function SessionsPage() {
                       )}
                     </div>
                     <div className="tp-device-detail">
-                      建立 {relativeTime(s.created_at)}
+                      建立 {localDateTime(s.created_at)}
                       {s.ip_hash_prefix && (
                         <span title="IP 位址的雜湊前綴（privacy）— 同一網路下相同">
                           {' · 裝置 ID '}{s.ip_hash_prefix}…
@@ -346,17 +382,19 @@ export default function SessionsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tp-time">{relativeTime(s.last_seen_at)}</div>
-                <div>
+                <div className="tp-time">
+                  <div>{relativeTime(s.last_seen_at)}</div>
+                  <div className="tp-time-absolute">{localDateTime(s.last_seen_at)}</div>
+                </div>
+                <div className="tp-row-action">
                   {!s.is_current && (
                     <button
                       className="tp-btn tp-btn-destructive"
-                      aria-label={`登出 ${s.ua_summary ?? '未知裝置'}`}
-                      onClick={() => void revoke({ kind: 'session', sid: s.sid })}
-                      disabled={pending !== null}
+                      onClick={() => revokeOne(s.sid)}
+                      disabled={revokingSid === s.sid}
                       data-testid={`sessions-revoke-${s.sid}`}
                     >
-                      {pending?.kind === 'session' && pending.sid === s.sid ? '登出中…' : '登出'}
+                      {revokingSid === s.sid ? '登出中…' : '登出'}
                     </button>
                   )}
                 </div>
@@ -365,11 +403,7 @@ export default function SessionsPage() {
           </div>
         )}
 
-        {readError && <>
-          <ErrorBanner message={readError} testId="sessions-error" />
-          <button type="button" className="tp-btn min-h-[44px]" disabled={pending !== null} onClick={() => setReadAttempt(n => n + 1)}>重試載入裝置</button>
-        </>}
-        {error && !revokeAllConfirmOpen && <ErrorBanner message={error} testId="sessions-error" />}
+        {error && <ErrorBanner message={error} testId="sessions-error" />}
 
         <div className="tp-banner tp-banner-info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -378,7 +412,7 @@ export default function SessionsPage() {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <div>
-            登出某裝置後，該裝置下次操作時需要重新登入。
+            登出某裝置後，該裝置上的 Tripline 會立即跳回登入畫面。
             OAuth 已連結 app 不受影響（請至「<a href="/settings/connected-apps">已連結的應用</a>」管理）。
           </div>
         </div>
@@ -397,10 +431,39 @@ export default function SessionsPage() {
             type="button"
             className="tp-account-logout-btn"
             data-testid="sessions-logout"
-            disabled={pending !== null}
-            onClick={() => void revoke({ kind: 'current' })}
+            disabled={loggingOut}
+            onClick={async () => {
+              if (loggingOut) return;
+              setLoggingOut(true);
+              setError(null);
+              try {
+                const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
+                if (!response.ok) throw new Error('Logout failed');
+                writeAuthHint(false);
+                navigate('/login', { replace: true });
+              } catch {
+                // The server may have revoked the session even if its response was lost.
+                try {
+                  const status = await apiFetchRaw('/oauth/userinfo');
+                  if (status.status === 401) {
+                    writeAuthHint(false);
+                    navigate('/login', { replace: true });
+                    return;
+                  }
+                  if (status.ok) {
+                    setError('登出失敗，請稍後再試。');
+                    return;
+                  }
+                } catch {
+                  // The session result remains unknown until connectivity returns.
+                }
+                setError('無法確認登出結果，請檢查連線後再試。');
+              } finally {
+                setLoggingOut(false);
+              }
+            }}
           >
-            {pending?.kind === 'current' ? '登出中…' : '登出目前裝置'}
+            {loggingOut ? '登出中…' : '登出此帳號'}
           </button>
         </div>
       </div>
@@ -408,13 +471,12 @@ export default function SessionsPage() {
       <ConfirmModal
         open={revokeAllConfirmOpen}
         title="登出其他所有裝置？"
-        message="目前裝置不受影響。其他登入過的瀏覽器／手機下次操作時需要重新登入。"
+        message="目前裝置不受影響。其他登入過的瀏覽器 / 手機都會立即跳回登入畫面。"
         confirmLabel="登出全部"
-        busy={pending?.kind === 'others'}
-        fallbackFocusRef={contentRef}
-        onConfirm={() => void revoke({ kind: 'others' })}
+        busy={revokingAll}
+        onConfirm={revokeAllOthers}
         onCancel={() => setRevokeAllConfirmOpen(false)}
-      >{error && <ErrorBanner message={error} testId="sessions-error" />}</ConfirmModal>
+      />
       </>}
     />
   );

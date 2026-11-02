@@ -22,6 +22,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 // DesktopSidebarConnected（整頁模式）會打 /api/trips — mock 掉資料源。
 vi.mock('../../src/hooks/useMyTrips', () => ({
   useMyTrips: () => ({ trips: [] }),
+  useTripSelection: () => ({ trips: [], status: 'ready', activeTripId: null }),
   __clearMyTripsCache: () => {},
 }));
 vi.mock('../../src/hooks/useCurrentUser', () => ({
@@ -210,6 +211,21 @@ describe('OperationShell — 雙形態外殼', () => {
     );
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(closeStack).toHaveBeenCalledTimes(1);
+  });
+
+  it('inStack：Escape 事件已被內層處理（defaultPrevented）時不關 panel（#1445 /ship adversarial 發現 1）', () => {
+    const closeStack = vi.fn();
+    renderStack(
+      <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="編輯景點" back={() => {}}>
+        <div />
+      </OperationShell>,
+      closeStack,
+    );
+    // 時間編輯 popover 這類非 Popover API、不進 sheet registry 的內層浮層會在 capture 階段 preventDefault。
+    const ev = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    ev.preventDefault();
+    document.dispatchEvent(ev);
+    expect(closeStack).not.toHaveBeenCalled();
   });
 
   it('inStack：內層有 engine modal 開著時 Escape 不關 panel（nested guard，讓內層先處理）', () => {

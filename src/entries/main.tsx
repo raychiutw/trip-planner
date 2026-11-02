@@ -98,6 +98,7 @@ const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
 const AppearanceSettingsPage = lazyWithRetry(() => import('../pages/AppearanceSettingsPage'));
 const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/NotificationsSettingsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
+const OauthAuthorizePage = lazyWithRetry(() => import('../pages/OauthAuthorizePage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
 const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 // v2.18.0:共編 sheet 升格獨立頁面
@@ -136,21 +137,16 @@ const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
  *  其他 user 走 unknown route 會被 redirect 到非自己的 trip → 403。
  *  改成沒 valid ?trip= 就回 /trips（無 selected param 讓 TripsListPage
  *  fallback 到 user 最新編輯 trip 或顯示 empty state）。 */
-function LegacyRedirect({ to = '/trips' }: { to?: '/trips' | '/chat' }) {
+function LegacyRedirect() {
   const { search, hash } = useLocation();
   const params = new URLSearchParams(search);
-  if (to === '/trips') {
-    const queryTrip = params.get('trip');
+  const queryTrip = params.get('trip');
+  if (queryTrip && /^[\w-]+$/.test(queryTrip)) {
     params.delete('trip');
-    if (queryTrip && /^[\w-]+$/.test(queryTrip)) params.set('selected', queryTrip);
+    params.set('selected', queryTrip);
+    return <Navigate to={`/trips?${params.toString()}${hash}`} replace />;
   }
-  return <Navigate to={{ pathname: to, search: params.toString(), hash }} replace />;
-}
-
-/** Historical root query links still identify a trip; ordinary visits show the landing page. */
-function LandingPageRoute() {
-  const { search } = useLocation();
-  return new URLSearchParams(search).has('trip') ? <LegacyRedirect /> : <LandingPage />;
+  return <Navigate to="/trips" replace />;
 }
 
 /** /trip/:tripId index → /trips?selected=:tripId（unified URL pattern）*/
@@ -160,7 +156,7 @@ function TripIndexRedirect() {
   const incoming = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   // Forward existing query params (?sheet=map etc) onto the new URL
   incoming.set('selected', tripId ?? '');
-  return <Navigate to={{ pathname: '/trips', search: incoming.toString(), hash }} replace />;
+  return <Navigate to={`/trips?${incoming.toString()}${hash}`} replace />;
 }
 
 /** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
@@ -175,11 +171,10 @@ function TripIndexRedirect() {
  * 就是正解，不該是 modal。 */
 function StopDetailRedirect() {
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
-  const { search, hash } = useLocation();
-  const params = new URLSearchParams(search);
+  const params = new URLSearchParams();
   params.set('selected', tripId ?? '');
   if (entryId) params.set('focus', entryId);
-  return <Navigate to={{ pathname: '/trips', search: params.toString(), hash }} replace />;
+  return <Navigate to={`/trips?${params.toString()}`} replace />;
 }
 
 /**
@@ -254,9 +249,16 @@ function KeyboardInsetTracker() {
   return null;
 }
 
-function ApplicationRoutes() {
-  return (<>
+const el = document.getElementById('reactRoot');
+if (el) {
+  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
+  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
+  const root = existingRoot ?? createRoot(el);
+  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
 
+  // Data router lets edit sessions block internal navigation, including browser Back.
+  // The existing descendant Routes keep account-sheet background-location behavior.
+  const router = createBrowserRouter([{ path: '*', element: (
           <AccountSheetProvider>
           <DarkModeInit />
           <ServerStatusBanner />
@@ -275,11 +277,11 @@ function ApplicationRoutes() {
             <Routes location={mainLocation}>
               {/* `/` 改指向未登入首頁。改版前落到 path="*" → LegacyRedirect → /trips → /login，
                   訪客永遠看不到這個 app 在做什麼。已登入者由 LandingPage 導回 /trips。 */}
-              <Route path="/" element={<LandingPageRoute />} />
-              <Route path="/admin" element={<LegacyRedirect />} />
-              <Route path="/admin/" element={<LegacyRedirect />} />
-              <Route path="/manage" element={<LegacyRedirect to="/chat" />} />
-              <Route path="/manage/" element={<LegacyRedirect to="/chat" />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/admin" element={<Navigate to="/trips" replace />} />
+              <Route path="/admin/" element={<Navigate to="/trips" replace />} />
+              <Route path="/manage" element={<Navigate to="/chat" replace />} />
+              <Route path="/manage/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
@@ -316,6 +318,8 @@ function ApplicationRoutes() {
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
+              {/* 新 api 的第一方 App「瀏覽器登入」授權頁（登入＋一鍵繼續）；不看新 api 旗標 */}
+              <Route path="/oauth/authorize" element={<OauthAuthorizePage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
               {/* 2026-05-03 modal-to-fullpage migration: NewTripModal → /trips/new */}
@@ -376,23 +380,12 @@ function ApplicationRoutes() {
           </NewTripProvider>
           </ActiveTripProvider>
           </AccountSheetProvider>
-
-  </>);
-}
-
-const appRouter = createBrowserRouter([{ path: "*", element: <ApplicationRoutes /> }]);
-
-const el = document.getElementById('reactRoot');
-if (el) {
-  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
-  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
-  const root = existingRoot ?? createRoot(el);
-  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+  ) }]);
 
   root.render(
     <StrictMode>
       <ErrorBoundary>
-        <RouterProvider router={appRouter} />
+        <RouterProvider router={router} />
       </ErrorBoundary>
     </StrictMode>
   );

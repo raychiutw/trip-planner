@@ -6,7 +6,7 @@ export const MOBILE_PROD_REDIRECT = `${MOBILE_CALLBACK_HOST}/oauth/callback`;
 export const MOBILE_UAT_REDIRECT = `${MOBILE_CALLBACK_HOST}/uat/oauth/callback`;
 export const MOBILE_DEV_REDIRECT = 'http://127.0.0.1:8765';
 
-/** Exact issuer/client/redirect tuple. No wildcard host or cross-environment fallback. */
+/** 精確的 issuer / client / redirect 組合：不允許 wildcard host，也不跨環境 fallback。 */
 export function mobileOAuthContract(env: Env, request: Request): { clientId: string; redirectUri: string } | null {
   const origin = new URL(request.url).origin;
   if (env.ENVIRONMENT === 'production' && origin === getPublicOrigin(env, request)) {

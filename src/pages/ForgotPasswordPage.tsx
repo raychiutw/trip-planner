@@ -5,11 +5,11 @@
  * Form: email → POST /api/oauth/forgot-password
  *
  * Anti-enumeration: API 永遠回 generic 200，不分 email 存在/不存在。
- * 此頁也跟 API 對齊：成功代表接受申請，不保證信件送達。
+ * 此頁也跟 API 對齊：成功狀態說「若帳號存在，重設連結已寄出」。
  *
  * Rate limit (V2-P6): 429 FORGOT_PASSWORD_RATE_LIMITED → 顯示 retry-after。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
 
@@ -86,40 +86,27 @@ interface ApiError {
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
-  const active = useRef(true);
-  const inFlight = useRef(false);
-  useEffect(() => {
-    active.current = true;
-    return () => { active.current = false; };
-  }, []);
-  const warningRef = useRef<HTMLDivElement>(null);
-  const successRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => {
-    if (submitted !== null) successRef.current?.focus();
-    else if (warning) warningRef.current?.focus();
-  }, [submitted, warning]);
+  const submittingRef = useRef(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (inFlight.current || submitted !== null) return;
-    inFlight.current = true;
-    const requestEmail = email.trim();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setWarning(null);
     try {
       const res = await apiFetchRaw('/oauth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email: requestEmail }),
+        body: JSON.stringify({ email: email.trim() }),
       });
-      const data = (await res.json().catch(() => null)) as (ApiError & { ok?: boolean }) | null;
-      if (!active.current) return;
-      if (res.ok && data?.ok === true) {
-        setSubmitted(requestEmail);
+      if (res.ok) {
+        setSubmitted(true);
         return;
       }
-      const code = data?.error?.code ?? 'UNKNOWN';
+      const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      const code = errJson?.error?.code ?? 'UNKNOWN';
       if (code === 'FORGOT_PASSWORD_RATE_LIMITED') {
         const retryAfter = res.headers.get('Retry-After');
         // v2.31.58 zh-TW fix：retryAfter null fallback「幾分鐘」與後綴「秒後」
@@ -133,11 +120,10 @@ export default function ForgotPasswordPage() {
         setWarning('暫時無法處理，請稍後再試。');
       }
     } catch {
-      if (!active.current) return;
       setWarning('網路連線失敗，請稍後再試。');
     } finally {
-      inFlight.current = false;
-      if (active.current) setSubmitting(false);
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -151,7 +137,7 @@ export default function ForgotPasswordPage() {
           <span>Tripline</span>
         </div>
 
-        {submitted !== null ? (
+        {submitted ? (
           <>
             <div className="tp-success-icon-circle" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -159,8 +145,8 @@ export default function ForgotPasswordPage() {
               </svg>
             </div>
             <div className="tp-auth-headline">
-              <h1 ref={successRef} tabIndex={-1}>查看你的信箱</h1>
-              <p>若 <strong>{submitted}</strong> 已註冊，重設連結將寄至信箱。<br />連結 1 小時內有效。</p>
+              <h1>查看你的信箱</h1>
+              <p>若 <strong>{email.trim()}</strong> 已註冊，重設連結已寄出。<br />連結 1 小時內有效。</p>
             </div>
             <div className="tp-auth-footer">
               <a href="/login">回登入</a>
@@ -174,12 +160,12 @@ export default function ForgotPasswordPage() {
             </div>
 
             {warning && (
-              <div ref={warningRef} tabIndex={-1} className="tp-banner tp-banner-warning" role="alert" data-testid="forgot-banner-warning">
+              <div className="tp-banner tp-banner-warning" role="alert" data-testid="forgot-banner-warning">
                 {warning}
               </div>
             )}
 
-            <form className="tp-form tp-form--auth" onSubmit={handleSubmit} aria-busy={submitting} noValidate>
+            <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
               <div className="tp-form-row">
                 <label htmlFor="forgot-email">電子郵件</label>
                 <input

@@ -20,7 +20,6 @@ export interface UseTypeaheadKeyboardOptions<T> {
   listId: string;
   options: T[];
   onPick: (option: T) => void;
-  onDismiss?: () => void;
 }
 
 export interface UseTypeaheadKeyboardResult {
@@ -43,7 +42,7 @@ export interface UseTypeaheadKeyboardResult {
 export function useTypeaheadKeyboard<T>(
   opts: UseTypeaheadKeyboardOptions<T>,
 ): UseTypeaheadKeyboardResult {
-  const { listId, options, onPick, onDismiss } = opts;
+  const { listId, options, onPick } = opts;
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // When the option list shape changes (length / first item), reset focus to
@@ -56,7 +55,7 @@ export function useTypeaheadKeyboard<T>(
 
   const onKeyDown = useCallback(
     (ev: React.KeyboardEvent<HTMLInputElement>) => {
-      if (ev.nativeEvent.isComposing || options.length === 0) return;
+      if (options.length === 0) return;
       switch (ev.key) {
         case 'ArrowDown':
           ev.preventDefault();
@@ -73,15 +72,14 @@ export function useTypeaheadKeyboard<T>(
           }
           break;
         case 'Escape':
-          ev.preventDefault(); ev.stopPropagation();
-          onDismiss?.();
+          ev.preventDefault();
           setFocusedIndex(-1);
           break;
         default:
           return;
       }
     },
-    [focusedIndex, options, onPick, onDismiss],
+    [focusedIndex, options, onPick],
   );
 
   const resetFocus = useCallback(() => setFocusedIndex(-1), []);

@@ -27,7 +27,7 @@ const API_TYPES = readFileSync(path.join(ROOT, 'src/types/api.ts'), 'utf8');
 
 describe('v2.31.58 empty trip AI 健檢 guard', () => {
   describe('Backend POST handler', () => {
-    it('hasWritePermission 後 SELECT COUNT(*) FROM trip_entries JOIN trip_days 檢查', () => {
+    it('寫入權限檢查（requireTripWrite）後 SELECT COUNT(*) FROM trip_entries JOIN trip_days 檢查', () => {
       // trip_entries 沒 trip_id 欄位，JOIN trip_days 才能 WHERE d.trip_id = ?
       expect(BACKEND).toMatch(/SELECT COUNT\(\*\) as cnt FROM trip_entries e/);
       expect(BACKEND).toMatch(/JOIN trip_days d ON e\.day_id = d\.id/);
@@ -38,8 +38,8 @@ describe('v2.31.58 empty trip AI 健檢 guard', () => {
       expect(BACKEND).toMatch(/throw new AppError\(\s*['"]TRIP_EMPTY['"]\s*\)/);
     });
 
-    it('guard 放在 hasWritePermission 之後、UPSERT 之前（避免污染 DB）', () => {
-      const writePermIdx = BACKEND.indexOf('hasWritePermission(env.DB');
+    it('guard 放在 requireTripWrite 之後、UPSERT 之前（避免污染 DB）', () => {
+      const writePermIdx = BACKEND.indexOf('requireTripWrite(env.DB');
       const guardIdx = BACKEND.indexOf('TRIP_EMPTY');
       const upsertIdx = BACKEND.indexOf('INSERT INTO trip_health_reports');
       expect(writePermIdx).toBeGreaterThan(0);
@@ -49,7 +49,23 @@ describe('v2.31.58 empty trip AI 健檢 guard', () => {
   });
 
   describe('Frontend disable + hint', () => {
-    // Runtime coverage: health-observer-recovery verifies zero/unknown entry eligibility and retry.
+    it('useState 加 entryCount state', () => {
+      expect(FRONTEND).toMatch(/const \[entryCount, setEntryCount\] = useState<number \| null>\(null\)/);
+    });
+
+    it('fetch /trips/:id/days?all=1 並累加 timeline length 算 entry count', () => {
+      expect(FRONTEND).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
+      expect(FRONTEND).toMatch(/d\.timeline\) \? d\.timeline\.length : 0/);
+    });
+
+    it('button disabled 條件加 entryCount === 0 (v2.33.118: body CTA disable 條件)', () => {
+      // v2.33.118 redesign: CTA 拆 2 個 button —
+      //   titlebar (pending/completed): unknown state and empty trip also disabled
+      //   body CTA (idle): unknown entry count and empty trip both disabled
+      // entryCount === 0 guard 從原本 titlebar 單一 button 搬到 body CTA（因為 idle 才是 user 真正能 click）
+      expect(FRONTEND).toMatch(/disabled=\{submitting \|\| entryCount === null \|\| entryCount === 0\}/);
+    });
+
     it('entryCount === 0 顯示 hint 取代 button 文案', () => {
       expect(FRONTEND).toMatch(/此行程尚無景點，請先加入景點再執行健檢/);
       expect(FRONTEND).toMatch(/data-testid="ai-health-empty-hint"/);

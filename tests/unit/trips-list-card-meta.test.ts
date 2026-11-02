@@ -1,7 +1,6 @@
 // @vitest-environment node
 /**
- * mockup-parity-qa-fixes Sprint 10.3: TripsListPage cardMeta 出發日格式 + camelCase
- * fix 不被 regression。
+ * mockup-parity-qa-fixes Sprint 10.3: TripsListPage cardMeta 出發日格式。
  *
  * Pure-text grep on source 避免 jsdom + React 18 + vi.* API 不相容問題。
  */
@@ -15,19 +14,6 @@ const SRC = readFileSync(
 );
 
 describe('mockup-parity-qa-fixes TripsListPage card meta + filter', () => {
-  it('TripInfo interface 用 camelCase 對齊 API deepCamel response', () => {
-    expect(SRC).toMatch(/dayCount\?:\s*number/);
-    expect(SRC).toMatch(/startDate\?:\s*string\s*\|\s*null/);
-    expect(SRC).toMatch(/memberCount\?:\s*number/);
-    expect(SRC).toMatch(/archivedAt\?:\s*string\s*\|\s*null/);
-    // 既有 snake_case 不應該存在於 TripInfo 介面內
-    const interfaceMatch = SRC.match(/interface TripInfo \{[\s\S]*?\n\}/);
-    expect(interfaceMatch).not.toBeNull();
-    expect(interfaceMatch?.[0]).not.toMatch(/day_count\?:/);
-    expect(interfaceMatch?.[0]).not.toMatch(/start_date\?:/);
-    expect(interfaceMatch?.[0]).not.toMatch(/member_count\?:/);
-  });
-
   it('startDateMD helper 產生「7/2 出發」格式（mockup section 16:6908）', () => {
     expect(SRC).toMatch(/function startDateMD/);
     expect(SRC).toMatch(/parseInt\(m\[2\]!,\s*10\)/);

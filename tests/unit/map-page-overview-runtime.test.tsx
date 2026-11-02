@@ -15,6 +15,8 @@ interface CapturedTpMapProps {
   focusId?: number;
   pinsByDay?: Map<number, unknown>;
   dayNum?: number;
+  zoomControlPosition?: string;
+  onMarkerClick?: (id: number) => void;
 }
 
 // Capture TpMap props across renders
@@ -29,9 +31,16 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 const mockAllDays = {
-  1: { dayNum: 1, date: '2026-07-29', label: '北谷', entries: [] },
-  2: { dayNum: 2, date: '2026-07-30', label: '那覇', entries: [] },
-  3: { dayNum: 3, date: '2026-07-31', label: '糸満', entries: [] },
+  1: { dayNum: 1, date: '2026-07-29', label: '北谷', timeline: [
+    { id: 1, sortOrder: 1, stopPois: [{ name: 'e1', type: 'place', lat: 26.1, lng: 127.6, sortOrder: 1 }] },
+  ] },
+  2: { dayNum: 2, date: '2026-07-30', label: '那覇', timeline: [
+    { id: 2, sortOrder: 1, stopPois: [{ name: 'e2', type: 'place', lat: 26.2, lng: 127.7, sortOrder: 1 }] },
+    { id: 3, sortOrder: 2, stopPois: [{ name: 'e3', type: 'place', lat: 26.3, lng: 127.8, sortOrder: 1 }] },
+  ] },
+  3: { dayNum: 3, date: '2026-07-31', label: '糸満', timeline: [
+    { id: 4, sortOrder: 1, stopPois: [{ name: 'e4', type: 'place', lat: 26.4, lng: 127.9, sortOrder: 1 }] },
+  ] },
 };
 
 vi.mock('../../src/contexts/TripContext', async (importOriginal) => {
@@ -79,26 +88,7 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
-// extractPinsFromDay / extractPinsFromAllDays need fake pins so mapPins.length > 0
-// (otherwise MapPage short-circuits to empty state before rendering TpMap)
-vi.mock('../../src/hooks/useMapData', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('../../src/hooks/useMapData')>();
-  const fakePin = {
-    id: 1, type: 'entry' as const, index: 1, title: 'e1',
-    lat: 26.1, lng: 127.6, sortOrder: 0,
-  };
-  return {
-    ...orig,
-    extractPinsFromDay: () => ({ pins: [fakePin], missingCount: 0 }),
-    extractPinsFromAllDays: () => ({
-      pins: [fakePin, { ...fakePin, id: 2 }],
-      pinsByDay: new Map([[1, [fakePin]], [2, [{ ...fakePin, id: 2 }]]]),
-      missingCount: 0,
-    }),
-  };
-});
-
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, act, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 async function mountMapPage(url: string) {
@@ -136,6 +126,11 @@ describe('MapPage overview runtime — fitBounds vs flyTo', () => {
     expect(last.pinsByDay).toBeInstanceOf(Map);
     expect(last.pinsByDay!.size).toBeGreaterThan(0);
     expect(last.dayNum).toBeUndefined();
+  });
+
+  it('keeps Google zoom controls on the opposite side from map action buttons', async () => {
+    await mountMapPage('/trip/test-trip/map?day=all');
+    expect(tpMapCalls[tpMapCalls.length - 1]!.zoomControlPosition).toBe('LEFT_CENTER');
   });
 
   it('?day=2: TpMap receives dayNum=2 and pinsByDay=undefined (single-day mode)', async () => {
@@ -178,5 +173,17 @@ describe('MapPage overview runtime — handleTabClick URL sync', () => {
     const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeUndefined();
     expect(after.dayNum).toBe(2);
+  });
+
+  it('selecting a day-two pin keeps that pin, card, and day selected', async () => {
+    await mountMapPage('/trip/test-trip/map?day=all');
+
+    act(() => tpMapCalls[tpMapCalls.length - 1]!.onMarkerClick?.(3));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('map-day-2')).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByText('e3').closest('[data-card-entry-id]')).toHaveAttribute('aria-current', 'true');
+      expect(tpMapCalls[tpMapCalls.length - 1]!.focusId).toBe(3);
+    });
   });
 });

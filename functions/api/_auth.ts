@@ -68,15 +68,16 @@ export async function requirePoiWrite(
 ): Promise<void> {
   if (hasOpsScope(auth, 'ops:poi')) return;
   if (!tripId) throw new AppError('DATA_VALIDATION', '非維運 token 必須提供 tripId');
-  if (!(await hasWritePermission(db, auth, tripId))) throw new AppError('PERM_DENIED');
+  await requireTripWrite(db, auth, tripId);
   if (!(await verifyPoiBelongsToTrip(db, poiId, tripId))) {
     throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
   }
 }
 
 /**
- * Per-trip 寫權限 gate（owner/member，排除 viewer）。audit / rollback 等
- * per-trip 特權操作共用（D4：取代舊 admin-only gate）。
+ * Per-trip 寫權限 gate（owner/member，排除 viewer）。所有 per-trip 寫入 handler
+ * （days／entries／notes／segments／shares／requests 等）與 requirePoiWrite 共用的唯一一份；
+ * 不要在 handler 內嵌 hasWritePermission + PERM_DENIED（tests/unit/trip-write-gate-structure.test.ts 會擋）。
  */
 export async function requireTripWrite(
   db: D1Database,

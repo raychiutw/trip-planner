@@ -33,7 +33,18 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
   });
 
-  // Actual add/delete/restore HTTP contracts are covered in edit-trip-date-recovery.
+  it('handleAddDay POST /days with body { position }', () => {
+    expect(EDIT_TRIP_SRC).toMatch(/handleAddDay = useCallback\(async \(position: 'start' \| 'end'\)/);
+    expect(EDIT_TRIP_SRC).toMatch(
+      /apiFetchRaw\(`\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days`,[\s\S]{0,200}method: 'POST'[\s\S]{0,200}position/,
+    );
+  });
+
+  it('handleConfirmDelete 走 tripMutations.deleteDay（endpoint／錯誤訊息／事件的行為見 trip-mutations.test.tsx）', () => {
+    expect(EDIT_TRIP_SRC).toMatch(/handleConfirmDelete = useCallback/);
+    expect(EDIT_TRIP_SRC).toMatch(/await deleteDay\(tripId, dayNum\)/);
+  });
+
   it('ConfirmModal import + mount with pendingDelete state', () => {
     expect(EDIT_TRIP_SRC).toMatch(/import ConfirmModal from/);
     expect(EDIT_TRIP_SRC).toMatch(/<ConfirmModal\b[\s\S]{0,400}open=\{!!pendingDelete\}/);
@@ -62,6 +73,7 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/function chineseDayOfWeek/);
     // handleRestoreDay 呼叫 POST position: 'insert', date
     expect(EDIT_TRIP_SRC).toMatch(/handleRestoreDay = useCallback/);
+    expect(EDIT_TRIP_SRC).toMatch(/JSON\.stringify\(\{ position: 'insert', date \}\)/);
     // gap placeholder render with testid
     expect(EDIT_TRIP_SRC).toMatch(/data-testid=\{`edit-trip-day-gap-\$\{gapDate\}`\}/);
     expect(EDIT_TRIP_SRC).toMatch(/className="tp-edit-day-gap"/);

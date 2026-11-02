@@ -246,13 +246,21 @@ export function checkCsrf(request: Request, env: Env, url: URL): Response | null
 /**
  * Companion scope restriction — limits operations when X-Request-Scope: companion is set.
  * Used by tp-request scheduler to prevent prompt injection from escalating privileges.
+ *
+ * 2026-11-02 收窄為最小權限：白名單只剩 agent 的 MCP server 標為 companion 的 10 個工具。
+ * 依據：唯一會送這個 header 的程式就是 agent 的 MCP server（只對標為 companion 的工具）；
+ * Flutter 與網站都不送；MCP 沒有收藏／trip-pois 工具，讀取與 updateRequest 的 MCP 工具
+ * 不帶 companion header；production 的 companion_request_actions 與
+ * audit_log.trip_id='system:companion' 都是 0 筆（從沒被用過）。
+ * 移除的 10 項：trip-pois 三個寫入（POST／PATCH／DELETE）、PATCH /api/requests/:id、
+ * 三個 GET（/api/trips/…、/api/requests…、/api/poi-favorites）、收藏三個寫入
+ * （POST /api/poi-favorites、DELETE /api/poi-favorites/:id、POST …/add-to-trip）。
+ * 沒帶 companion header 的一般請求完全不受影響。
+ * PUT /docs 另於 2026-07-28 移除（trip_docs 退役，見 git history）。
  */
 const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/days\/\d+\/entries$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+$/ },
-  // v2.27.0+ entry-POI 主要 endpoints（alternates / master / poi-id）。舊清單只有
-  // legacy /trip-pois，導致帶 companion header 的 restrict-mode 寫入這些路徑會 403
-  // （latent gap，tp-request containment 修）。
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates$/ },
   { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates\/\d+$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/alternates\/reorder$/ },
@@ -260,32 +268,7 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'PUT',   pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/poi-id$/ },
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/recompute-travel$/ },
   { method: 'POST',  pattern: /^\/api\/pois\/\d+\/enrich$/ },
-  // legacy /trip-pois alias（v2.29.0 PATCH/DELETE endpoint 已刪，POST alias 仍在）
-  { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/trip-pois$/ },
-  { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
-  { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
-  // PUT /docs **刻意移除**（2026-07-28）：trip_docs 整條退役 —— 前端完全不 fetch
-  // /docs，checklist/emergency 的 UI 入口 v2.17.17 就整批移除，行程筆記讀的是
-  // trip_pretrip_notes + trip_emergency_contacts（migration 0073）。留著這條放行，
-  // agent 想寫行程筆記時就只有這個黑洞可倒：prod request 280 對它寫了四次
-  // entries_count=0，然後回報「已重新生成…包含警察/消防/海保電話…」。
-  // 唯一消費者是 MCP 的 putDoc 工具，已一併移除。筆記的正解是 App 筆記頁的
-  // POST /trips/:id/notes/:type/generate。
-  { method: 'PATCH', pattern: /^\/api\/requests\/\d+$/ },
   { method: 'PATCH', pattern: /^\/api\/pois\/\d+$/ },
-  { method: 'GET',   pattern: /^\/api\/trips\// },
-  { method: 'GET',   pattern: /^\/api\/requests/ },
-  // poi-favorites-rename §5.4: saved-pois → poi-favorites hard cutover（不留 alias）。
-  // tp-request scheduler 透過 companion 路徑做：
-  //   - 查/建/刪 poi_favorites（對映 entry → 收藏 / 收藏 → entry 流程）
-  //   - 從收藏 fast-path 加入行程（D-C1 endpoint）
-  // companion 真實 gate 在 functions/api/_companion.ts requireFavoriteActor —
-  // middleware 僅做 path 白名單（self-imposed restriction），實際 OAuth scope +
-  // clientId 三 gate 由 helper 套用（防 self-reported X-Request-Scope header）。
-  { method: 'GET',    pattern: /^\/api\/poi-favorites$/ },
-  { method: 'POST',   pattern: /^\/api\/poi-favorites$/ },
-  { method: 'DELETE', pattern: /^\/api\/poi-favorites\/\d+$/ },
-  { method: 'POST',   pattern: /^\/api\/poi-favorites\/\d+\/add-to-trip$/ },
 ];
 
 /** @internal — exported for unit testing */
@@ -427,6 +410,18 @@ async function handleAuth(
   // （CSPRNG ≥192-bit，DB 只存 SHA-256 hash），端點自管 per-IP rate-limit + default-deny
   // 區塊過濾 + 統一 404（無 enumeration oracle）+ no-store/no-referrer/frame-DENY headers。
   // 只 bypass GET：管理端點 GET/POST /api/trips/:id/shares 與 clone (POST) 仍要求 auth。
+  // 邀請預覽：InvitePage 給還沒登入的被邀請者看（「註冊並加入」「登入並加入」靠它）。
+  // 只放行 token 分支；tripId 分支（owner 列 pending 邀請）仍需認證，同時帶兩者視為後者。
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/api/invitations' &&
+    url.searchParams.has('token') &&
+    !url.searchParams.has('tripId')
+  ) {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   if (request.method === 'GET' && url.pathname.startsWith('/api/share/')) {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();

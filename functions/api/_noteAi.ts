@@ -206,7 +206,7 @@ async function expireNoteAiJob(db: D1Database, requestId: number, tripId: string
   await db.prepare(
     `UPDATE trip_note_ai_jobs
      SET status = 'timed_out', error_code = 'NOTES_AI_JOB_STALE',
-         error_message = 'AI 生成超過 10 分鐘', completed_at = datetime('now')
+         error_message = 'AI 生成逾時（超過 100 分鐘未回報）', completed_at = datetime('now')
      WHERE request_id = ? AND trip_id = ? AND status IN ('pending', 'processing')
        AND timeout_at <= datetime('now')`,
   ).bind(requestId, tripId).run();

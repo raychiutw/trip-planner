@@ -36,7 +36,7 @@ describe('setMaster', () => {
     expect(url).toBe('/trips/t1/entries/42/master');
     expect(opts.method).toBe('PATCH');
     expect(JSON.parse(String(opts.body))).toEqual({ poiId: 99 });
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 3, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 3);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 42, dayNum: 3 }]);
   });
 
@@ -65,7 +65,7 @@ describe('deleteEntry', () => {
     L.off();
     expect(r.ok).toBe(true);
     expect((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].method).toBe('DELETE');
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 7, dayNum: 2 }]);
   });
 });
@@ -76,7 +76,7 @@ describe('updateEntry（時間等欄位）', () => {
     const r = await updateEntry('t1', 7, 2, { start_time: '09:00' });
     expect(r).toMatchObject({ ok: true, data: { id: 7 } });
     expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ start_time: '09:00' });
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
   });
   it('recompute 失敗 → Result.recompute resolve false（caller 決定 info toast）', async () => {
     apiFetchRawMock.mockResolvedValueOnce(res(200, {}));
@@ -96,7 +96,7 @@ describe('reorderEntries', () => {
     const [url, opts] = apiFetchRawMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/trips/t1/entries/batch');
     expect(JSON.parse(String(opts.body))).toEqual({ updates: [{ id: 30, sort_order: 0 }, { id: 10, sort_order: 1 }, { id: 20, sort_order: 2 }] });
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
     expect(L.events).toEqual([{ tripId: 't1', dayNum: 2 }]);
   });
 });
@@ -115,6 +115,12 @@ describe('updateEntryPoi（備註／分類／訂位，不動車程）', () => {
 });
 
 describe('moveEntry（跨天）', () => {
+  it('選擇時段時將起訖時間與目標日一併寫入', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    await moveEntry('t1', 7, { fromDayNum: 1, toDayNum: 3, toDayId: 300, time: { start: '12:00', end: '13:30' } });
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ day_id: 300, start_time: '12:00', end_time: '13:30' });
+  });
+
   it('PATCH day_id → 來源日與目標日各 recompute 一次，emit 兩個 day', async () => {
     apiFetchRawMock.mockResolvedValueOnce(res(200));
     const L = listen();
@@ -122,8 +128,32 @@ describe('moveEntry（跨天）', () => {
     L.off();
     expect(r.ok).toBe(true);
     expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ day_id: 300 });
-    expect(recomputeMock.mock.calls).toEqual([['t1', 3, { afterWrite: true, isCurrent: expect.any(Function) }], ['t1', 1, { afterWrite: true, isCurrent: expect.any(Function) }]]);
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1]]);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 7, dayNum: 3 }, { tripId: 't1', entryId: 7, dayNum: 1 }]);
+  });
+
+  it('寫入成功但目標日車程失敗時，只重試未完成 scope，不重送 PATCH', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    recomputeMock.mockRejectedValueOnce(new Error('target failed')).mockResolvedValue(null);
+    const result = await moveEntry('t1', 7, { fromDayNum: 1, toDayNum: 3, toDayId: 300 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await result.recompute).toBe(false);
+    expect(await result.retryRecompute()).toBe(true);
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1], ['t1', 3]]);
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('交通 API 回 200 但仍有未完成 pair 時，該日期可重試', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    recomputeMock.mockResolvedValueOnce({ errorsDetail: [{ entryId: 7, message: 'Google error' }] }).mockResolvedValue(null);
+    const result = await copyEntry('t1', 7, { targetDayId: 300, targetDayNum: 3 });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(await result.recompute).toBe(false);
+    expect(await result.retryRecompute()).toBe(true);
+    expect(recomputeMock).toHaveBeenCalledTimes(2);
+    expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -135,7 +165,7 @@ describe('createEntry', () => {
     L.off();
     expect(r).toMatchObject({ ok: true, data: { id: 88 } });
     expect((apiFetchRawMock.mock.calls[0] as [string])[0]).toBe('/trips/t1/days/2/entries');
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 88, dayNum: 2 }]);
   });
 });
@@ -178,7 +208,7 @@ describe('#1261 新增動詞', () => {
     const r = await replaceMasterPoi('t1', 42, null, { poiId: 5 });
     expect(r.ok).toBe(true);
     expect((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].method).toBe('PUT');
-    expect(recomputeMock).toHaveBeenCalledWith('t1', null, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', null);
   });
 
   it('copyEntry：POST /copy 只重算目標天', async () => {
@@ -186,7 +216,13 @@ describe('#1261 新增動詞', () => {
     const r = await copyEntry('t1', 42, { targetDayId: 300, targetDayNum: 3 });
     expect(r).toMatchObject({ ok: true, data: { id: 77 } });
     expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ targetDayId: 300 });
-    expect(recomputeMock.mock.calls).toEqual([['t1', 3, { afterWrite: true, isCurrent: expect.any(Function) }]]);
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3]]);
+  });
+
+  it('copyEntry 選擇時段時傳給現有 copy endpoint', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(200));
+    await copyEntry('t1', 42, { targetDayId: 300, targetDayNum: 3, time: { start: '09:00', end: '11:30' } });
+    expect(JSON.parse(String((apiFetchRawMock.mock.calls[0] as [string, RequestInit])[1].body))).toEqual({ targetDayId: 300, time: '09:00 - 11:30' });
   });
 
   it('moveEntriesBatch：PATCH /entries/batch，來源日與目標日各重算一次、各 emit 一次', async () => {
@@ -194,7 +230,7 @@ describe('#1261 新增動詞', () => {
     const L = listen();
     await moveEntriesBatch('t1', [{ id: 1, day_id: 300, sort_order: 0 }], { fromDayNum: 1, toDayNum: 3 });
     L.off();
-    expect(recomputeMock.mock.calls).toEqual([['t1', 3, { afterWrite: true, isCurrent: expect.any(Function) }], ['t1', 1, { afterWrite: true, isCurrent: expect.any(Function) }]]);
+    expect(recomputeMock.mock.calls).toEqual([['t1', 3], ['t1', 1]]);
     expect(L.events).toEqual([{ tripId: 't1', dayNum: 3 }, { tripId: 't1', dayNum: 1 }]);
   });
 
@@ -207,7 +243,7 @@ describe('#1261 新增動詞', () => {
     const [url, opts] = apiFetchRawMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/poi-favorites/12/add-to-trip');
     expect(JSON.parse(String(opts.body))).toEqual({ tripId: 't1', dayNum: 2, startTime: '10:00', endTime: '11:00' });
-    expect(recomputeMock).toHaveBeenCalledWith('t1', 2, { afterWrite: true, isCurrent: expect.any(Function) });
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
     expect(L.events).toEqual([{ tripId: 't1', entryId: 91, dayNum: 2 }]);
   });
 });

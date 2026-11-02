@@ -73,7 +73,7 @@ const ENTRY_B: TimelineEntryData = {
 
 function renderRail(events: TimelineEntryData[] = [ENTRY_A, ENTRY_B], tripId = 'okinawa-2026') {
   return render(
-    <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
+    <MemoryRouter>
       <TripIdContext.Provider value={tripId}>
         <TimelineRail events={events} />
       </TripIdContext.Provider>
@@ -346,7 +346,7 @@ const DAY_OPTIONS: DayOption[] = [
 
 function renderWiredRail(events = [ENTRY_A, ENTRY_B], days = DAY_OPTIONS, dayId: number | null = 101, tripId = 'okinawa-2026') {
   return render(
-    <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
+    <MemoryRouter>
       <TripIdContext.Provider value={tripId}>
         <TripDaysContext.Provider value={days}>
           <TimelineRail events={events} dayId={dayId} />
@@ -393,14 +393,6 @@ describe('TimelineRail — drag reorder contract', () => {
     expect(USE_DRAG_DROP_SRC).toContain('sortableKeyboardCoordinates');
   });
 
-  it('optimistically reorders rows and posts a single batch payload', () => {
-    expect(TIMELINE_RAIL_SRC).toContain('arrayMove(orderedEvents, oldIdx, newIdx)');
-    expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(newIds)');
-    // #1260：batch payload（/entries/batch、{ updates: [{ id, sort_order }] }）由
-    // entry 變更 module 承載，tests/unit/entry-mutations.test.tsx 走 interface 驗。
-    expect(TIMELINE_RAIL_SRC).toContain('reorderEntries(tripId');
-  });
-
   it('broadcasts tp-entry-updated after successful reorder and reverts override on failure', () => {
     // #1260：entryUpdated 由 module emit（entry-mutations.test 驗）；這裡只鎖失敗 revert。
     expect(TIMELINE_RAIL_SRC).toContain('setOrderOverride(null)');
@@ -418,7 +410,7 @@ describe('TimelineRail — drag reorder runtime', () => {
       { id: 3, title: 'C', time: '12:00-13:00' },
     ];
     render(
-      <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
+      <MemoryRouter>
         <TripIdContext.Provider value="okinawa-2026">
           <TimelineRail events={events} />
         </TripIdContext.Provider>

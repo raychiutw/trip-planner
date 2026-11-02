@@ -5,12 +5,15 @@
  * 對應 mockup section 19 (line 7425-7583)。Profile hero + 3 group settings
  * rows，整合既有分散的 /settings/* page 為 entry hub。
  */
-import AuthStatus from '../components/shared/AuthStatus';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
+import { apiFetch } from '../lib/apiClient';
+import { isNewApiAuthEnabled } from '../lib/auth';
+import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
+import { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -19,9 +22,16 @@ import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import { writeAuthHint } from '../lib/authHint';
 
+/** 新 api 模式：重新驗證的 challenge id 在導去 Google 前存起來，回到 /account 後 DELETE 要帶它（跨頁面導向，只能放 sessionStorage）。 */
+const DELETE_CHALLENGE_KEY = 'tp-delete-challenge';
+const readDeleteChallenge = (): string | null => { try { return sessionStorage.getItem(DELETE_CHALLENGE_KEY); } catch { return null; } };
+const writeDeleteChallenge = (id: string | null) => {
+  try { if (id) sessionStorage.setItem(DELETE_CHALLENGE_KEY, id); else sessionStorage.removeItem(DELETE_CHALLENGE_KEY); } catch { /* 無痕或被禁用：之後會要求重新驗證 */ }
+};
+
 /** GET /api/account 的刪除影響預覽。 */
 interface DeleteAccountPreview {
-  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 用確認字串 */
+  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 先完成 Google 重新驗證，再輸入確認字串 */
   hasPassword: boolean;
   reauthProvider: 'google' | null;
   reauthenticated: boolean;
@@ -33,6 +43,17 @@ interface AccountStats {
   tripCount: number;
   totalDays: number;
   collaboratorCount: number;
+}
+
+function isDeleteAccountPreview(value: unknown): value is DeleteAccountPreview {
+  if (!value || typeof value !== 'object') return false;
+  const preview = value as Record<string, unknown>;
+  return typeof preview.hasPassword === 'boolean'
+    && (preview.hasPassword || ((preview.reauthProvider === 'google' || preview.reauthProvider === null)
+      && typeof preview.reauthenticated === 'boolean'))
+    && typeof preview.tripsOwned === 'number' && Number.isSafeInteger(preview.tripsOwned) && preview.tripsOwned >= 0
+    && typeof preview.collaboratorsAffected === 'number' && Number.isSafeInteger(preview.collaboratorsAffected)
+    && preview.collaboratorsAffected >= 0;
 }
 
 const SCOPED_STYLES = `
@@ -122,6 +143,7 @@ const SCOPED_STYLES = `
   justify-content: center;
 }
 .tp-account-hero-name-edit {
+  position: relative;
   display: grid; place-items: center;
   width: 32px; height: 32px;
   background: transparent; border: none;
@@ -130,6 +152,7 @@ const SCOPED_STYLES = `
   cursor: pointer;
   transition: background-color 150ms, color 150ms;
 }
+.tp-account-hero-name-edit::before { content: ''; position: absolute; inset: -6px; } /* #1445 F4：視覺 32px，點擊區 44px */
 .tp-account-hero-name-edit:hover {
   background: var(--color-hover);
   color: var(--color-accent-text);
@@ -284,13 +307,11 @@ interface SettingsRow {
 
 export default function AccountPage() {
   const auth = useRequireAuth();
-  const { user } = auth;
-  const [savedProfile, setSavedProfile] = useState<{ id: string; displayName: string | null } | null>(null);
+  const { user, reload: reloadUser } = useCurrentUser();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
-  const [statsAttempt, setStatsAttempt] = useState(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   /* ── 刪除帳號（Google Play 強制要求的帳號刪除路徑）──────────────────
@@ -299,100 +320,76 @@ export default function AccountPage() {
    * 那兩個數字前端算不出來，由 GET /api/account 提供。 */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePreview, setDeletePreview] = useState<DeleteAccountPreview | null>(null);
+  const deletePreviewGeneration = useRef(0);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
-  const loggingOutRef = useRef(false);
-  const previewRequest = useRef<AbortController | null>(null);
-  const deletingRef = useRef(false);
-  const lifetime = useRef(0);
-  useLayoutEffect(() => () => { lifetime.current++; previewRequest.current?.abort(); }, [user?.id]);
 
   // v2.33.142: inline edit display_name — 取代 v2.33.122 modal。
-  // pencil 或 name click → 變 input → blur 自動 save → 成功更新名稱 / 失敗保留欄位與錯誤。
+  // pencil 或 name click → 變 input → blur 自動 save → 成功 silent / 失敗 toast。
   // ESC 取消還原。Enter blur (trigger save)。
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState('');
+  const [confirmedName, setConfirmedName] = useState<{ value: string | null; userAtSave: CurrentUser | null | undefined } | null>(null);
+  const currentName = confirmedName && confirmedName.userAtSave === user
+    ? confirmedName.value : user?.displayName;
   const [savingName, setSavingName] = useState(false);
-  const savingNameRef = useRef(false);
-  const [nameError, setNameError] = useState<string | null>(null);
-  const nameButtonRef = useRef<HTMLButtonElement>(null);
-  const returnNameFocus = useRef(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   // 進入編輯前的快照 — ESC 還原 / 比對是否真的有改 (無改省 API call)
   const draftBaselineRef = useRef('');
 
   const startEditName = useCallback(() => {
-    const current = (savedProfile?.id === user?.id ? savedProfile?.displayName : user?.displayName) ?? '';
-    setNameError(null);
+    const current = currentName ?? '';
     setDraftName(current);
     draftBaselineRef.current = current;
     setEditingName(true);
-  }, [user?.id, user?.displayName, savedProfile]);
-
-  useLayoutEffect(() => {
-    if (editingName) {
+    // next tick focus + select
+    setTimeout(() => {
       nameInputRef.current?.focus();
       nameInputRef.current?.select();
-    } else if (returnNameFocus.current) {
-      returnNameFocus.current = false;
-      if (document.activeElement === document.body) nameButtonRef.current?.focus({ preventScroll: true });
-    }
-  }, [editingName]);
+    }, 0);
+  }, [currentName]);
 
   const cancelEditName = useCallback(() => {
-    if (savingNameRef.current) return;
-    returnNameFocus.current = true;
-    setNameError(null);
     setDraftName(draftBaselineRef.current);
     setEditingName(false);
   }, []);
 
   const commitEditName = useCallback(async (): Promise<void> => {
-    if (savingNameRef.current || !user) return;
-    const operation = lifetime.current;
     const trimmed = draftName.trim();
     // 無改 → 不打 API，直接退出 editing
     if (trimmed === draftBaselineRef.current.trim()) {
       setEditingName(false);
       return;
     }
-    savingNameRef.current = true;
     setSavingName(true);
-    setNameError(null);
     try {
-      const profile = await apiFetch<{ id: string; displayName: string | null }>('/account/profile', {
+      const saved: CurrentUser = await apiFetch('/account/profile', {
         method: 'PATCH',
         body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
         headers: { 'content-type': 'application/json' },
       });
-      if (operation !== lifetime.current) return;
-      if (profile?.id !== user.id || !(profile.displayName === null || typeof profile.displayName === 'string')) throw new Error('invalid profile');
-      setSavedProfile(profile);
+      setConfirmedName({ value: saved.displayName, userAtSave: user });
+      reloadUser();
       setEditingName(false);
       // v2.33.142: 成功 silent (user feedback 「右上角不用顯示狀態」一脈相承)。
-      // 成功由更新的名稱與輔助狀態呈現。
-    } catch {
-      if (operation !== lifetime.current) return;
-      setNameError('名稱更新失敗，請重新離開欄位以重試，或按 Escape 取消。');
+      // 失敗才走 toast。
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '更新失敗';
+      showToast(msg, 'error');
       // 失敗保留 editing=true 讓 user retry
+      setTimeout(() => nameInputRef.current?.focus(), 0);
     } finally {
-      if (operation === lifetime.current) { savingNameRef.current = false; setSavingName(false); }
+      setSavingName(false);
     }
-  }, [draftName, user]);
+  }, [draftName, reloadUser, user]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    setStats(null);
-    setStatsError(null);
+    if (!auth.user) return;
     let cancelled = false;
     apiFetch<AccountStats>('/account/stats')
-      .then((data) => {
-        if (![data?.tripCount, data?.totalDays, data?.collaboratorCount].every(n => Number.isSafeInteger(n) && n >= 0)) throw new Error('invalid stats');
-        if (!cancelled) setStats(data);
-      })
+      .then((data) => { if (!cancelled) setStats(data); })
       // v2.33.47 round 7b: 不直接 surface raw error.message (可能 leak backend
       // detail / SQL fragment)。改 ApiError 與 network error 分開 generic 文案。
       .catch((e) => {
@@ -400,27 +397,27 @@ export default function AccountPage() {
         setStatsError(e instanceof ApiError ? '統計資料載入失敗' : '網路錯誤，請稍後再試');
       });
     return () => { cancelled = true; };
-  }, [user?.id, statsAttempt]);
+  }, [auth.user]);
 
   /** 開啟刪除確認前先抓預覽 —— 沒有數字就不該讓使用者按下不可逆的按鈕。 */
   const openDeleteModal = useCallback(async () => {
-    previewRequest.current?.abort();
-    const request = new AbortController();
-    previewRequest.current = request;
+    const generation = ++deletePreviewGeneration.current;
     setDeleteError(null);
     setDeleteInput('');
     setDeletePreview(null);
     setShowDeleteModal(true);
     try {
-      const preview = await apiFetch<DeleteAccountPreview>('/account', { signal: request.signal });
-      if (request.signal.aborted) return;
-      if (typeof preview?.hasPassword !== 'boolean' ||
-          (!preview.hasPassword && (preview.reauthProvider !== 'google' && preview.reauthProvider !== null || typeof preview.reauthenticated !== 'boolean')) ||
-          ![preview.tripsOwned, preview.collaboratorsAffected].every(n => Number.isSafeInteger(n) && n >= 0)) throw new Error('invalid preview');
-      setDeletePreview(preview);
+      const preview = await apiFetch<unknown>('/account');
+      if (!isDeleteAccountPreview(preview)) throw new Error('Invalid delete preview');
+      if (deletePreviewGeneration.current === generation) setDeletePreview(preview);
     } catch {
-      if (!request.signal.aborted) setDeleteError('無法取得刪除影響範圍，請稍後再試');
+      if (deletePreviewGeneration.current === generation) setDeleteError('無法取得刪除影響範圍，請稍後再試');
     }
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    deletePreviewGeneration.current += 1;
+    setShowDeleteModal(false);
   }, []);
 
   useEffect(() => {
@@ -428,43 +425,63 @@ export default function AccountPage() {
     const result = new URLSearchParams(window.location.search).get('deleteReauth');
     if (result !== 'done' && result !== 'failed') return;
     window.history.replaceState(window.history.state, '', '/account');
+    if (result === 'failed') writeDeleteChallenge(null);
     void openDeleteModal().then(() => {
       if (result === 'failed') setDeleteError('身分驗證未完成，帳號尚未刪除。請重新驗證。');
     });
   }, [openDeleteModal, user?.id]);
 
-  /** 二次確認是否已滿足：有密碼要打密碼，純 OAuth 要打 DELETE。 */
+  /** 二次確認是否已滿足：有密碼要打密碼；純 OAuth 要先完成 Google 重新驗證，再打 DELETE。 */
   const canConfirmDelete = deletePreview
     ? (deletePreview.hasPassword ? deleteInput.length > 0 :
       deletePreview.reauthProvider === 'google' && deleteInput === 'DELETE')
     : false;
 
   const deleteAccount = useCallback(async () => {
-    if (!deletePreview || !canConfirmDelete || deletingRef.current) return;
+    if (!deletePreview || !canConfirmDelete || deleting) return;
+    const newApi = isNewApiAuthEnabled();
     if (!deletePreview.hasPassword && !deletePreview.reauthenticated) {
-      window.location.href = '/api/oauth/login/google?purpose=account-delete';
+      if (!newApi) {
+        window.location.href = '/api/oauth/login/google?purpose=account-delete';
+        return;
+      }
+      // 新 api 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
+      setDeleteError(null);
+      try {
+        const started = await apiFetch<{ challengeId?: string; authorizeUrl?: string }>('/account/delete-reauth', { method: 'POST' });
+        if (!started.challengeId || !started.authorizeUrl) throw new Error('Invalid delete-reauth response');
+        writeDeleteChallenge(started.challengeId);
+        window.location.href = started.authorizeUrl;
+      } catch {
+        setDeleteError('無法開始身分驗證，帳號尚未刪除。請稍後再試。');
+      }
       return;
     }
-    const operation = lifetime.current;
-    deletingRef.current = true;
+    let challengeId: string | null = null;
+    if (!deletePreview.hasPassword && newApi) {
+      challengeId = readDeleteChallenge();
+      if (!challengeId) {
+        setDeleteError('近期身分驗證已失效，請重新驗證。帳號尚未刪除。');
+        setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
+        return;
+      }
+    }
     setDeleting(true);
     setDeleteError(null);
     try {
-      const result = await apiFetch<{ ok: boolean }>('/account', {
+      await apiFetch('/account', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          deletePreview.hasPassword ? { password: deleteInput } : { confirm: deleteInput },
+          deletePreview.hasPassword ? { password: deleteInput }
+            : challengeId ? { challengeId } : { confirm: deleteInput },
         ),
       });
-      if (operation !== lifetime.current) return;
-      if (result?.ok !== true) throw new Error('unconfirmed deletion');
+      writeDeleteChallenge(null);
       // 帳號已不存在，不能留在帳號頁。用整頁導向而非 SPA navigate —— 要把
       // 記憶體中的 auth context / 快取一併清掉。
       window.location.href = '/';
     } catch (err) {
-      if (operation !== lifetime.current) return;
-      deletingRef.current = false;
       setDeleting(false);
       setDeleteError(
         err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID'
@@ -474,21 +491,16 @@ export default function AccountPage() {
           : '刪除失敗，請稍後再試',
       );
       if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
+        writeDeleteChallenge(null);
         setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
       }
     }
-  }, [deletePreview, canConfirmDelete, deleteInput]);
+  }, [deletePreview, canConfirmDelete, deleteInput, deleting]);
 
   const handleLogout = useCallback(async () => {
-    if (loggingOutRef.current) return;
-    loggingOutRef.current = true;
-    const operation = lifetime.current;
-    setLogoutError(null);
     setLoggingOut(true);
     try {
-      const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
-      if (!response.ok) throw await ApiError.fromResponse(response);
-      if (operation !== lifetime.current) return;
+      await logoutSession();
       // 清掉「上次已登入」旗標（見 lib/authHint）。不清的話，登出後第一次進 `/`
       // 會被 LandingPage 依舊旗標轉去 /trips，再被 useRequireAuth 踢回 /login ——
       // 使用者想看行銷頁卻直接彈到登入頁。旗標會在那次 401 時自我校正，但沒必要
@@ -499,18 +511,18 @@ export default function AccountPage() {
       setShowLogoutModal(false);
       navigate('/login', { replace: true });
     } catch {
-      if (operation !== lifetime.current) return;
-      loggingOutRef.current = false;
+      // v2.33.47 round 7b: 失敗路徑也關 modal + 顯 toast (之前 modal 卡死)。
       setLoggingOut(false);
-      setLogoutError('登出失敗，請稍後再試');
+      setShowLogoutModal(false);
+      showToast('登出失敗，請稍後再試', 'error');
     }
   }, [navigate]);
 
-  if (!user) return <AuthStatus auth={auth} />;
+  if (!auth.user || !user) return null;
 
   // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
   // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。
-  const displayName = (savedProfile?.id === user.id ? savedProfile.displayName : user.displayName) || user.email.split('@')[0] || user.email;
+  const displayName = currentName || user.email.split('@')[0] || user.email;
   const initial = displayName.charAt(0).toUpperCase();
 
   // v2.54.10「依設定分區三色」(mockup V1)：每組設定一色，由 group.tone 驅動 row icon chip。
@@ -522,8 +534,8 @@ export default function AccountPage() {
       label: '應用程式',
       tone: 'accent',
       rows: [
-        { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '跟隨系統、淺色或深色', to: '/account/appearance' },
-        { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '尚未開放 · 查看規劃內容', to: '/account/notifications' },
+        { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '跟隨系統、淺色、深色', to: '/account/appearance' },
+        { key: 'notifications', icon: 'lightbulb', title: '通知設定', helper: '尚未開放', to: '/account/notifications' },
       ],
     },
     {
@@ -543,7 +555,7 @@ export default function AccountPage() {
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有登入中的裝置', to: '/settings/sessions' },
         // Google Play 要求 app 內可直接取得隱私權政策，不能只放在網站頁尾。
         { key: 'privacy', icon: 'document', title: '隱私權政策', helper: '我們收集什麼資料、如何使用', to: '/privacy' },
-        { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => { setLogoutError(null); setShowLogoutModal(true); }, danger: true },
+        { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
         { key: 'delete-account', icon: 'trash', title: '刪除帳號', helper: '永久刪除帳號與所有行程，無法復原', onClick: openDeleteModal, danger: true },
       ],
     },
@@ -567,9 +579,7 @@ export default function AccountPage() {
                   onChange={(e) => setDraftName(e.target.value)}
                   onBlur={() => void commitEditName()}
                   onKeyDown={(e) => {
-                    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                     if (e.key === 'Enter') {
-                      returnNameFocus.current = true;
                       e.preventDefault();
                       (e.target as HTMLInputElement).blur();
                     } else if (e.key === 'Escape') {
@@ -594,7 +604,6 @@ export default function AccountPage() {
                   </h2>
                   <button
                     type="button"
-                    ref={nameButtonRef}
                     className="tp-account-hero-name-edit"
                     onClick={startEditName}
                     aria-label="編輯名稱"
@@ -606,8 +615,6 @@ export default function AccountPage() {
                 </>
               )}
             </div>
-            {nameError && <p role="alert" className="tp-account-delete-error">{nameError}</p>}
-            <span role="status" className="sr-only">{savingName ? '正在儲存名稱' : !nameError && savedProfile ? '名稱已更新' : ''}</span>
             <div className="tp-account-hero-email">{user.email}</div>
           </div>
           <div className="tp-account-hero-stats">
@@ -625,9 +632,7 @@ export default function AccountPage() {
             </div>
           </div>
           {statsError && (
-            <div className="tp-logout-stats-error" role="status">數據載入失敗：{statsError}
-              <button type="button" className="min-h-[44px] text-accent" onClick={() => setStatsAttempt(n => n + 1)}>重試統計</button>
-            </div>
+            <div className="tp-logout-stats-error" role="status">數據載入失敗：{statsError}</div>
           )}
         </section>
 
@@ -686,7 +691,7 @@ export default function AccountPage() {
         busy={loggingOut}
         onConfirm={handleLogout}
         onCancel={() => setShowLogoutModal(false)}
-      >{logoutError && <p role="alert" className="tp-account-delete-error">{logoutError}</p>}</ConfirmModal>
+      />
 
       {/* 刪除帳號 —— Google Play 強制要求的路徑。
           確認畫面必須誠實顯示影響範圍：owner 決策是「行程一併刪除，含共編者的」，
@@ -697,7 +702,7 @@ export default function AccountPage() {
         message={
           deletePreview
             ? `這個動作無法復原。你的 ${deletePreview.tripsOwned} 個行程會一併刪除。`
-            : deleteError ? '目前無法確認刪除影響範圍，帳號尚未刪除。' : '正在確認刪除影響範圍⋯'
+            : deleteError ? '無法確認刪除影響範圍。請取消後重試。' : '正在確認刪除影響範圍⋯'
         }
         warning={
           deletePreview && deletePreview.collaboratorsAffected > 0
@@ -709,11 +714,7 @@ export default function AccountPage() {
         busy={deleting}
         confirmDisabled={!canConfirmDelete}
         onConfirm={deleteAccount}
-        onCancel={() => {
-          if (deletingRef.current) return;
-          previewRequest.current?.abort();
-          setShowDeleteModal(false);
-        }}
+        onCancel={closeDeleteModal}
       >
         {deletePreview && (
           <div className="tp-account-delete-confirm">
@@ -741,9 +742,7 @@ export default function AccountPage() {
           </div>
         )}
         {!deletePreview && deleteError && (
-          <div><p className="tp-account-delete-error" role="alert">{deleteError}</p>
-            <button type="button" className="min-h-[44px] text-accent" onClick={openDeleteModal}>重試刪除預覽</button>
-          </div>
+          <p className="tp-account-delete-error" role="alert">{deleteError}</p>
         )}
       </ConfirmModal>
 

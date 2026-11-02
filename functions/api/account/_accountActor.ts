@@ -16,7 +16,11 @@ export function requireMobileAccountActor(context: Context): { uid: string; gran
 }
 
 export async function requireAccountActor(context: Context): Promise<{ uid: string; grantId?: string; clientId?: string }> {
-  return context.request.headers.get('Authorization')?.startsWith('Bearer ')
+  // 看 middleware 實際認證出來的身分，不是看有沒有 Authorization 標頭：
+  // middleware 以 session cookie 優先，同時帶 cookie 與 Bearer 時 auth 來自 cookie（沒有 grantId），
+  // 照標頭判斷會把已登入的瀏覽器使用者誤導去 mobile 路徑而拒絕。
+  const auth = (context.data as { auth?: { grantId?: string } } | undefined)?.auth;
+  return auth?.grantId
     ? requireMobileAccountActor(context)
     : { uid: (await requireSessionUser(context.request, context.env)).uid };
 }

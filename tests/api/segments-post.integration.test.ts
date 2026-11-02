@@ -1,5 +1,6 @@
 /**
  * Integration test — POST /api/trips/:id/segments
+ * 走 HTTP 邊界（tests/api/http.ts），認證用真實 bearer token，不直接呼叫 handler。
  *
  * v2.55.x：手動建立 segment。recompute 尚未跑、segment 不存在時，user 從 EditEntryPage
  * 手動選移動方式（開車 / 步行 / 大眾運輸）→ POST 建立。
@@ -34,12 +35,15 @@ vi.mock('../../functions/api/_maps_lock', () => ({
 }));
 
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip, getDayId, callHandler, seedEntry, jsonRequest } from './helpers';
-import { onRequestPost } from '../../functions/api/trips/[id]/segments/index';
+import { mockEnv, seedTrip, getDayId, seedEntry } from './helpers';
+import { createApi, type Api } from './http';
+import { cleanupTrips } from './cleanup-trips';
+import { D1Adapter } from '../../src/server/oauth-d1-adapter';
 import type { Env } from '../../functions/api/_types';
 
 let db: D1Database;
 let env: Env;
+let api: Api;
 let e1: number; // 有座標
 let e2: number; // 有座標
 let e3: number; // 無座標（測 fallback）
@@ -60,6 +64,7 @@ async function seedEntryWithCoords(dayId: number, sortOrder: number, lat: number
 beforeEach(async () => {
   db = await createTestDb();
   env = mockEnv(db, { GOOGLE_MAPS_API_KEY: 'test-key' } as Partial<Env>);
+  api = createApi({ env });
   await db.prepare('DELETE FROM trip_segments WHERE trip_id LIKE ?').bind('trip-segpost%').run();
   await seedTrip(db, { id: 'trip-segpost' });
   const day1 = await getDayId(db, 'trip-segpost', 1);
@@ -68,20 +73,18 @@ beforeEach(async () => {
   e3 = await seedEntry(db, day1, { sortOrder: 3 }); // 無 master POI → 無座標
 });
 
-afterAll(disposeMiniflare);
+afterAll(async () => {
+  await cleanupTrips(db, ['trip-segpost%'], ['segpost-poi-%']);
+  await disposeMiniflare();
+});
 
-function postCtx(body: Record<string, unknown>) {
-  return mockContext({
-    request: jsonRequest('https://test.com/api/trips/trip-segpost/segments', 'POST', body),
-    env,
-    auth: mockAuth({ email: 'user@test.com' }),
-    params: { id: 'trip-segpost' },
-  });
+function post(body: Record<string, unknown>) {
+  return api.request('POST', 'https://test.com/api/trips/trip-segpost/segments', { json: body, as: 'user@test.com' });
 }
 
 describe('POST /api/trips/:id/segments', () => {
   it('driving 有座標 → 201 + source=google + min>0', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'driving' }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'driving' });
     expect(resp.status).toBe(201);
     const row = await db
       .prepare('SELECT mode, min, source, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
@@ -95,7 +98,7 @@ describe('POST /api/trips/:id/segments', () => {
 
   it('transit + min=25（無 submode=其他）→ 201 + source=manual + submode=NULL + distance_m=Haversine 直線', async () => {
     // v2.55.45：手填方式（其他/metro/train/hsr）距離自動算直線 Haversine（非 NULL）。
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 25 }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 25 });
     expect(resp.status).toBe(201);
     const row = await db
       .prepare('SELECT mode, submode, min, source, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
@@ -109,8 +112,8 @@ describe('POST /api/trips/:id/segments', () => {
   });
 
   it('同 pair 重送 → upsert（改 mode，不建第二筆）', async () => {
-    await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'driving' }));
-    const resp2 = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 40 }));
+    await post({ from_entry_id: e1, to_entry_id: e2, mode: 'driving' });
+    const resp2 = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 40 });
     expect(resp2.status).toBe(201);
     const rows = await db
       .prepare('SELECT id, mode, version FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
@@ -122,7 +125,7 @@ describe('POST /api/trips/:id/segments', () => {
   });
 
   it('driving 缺座標（entry 無 master POI）→ 201 + stale（source=NULL, min=NULL）', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e3, mode: 'driving' }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e3, mode: 'driving' });
     expect(resp.status).toBe(201);
     const row = await db
       .prepare('SELECT mode, min, source, computed_at FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
@@ -135,7 +138,7 @@ describe('POST /api/trips/:id/segments', () => {
   });
 
   it('G8 transit + submode=bus（自動、不帶 min）→ 201 + source=google（Google DRIVE 代理）+ submode=bus', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'bus' }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'bus' });
     expect(resp.status).toBe(201);
     const row = await db.prepare('SELECT mode, submode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
       .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number }>();
@@ -148,7 +151,7 @@ describe('POST /api/trips/:id/segments', () => {
   it.each(['metro', 'train', 'hsr'])(
     'G8b transit + submode=%s（自動、不帶 min）→ 201 + source=google（DRIVE 代理）+ submode 保留 + min>0',
     async (submode) => {
-      const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode }));
+      const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode });
       expect(resp.status).toBe(201);
       const row = await db.prepare('SELECT mode, submode, source, min, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
         .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number; distance_m: number }>();
@@ -159,7 +162,7 @@ describe('POST /api/trips/:id/segments', () => {
   );
 
   it('G10 transit + submode=metro + min=30（手填）→ 201 + source=manual + submode=metro + 距離直線 Haversine', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'metro', min: 30 }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', submode: 'metro', min: 30 });
     expect(resp.status).toBe(201);
     const row = await db.prepare('SELECT mode, submode, source, min, distance_m FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
       .bind(e1, e2).first<{ mode: string; submode: string; source: string; min: number; distance_m: number | null }>();
@@ -169,7 +172,7 @@ describe('POST /api/trips/:id/segments', () => {
 
   // v2.55.72：transit 無 min 不再 400 — 非單軌一律預設 DRIVE 估（bare transit submode=NULL 同）。
   it('transit 無 submode 無 min → 201 + source=google（DRIVE 預設估）', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit' }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit' });
     expect(resp.status).toBe(201);
     const row = await db.prepare('SELECT mode, submode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
       .bind(e1, e2).first<{ mode: string; submode: string | null; source: string; min: number }>();
@@ -179,7 +182,7 @@ describe('POST /api/trips/:id/segments', () => {
 
   it('transit 無 submode 無 min 但缺座標 → 201 + stale（source=NULL）', async () => {
     // DRIVE 估缺座標 → computeGoogle ok:false → 存 NULL（同 driving 缺座標），仍建段不 400。
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e3, mode: 'transit' }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e3, mode: 'transit' });
     expect(resp.status).toBe(201);
     const row = await db.prepare('SELECT mode, source, min FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?')
       .bind(e1, e3).first<{ mode: string; source: string | null; min: number | null }>();
@@ -189,55 +192,71 @@ describe('POST /api/trips/:id/segments', () => {
   });
 
   it('transit min 超範圍（>1440）→ 400', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 9999 }))).status).toBe(400);
+    expect((await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 9999 })).status).toBe(400);
   });
 
   it('invalid mode → 400', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'flying' }))).status).toBe(400);
+    expect((await post({ from_entry_id: e1, to_entry_id: e2, mode: 'flying' })).status).toBe(400);
   });
 
   it('from === to → 400', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e1, mode: 'driving' }))).status).toBe(400);
+    expect((await post({ from_entry_id: e1, to_entry_id: e1, mode: 'driving' })).status).toBe(400);
   });
 
   it('from/to entry 不屬此 trip → 404（防 IDOR）', async () => {
     // 另一個 trip 的 entry
-    await seedTrip(db, { id: 'trip-other' });
-    const otherDay = await getDayId(db, 'trip-other', 1);
+    await seedTrip(db, { id: 'trip-segpost-other' });
+    const otherDay = await getDayId(db, 'trip-segpost-other', 1);
     const otherEntry = await seedEntry(db, otherDay, { sortOrder: 1 });
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: otherEntry, mode: 'driving' }))).status).toBe(404);
+    expect((await post({ from_entry_id: e1, to_entry_id: otherEntry, mode: 'driving' })).status).toBe(404);
   });
 
   it('缺 from_entry_id → 400', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ to_entry_id: e2, mode: 'driving' }))).status).toBe(400);
+    expect((await post({ to_entry_id: e2, mode: 'driving' })).status).toBe(400);
   });
 
   it('transit min=0 → 400（min<1 收緊）', async () => {
-    expect((await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 0 }))).status).toBe(400);
+    expect((await post({ from_entry_id: e1, to_entry_id: e2, mode: 'transit', min: 0 })).status).toBe(400);
   });
 
   // authz — 新 mutating endpoint 必鎖（requireAuth + hasWritePermission）
-  it('未認證 → 401', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-segpost/segments', 'POST', { from_entry_id: e1, to_entry_id: e2, mode: 'driving' }),
-      env,
-      params: { id: 'trip-segpost' },
+  // 真實邊界：未帶 Origin 的未認證寫入先被 CSRF gate 擋（403）；帶合法 Origin 才會走到認證檢查（401）
+  it('未認證（帶合法 Origin）→ 401', async () => {
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-segpost/segments', {
+      json: { from_entry_id: e1, to_entry_id: e2, mode: 'driving' },
+      headers: { Origin: 'http://localhost:5173' },
     });
-    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
+    expect(resp.status).toBe(401);
+  });
+
+  it('未認證且無 Origin → 403（CSRF gate，且不建立 segment）', async () => {
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-segpost/segments', {
+      json: { from_entry_id: e1, to_entry_id: e2, mode: 'driving' },
+    });
+    expect(resp.status).toBe(403);
+    const rows = await db.prepare('SELECT COUNT(*) AS n FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ n: number }>();
+    expect(rows!.n).toBe(0);
   });
 
   it('service token（無 trip write 權限）→ 403', async () => {
-    const ctx = mockContext({
-      request: jsonRequest('https://test.com/api/trips/trip-segpost/segments', 'POST', { from_entry_id: e1, to_entry_id: e2, mode: 'driving' }),
-      env,
-      auth: mockAuth({ email: 'svc@test.com', isServiceToken: true }),
-      params: { id: 'trip-segpost' },
+    // client_credentials 的 access token：user_id 為 NULL（真實 service token 形狀）
+    const svcToken = `http-test-svc-${crypto.randomUUID()}`;
+    await new D1Adapter(db, 'AccessToken').upsert(
+      svcToken,
+      { jti: svcToken, client_id: 'svc-segpost', user_id: null, scopes: ['trips:read', 'trips:write'], grantId: `grant-${svcToken}` },
+      300,
+    );
+    const resp = await api.request('POST', 'https://test.com/api/trips/trip-segpost/segments', {
+      json: { from_entry_id: e1, to_entry_id: e2, mode: 'driving' },
+      bearer: svcToken,
     });
-    expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
+    expect(resp.status).toBe(403);
+    const rows = await db.prepare('SELECT COUNT(*) AS n FROM trip_segments WHERE from_entry_id=? AND to_entry_id=?').bind(e1, e2).first<{ n: number }>();
+    expect(rows!.n).toBe(0); // 被擋下就不該有寫入
   });
 
   it('N-POST 同一地點/免交通：POST {noTravel:true}（不帶 mode）→ 201 + no_travel=1 + min/dist/source NULL', async () => {
-    const resp = await callHandler(onRequestPost, postCtx({ from_entry_id: e1, to_entry_id: e2, noTravel: true }));
+    const resp = await post({ from_entry_id: e1, to_entry_id: e2, noTravel: true });
     expect(resp.status).toBe(201);
     const body = await resp.json() as Record<string, unknown>;
     expect(body.noTravel).toBe(1);

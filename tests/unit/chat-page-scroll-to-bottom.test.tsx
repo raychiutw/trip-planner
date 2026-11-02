@@ -107,9 +107,63 @@ describe('聊天捲到底箭頭', () => {
     await act(async () => { fireEvent.click(btn); });
 
     expect(body.scrollTop).toBe(2000);
+    // jsdom does not dispatch the browser's scroll event for a scrollTop change.
+    await act(async () => { fireEvent.scroll(body); });
     await waitFor(() => {
       expect(screen.queryByTestId('chat-jump-to-latest')).not.toBeInTheDocument();
     });
+  });
+
+  it('回到底部刷新失敗時保留訊息並在底部提供重試', async () => {
+    let latestReads = 0;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.startsWith('/requests?') && !path.includes('before=')) {
+        latestReads++;
+        return latestReads === 1
+          ? Promise.resolve({ items: [row(1), row(2), row(3)], hasMore: false })
+          : latestReads === 2 ? Promise.reject(new Error('offline'))
+            : Promise.resolve({ items: [row(4), row(3)], hasMore: false });
+      }
+      if (path === '/my-trips') return Promise.resolve([{ tripId: 'okinawa-2026', name: '沖繩 2026' }]);
+      if (path === '/account/ai-authorization') return Promise.resolve({ authorized: true });
+      return Promise.resolve(null);
+    });
+    renderPage();
+    const body = await screen.findByTestId('chat-body');
+    await screen.findByText('使用者訊息 1');
+    await act(async () => { makeScrolledUp(body, { scrollTop: 200 }); fireEvent.scroll(body); });
+    await act(async () => { body.scrollTop = 1500; fireEvent.scroll(body); });
+    expect(await screen.findByTestId('chat-latest-retry')).toHaveAccessibleName('更新最新訊息失敗，重試');
+    expect(screen.getByText('使用者訊息 1')).toBeInTheDocument();
+    expect(latestReads).toBe(2);
+    await act(async () => { fireEvent.click(screen.getByTestId('chat-latest-retry')); });
+    await screen.findByText('使用者訊息 4');
+    expect(latestReads).toBe(3);
+    expect(screen.getByText('使用者訊息 1')).toBeInTheDocument();
+  });
+});
+
+describe('載入較早訊息狀態', () => {
+  it('頂部顯示載入中與失敗重試，不擠動訊息', async () => {
+    let failOlder: (error: Error) => void = () => {};
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.startsWith('/requests?') && path.includes('before=')) {
+        return new Promise((_resolve, reject) => { failOlder = reject; });
+      }
+      if (path.startsWith('/requests?')) return Promise.resolve({ items: [row(1), row(2), row(3)], hasMore: true });
+      if (path === '/my-trips') return Promise.resolve([{ tripId: 'okinawa-2026', name: '沖繩 2026' }]);
+      if (path === '/account/ai-authorization') return Promise.resolve({ authorized: true });
+      return Promise.resolve(null);
+    });
+    renderPage();
+    const body = await screen.findByTestId('chat-body');
+    await screen.findByText('使用者訊息 1');
+    await act(async () => { makeScrolledUp(body, { scrollTop: 50 }); fireEvent.scroll(body); });
+    expect(screen.getByTestId('chat-history-status')).toHaveTextContent('載入較早訊息…');
+    expect(screen.getByRole('status', { name: '載入較早訊息…' })).toBeInTheDocument();
+    await act(async () => { failOlder(new Error('offline')); });
+    expect(screen.getByRole('button', { name: '無法載入較早訊息，重試' })).toBeInTheDocument();
+    expect(screen.getByText('使用者訊息 1')).toBeInTheDocument();
   });
 });
 

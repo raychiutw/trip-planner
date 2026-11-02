@@ -20,18 +20,19 @@ interface UsePoiSearchOptions {
   /** Debounce window in ms. Default: 300. */
   debounceMs?: number;
   /**
-   * Optional caller-side response normaliser. API may return either a bare
-   * array or `{ results: [...] }` wrapper, with snake_case vs camelCase row
-   * shapes. Default: cast as `PoiSearchResult[]` (assumes API returns canonical shape).
+   * Optional normaliser for callers with a different POI row shape.
+   * Default accepts the POI search API's `{ results: [...] }` and bare arrays.
    */
   normalise?: (raw: unknown) => PoiSearchResult[];
 }
 
 interface UsePoiSearchResult {
-  results: PoiSearchResult[];
-  searching: boolean;
-  status: 'idle' | 'loading' | 'success' | 'error';
-  error: string | null;
+  /** Current query/region result. Never contains a previous search's rows or error. */
+  state: {
+    status: 'idle' | 'loading' | 'success' | 'error';
+    results: PoiSearchResult[];
+    error: 'http-error' | 'network-error' | null;
+  };
   retry: () => void;
 }
 
@@ -77,42 +78,70 @@ export function usePoiSearch({
   debounceMs = 300,
   normalise,
 }: UsePoiSearchOptions): UsePoiSearchResult {
-  const [attempt, setAttempt] = useState(0);
+  const [result, setResult] = useState<{
+    key: object;
+    status: 'loading' | 'success' | 'error';
+    results: PoiSearchResult[];
+    error: 'http-error' | 'network-error' | null;
+  } | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const retry = useCallback(() => setGeneration((value) => value + 1), []);
   const trimmed = query.trim();
-  const active = enabled && trimmed.length >= 2;
-  const key = JSON.stringify([active, trimmed, region, limit, attempt]);
-  const scope = useMemo(() => ({key}), [key]);
-  type Snapshot = { scope: object | null; results: PoiSearchResult[]; status: UsePoiSearchResult['status']; error: string | null };
-  const [snapshot, setSnapshot] = useState<Snapshot>({scope: null, results: [], status: 'idle', error: null});
+  // Each change is a new search, including A → B → A and disable → enable.
+  const key = useMemo(() => ({ enabled, trimmed, region, limit, generation }), [enabled, trimmed, region, limit, generation]);
+  const currentKeyRef = useRef(key);
+  currentKeyRef.current = key;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Stable ref for callbacks — drop from effect deps so caller-side
+  // inline arrows don't re-trigger the effect on every parent render.
   const normaliseRef = useRef(normalise);
-  normaliseRef.current = normalise;
-  const retry = useCallback(() => setAttempt(value => value + 1), []);
+  useEffect(() => { normaliseRef.current = normalise; }, [normalise]);
 
   useEffect(() => {
-    if (!active) return;
-    const ctrl = new AbortController();
-    const timer = setTimeout(async () => {
-      const fail = (kind: 'http-error' | 'network-error') => {
-        if (ctrl.signal.aborted) return;
-        setSnapshot({scope, results: [], status: 'error', error: kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'});
-      };
+    if (!enabled || trimmed.length < 2) return;
+    setResult({ key, status: 'loading', results: [], error: null });
+    debounceRef.current = setTimeout(async () => {
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       try {
         const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
-        const response = await apiFetchRaw(`/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`, {signal: ctrl.signal});
-        if (ctrl.signal.aborted) return;
-        if (!response.ok) { fail('http-error'); return; }
-        const raw = await response.json() as unknown;
-        if (ctrl.signal.aborted) return;
-        const rows = normaliseRef.current ? normaliseRef.current(raw) : raw;
-        setSnapshot({scope, results: Array.isArray(rows) ? rows.filter(isValidPoi) : [], status: 'success', error: null});
-      } catch { fail('network-error'); }
+        const resp = await apiFetchRaw(
+          `/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
+          { signal: ctrl.signal },
+        );
+        if (!resp.ok) {
+          if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+            setResult({ key, status: 'error', results: [], error: 'http-error' });
+          }
+          return;
+        }
+        const raw = await resp.json() as unknown;
+        const normalised = normaliseRef.current
+          ? normaliseRef.current(raw)
+          : Array.isArray(raw) ? raw : (raw as { results?: unknown } | null)?.results;
+        const rows = Array.isArray(normalised) ? normalised.filter(isValidPoi) : [];
+        if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+          setResult({ key, status: 'success', results: rows, error: null });
+        }
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
+        if (currentKeyRef.current === key && !ctrl.signal.aborted) {
+          setResult({ key, status: 'error', results: [], error: 'network-error' });
+        }
+      }
     }, debounceMs);
-    return () => { clearTimeout(timer); ctrl.abort(); };
-  }, [active, scope, trimmed, region, limit, debounceMs]);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, [enabled, trimmed, region, limit, debounceMs, key]);
 
-  // A result belongs to its exact query, region and attempt. Never expose the
-  // previous scope during the render before effect cleanup, or while disabled.
-  const current = !active ? {results: [], status: 'idle' as const, error: null}
-    : snapshot.scope === scope ? snapshot : {results: [], status: 'loading' as const, error: null};
-  return { results: current.results, status: current.status, error: current.error, searching: current.status === 'loading', retry };
+  const state = !enabled || trimmed.length < 2
+    ? { status: 'idle' as const, results: [], error: null }
+    : result?.key === key
+      ? { status: result.status, results: result.results, error: result.error }
+      : { status: 'loading' as const, results: [], error: null };
+  return { state, retry };
 }

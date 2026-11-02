@@ -14,8 +14,7 @@
  * Deny  → POST /api/oauth/consent { decision: 'deny', ... }
  *   → server validates redirect_uri ∈ client_apps.redirect_uris + 302 with error=access_denied
  */
-import { SCOPE_DESCRIPTIONS } from '../lib/oauthScopes';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
@@ -94,10 +93,14 @@ const SCOPED_STYLES = `
 }
 `;
 
-// v2.33.46 round 7a security audit: scope allowlist — 未知 scope (`scope=admin`
-// 等) 仍 render 給 user click Allow 培養忽略警告的行為。allowlist 外 scope
-// 顯紅色「未知範圍」 chip 並不附說明。
-const KNOWN_SCOPES = new Set(Object.keys(SCOPE_DESCRIPTIONS));
+const SCOPE_DETAILS: Record<string, { name: string; description: string }> = {
+  openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
+  profile: { name: '基本資料', description: '基本個人資料（名稱、頭像）' },
+  email: { name: '電子郵件', description: '您的電子郵件地址' },
+  offline_access: { name: '離線存取', description: '即使您離線也可存取（refresh token）' },
+  'trips:read': { name: '查看行程', description: '讀取您的行程資料' },
+  'trips:write': { name: '修改行程', description: '建立 / 修改您的行程' },
+};
 
 // v2.33.46 round 7a: redirect_uri 客戶端基本驗證 (defense in depth — server
 // 是 source of truth)。拒 javascript: / data: / file: 等 dangerous scheme。
@@ -122,44 +125,22 @@ interface ClientAppInfo {
 
 export default function ConsentPage() {
   const [searchParams] = useSearchParams();
-  return <ConsentRequest key={searchParams.toString()} />;
-}
-
-function ConsentRequest() {
-  const [searchParams] = useSearchParams();
   const clientId = searchParams.get('client_id') ?? '';
   const scope = searchParams.get('scope') ?? '';
   const redirectUri = searchParams.get('redirect_uri') ?? '';
   const state = searchParams.get('state') ?? '';
-  const responseType = searchParams.get('response_type') ?? 'code';
+  const responseType = searchParams.get('response_type') ?? '';
   const codeChallenge = searchParams.get('code_challenge') ?? '';
   const codeChallengeMethod = searchParams.get('code_challenge_method') ?? '';
-  const requestedScopes = [...new Set(scope.split(/\s+/).filter(Boolean))];
-  const inFlight = useRef(false);
-  const [submitting, setSubmitting] = useState(false);
-  useEffect(() => {
-    const restore = (event: PageTransitionEvent) => {
-      if (event.persisted) { inFlight.current = false; setSubmitting(false); }
-    };
-    window.addEventListener('pageshow', restore);
-    return () => window.removeEventListener('pageshow', restore);
-  }, []);
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    if (inFlight.current) { event.preventDefault(); return; }
-    inFlight.current = true;
-    setSubmitting(true);
-  }
+  const requestedScopes = scope.split(/\s+/).filter(Boolean);
 
-  const [clientInfo, setClientInfo] = useState<ClientAppInfo | null>(null);
+  const [clientInfo, setClientInfo] = useState<{ id: string; info: ClientAppInfo } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [retryable, setRetryable] = useState(false);
-  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     // deps 若 invalid→valid 轉換，清掉上一輪 latch 的 error（否則 `if (error) return` 卡住）。
     setError(null);
     setClientInfo(null);
-    setRetryable(false);
     if (!clientId) {
       // v2.31.58 zh-TW fix：原本英文「Missing client_id」 — user 看不懂、不一致。
       setError('授權連結缺少必要參數 client_id，請從應用商家提供的連結重新進入。');
@@ -167,33 +148,34 @@ function ConsentRequest() {
     }
     // v2.33.46 round 7a: client-side redirect_uri sanity check (defense in
     // depth — backend 仍是 source of truth)。
-    if (!isPlausibleRedirectUri(redirectUri)) {
+    if (redirectUri && !isPlausibleRedirectUri(redirectUri)) {
       setError('授權連結的 redirect_uri 不合法（必須 https:// 或 http://）。請聯繫應用程式提供者。');
       return;
     }
+    // Phase 2：從 /api/oauth/client-info 取已註冊 active client 的公開品牌（app_name/logo/…）。
+    // 只有取得已註冊 active client 的名稱，才顯示授權動作。
     let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`);
-        if (res.status === 404) {
-          if (!cancelled) setError(`未知應用程式 (client_id=${clientId})，應用可能不存在或已停用。請從應用程式重新開始授權。`);
+    fetch(`/api/oauth/client-info?client_id=${encodeURIComponent(clientId)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          if (!cancelled) setError(res.status === 404
+            ? '找不到可授權的應用程式，請從應用程式重新發起授權。'
+            : '無法確認應用程式資訊，請稍後再試。');
           return;
         }
-        if (!res.ok) throw new Error('client-info unavailable');
         const info = await res.json() as ClientAppInfo;
-        if (!info || typeof info.app_name !== 'string' || !info.app_name.trim()) throw new Error('invalid client-info');
-        if (!cancelled) setClientInfo(info);
-      } catch {
         if (!cancelled) {
-          setError('暫時無法載入應用程式資訊，請重試。');
-          setRetryable(true);
+          if (typeof info.app_name === 'string' && info.app_name.trim()) setClientInfo({ id: clientId, info });
+          else setError('無法確認應用程式資訊，請稍後再試。');
         }
-      }
-    })();
+      })
+      .catch(() => {
+        if (!cancelled) setError('無法確認應用程式資訊，請稍後再試。');
+      });
     return () => {
       cancelled = true;
     };
-  }, [clientId, redirectUri, attempt]);
+  }, [clientId, redirectUri]);
 
   if (error) {
     return (
@@ -201,17 +183,16 @@ function ConsentRequest() {
         <style>{SCOPED_STYLES}</style>
         <div className="tp-consent-card">
           <ErrorBanner message={error} testId="consent-error" />
-          {retryable && <button type="button" className="tp-consent-btn" onClick={() => setAttempt((value) => value + 1)}>重試</button>}
         </div>
       </main>
     );
   }
 
-  if (!clientInfo) {
+  if (!clientInfo || clientInfo.id !== clientId) {
     return (
       <main className="tp-consent-shell" data-testid="consent-page">
         <style>{SCOPED_STYLES}</style>
-        <div className="tp-consent-card" role="status">載入中…</div>
+        <div className="tp-consent-card">載入中…</div>
       </main>
     );
   }
@@ -223,13 +204,13 @@ function ConsentRequest() {
         <div className="tp-consent-header">
           <div className="tp-consent-eyebrow">授權請求</div>
           <h1 className="tp-consent-title">
-            <span className="tp-consent-app-name">{clientInfo.app_name}</span>
+            <span className="tp-consent-app-name">{clientInfo.info.app_name}</span>
             <br />
             想要存取您的帳號
           </h1>
         </div>
 
-        <div className="tp-consent-scopes" role="list" aria-label="請求權限" data-testid="consent-scopes">
+        <div className="tp-consent-scopes" role="group" aria-label="要求以下權限" data-testid="consent-scopes">
           {requestedScopes.length === 0 ? (
             <div>無 scope 請求</div>
           ) : (
@@ -237,22 +218,21 @@ function ConsentRequest() {
             // 字串長度 cap 64 char 避免破壞 layout。
             requestedScopes.map((sRaw) => {
               const s = sRaw.slice(0, 64);
-              const known = KNOWN_SCOPES.has(s);
+              const details = SCOPE_DETAILS[s];
               return (
                 <div
-                  key={sRaw}
-                  role="listitem"
-                  className={`tp-consent-scope-row${known ? '' : ' unknown'}`}
+                  key={s}
+                  className={`tp-consent-scope-row${details ? '' : ' unknown'}`}
                   data-testid={`consent-scope-${s}`}
-                  data-unknown={known ? undefined : 'true'}
+                  data-unknown={details ? undefined : 'true'}
                 >
                   <svg className="tp-consent-scope-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
                   </svg>
                   <span>
-                    <strong>{s}</strong>
-                    {known ? (
-                      SCOPE_DESCRIPTIONS[s] && <> — {SCOPE_DESCRIPTIONS[s]}</>
+                    <strong>{details?.name ?? s}</strong>
+                    {details ? (
+                      <> — {details.description}</>
                     ) : (
                       <> — <span className="tp-consent-scope-warning">⚠ 未知範圍 — 請勿授權</span></>
                     )}
@@ -264,7 +244,7 @@ function ConsentRequest() {
         </div>
 
         <div className="tp-consent-actions">
-          <form method="POST" onSubmit={submit} aria-busy={submitting} action="/api/oauth/consent" style={{ flex: 1 }}>
+          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
             <input type="hidden" name="decision" value="deny" />
             <input type="hidden" name="client_id" value={clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
@@ -275,15 +255,14 @@ function ConsentRequest() {
             {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
             <button
               type="submit"
-              disabled={submitting}
               className="tp-consent-btn tp-consent-btn-deny"
               data-testid="consent-deny"
               style={{ width: '100%' }}
             >
-              拒絕
+              拒絕授權
             </button>
           </form>
-          <form method="POST" onSubmit={submit} aria-busy={submitting} action="/api/oauth/consent" style={{ flex: 1 }}>
+          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
             <input type="hidden" name="decision" value="allow" />
             <input type="hidden" name="client_id" value={clientId} />
             <input type="hidden" name="redirect_uri" value={redirectUri} />
@@ -294,12 +273,11 @@ function ConsentRequest() {
             {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
             <button
               type="submit"
-              disabled={submitting}
               className="tp-consent-btn tp-consent-btn-allow"
               data-testid="consent-allow"
               style={{ width: '100%' }}
             >
-              同意
+              同意授權
             </button>
           </form>
         </div>

@@ -49,12 +49,14 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
 
   it('.tp-titlebar-title compact 對齊 mockup 18px', () => {
     // compact ≤760px rule 內 hardcoded 18px (allow comment / whitespace between rules)
-    expect(tokens).toMatch(/font-size:\s*18px;[\s\S]*?line-height:\s*24px/);
+    // #1445 F16：18px 改 rem（手機 root 17px → 18/17 = 1.0588rem）才會隨使用者字級放大；實際像素不變。
+    expect(tokens).toMatch(/font-size:\s*(?:18px|1\.0588rem);[\s\S]*?line-height:\s*24px/);
   });
 
   it('.tp-hero-title desktop = rev2 細 day label 18px（大褐卡→細 label，v2.55.91）', () => {
     // rev2：day-header 大褐卡退場 → 細 day label；desktop override 18px（取代舊 mockup 28px）。
-    expect(tokens).toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*18px/);
+    // #1445 F16：18px 改 1.125rem（桌機 root 16px，實際仍 18px）。
+    expect(tokens).toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*(?:18px|1\.125rem)/);
     expect(tokens).not.toMatch(/\.tp-hero-title\s*\{\s*font-size:\s*(?:28|32)px/);
   });
 
@@ -95,9 +97,8 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
 
   it('mobile bottom nav label 對齊 mockup .ph-tab 10/12/700（玻璃膠囊窄 tab）', () => {
     // rev2「手機也做」：手機底部改浮動玻璃膠囊（iOS 26 .ph-tabs），tab 窄 → label 降
-    // 10px/700（mockup .ph-tab）；unitless 1.2 retains 12px normally and scales with text.
-    // Doubled text geometry is exercised in shell-reflow.spec.js.
-    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-eyebrow\)[\s\S]*?line-height:\s*1\.2;[\s\S]*?font-weight:\s*700/);
+    // 10px/700（mockup .ph-tab）。桌機 @≥1024 才回 caption2/14px（row layout）。
+    const labelBlock = bnav.match(/\.tp-global-bottom-nav-btn span\s*\{[\s\S]*?font-size:\s*var\(--font-size-eyebrow\)[\s\S]*?line-height:\s*12px[\s\S]*?font-weight:\s*700/);
     expect(labelBlock).not.toBeNull();
   });
 

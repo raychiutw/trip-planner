@@ -22,6 +22,14 @@
 /** 匿名化後 `audit_log.changed_by` 的前綴。刻意保留可辨識的形狀供稽核追溯同一主體。 */
 export const ERASURE_ANON_PREFIX = 'deleted-user-';
 
+/**
+ * 刪除某使用者的 token／grant／session／challenge。payload 裡 token 類用 `$.user_id`、session 與 challenge 類用 `$.uid`。
+ * 兩個 json_extract 都要有表達式索引（idx_oauth_models_user_id、idx_oauth_models_uid），否則每次刪帳號都整表解析 JSON。
+ * tests/unit/erasure-oauth-models-plan.test.ts 用 EXPLAIN QUERY PLAN 守住這件事。
+ */
+export const OAUTH_MODELS_ERASE_SQL = `DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') = ?
+    OR json_extract(payload, '$.uid') = ?`;
+
 export interface ErasureSummary {
   /** users.id 是 **TEXT** PK（非 autoincrement integer），型別不可寫成 number。 */
   userId: string;
@@ -61,24 +69,27 @@ const USER_ORPHAN_TABLES = [
 ] as const;
 
 /**
- * Build the whole erasure as one D1 batch. D1 rolls a failed batch back, so a
- * retry starts with an intact account rather than a partially deleted one.
+ * 整個刪除組成單一 D1 batch。D1 會整批回滾失敗的 batch，重試時帳號仍完整，
+ * 不會留下刪到一半的狀態。
  */
 export async function eraseUserAccount(db: D1Database, userId: string): Promise<ErasureSummary> {
   const user = await db.prepare('SELECT email FROM users WHERE id = ?')
     .bind(userId).first<{ email: string }>();
-  // The supported deployment snapshots do not all contain every historical
-  // table; omit absent optional tables before constructing the atomic batch.
+  // 各部署環境的 schema 快照不一定都有每張歷史表；
+  // 組 atomic batch 前先略過不存在的選用表。
   const schema = await db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
     .all<{ name: string }>();
   const present = new Set((schema.results ?? []).map(row => row.name));
   const statements: D1PreparedStatement[] = [];
   const labels: string[] = [];
-  const add = (label: string, sql: string, ...binds: unknown[]) => {
-    if (!present.has(label === 'audit_log(anonymized)' ? 'audit_log' : label)) return;
+  // table：要檢查是否存在的表；label：回報用的名稱（同一張表可有多條語句，例如 audit_log 的匿名化）。
+  // 表名與 label 分開傳，以前用 label 字串特判，label 一改就會讓該語句被當成「表不存在」而悄悄跳過刪除。
+  const addFor = (table: string, label: string, sql: string, ...binds: unknown[]) => {
+    if (!present.has(table)) return;
     labels.push(label);
     statements.push(db.prepare(sql).bind(...binds));
   };
+  const add = (table: string, sql: string, ...binds: unknown[]) => addFor(table, table, sql, ...binds);
 
   if (present.has('trip_days')) {
     add('trip_entries', `DELETE FROM trip_entries WHERE day_id IN
@@ -91,12 +102,11 @@ export async function eraseUserAccount(db: D1Database, userId: string): Promise<
     add(table, `DELETE FROM ${table} WHERE trip_id IN (SELECT id FROM trips WHERE owner_user_id = ?)`, userId);
   }
   add('trips', 'DELETE FROM trips WHERE owner_user_id = ?', userId);
-  add('audit_log(anonymized)', `UPDATE audit_log
+  addFor('audit_log', 'audit_log(anonymized)', `UPDATE audit_log
     SET changed_by = ?, changed_by_user_id = NULL, diff_json = NULL, snapshot = NULL
     WHERE changed_by_user_id = ?`, `${ERASURE_ANON_PREFIX}${userId}`, userId);
   for (const table of USER_ORPHAN_TABLES) add(table, `DELETE FROM ${table} WHERE user_id = ?`, userId);
-  add('oauth_models', `DELETE FROM oauth_models WHERE json_extract(payload, '$.user_id') = ?
-    OR json_extract(payload, '$.uid') = ?`, userId, userId);
+  add('oauth_models', OAUTH_MODELS_ERASE_SQL, userId, userId);
   if (user?.email) {
     add('rate_limit_buckets', 'DELETE FROM rate_limit_buckets WHERE bucket_key LIKE ?', `%:${user.email}`);
     for (const table of ['requests', 'trip_requests']) {

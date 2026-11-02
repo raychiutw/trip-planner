@@ -385,3 +385,172 @@ test('a11y: 帳號 sheet 的焦點真的關在裡面（aria-modal 不是空頭�
     expect(stillInside, `第 ${i + 1} 次 Tab 後焦點跑出 sheet 外了`).toBe(true);
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 全頁面（淺色/深色 × 手機/桌機）對比與點擊目標 + 逐頁擷圖（#1423）
+ *
+ * 上面 PAGES 只有 4 頁、主要在淺色、只掃預設狀態；2026-10 的全頁擷圖驗證在其餘頁面找到
+ * 數十筆 WCAG 2.2 AA 違規（color-contrast 與 target-size）。這裡把範圍擴到全部頁面，
+ * 每一組（頁面 × 模式 × 版面）都擷圖附在報告上供人工逐頁檢視。
+ *
+ * 防假綠：
+ *  - 每頁先確認真的載入（非 error boundary／空白頁），並斷言 body.dark 與目標模式一致，
+ *    避免「以為測了深色、其實是淺色」。
+ *  - 每個測試先植入一個已知低對比的元素，確認 axe 抓得到（自我檢查）。
+ *  - 例外只准寫在 EXCEPTIONS：每筆要有頁面、規則、選擇器與理由，由 owner 核准；
+ *    清單之外的違規一律失敗，不靜默跳過。
+ *
+ * ⚠ axe 對「單字元元素」與「背景不確定（玻璃／漸層）」歸到 incomplete 而非 violations。
+ *   這裡把 incomplete 的數量與前 5 筆附在報告（不失敗）；單字元徽章靠
+ *   tests/unit/ 的 call-site 守衛補，不要以為這支全綠就代表沒有對比違規。
+ * ⚠ 本支在 mock 資料下跑；真實資料才會出現的狀態（例如收藏卡有評分）要在 api-mocks 補齊，
+ *   不可因為 mock 沒呈現就當作沒有違規。
+ * ⚠ 排除：分享頁 /s/:token（沒有 e2e mock，改由 tests/unit/trip-print-styles-contrast.test.ts 守）。
+ * ══════════════════════════════════════════════════════════════════════════ */
+const ALL_TRIP = 'okinawa-trip-2026-Ray';
+const ALL_ENTRY = 101;
+const ALL_PAGES_AUTHED = [
+  '/trips', '/trips/new', '/chat', '/explore', '/favorites', '/favorites/1/add-to-trip', '/add-to-trip',
+  '/account', '/account/appearance', '/account/notifications', '/account/sessions', '/account/connected-apps',
+  '/developer/apps', '/developer/apps/new', '/privacy', '/invite',
+  `/trip/${ALL_TRIP}/map?day=all`, `/trip/${ALL_TRIP}/print`, `/trip/${ALL_TRIP}/edit`,
+  `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/edit`, `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/copy`,
+  `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/move`, `/trip/${ALL_TRIP}/stop/${ALL_ENTRY}/change-poi`,
+  `/trip/${ALL_TRIP}/add-stop`, `/trip/${ALL_TRIP}/add-entry`, `/trip/${ALL_TRIP}/collab`,
+  `/trip/${ALL_TRIP}/health`, `/trip/${ALL_TRIP}/notes`,
+  // 行程頁本身（手機會轉到 /trips?selected=…，渲染時間軸；時間 chip 的 target-size 在這裡才量得到）。
+  `/trip/${ALL_TRIP}`,
+];
+// 匿名：把 userinfo 回 401（晚註冊的 route 優先），落地頁與登入／註冊／驗證等才不會被導走。
+const ALL_PAGES_ANON = [
+  '/', '/login', '/signup', '/signup/check-email', '/login/forgot', '/auth/password/reset?token=abc',
+  '/auth/verify-email', '/auth/verify-email?token=abc',
+  '/oauth/consent?client_id=demo&scope=openid&redirect_uri=https://example.com/cb&state=x&response_type=code',
+];
+/** 已知且經 owner 核准的例外。{ rule, target 片段, reason }：以 rule 與 target 比對，reason 必填（給人看的理由）。 */
+const EXCEPTIONS = [
+  // 目前沒有例外。新增時每筆都要有 reason，並由 owner 核准。
+];
+for (const e of EXCEPTIONS) {
+  if (!e.rule || !e.target || !String(e.reason || '').trim()) throw new Error(`EXCEPTIONS 每筆都要有 rule、target 與 reason（owner 核准的理由）：${JSON.stringify(e)}`);
+}
+const isExcepted = (rule, target) => EXCEPTIONS.some((e) => e.rule === rule && target.includes(e.target));
+
+async function runAxeContrastAndTarget(page) {
+  await page.addScriptTag({ path: axePath });
+  return page.evaluate(async () => {
+    const EXCLUDE = [['.gm-style'], ['iframe']];
+    // eslint-disable-next-line no-undef
+    const r = await window.axe.run({ exclude: EXCLUDE }, {
+      runOnly: { type: 'rule', values: ['color-contrast', 'target-size'] },
+      resultTypes: ['violations', 'incomplete'],
+    });
+    const f = (arr) => arr.flatMap((v) => v.nodes.map((n) => ({
+      rule: v.id, target: n.target.join(' ').slice(0, 90),
+      msg: ((n.any && n.any[0]) || (n.all && n.all[0]) || {}).message || '',
+    })));
+    return { violations: f(r.violations), incomplete: f(r.incomplete) };
+  });
+}
+
+test.describe('a11y 全頁面（淺/深 × 手機/桌機）', () => {
+  // 四組彼此獨立；每組走 37 頁約 2–3 分鐘，單 worker 會串起來，CI 兩個 worker 可分攤。
+  test.describe.configure({ mode: 'parallel' });
+for (const scheme of ['light', 'dark']) {
+  for (const [w, h] of [[390, 844], [1440, 900]]) {
+    test(`a11y 全頁面：color-contrast 與 target-size 零違規 — ${scheme} ${w}px`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑（固定 viewport 自行量；master 矩陣不製造噪音）');
+      test.setTimeout(480000); // 37 頁 × (networkidle ≤4s + 0.8s + 擷圖 + 2 次 axe)；慢 runner 也要有餘裕
+      await setupApiMocks(page);
+      await page.route(/maps\.googleapis\.com/, (r) => r.abort());
+      await page.route('**/api/route**', (r) => r.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ polyline: [], duration: null, distance: 0, approx: true }),
+      }));
+      // mock 預設的收藏沒有評分，`.poi-rating`（曾是 --color-accent 當文字，3.2:1）就不會出現在畫面上；
+      // 真實資料才會。只在這支掃描內覆寫（共用 mock 不動，避免影響其他 e2e 的收藏數量斷言）。
+      await page.route(/\/api\/poi-favorites$/, (r) => (r.request().method() === 'GET'
+        ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { id: 901, poiId: 9001, poiName: '沖繩美麗海水族館', poiAddress: '沖繩縣國頭郡本部町石川424', poiType: 'attraction', poiRating: 4.5, poiLat: 26.69, poiLng: 127.88, note: null, favoritedAt: '2026-07-01 00:00:00', usages: [] },
+          { id: 902, poiId: 9002, poiName: '國際通拉麵', poiAddress: '沖繩縣那霸市牧志', poiType: 'restaurant', poiRating: 4.3, poiLat: 26.21, poiLng: 127.68, note: null, favoritedAt: '2026-07-02 00:00:00', usages: [] },
+        ]) })
+        : r.fallback()));
+      await page.route(/\/api\/oauth\/client-info/, (r) => r.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ app_name: '示範應用程式', app_description: '測試用', app_logo_url: null, homepage_url: null }),
+      }));
+      await page.setViewportSize({ width: w, height: h });
+      await page.emulateMedia({ colorScheme: scheme });
+
+      const bad = [];
+      const incomplete = [];
+      let canaryChecked = false;
+      const jobs = [...ALL_PAGES_AUTHED.map((p) => ({ p, anon: false })), ...ALL_PAGES_ANON.map((p) => ({ p, anon: true }))];
+      for (const { p, anon } of jobs) {
+        // 順序是「登入後頁面在前、匿名頁面在後」，所以不需要在迴圈裡重新 setupApiMocks —— 重新註冊會排在
+        // 上面的覆寫（收藏資料）之後，而 Playwright 是後註冊的 route 優先，覆寫就被蓋掉、評分從沒出現
+        // （mutation 沒轉紅才發現）。匿名頁面則清掉「上次已登入」提示並讓 userinfo 回 401。
+        if (anon) {
+          await page.route(/\/api\/oauth\/userinfo$/, (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
+          await page.addInitScript(() => { try { localStorage.clear(); } catch { /* ignore */ } });
+        }
+        await page.goto(p);
+        await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => {});
+        await page.waitForTimeout(800);
+        // 頁面真的載入了（不是 error boundary／空白頁），而且 body.dark 與目標模式一致。
+        await expect(page.locator('body'), `${p} 進了 error boundary`).not.toContainText('Unexpected Application Error');
+        expect((await page.locator('body').innerText()).length, `${p} 空白頁`).toBeGreaterThan(15);
+        await expect(page.locator('body')).toHaveClass(scheme === 'dark' ? /dark/ : /^(?!.*dark)/);
+
+        if (!canaryChecked) {
+          // 自我檢查：植入 1.26:1 的低對比文字，axe 一定要抓得到，否則整支掃描不可信。
+          await page.evaluate(() => {
+            const d = document.createElement('p');
+            d.id = 'axe-canary'; d.textContent = 'canary 低對比文字';
+            d.style.cssText = 'color:#777;background:#888;padding:8px;position:fixed;top:120px;left:120px;z-index:99999';
+            document.body.appendChild(d);
+          });
+          const probe = await runAxeContrastAndTarget(page);
+          expect(probe.violations.some((v) => v.target.includes('#axe-canary')), 'axe 抓不到植入的低對比元素 — 掃描不可信').toBe(true);
+          await page.evaluate(() => document.getElementById('axe-canary')?.remove());
+          canaryChecked = true;
+        }
+
+        const shot = await page.screenshot({ type: 'jpeg', quality: 60 });
+        await testInfo.attach(`${scheme}-${w}-${p.replace(/[^a-z0-9]+/gi, '_').slice(0, 50)}`, { body: shot, contentType: 'image/jpeg' });
+
+        const res = await runAxeContrastAndTarget(page);
+        for (const v of res.violations) {
+          if (isExcepted(v.rule, v.target)) continue;
+          bad.push(`${p} | ${v.rule} | ${v.target} | ${v.msg.slice(0, 80)}`);
+        }
+        for (const i of res.incomplete) incomplete.push(`${p} | ${i.rule} | ${i.target}`);
+      }
+      await testInfo.attach('axe-incomplete.txt', {
+        body: `incomplete ${incomplete.length} 筆（axe 無法判定，僅記錄不失敗）\n` + incomplete.slice(0, 200).join('\n'),
+        contentType: 'text/plain',
+      });
+      expect([...new Set(bad)], `${scheme} ${w}px 有對比／點擊目標違規`).toEqual([]);
+    });
+  }
+}
+});
+
+// 深色第三欄 sheet 的局部提亮（#1423）不得蓋掉「提高對比」的加強階（code review 抓到的回歸）：
+// sheet 元素上的局部宣告離子孫更近，會把 body.dark 的 --color-destructive: #FFB9AB 蓋回 #FF806A。
+test('a11y: 深色 sheet 內 destructive — 一般取局部提亮值、提高對比時取加強階', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', '用到 CDP，只在 chromium 專案跑');
+  await setupApiMocks(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const read = () => page.evaluate(() => {
+    const el = document.querySelector('.app-shell-sheet');
+    return el ? getComputedStyle(el).getPropertyValue('--color-destructive').trim().toLowerCase() : null;
+  });
+  await page.goto(`/trip/${ALL_TRIP}/edit`);
+  await expect(page.locator('.app-shell-sheet')).toBeVisible();
+  expect(await read(), '一般深色：sheet 內 destructive 應為局部提亮值').toBe('#ff806a');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-contrast', value: 'more' }] });
+  expect(await read(), '提高對比：應取加強階 #FFB9AB，不可被 sheet 的局部覆寫蓋回').toBe('#ffb9ab');
+});

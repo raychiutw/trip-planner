@@ -1,12 +1,11 @@
 /**
- * ThemeToggle — 3-way 深淺模式 segmented control（淺 / 自動 / 深）.
+ * ThemeToggle — 3-way 深淺模式 segmented control（淺色 / 跟隨系統 / 深色）.
  *
- * Used by DesktopSidebar (bottom CTA) and SessionsPage (mobile 帳號 entry).
+ * Used by AppearanceSettingsPage and SessionsPage.
  * Backed by useDarkMode — writes to localStorage('color-mode'), toggles
  * `body.dark`, and updates <meta name="theme-color">.
  */
 import { useDarkMode } from '../../hooks/useDarkMode';
-import InlineError from './InlineError';
 
 const SCOPED_STYLES = `
 .tp-theme-toggle {
@@ -47,7 +46,7 @@ export interface ThemeToggleProps {
 }
 
 export default function ThemeToggle({ testId = 'theme' }: ThemeToggleProps = {}) {
-  const { colorMode, setColorMode, saveFailed } = useDarkMode();
+  const { colorMode, setColorMode } = useDarkMode();
   return (
     <>
       <style>{SCOPED_STYLES}</style>
@@ -65,7 +64,6 @@ export default function ThemeToggle({ testId = 'theme' }: ThemeToggleProps = {})
           </button>
         ))}
       </div>
-      {saveFailed && <InlineError message="已套用外觀，但瀏覽器無法儲存偏好。重新整理後可能還原；可再次選擇以重試儲存。" />}
     </>
   );
 }

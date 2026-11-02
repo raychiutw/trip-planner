@@ -62,26 +62,3 @@ describe('v2.33.135 fix: /api/health 進 middleware public bypass', () => {
     expect(MW).toMatch(/v2\.33\.135 fix.*PR3.*漏列 bypass.*UptimeRobot.*401/s);
   });
 });
-
-describe('docs/monitoring/uptime-monitor.md', () => {
-  const DOC = readFileSync(
-    join(__dirname, '../../docs/monitoring/uptime-monitor.md'),
-    'utf8',
-  );
-
-  it('文件 endpoint URL + response shape', () => {
-    expect(DOC).toMatch(/GET https:\/\/trip-planner-dby\.pages\.dev\/api\/health/);
-    expect(DOC).toMatch(/"d1": "ok" \| "fail"/);
-    expect(DOC).toMatch(/"googleMapsKey": "ok" \| "missing"/);
-  });
-
-  it('文件給 UptimeRobot + Pingdom + curl cron 三選一', () => {
-    expect(DOC).toMatch(/UptimeRobot/);
-    expect(DOC).toMatch(/Pingdom/);
-    expect(DOC).toMatch(/curl cron/);
-  });
-
-  it('文件交代「為何不檢 mac mini」職責分離', () => {
-    expect(DOC).toMatch(/為什麼不檢查 mac mini/);
-  });
-});

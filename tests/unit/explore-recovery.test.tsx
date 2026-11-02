@@ -1,96 +1,307 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { MemoryRouter, createMemoryRouter, RouterProvider } from 'react-router-dom';
-import AddPoiFavoriteToTripPage from '../../src/pages/AddPoiFavoriteToTripPage';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
+const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
+vi.mock('../../src/lib/apiClient', () => ({ apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init) }));
+vi.mock('../../src/components/shared/Toast', () => ({ default: () => null, showToast: vi.fn() }));
+vi.mock('../../src/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ user: { id: 'u1' } }) }));
+vi.mock('../../src/hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: { id: 'u1' } }) }));
+vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
+vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
+
 import ExplorePage from '../../src/pages/ExplorePage';
-import { resetToasts } from '../../src/lib/toastBus';
-const poi=(id:string)=>({place_id:id,name:`景點 ${id}`,lat:25,lng:121,category:'cafe'});
-const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status});
-let http: ReturnType<typeof vi.fn>;
-let observer: IntersectionObserverCallback | undefined;
-const searchCalls=()=>http.mock.calls.filter(([p])=>p.includes('/poi-search'));
-function setup(){return render(<MemoryRouter><ExplorePage/></MemoryRouter>);}
-beforeEach(()=>{
- resetToasts();observer=undefined;vi.spyOn(window,'scrollTo').mockImplementation(()=>{});
- vi.stubGlobal('IntersectionObserver',class{constructor(cb:IntersectionObserverCallback){observer=cb;}observe(){}disconnect(){}unobserve(){}});
- http=vi.fn(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('/poi-search')?reply({results:[poi('A')],nextPageToken:'next-A'}):reply([]));vi.stubGlobal('fetch',http);
-});
-afterEach(()=>{cleanup();vi.unstubAllGlobals();});
-function intersect(){act(()=>observer?.([{isIntersecting:true}] as IntersectionObserverEntry[],{} as IntersectionObserver));}
-it('failed next page preserves results, retries explicitly and deduplicates overlapping places',async()=>{
- let nextAttempts=0;http.mockImplementation(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('pageToken')?++nextAttempts===1?reply({},503):reply({results:[poi('A'),poi('B')]}):p.includes('/poi-search')?reply({results:[poi('A')],nextPageToken:'next-A'}):reply([]));
- setup();await screen.findByText('景點 A');intersect();
- expect(await screen.findByRole('button',{name:'重試載入更多'})).toBeVisible();expect(screen.getByText('景點 A')).toBeVisible();
- intersect();await act(async()=>{});expect(nextAttempts).toBe(1);
- fireEvent.click(screen.getByRole('button',{name:'重試載入更多'}));expect(await screen.findByText('景點 B')).toBeVisible();expect(screen.getAllByText('景點 A')).toHaveLength(1);
-});
-it('pagination uses the submitted query, not the edited draft, and late pages cannot join a new search',async()=>{
- let release!:(r:Response)=>void;http.mockImplementation(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('pageToken')?new Promise<Response>(r=>{release=r;}):p.includes('q=%E4%BA%AC%E9%83%BD')?reply({results:[poi('京都')]}):p.includes('/poi-search')?reply({results:[poi('A')],nextPageToken:'next-A'}):reply([]));
- setup();await screen.findByText('景點 A');fireEvent.change(screen.getByTestId('explore-search-input'),{target:{value:'京都'}});intersect();
- await waitFor(()=>expect(searchCalls()).toHaveLength(2));expect(new URL(searchCalls()[1][0],'https://test').searchParams.get('q')).toBe('東京');
- fireEvent.click(screen.getByTestId('explore-search-submit'));await screen.findByText('景點 京都');
- await act(async()=>{release(reply({results:[poi('舊頁')]}));});expect(screen.queryByText('景點 舊頁')).toBeNull();expect(screen.queryByText('景點 A')).toBeNull();
-});
-it('a failed first page has a durable retry and is not presented as zero matches',async()=>{
- let failed=true;http.mockImplementation(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('/poi-search')?failed?reply({},503):reply({results:[]}):reply([]));setup();
- expect(await screen.findByRole('button',{name:'重試搜尋'})).toBeVisible();expect(screen.queryByText(/沒有找到/)).toBeNull();failed=false;fireEvent.click(screen.getByRole('button',{name:'重試搜尋'}));expect(await screen.findByTestId('explore-landing-empty')).toBeVisible();
-});
-it('three pages remain capped and a remaining token is not described as all search results',async()=>{
- let page=0;http.mockImplementation(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('/poi-search')?reply({results:[poi(String(++page))],nextPageToken:`token-${page}`}):reply([]));setup();await screen.findByText('景點 1');intersect();await screen.findByText('景點 2');intersect();await screen.findByText('景點 3');
- expect(screen.getByTestId('explore-results-end')).toHaveTextContent('請縮小搜尋範圍');intersect();await act(async()=>{});expect(page).toBe(3);
+import { showToast } from '../../src/components/shared/Toast';
+import { ApiError } from '../../src/lib/errors';
+
+const poi = (place_id: string) => ({ place_id, name: place_id, address: 'addr', lat: 1, lng: 2, category: 'cafe' });
+
+let observe: ((entries: { isIntersecting: boolean }[]) => void) | undefined;
+beforeEach(() => {
+  sessionStorage.clear();
+  vi.mocked(showToast).mockClear();
+  apiFetchMock.mockReset();
+  apiFetchMock.mockImplementation((path) => path === '/poi-favorites' ? Promise.resolve([]) : Promise.resolve({ results: [] }));
+  class Observer {
+    constructor(callback: typeof observe) { observe = callback; }
+    observe() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('IntersectionObserver', Observer);
 });
 
-it('adding to a trip retains the search across failure, then returns to the read results on success',async()=>{
- let writes=0;http.mockImplementation(async(p:string,o?:RequestInit)=>{
-  if(p.includes('userinfo'))return reply({id:'u1',email:'user@test.com'});
-  if(p.includes('/my-trips'))return reply([{tripId:'t1',title:'旅程一'}]);
-  if(p.includes('/days')&&!p.includes('/entries'))return reply([{id:71,dayNum:1,date:'2026-09-25'}]);
-  if(p.includes('/entries'))return ++writes===1?reply({error:{message:'加入暫時失敗'}},503):reply({id:99});
-  if(p.includes('/poi-search'))return reply({results:[poi('A')],nextPageToken:null});
-  return reply(o?.method?{}:[]);
- });
- const router=createMemoryRouter([{path:'/explore',element:<ExplorePage/>},{path:'/add-to-trip',element:<AddPoiFavoriteToTripPage/>},{path:'*',element:<p>離開探索</p>}],{initialEntries:['/explore']});render(<RouterProvider router={router}/>);
- await screen.findByText('景點 A');fireEvent.change(screen.getByTestId('explore-search-input'),{target:{value:'京都咖啡'}});fireEvent.click(screen.getByTestId('explore-search-submit'));await waitFor(()=>expect(searchCalls()).toHaveLength(2));
- fireEvent.click(screen.getByTestId('explore-cat-咖啡廳'));fireEvent.click(screen.getByTestId('explore-add-to-trip-btn-A'));
- await screen.findByTestId('favorites-add-to-trip-submit');fireEvent.click(screen.getByRole('button',{name:'天數'}));fireEvent.click(await screen.findByRole('option',{name:/Day 1/}));
- fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));expect(await screen.findByTestId('favorites-add-to-trip-error')).toBeVisible();
- fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));await screen.findByTestId('explore-search-input');
- expect(screen.getByTestId('explore-search-input')).toHaveValue('京都咖啡');expect(screen.getByTestId('explore-cat-咖啡廳')).toHaveClass('is-active');expect(screen.getByText('景點 A')).toBeVisible();expect(searchCalls()).toHaveLength(2);expect(writes).toBe(2);
-});
-it('favorites read failure is recoverable instead of treating every result as unsaved',async()=>{
- let failed=true;http.mockImplementation(async(p:string)=>p.includes('userinfo')?reply({id:'u1',email:'user@test.com'}):p.includes('/poi-search')?reply({results:[poi('A')]}):p.includes('/poi-favorites')?failed?reply({},503):reply([{id:7,poiId:8,poiName:'景點 A',poiType:'food',poiPlaceId:'A'}]):reply([]));setup();await screen.findByText('景點 A');
- expect(screen.getByTestId('explore-save-btn-A')).toBeDisabled();failed=false;fireEvent.click(await screen.findByRole('button',{name:'重試收藏狀態'}));await waitFor(()=>expect(screen.getByTestId('explore-save-btn-A')).toBeEnabled());expect(screen.getByTestId('explore-save-btn-A')).toHaveAccessibleName('已收藏 · 點擊取消');
-});
-it('accepted favorite updates only its canonical place, prevents double writes, and does not depend on a refresh',async()=>{
- let writes=0,reads=0;http.mockImplementation(async(p:string,o?:RequestInit)=>{
-  if(p.includes('userinfo'))return reply({id:'u1',email:'user@test.com'});
-  if(p.includes('/poi-search'))return reply({results:[poi('A'),{...poi('B'),name:'景點 A'}]});
-  if(p.includes('find-or-create'))return reply({id:8});
-  if(p.includes('/poi-favorites')&&o?.method==='POST'){writes++;return reply({id:7,poiId:8},201);}
-  if(p.includes('/poi-favorites'))return ++reads===1?reply([]):reply({},503);
-  return reply([]);
- });setup();await screen.findAllByText('景點 A');await waitFor(()=>expect(screen.getByTestId('explore-save-btn-A')).toBeEnabled());const save=screen.getByTestId('explore-save-btn-A');act(()=>{save.click();save.click();});
- await waitFor(()=>expect(save).toHaveAccessibleName('已收藏 · 點擊取消'));expect(screen.getByTestId('explore-save-btn-B')).toHaveAccessibleName('加入收藏');expect(writes).toBe(1);expect(searchCalls()).toHaveLength(1);
-});
-it('region keyboard selection submits the same query in the chosen region',async()=>{
- setup();await screen.findByText('景點 A');const trigger=screen.getByTestId('explore-region-pill').querySelector('button') ?? screen.getByTestId('explore-region-pill');trigger.focus();fireEvent.keyDown(trigger,{key:'ArrowDown'});
- const option=await screen.findByRole('option',{name:'東京'});fireEvent.click(option);
- await waitFor(()=>expect(searchCalls()).toHaveLength(2));expect(new URL(searchCalls()[1][0],'https://test').searchParams.get('region')).toBe('東京');expect(screen.getByTestId('explore-region-pill')).toHaveTextContent('東京');
-});
-it('an already-existing favorite is confirmed by a read and can subsequently be removed',async()=>{
- let posts=0,reads=0,deletes=0;http.mockImplementation(async(p:string,o?:RequestInit)=>{
-  if(p.includes('userinfo'))return reply({id:'u1',email:'user@test.com'});
-  if(p.includes('/poi-search'))return reply({results:[poi('A')]});
-  if(p.includes('find-or-create'))return reply({id:8});
-  if(o?.method==='POST'){posts++;return reply({error:{code:'DATA_CONFLICT',message:'已收藏'}},409);}
-  if(o?.method==='DELETE'){deletes++;return new Response(null,{status:204});}
-  if(p.includes('/poi-favorites'))return reply(++reads===1?[]:[{id:7,poiId:8,poiPlaceId:'A'}]);
-  return reply([]);
- });setup();await screen.findByText('景點 A');await waitFor(()=>expect(screen.getByTestId('explore-save-btn-A')).toBeEnabled());fireEvent.click(screen.getByTestId('explore-save-btn-A'));
- await waitFor(()=>expect(screen.getByTestId('explore-save-btn-A')).toHaveAccessibleName('已收藏 · 點擊取消'));expect(posts).toBe(1);
- fireEvent.click(screen.getByTestId('explore-save-btn-A'));await waitFor(()=>expect(screen.getByTestId('explore-save-btn-A')).toHaveAccessibleName('加入收藏'));expect(deletes).toBe(1);expect(searchCalls()).toHaveLength(1);
-});
+async function open() {
+  const page = render(<MemoryRouter><ExplorePage /></MemoryRouter>);
+  await waitFor(() => expect((screen.getByTestId('explore-search-submit') as HTMLButtonElement).disabled).toBe(false));
+  return page;
+}
 
-it('a queued pagination observation after leaving cannot start another request',async()=>{
- const page=setup();await screen.findByText('景點 A');page.unmount();intersect();await act(async()=>{});expect(searchCalls()).toHaveLength(1);
+function search(q: string) {
+  fireEvent.change(screen.getByTestId('explore-search-input'), { target: { value: q } });
+  fireEvent.click(screen.getByTestId('explore-search-submit'));
+}
+
+describe('Explore search recovery', () => {
+  it('keeps the visible query results when a new search fails', async () => {
+    let secondCalls = 0;
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      if (path.includes('q=second')) return ++secondCalls === 1
+        ? Promise.reject(new Error('offline')) : Promise.resolve({ results: [poi('second')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    search('second');
+    await waitFor(() => expect(screen.getByTestId('explore-search-submit').textContent).toBe('搜尋'));
+    expect(screen.getByText('first')).toBeTruthy();
+    expect((screen.getByTestId('explore-search-input') as HTMLInputElement).value).toBe('second');
+    expect(screen.getByRole('alert').textContent).toContain('仍顯示先前結果');
+    fireEvent.click(screen.getByRole('button', { name: '重新搜尋' }));
+    await screen.findByText('second');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('distinguishes failed first search from a successful empty result', async () => {
+    apiFetchMock.mockImplementation((path) => path === '/poi-favorites' ? Promise.resolve([])
+      : Promise.reject(new Error('offline')));
+    await open();
+    expect(screen.getByText('搜尋暫時失敗')).toBeTruthy();
+    expect(screen.queryByText('試試這些')).toBeNull();
+  });
+
+  it('keeps prior pages after load-more failure and retries the same cursor on request', async () => {
+    let pageCalls = 0;
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('pageToken=next')) {
+        pageCalls++;
+        return pageCalls === 1 ? Promise.reject(new Error('offline')) : Promise.resolve({ results: [poi('second')] });
+      }
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    const retry = await screen.findByRole('button', { name: /重試載入更多/ });
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(pageCalls).toBe(1);
+    fireEvent.click(retry);
+    await screen.findByText('second');
+    expect(pageCalls).toBe(2);
+    expect(screen.getAllByText('first')).toHaveLength(1);
+  });
+
+  it('does not mix a late page from another search into current results', async () => {
+    let finishPage!: (value: unknown) => void;
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('pageToken=next')) return new Promise((resolve) => { finishPage = resolve; });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      if (path.includes('q=second')) return Promise.resolve({ results: [poi('second')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    await waitFor(() => expect(finishPage).toBeTypeOf('function'));
+    search('second');
+    await screen.findByText('second');
+    await act(async () => { finishPage({ results: [poi('stale')] }); });
+    await waitFor(() => expect(screen.queryByText('stale')).toBeNull());
+    expect(screen.queryByText('first')).toBeNull();
+  });
+
+  it('clears an aborted page spinner when the replacement search fails', async () => {
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('pageToken=next')) return new Promise((_, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+      });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      if (path.includes('q=second')) return Promise.reject(new Error('offline'));
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    await screen.findByText('載入更多…');
+    search('second');
+    await waitFor(() => expect(screen.getByTestId('explore-search-submit').textContent).toBe('搜尋'));
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(screen.queryByText('載入更多…')).toBeNull();
+  });
+
+  it('paginates the displayed search even after the input is edited and deduplicates overlapping places', async () => {
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('pageToken=next')) return Promise.resolve({ results: [poi('first'), poi('second')] });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.change(screen.getByTestId('explore-search-input'), { target: { value: 'unsent' } });
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    await screen.findByText('second');
+    expect(apiFetchMock.mock.calls.map((c) => c[0])).toContain('/poi-search?q=first&limit=20&pageToken=next');
+    expect(screen.getAllByText('first')).toHaveLength(1);
+  });
+
+  it('restores read results and query when returning from add-to-trip', async () => {
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')], nextPageToken: 'next' });
+      return Promise.resolve({ results: [] });
+    });
+    const page = await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-cat-咖啡廳'));
+    fireEvent.click(screen.getByTestId('explore-region-pill'));
+    fireEvent.click(screen.getByTestId('explore-region-option-東京'));
+    fireEvent.click(screen.getByTestId('explore-add-to-trip-btn-first'));
+    // A return to /explore mounts the page again after the add-to-trip flow.
+    page.unmount();
+    await open();
+    expect((screen.getByTestId('explore-search-input') as HTMLInputElement).value).toBe('first');
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(screen.getByTestId('explore-load-more')).toBeTruthy();
+    expect(screen.getByTestId('explore-region-pill').textContent).toContain('東京');
+    expect(screen.getByTestId('explore-cat-咖啡廳').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('confirms a saved favorite without another list read or losing search results', async () => {
+    let favoriteReads = 0;
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites') {
+        if (init?.method === 'POST') return Promise.resolve({ id: 71 });
+        favoriteReads++;
+        return favoriteReads > 1 ? Promise.reject(new Error('offline')) : Promise.resolve([]);
+      }
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      return Promise.resolve({ id: 71 });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(screen.getByTestId('explore-save-btn-first').getAttribute('aria-label')).toContain('已收藏'));
+    expect(screen.getByText('first')).toBeTruthy();
+    expect(showToast).toHaveBeenCalledWith('已加入收藏「first」', 'success', 2000);
+    expect(favoriteReads).toBe(1);
+  });
+
+  it('reconciles an already-saved favorite after duplicate POST', async () => {
+    let favoriteReads = 0;
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.reject(new ApiError('DATA_CONFLICT', 409));
+      if (path === '/poi-favorites') return Promise.resolve(++favoriteReads === 1 ? [] : [{ id: 71, poiName: 'first', poiType: 'restaurant' }]);
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(screen.getByTestId('explore-save-btn-first').getAttribute('aria-label')).toContain('已收藏'));
+    expect(showToast).toHaveBeenCalledWith('「first」已在收藏中', 'info', 2000);
+  });
+
+  it('does not report a duplicate favorite as an unsuccessful write when reconciliation is offline', async () => {
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.reject(new ApiError('DATA_CONFLICT', 409));
+      if (path === '/poi-favorites') return Promise.reject(new Error('offline'));
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('「first」已在收藏中，請重整以更新狀態', 'info', 3000));
+  });
+
+  it('does not let an older favorite-list response undo a confirmed save', async () => {
+    let finishList!: (rows: unknown[]) => void;
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.resolve({ id: 71 });
+      if (path === '/poi-favorites') return new Promise((resolve) => { finishList = resolve; });
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(screen.getByTestId('explore-save-btn-first').getAttribute('aria-label')).toContain('已收藏'));
+    await act(async () => { finishList([]); });
+    expect(screen.getByTestId('explore-save-btn-first').getAttribute('aria-label')).toContain('已收藏');
+  });
+
+  it('keeps the place visible and offers another save attempt after favorite failure', async () => {
+    apiFetchMock.mockImplementation((path, init) => {
+      if (path === '/poi-favorites' && init?.method === 'POST') return Promise.reject(new Error('offline'));
+      if (path === '/poi-favorites') return Promise.resolve([]);
+      if (path === '/pois/find-or-create') return Promise.resolve({ id: 41 });
+      if (path.includes('q=first')) return Promise.resolve({ results: [poi('first')] });
+      return Promise.resolve({ results: [] });
+    });
+    await open();
+    search('first');
+    await screen.findByText('first');
+    fireEvent.click(screen.getByTestId('explore-save-btn-first'));
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('加入收藏失敗：offline', 'error', 3000));
+    expect(screen.getByText('first')).toBeTruthy();
+    expect((screen.getByTestId('explore-save-btn-first') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('uses native buttons for region and category filters and returns focus after choosing a region', async () => {
+    apiFetchMock.mockImplementation((path) => path === '/poi-favorites' ? Promise.resolve([])
+      : Promise.resolve({ results: [poi('first')] }));
+    await open();
+    search('first');
+    await screen.findByText('first');
+    const region = screen.getByTestId('explore-region-pill');
+    region.focus();
+    fireEvent.click(region);
+    const option = screen.getByTestId('explore-region-option-東京');
+    expect(option.tagName).toBe('BUTTON');
+    expect(option.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(option);
+    expect(document.activeElement).toBe(region);
+    expect(region.textContent).toContain('東京');
+    const category = screen.getByTestId('explore-cat-咖啡廳');
+    expect(category.tagName).toBe('BUTTON');
+    fireEvent.click(category);
+    expect(category.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('keeps category focus when Escape closes it while the region picker is open', async () => {
+    const categories = ['cafe', 'restaurant', 'museum', 'park', 'hotel'];
+    apiFetchMock.mockImplementation((path) => path === '/poi-favorites' ? Promise.resolve([])
+      : Promise.resolve({ results: categories.map((category, i) => ({ ...poi(`place-${i}`), category })) }));
+    await open();
+    search('first');
+    await screen.findByText('place-0');
+    fireEvent.click(screen.getByTestId('explore-region-pill'));
+    const summary = screen.getByTestId('explore-cat-more');
+    const details = summary.closest('details')!;
+    details.open = true;
+    summary.focus();
+    fireEvent.keyDown(summary, { key: 'Escape' });
+    expect(details.open).toBe(false);
+    expect(document.activeElement).toBe(summary);
+  });
 });

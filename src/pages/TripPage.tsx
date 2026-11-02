@@ -1,20 +1,19 @@
-import AuthStatus from '../components/shared/AuthStatus';
 import { Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef, type ReactNode } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 import { createPortal } from 'react-dom';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { buildCrossDayMoves, railItemsFirstCollision } from '../lib/crossDayMove';
-import { moveEntriesBatch, type MutationResult } from '../lib/entryMutations';
+import { moveEntriesBatch } from '../lib/entryMutations';
 import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from '../lib/preserveScroll';
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { lsRenewAll } from '../lib/localStorage';
-import { useAccessibleTripSelection } from '../hooks/useAccessibleTripSelection';
+import { useTripSelection } from '../hooks/useMyTrips';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -143,6 +142,15 @@ const LOADING_VIEW = (
   </div>
 );
 
+/* ===== URL helpers ===== */
+
+// Legacy query-string compat (React Router handles path-based routing)
+function getQueryTrip(): string | null {
+  if (typeof window === 'undefined') return null;
+  const tripId = new URLSearchParams(window.location.search).get('trip');
+  return tripId && /^[\w-]+$/.test(tripId) ? tripId : null;
+}
+
 /* ===== Scroll helpers ===== */
 
 /**
@@ -168,14 +176,13 @@ function scrollToDay(dayNum: number): void {
   if (!header) return;
   // scroll-margin-top on the header (set in the align effect below) handles
   // the day-strip sticky offset, so we just use scrollIntoView here.
-  header.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  header.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ===== Resolve state machine ===== */
 
 type ResolveState =
   | { status: 'loading' }
-  | { status: 'error' }
   | { status: 'unpublished' }
   | { status: 'resolved'; tripId: string };
 
@@ -220,31 +227,22 @@ export interface TripPageHandle {
   openAddStop: () => void;
 }
 
-// A background timeline must not overwrite an operation page's anchor or router state.
-function replaceDayHash(hash: string) {
-  const path = window.location.pathname;
-  if (path !== '/trips' && !/^\/trip\/[\w-]+\/?$/.test(path)) return;
-  history.replaceState(history.state, '', hash);
-}
-
 function TripPageInner(
   { tripId: propTripId, noShell = false, usePortalMain = false, portalNode = null }: TripPageProps,
   ref: React.Ref<TripPageHandle>,
 ) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
-  const location = useLocation();
   // Prefer prop tripId (embedded mode) over URL (route mode).
   const effectiveUrlTripId = propTripId ?? urlTripId;
-  const legacyTripId = new URLSearchParams(location.search).get('trip');
-  const explicitTripId = effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)
-    ? effectiveUrlTripId : legacyTripId && /^[\w-]+$/.test(legacyTripId) ? legacyTripId : null;
   const navigate = useNavigate();
-  const auth = useCurrentUser();
-  const { user: currentUser } = auth;
-  const { trips: accessibleTrips, status: accessibleStatus, activeTripId: selectedTripId } =
-    useAccessibleTripSelection(currentUser?.id, explicitTripId);
-  const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
-  const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
+  const { user: currentUser } = useCurrentUser();
+  const explicitTripId = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId))
+    ? effectiveUrlTripId : getQueryTrip();
+  const { activeTripId, status: tripsStatus } = useTripSelection(currentUser?.id, { explicitTripId });
+  const resolveState = useMemo<ResolveState>(() => activeTripId
+    ? { status: 'resolved', tripId: activeTripId }
+    : tripsStatus === 'ready' ? { status: 'unpublished' } : { status: 'loading' },
+  [activeTripId, tripsStatus]);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
   // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
@@ -256,9 +254,9 @@ function TripPageInner(
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
-  const scrollTripIdRef = useRef<string | null>(null);
   // ⑨ 連續捲動：scroll-spy 最後同步過的 day，避免每個 scroll frame 都 switchDay。
   const scrollDayRef = useRef(0);
+  useEffect(() => { initialScrollDone.current = false; }, [activeTripId]);
 
   /* --- Scroll restore when returning from StopDetailPage --- */
   useScrollRestoreOnBack();
@@ -306,9 +304,9 @@ function TripPageInner(
   }, []);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
-  const { isDark, setPrintAppearance } = useDarkMode();
+  const { isDark, setIsDark } = useDarkMode();
 
-  const { isPrintMode, togglePrint } = usePrintMode({ setPrintAppearance });
+  const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /**
    * v2.31.46 #143：portal target lookup for embedded mode sticky map sheet。
@@ -339,49 +337,10 @@ function TripPageInner(
     }
   }, []);
 
-  /* Keep the page's loading/empty views while the shared selection owns list
-   * validation and preference persistence. An explicit route always reaches
-   * useTrip, including when it is absent from the accessible summary list. */
-  useEffect(() => {
-    const nextTripId = explicitTripId ?? selectedTripId;
-    if (scrollTripIdRef.current !== nextTripId) {
-      initialScrollDone.current = false;
-      scrollTripIdRef.current = nextTripId;
-    }
-    // Preserve the original first-read ordering. A later list refresh can
-    // never unmount a detail already reading its explicit target.
-    const explicitReady = !!explicitTripId
-      && (currentUser === null || accessibleStatus !== 'loading' || accessibleTrips !== undefined);
-    const targetId = explicitTripId ? (explicitReady ? explicitTripId : null) : selectedTripId;
-    const next: ResolveState = targetId
-      ? { status: 'resolved', tripId: targetId }
-      : accessibleStatus === 'success' && accessibleTrips
-        ? { status: 'unpublished' }
-        : accessibleStatus === 'error' ? { status: 'error' } : { status: 'loading' };
-    setResolveState((previous) => previous.status === next.status
-      && (previous.status !== 'resolved' || previous.tripId === targetId) ? previous : next);
-  }, [resolveKey, explicitTripId, selectedTripId, accessibleStatus, accessibleTrips, currentUser]);
-
-  /* --- Derive active tripId for the hook --- */
-  const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
   eventTripRef.current = activeTripId;
   const operationGeneration = useRef(0);
-  const moveAttempt = useRef(0);
-  const moveWriting = useRef<number | null>(null);
-  const moveRetrying = useRef<number | null>(null);
-  const pendingMoveFocus = useRef<{ id: number; dayNum: number } | null>(null);
-  const [moveResult, setMoveResult] = useState<{
-    dayNum: number;
-    status: 'saving' | 'travel' | 'travel-error' | 'saved' | 'error';
-    accepted?: Extract<MutationResult, { ok: true }>;
-    message?: string;
-  } | null>(null);
   useEffect(() => {
     const generation = ++operationGeneration.current;
-    setMoveResult(null);
-    pendingMoveFocus.current = null;
-    moveWriting.current = null;
-    moveRetrying.current = null;
     return () => { operationGeneration.current = generation + 1; };
   }, [effectiveUrlTripId, activeTripId]);
 
@@ -416,7 +375,7 @@ function TripPageInner(
   }, [portalNode, activeTripId]);
 
   const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
-    useTrip(activeTripId, resolveKey);
+    useTrip(activeTripId);
 
   // v2.31.x N+1 fix: 集中 fetch segments，children TimelineRail 透過 context 共用。
   // 不傳 provider 時 hook 退回自己 fetch（EditEntryPage 等獨立頁面適用）。
@@ -426,8 +385,7 @@ function TripPageInner(
     segmentMap: segmentsHookResult.segmentMap,
     loading: segmentsHookResult.loading,
     ready: segmentsHookResult.ready,
-    canRecompute: segmentsHookResult.canRecompute,
-  }), [segmentsHookResult.segments, segmentsHookResult.segmentMap, segmentsHookResult.loading, segmentsHookResult.ready, segmentsHookResult.canRecompute]);
+  }), [segmentsHookResult.segments, segmentsHookResult.segmentMap, segmentsHookResult.loading, segmentsHookResult.ready]);
 
   // Keep ref in sync so the online-status effect can call it without a stale closure
   refetchCurrentDayRef.current = refetchCurrentDay;
@@ -448,12 +406,15 @@ function TripPageInner(
     try {
       if (format === 'json') await downloadTripJson({ tripId: activeTripId, trip });
       else {
-        await renderTripPrintPdf({tripId: activeTripId, trip, onProgress: stage => showToast(stage === 'preparing' ? 'PDF 準備中…' : 'PDF 輸出中…', 'info')});
-        showToast('PDF 已產生', 'success');
+        const result = await renderTripPrintPdf({
+          tripId: activeTripId, trip,
+          onPhase: (phase) => showToast(phase === 'preparing' ? '正在準備 PDF…' : '正在輸出 PDF…', 'info', 1500),
+        });
+        showToast(result === 'saved' ? 'PDF 已下載' : 'PDF 正在產生中', 'info', 3000);
       }
     } catch (err) {
       console.error(`[handleDownloadFormat] ${format} 失敗:`, err);
-      showToast('下載失敗，請稍後再試', 'error', 3000);
+      showToast(format === 'pdf' ? 'PDF 產生失敗，請重試' : '下載失敗，請稍後再試', 'error', 3000);
     }
   }, [activeTripId, trip]);
 
@@ -520,7 +481,7 @@ function TripPageInner(
     // 抵消 autoScroll + drop 後 focus 亂捲，頁面不移動。idempotent（用完即清）。
     restoreDragScroll();
     const { active, over } = e;
-    if (!over || typeof active.id !== 'number' || !activeTripId || moveWriting.current != null) return;
+    if (!over || typeof active.id !== 'number' || !activeTripId) return;
     const activeDayId = (active.data.current as { dayId?: number | null } | undefined)?.dayId;
     const overData = over.data?.current as { dayId?: number | null; railContainer?: boolean } | undefined;
     const targetDayId = overData?.dayId;
@@ -534,53 +495,17 @@ function TripPageInner(
       .filter((id): id is number => typeof id === 'number');
     const overEntryId = overData?.railContainer ? null : (typeof over.id === 'number' ? over.id : null);
     const updates = buildCrossDayMoves(active.id, targetDayId, targetIds, overEntryId);
-    const attempt = ++moveAttempt.current;
-    moveWriting.current = attempt;
-    setMoveResult({ dayNum: targetOpt.dayNum, status: 'saving' });
-    const isCurrent = () => operationGeneration.current === generation && moveAttempt.current === attempt;
     try {
       // #1261：跨天 batch + 兩天重算 + 兩天各一個 emit（detail.dayNum → refetchDay）在 module。
       const r = await moveEntriesBatch(activeTripId, updates, { fromDayNum: sourceOpt?.dayNum ?? null, toDayNum: targetOpt.dayNum });
-      if (!isCurrent()) return;
-      if (!r.ok) throw new Error(r.message || '跨天移動失敗，請稍後再試');
-      pendingMoveFocus.current = { id: active.id, dayNum: targetOpt.dayNum };
-      setMoveResult({ dayNum: targetOpt.dayNum, status: 'travel', accepted: r });
-      void r.recompute.then(ok => {
-        if (isCurrent()) setMoveResult({ dayNum: targetOpt.dayNum, status: ok ? 'saved' : 'travel-error', accepted: r });
-      });
-    } catch (error) {
-      if (!isCurrent()) return;
-      setMoveResult({ dayNum: targetOpt.dayNum, status: 'error', message: error instanceof Error ? error.message : '跨天移動失敗，請稍後再試' });
-    } finally {
-      if (moveWriting.current === attempt) moveWriting.current = null;
+      if (operationGeneration.current !== generation) return;
+      if (!r.ok) throw new Error(`batch ${r.status}`);
+      showToast(`已移到 Day ${String(targetOpt.dayNum).padStart(2, '0')}`, 'success');
+    } catch {
+      if (operationGeneration.current !== generation) return;
+      showToast('跨天移動失敗，請稍後再試', 'error');
     }
   }, [activeTripId, dayOptions, allDays]);
-
-  useEffect(() => {
-    const target = pendingMoveFocus.current;
-    if (!target) return;
-    const trigger = document.querySelector<HTMLButtonElement>(`section[data-day="${target.dayNum}"] [data-scroll-anchor="entry-${target.id}"] .tp-rail-menu-trigger`);
-    if (!trigger) return;
-    pendingMoveFocus.current = null;
-    switchDay(target.dayNum);
-    trigger.focus({ preventScroll: true });
-    trigger.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-  }, [allDays, moveResult, switchDay]);
-
-  const moveStatusRef = useRef<HTMLDivElement>(null);
-  async function retryMoveTravel() {
-    if (!moveResult?.accepted || moveRetrying.current != null || moveWriting.current != null) return;
-    const generation = operationGeneration.current;
-    const attempt = moveAttempt.current;
-    moveRetrying.current = attempt;
-    const result = moveResult;
-    const accepted = moveResult.accepted;
-    moveStatusRef.current?.focus({ preventScroll: true });
-    setMoveResult({ ...result, status: 'travel' });
-    const ok = await accepted.retryRecompute();
-    if (moveRetrying.current === attempt) moveRetrying.current = null;
-    if (operationGeneration.current === generation && moveAttempt.current === attempt) setMoveResult({ ...result, status: ok ? 'saved' : 'travel-error' });
-  }
 
   /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
   const mapRailData = useMemo(() => {
@@ -614,47 +539,15 @@ function TripPageInner(
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
       scrollToDay(dayNum);
-      replaceDayHash('#day' + dayNum);
+      history.replaceState(null, '', '#day' + dayNum);
     },
     [switchDay],
   );
 
-  const focusParam = new URLSearchParams(location.search).get('focus');
-  const focusEntryId = focusParam && /^\d+$/.test(focusParam) && Number.isSafeInteger(Number(focusParam)) && Number(focusParam) > 0
-    ? Number(focusParam) : null;
-  const focusDayParam = new URLSearchParams(location.search).get('focusDay');
-  const focusDay = focusDayParam && /^\d+$/.test(focusDayParam) && Number.isSafeInteger(Number(focusDayParam)) && Number(focusDayParam) > 0
-    ? Number(focusDayParam) : null;
-  const focusedVisit = useRef<string | null>(null);
-  useEffect(() => {
-    if (focusEntryId == null && focusDay == null) { focusedVisit.current = null; return; }
-    if (loading || !activeTripId || trip?.id !== activeTripId) return;
-    const visit = `${activeTripId}:${location.key}:${focusEntryId}:${focusDay}`;
-    if (focusedVisit.current === visit) return;
-    const targetDay = Object.values(allDays).find(day => focusEntryId != null
-      ? day.timeline.some(entry => entry.id === focusEntryId) : day.dayNum === focusDay);
-    if (!targetDay) return;
-    const target = focusEntryId != null
-      ? document.querySelector<HTMLElement>(`#tripContent [data-scroll-anchor="entry-${focusEntryId}"] .tp-rail-caret`)
-      : document.getElementById(`day${targetDay.dayNum}`);
-    if (!target) return;
-    focusedVisit.current = visit;
-    manualScrollTs.current = Date.now();
-    switchDay(targetDay.dayNum);
-    if (focusEntryId == null) target.tabIndex = -1;
-    target.focus({ preventScroll: true });
-    target.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-  }, [focusEntryId, focusDay, location.key, activeTripId, loading, trip?.id, allDays, switchDay, portalNode]);
-
   /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {
-    // useTrip clears the previous trip in an effect. During A→B the render
-    // before that effect still exposes A's days; those must not consume B's
-    // one-time scroll restoration latch.
-    if (loading || dayNums.length === 0 || initialScrollDone.current
-      || !activeTripId || trip?.id !== activeTripId) return;
+    if (loading || dayNums.length === 0 || initialScrollDone.current) return;
     initialScrollDone.current = true;
-    if (focusEntryId != null || focusDay != null) return; // Explicit target takes precedence over saved scroll.
 
     // ⑨：標記「剛做初始定位」→ 下方 scroll-spy 在 600ms 內不 switchDay，避免它在
     // deep-link / today 的程式化捲動途中先報 day1 蓋掉正確選天（57814b67 修的 bug）。
@@ -664,10 +557,15 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    // Without an explicit entry target, preserve the last scroll position.
-    // Cold visits fall through to hash/today positioning.
+    // 從編輯 / 新增景點 / 子頁「返回」→ 還原捲動位置，不移動頁面（見 preserveScroll）。
+    // module-map 有值 = 本 session 在 SPA 內導航返回；冷開 / reload 沒值 → 落到下面
+    // 的 ?focus / hash / auto-locate 預設行為。?focus 的 entry 展開由 TimelineRail
+    // 自行讀 ?focus= 處理，這裡只負責「不捲走」。
     const savedTop = activeTripId ? recallScroll(activeTripId) : undefined;
     if (savedTop != null) {
+      const returnParams = new URLSearchParams(window.location.search);
+      const fDay = parseInt(returnParams.get('focusDay') ?? '', 10);
+      if (Number.isFinite(fDay) && dayNums.includes(fDay)) switchDay(fDay);
       // per-day timeline async 載入，內容未滿高度 → bounded retry 直到站得住。
       restoreScrollTo(savedTop);
       return;
@@ -680,6 +578,29 @@ function TripPageInner(
     const sheetParam = new URLSearchParams(window.location.search).get('sheet');
     if (sheetParam === 'collab' && resolveState.status === 'resolved') {
       navigate(`/trip/${encodeURIComponent(resolveState.tripId)}/collab`, { replace: true });
+    }
+
+    // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
+    // 卡「跳到行程」過來，需要 scroll 到該 entry）。useScrollRestoreOnBack
+    // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query
+    // 跟 state，兩條路任一條 work 都行。這裡 query 那條是 fallback —
+    // 例如 user 直接貼 URL 沒有 history state。
+    const focusSearch = new URLSearchParams(window.location.search);
+    const focusParam = focusSearch.get('focus');
+    if (focusParam) {
+      // v2.55.x：回前頁還原「當下景點展開」— 先切到該景點所在天（rail 才會 render，
+      // TimelineRail 依同一個 ?focus= 展開它），再 scroll 到它。focusDay 由 EditEntryPage
+      // goBack 帶入（entry.dayId → dayNum）；無 focusDay 時維持原本只 scroll 行為。
+      const focusDayParam = focusSearch.get('focusDay');
+      const focusDay = focusDayParam ? parseInt(focusDayParam, 10) : NaN;
+      if (Number.isFinite(focusDay) && dayNums.includes(focusDay)) switchDay(focusDay);
+      requestAnimationFrame(() => {
+        const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
+        const el = document.querySelector<HTMLElement>(sel);
+        // block:'nearest' — 已在視野就不捲（不移動頁面），離屏才最小捲入。
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+      });
+      return;
     }
 
     // URL hash takes priority over auto-locate
@@ -700,7 +621,7 @@ function TripPageInner(
     // 在初始 resolve 完同步推合法 hash 進 URL，避免分享連結時沒有日期錨點。
     const initialHash = computeInitialHash(dayNums, hash, localToday, autoScrollDates);
     if (initialHash && window.location.hash !== initialHash) {
-      replaceDayHash(initialHash);
+      history.replaceState(null, '', initialHash);
     }
 
     // Auto-locate to today (timezone-aware)
@@ -718,7 +639,7 @@ function TripPageInner(
         timeoutId = setTimeout(() => {
           const nowEl = document.querySelector('[data-now]');
           if (nowEl) {
-            nowEl.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+            nowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }, 300);
       });
@@ -730,7 +651,7 @@ function TripPageInner(
     // resolveState 是 discriminated union（tripId 只在 'resolved' variant），deps 不能
     // 取 .tripId（render 時可能是 loading variant → TS error）；依賴整個 resolveState 物件，
     // 變動由 initialScrollDone latch 擋住重跑。
-  }, [focusEntryId, focusDay, loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId, trip?.id]);
+  }, [loading, dayNums, autoScrollDates, switchDay, localToday, navigate, resolveState, activeTripId]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {
@@ -777,7 +698,7 @@ function TripPageInner(
           switchDay(activeDayNum);
           const newHash = '#day' + activeDayNum;
           if (window.location.hash !== newHash) {
-            replaceDayHash(newHash);
+            history.replaceState(null, '', newHash);
           }
         }
       }
@@ -833,30 +754,12 @@ function TripPageInner(
     ) : undefined
   ), [loading, trip, mapRailData.allPins, mapRailData.pinsByDay, isDark]);
 
-  // Every reader state belongs in the same host, including loading and recovery.
-  const renderMain = (content: ReactNode) => usePortalMain
-    ? (portalNode ? createPortal(content, portalNode) : null)
-    : content;
-
   /* --- Early returns (#13: use hoisted static views) --- */
-  if (resolveState.status === 'unpublished') return renderMain(UNPUBLISHED_VIEW);
-  if (resolveState.status === 'loading') return renderMain(currentUser === undefined ? <AuthStatus auth={auth} /> : LOADING_VIEW);
-  if (resolveState.status === 'error') return renderMain(
-    <div className="flex min-h-dvh">
-      <div className="flex-1 min-w-0 max-w-full mx-auto" id="tripContent" style={{ padding: '24px 16px' }}>
-        <AlertPanel
-          variant="error"
-          title="無法載入行程清單"
-          message="請稍後再試。"
-          actionLabel="重試"
-          onAction={() => window.dispatchEvent(new Event(EVENT.tripsUpdated))}
-        />
-      </div>
-    </div>
-  );
+  if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
+  if (resolveState.status === 'loading') return LOADING_VIEW;
 
   if (error && !trip) {
-    return renderMain(
+    return (
       <div className="flex min-h-dvh">
         <div className="flex-1 min-w-0 max-w-full mx-auto">
           <div id="tripContent" style={{ padding: '24px 16px' }}>
@@ -865,7 +768,7 @@ function TripPageInner(
               title="無法載入行程"
               message={`找不到此行程或載入失敗（ID：${activeTripId}）。請確認連結是否正確，或回行程列表挑選其他。`}
               actionLabel="重試"
-              onAction={() => setResolveKey((k) => k + 1)}
+              onAction={() => window.location.reload()}
             />
             <div className="text-center p-10 text-foreground">
               <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/trips">回行程列表</a>
@@ -924,13 +827,6 @@ function TripPageInner(
 
         {!loading && trip && (
           <div className="trip-content" id="tripContent">
-            {moveResult && (
-              <div ref={moveStatusRef} tabIndex={-1} data-testid="timeline-move-result" role={moveResult.status === 'error' || moveResult.status === 'travel-error' ? 'alert' : 'status'} className="px-3 text-callout">
-                {moveResult.status === 'saving' ? '正在儲存移動…' : moveResult.status === 'error' ? moveResult.message
-                  : `已移到 Day ${String(moveResult.dayNum).padStart(2, '0')}，${moveResult.status === 'travel' ? '交通更新中…' : moveResult.status === 'travel-error' ? '交通待更新。' : '景點及交通已更新。'}`}
-                {moveResult.status === 'travel-error' && <button type="button" className="min-h-[44px] text-accent" onClick={() => void retryMoveTravel()}>重試交通更新</button>}
-              </div>
-            )}
             {/* 2026-07-07 跨天拖拉：統一 DndContext（autoScroll 內建 — 拖到
               * 視窗邊緣自動捲動跨天）。rails 走 dndManaged 模式。 */}
             <DndContext
@@ -944,7 +840,7 @@ function TripPageInner(
                 * scroll-spy 依 header 位置更新 active day + DAY tab 高亮。資料全載於 allDays cache。 */}
               {dayNums.map((dayNum) => (
                 <DaySection
-                  key={`${activeTripId}:${dayNum}`}
+                  key={dayNum}
                   dayNum={dayNum}
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}
@@ -1018,7 +914,8 @@ function TripPageInner(
          * 切換、callback ref 還沒 fire）就先不 render 任何東西，等它到位才 portal，
          * 不會把內容顯示在錯的地方。不傳 usePortalMain 維持原本 inline render
          * （既有呼叫端，如 TripsListPage 手機分支，完全不受影響）。 */}
-        {renderMain(wrappedMain)}
+        {!usePortalMain && wrappedMain}
+        {usePortalMain && portalNode ? createPortal(wrappedMain, portalNode) : null}
         {sheetPortalNode && sheetContent && createPortal(sheetContent, sheetPortalNode)}
       </>
     );

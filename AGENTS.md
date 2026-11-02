@@ -1,6 +1,6 @@
 # Tripline
 
-Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
+Cloudflare Pages + D1 + React SPA + V2 OAuth. No global admin — owner/permissions + service-token ops scope.
 
 ## Development workflow (Matt Pocock official chain)
 
@@ -13,7 +13,7 @@ a small, settled, single-session change may proceed directly to `/implement`.
 
 1. **Clarify — `/grill-with-docs`**: for ambiguous work, ask one question at a
    time, answer repository facts by inspecting the code, and do not implement
-   until the user confirms shared understanding. Update `CONTEXT.md` only for
+   until the user confirms shared understanding. Update `GLOSSARY.md` only for
    settled domain vocabulary; create an ADR only for a hard-to-reverse,
    surprising decision with a real trade-off.
 2. **Specify — `/to-spec`**: for work that needs a durable spec, propose the fewest existing,
@@ -50,7 +50,6 @@ Official upstream references:
 [`to-tickets`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/to-tickets.md#L13-L42),
 [`implement`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/implement.md#L13-L29), and
 [`code-review`](https://github.com/mattpocock/skills/blob/2ab958093e83e0ec752e6c1c5932da465bf23e0c/docs/engineering/code-review.md#L13-L31).
-Detailed comparison: [`docs/research/2026-08-03-matt-pocock-skills-workflow.md`](docs/research/2026-08-03-matt-pocock-skills-workflow.md).
 
 When multiple skill frameworks could apply and the user has not named one, use this priority:
 
@@ -73,9 +72,9 @@ Matt Pocock skills do not cover the task or the user explicitly requests it.
 - Agent tool only for worktree isolation.
 - Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
 
-## Naming history (sync from CLAUDE.md)
+## Naming history
 
-完整 30+ 歷史 bug + 對應修法見 [CLAUDE.md](CLAUDE.md) "Naming history"。重點:
+重點:
 
 - **v2.23.0+**: Google Maps Platform — OSM / Nominatim / Overpass / ORS / Haversine 全 ripped out，no fallback
 - **v2.27.0+ (migration 0057+0058)**: `trip_entry_pois` junction table (1 entry × N POI: master sort_order=1 + alternates)
@@ -101,7 +100,7 @@ Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
 
-`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first. Native HIG, web WCAG, project targets and historical exceptions are distinguished in [docs/design-standards.md](docs/design-standards.md); the current prototype gate above still applies.
+For this Web/PWA, apply WCAG 2.2 to web accessibility acceptance, Apple HIG as the iOS/macOS interaction reference, and the owner-approved decisions in `DESIGN.md` to product styling (the old mockup files were removed). Native pt values are not CSS px requirements. See [`DESIGN.md` — Web 設計驗收與來源](DESIGN.md#web-設計驗收與來源) for source-specific thresholds, brand exceptions, and unresolved cases. Do not copy AI-generated example imagery as a visual specification. Resolve conflicts with the owner before changing a settled design; the prototype gate above applies to new layout regardless of old project exemptions.
 
 ## Skill Routing
 
@@ -123,7 +122,7 @@ it must not replace or duplicate an applicable Matt Pocock workflow unless the
 user explicitly asks.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite, see `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/
 
 ## Agent skills
 

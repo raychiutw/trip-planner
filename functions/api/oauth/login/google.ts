@@ -54,24 +54,40 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const state = generateOpaqueToken();
   const deleteReauth = url.searchParams.get('purpose') === 'account-delete';
   let reauth: { uid: string; sessionId?: string; challengeId?: string; grantId?: string; clientId?: string } | undefined;
+  let startedByThisRequest = false; // 只有這個請求自己把 challenge 轉成 started 時，state 寫入失敗才還原
   let redirectAfterLogin = sanitizeRedirect(url.searchParams.get('redirect_after_login'));
   if (deleteReauth) {
     const challengeId = url.searchParams.get('challenge');
     if (challengeId) {
       const challenge = await readMobileDeleteChallenge(context.env.DB, challengeId);
       const contract = mobileOAuthContract(context.env, context.request);
-      if (!challenge || !contract || challenge.expired || challenge.status !== 'pending' || challenge.clientId !== contract.clientId ||
-          !(await transitionMobileDeleteChallenge(context.env.DB, challengeId, challenge.uid, challenge.grantId, 'pending', 'started'))) {
-        return new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' } }), { status: 403, headers: { 'content-type': 'application/json' } });
+      const refused = () => new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_REQUIRED' } }), { status: 403, headers: { 'content-type': 'application/json' } });
+      // pending 與 started 都能開始：授權連結被重新整理或預讀時不會卡死。
+      // 這不增加風險：完成流程仍要同一個 Google 帳號通過 callback，且 started→verified 只會成功一次。
+      if (!challenge || !contract || challenge.expired || challenge.clientId !== contract.clientId ||
+          (challenge.status !== 'pending' && challenge.status !== 'started')) {
+        return refused();
+      }
+      if (challenge.status === 'pending') {
+        const moved = await transitionMobileDeleteChallenge(context.env.DB, challengeId, challenge.uid, challenge.grantId, 'pending', 'started');
+        if (moved) {
+          startedByThisRequest = true;
+        } else if ((await readMobileDeleteChallenge(context.env.DB, challengeId))?.status !== 'started') {
+          return refused(); // 並行的另一個請求把它轉成 started 是可以的；其他狀態（verified／cancelled…）不行
+        }
       }
       reauth = { uid: challenge.uid, challengeId, grantId: challenge.grantId, clientId: challenge.clientId };
       redirectAfterLogin = mobileCallbackUrl(context.env).toString();
     } else {
-      const session = await requireSessionUser(context.request, context.env);
+      // 整頁導覽（window.location.href）：失敗要導回帳號頁，不能回一頁 JSON 讓使用者沒有路回 app。
+      // AccountPage 看到 ?deleteReauth=failed 會重開刪除對話框並顯示「身分驗證未完成」。
+      const backToAccount = () => Response.redirect(new URL('/account?deleteReauth=failed', url.origin), 302);
+      const session = await requireSessionUser(context.request, context.env).catch(() => null);
+      if (!session) return backToAccount();
       const sessionId = await deleteReauthSessionId(context.request);
       const identity = await context.env.DB.prepare("SELECT 1 FROM auth_identities WHERE user_id = ? AND provider = 'google'")
         .bind(session.uid).first();
-      if (!sessionId || !identity) return new Response(JSON.stringify({ error: { code: 'ACCOUNT_DELETE_REAUTH_UNAVAILABLE' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+      if (!sessionId || !identity) return backToAccount();
       reauth = { uid: session.uid, sessionId };
       redirectAfterLogin = '/account?deleteReauth=done';
     }
@@ -79,11 +95,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // Store state in D1 (CSRF protection + replay guard via consume on callback)
   const adapter = new D1Adapter(context.env.DB, 'OAuthState');
-  await adapter.upsert(
-    state,
-    { provider: 'google', redirectAfterLogin, createdAt: Date.now(), ...(reauth ? { reauth } : {}) },
-    STATE_TTL_SEC,
-  );
+  try {
+    await adapter.upsert(
+      state,
+      { provider: 'google', redirectAfterLogin, createdAt: Date.now(), ...(reauth ? { reauth } : {}) },
+      STATE_TTL_SEC,
+    );
+  } catch (err) {
+    // challenge 已轉為 started 但 state 沒寫成功：還原，否則使用者只能等它過期
+    if (startedByThisRequest && reauth?.challengeId && reauth.grantId) {
+      await transitionMobileDeleteChallenge(context.env.DB, reauth.challengeId, reauth.uid, reauth.grantId, 'started', 'pending').catch(() => {});
+    }
+    throw err;
+  }
 
   // Build Google OIDC authorize URL
   const callbackUri = `${url.origin}/api/oauth/callback/google`;

@@ -23,10 +23,10 @@
  *   - dirty.segment → PATCH /trips/:id/segments/:sid { mode, min }
  *   - 兩者皆失敗 → 整體 error；單邊失敗 → 顯示警示但保留 dirty 值。
  *
- * 取消（左 ←）：dirty 跳 ConfirmModal「丟棄變更」 → confirm 才 navigate。
+ * 離開：等待已接受的編輯保存；失敗或逾時則留頁並提供重試與明確放棄。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useBlocker, useNavigate, useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import Icon from '../components/shared/Icon';
@@ -35,21 +35,19 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import { CATEGORY_ICON } from '../components/trip/CategoryPicker';
-import { isAnySheetOpen } from '../hooks/useSheetBehavior';
-import SaveBeforeLeave from '../components/shared/SaveBeforeLeave';
-import { useAutosave, type SaveResult } from '../hooks/useAutosave';
+import { useAutosave } from '../hooks/useAutosave';
 import { useTripSegments, type TripSegment } from '../hooks/useTripSegments';
+import { useTripMeta, useTripDays } from '../hooks/useTripRead';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
 import { apiFetch } from '../lib/apiClient';
+import { saveSegment } from '../lib/segmentMutations';
 import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
 import { escUrl } from '../lib/sanitize';
 import { EVENT } from '../lib/events';
-import { saveManualSegment } from '../lib/manualSegment';
-import { captureSegmentScope } from '../lib/segmentScope';
 import { haversineMeters, avgLatLng, CROSS_REGION_THRESHOLD_M, type LatLng } from '../lib/geo';
 import { getStopDisplayTitle } from '../lib/stopDisplay';
 
@@ -796,6 +794,8 @@ function extractSiblingCoords(
   return out;
 }
 
+type NoteSave = { flush: () => Promise<boolean>; cancel: () => void; pending: () => boolean };
+
 interface PerPoiNoteRowProps {
   tripId: string;
   entryId: number;
@@ -817,7 +817,7 @@ interface PerPoiNoteRowProps {
    */
   onSecondary?: boolean;
   /** 把本行 autosave 的 flush 註冊給父頁（EditEntryPage）→ 回前頁前統一 await（v2.55.x stale-race 修）。 */
-  registerFlush?: (editor: { flush: () => Promise<SaveResult>; hasPending: () => boolean; discard: () => void }) => () => void;
+  registerFlush?: (save: NoteSave) => () => void;
 }
 
 /**
@@ -847,7 +847,7 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   }, [initialNote, editing]);
 
   const noteAutosave = useAutosave<{ note: string }>({
-    entityKey: `${tripId}:${entryId}:${poiId}:${field}`,
+    scopeKey: `${tripId}:${entryId}:${poiId}:${field}`,
     debounceMs: 800,
     save: async (body) => {
       // LWW — 不帶 entryPoisVersion；端點刻意不收/不 bump OCC token。#1261 走 module。
@@ -859,10 +859,13 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 
   // v2.55.x：把本行 autosave 的 flush 註冊給 EditEntryPage — 回前頁前統一 await 沖出 pending
   // 備註 PATCH，避免返回時 days GET 搶先讀到未 commit 的舊值（stale race，見 goBackFocused）。
-  const autosaveRef = useRef(noteAutosave);
-  autosaveRef.current = noteAutosave;
-  useEffect(() => registerFlush?.({ flush: () => autosaveRef.current.flush(),
-    hasPending: () => autosaveRef.current.hasPending, discard: () => autosaveRef.current.cancel() }), [registerFlush]);
+  const saveRef = useRef(noteAutosave);
+  saveRef.current = noteAutosave;
+  useEffect(() => registerFlush?.({
+    flush: () => saveRef.current.flush(),
+    cancel: () => saveRef.current.cancel(),
+    pending: () => saveRef.current.hasUnsaved(),
+  }), [registerFlush]);
 
   // autosave error → toast（對齊 TimelineRail；監聽 error state transition，
   // 避免每 re-render 重複 toast）。
@@ -882,8 +885,7 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
   }, [initialNote]);
 
   const closeEdit = useCallback(async () => {
-    const outcome = await noteAutosave.flush();
-    if (outcome.status === 'saved') setEditing(false);
+    if (await noteAutosave.flush()) setEditing(false);
   }, [noteAutosave]);
 
   const handleChange = (value: string) => {
@@ -973,6 +975,32 @@ function PerPoiNoteRow({ tripId, entryId, poiId, field = 'note', initialNote, pl
 }
 
 export default function EditEntryPage() {
+  const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
+  return <EditEntryPageContent key={`${tripId}:${entryId}`} />;
+}
+
+function EditRouteBlocker({ shouldBlock, onBlocked, resetRef }: {
+  shouldBlock: () => boolean;
+  onBlocked: (proceed: () => void) => void;
+  resetRef: React.RefObject<(() => void) | null>;
+}) {
+  const blocker = useBlocker(shouldBlock);
+  const handledRef = useRef(false);
+  useEffect(() => {
+    if (blocker.state !== 'blocked') {
+      handledRef.current = false;
+      resetRef.current = null;
+      return;
+    }
+    resetRef.current = blocker.reset;
+    if (handledRef.current) return;
+    handledRef.current = true;
+    onBlocked(blocker.proceed);
+  }, [blocker, onBlocked, resetRef]);
+  return null;
+}
+
+function EditEntryPageContent() {
   const { tripId, entryId: entryIdParam } = useParams<{ tripId: string; entryId: string }>();
   const entryId = Number(entryIdParam);
   const navigate = useNavigate();
@@ -981,7 +1009,6 @@ export default function EditEntryPage() {
   const [entry, setEntry] = useState<EntryApi | null>(null);
   const [poiInfo, setPoiInfo] = useState<{ name: string; poiType: string | null } | null>(null);
   const [prevEntry, setPrevEntry] = useState<{ id: number; title: string } | null>(null);
-  const [tripName, setTripName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -1015,10 +1042,15 @@ export default function EditEntryPage() {
   }>({ startTime: '', endTime: '', description: '', mode: null, transitMin: '', noTravel: false });
 
   const [submitting, setSubmitting] = useState(false);
+  const saveScopeRef = useRef(0);
+  useEffect(() => {
+    const scope = saveScopeRef;
+    return () => { scope.current++; };
+  }, []);
   // v2.33.139: 移除 `error` state — titleBar SaveStatus 已拔 (user feedback
   // 「右上角不用顯示狀態」)，error 細節走 showToast 即時呈現，不需 useState 持有。
   // 保留以前的 setError(...) call sites 改 showToast(...)。
-
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
   const { segmentMap } = useTripSegments(tripId);
 
@@ -1086,18 +1118,8 @@ export default function EditEntryPage() {
 
   // Load trip meta — 給 TitleBar 顯示 「編輯景點 · {tripName}」（v2.26.4 mockup V1）
   // 失敗時只省略 tripName，不擋 entry load。
-  useEffect(() => {
-    if (!tripId) return;
-    let cancelled = false;
-    apiFetch<TripMeta>(`/trips/${encodeURIComponent(tripId)}`)
-      .then((data) => {
-        if (cancelled) return;
-        const name = data?.title || data?.name;
-        if (name) setTripName(name);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [tripId]);
+  const tripMetaData = useTripMeta<TripMeta>(tripId).data;
+  const tripName: string | null = tripMetaData?.title || tripMetaData?.name || null;
 
   // 2026-07-06 車程重算：entry 所在 dayNum（下方 effect 解析後存入），刪除時
   // 做 day-scoped recompute；未解析到 → null → 全 trip recompute fallback。
@@ -1114,15 +1136,8 @@ export default function EditEntryPage() {
   // `extractSiblingCoords` 需要的鄰近停留點座標與前一個 entry 的標題 ——
   // 兩者都要整天的 timeline，entry 端點沒有。要再往下砍就得讓某支端點同時
   // 回 entry + 當天 context，那是另一個層級的 API 設計。
-  const [daysIndex, setDaysIndex] = useState<Array<{ id: number; dayNum: number }> | null>(null);
-  useEffect(() => {
-    if (!tripId) return;
-    let cancelled = false;
-    apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`)
-      .then((days) => { if (!cancelled) setDaysIndex(days); })
-      .catch(() => { /* graceful — 下方 effect 沒拿到就跳過 */ });
-    return () => { cancelled = true; };
-  }, [tripId]);
+  // 失敗 → 維持 null，下方 effect 沒拿到就跳過（graceful）。
+  const daysIndex = useTripDays(tripId).data;
 
   useEffect(() => {
     if (!entry || !tripId || !daysIndex) return;
@@ -1209,16 +1224,24 @@ export default function EditEntryPage() {
 
   useEffect(() => {
     if (!segment) return;
-    setMode(segment.mode);
-    setTransitMin(segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '');
-    setNoTravel(segment.noTravel === 1);
+    const nextMin = segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '';
+    const nextNoTravel = segment.noTravel === 1;
+    const wasEditing = mode !== originalRef.current.mode || transitMin !== originalRef.current.transitMin
+      || noTravel !== originalRef.current.noTravel;
+    if (!wasEditing) {
+      setMode(segment.mode);
+      setTransitMin(nextMin);
+      setNoTravel(nextNoTravel);
+    }
     originalRef.current = {
       ...originalRef.current,
       mode: segment.mode,
-      transitMin: segment.mode === 'transit' && typeof segment.min === 'number' ? String(segment.min) : '',
-      noTravel: segment.noTravel === 1,
+      transitMin: nextMin,
+      noTravel: nextNoTravel,
     };
-  }, [segment]);
+    // Refetches can follow an entry-only save while the segment edit is still dirty.
+    // Keep the local choice for retry, but advance the server baseline.
+  }, [segment, mode, transitMin, noTravel]);
 
   const validation = useMemo(() => {
     if (startTime && !TIME_RE.test(startTime)) return '抵達時間格式錯誤（HH:MM）';
@@ -1232,12 +1255,21 @@ export default function EditEntryPage() {
     return null;
   }, [startTime, endTime, mode, transitMin]);
 
-  const dirty = (() => {
-    const o = originalRef.current;
-    const entryDirty = startTime !== o.startTime || endTime !== o.endTime || description !== o.description;
-    const segmentDirty = noTravel !== o.noTravel || mode !== o.mode || (mode === 'transit' && transitMin !== o.transitMin);
-    return { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
-  })();
+  const original = originalRef.current;
+  const entryDirty = startTime !== original.startTime || endTime !== original.endTime || description !== original.description;
+  const segmentDirty = noTravel !== original.noTravel || mode !== original.mode || (mode === 'transit' && transitMin !== original.transitMin);
+  const dirty = { entryDirty, segmentDirty, any: entryDirty || segmentDirty };
+  const draftSignature = JSON.stringify([startTime, endTime, description, mode, transitMin, noTravel]);
+  const failedAutoSaveRef = useRef<string | null>(null);
+  const currentFormRef = useRef({ startTime, endTime, description, mode, transitMin, noTravel });
+  currentFormRef.current = { startTime, endTime, description, mode, transitMin, noTravel };
+  const hasFormChanges = useCallback(() => {
+    const current = currentFormRef.current;
+    const saved = originalRef.current;
+    return current.startTime !== saved.startTime || current.endTime !== saved.endTime ||
+      current.description !== saved.description || current.mode !== saved.mode ||
+      (current.mode === 'transit' && current.transitMin !== saved.transitMin) || current.noTravel !== saved.noTravel;
+  }, []);
 
   const stayMinutes = useMemo(() => {
     if (!startTime || !endTime) return null;
@@ -1259,22 +1291,13 @@ export default function EditEntryPage() {
     return `新正選距離本日其他點約 ${km} km，可能跨區，前後車程會誤算。確定要設為正選？`;
   }, [altSwapConfirm, siblingMasterCoords]);
 
-  const editLifetime = useMemo(() => ({ tripId, entryId, active: true }), [tripId, entryId]);
-  useEffect(() => {
-    editLifetime.active = true;
-    return () => { editLifetime.active = false; };
-  }, [editLifetime]);
-
-  const saveFormBatch = useCallback(async (): Promise<SaveResult> => {
-    if (!tripId || !entry) return { status: 'error', error: '景點尚未載入' };
-    if (validation) return { status: 'error', error: validation };
-    if (!dirty.any) return { status: 'saved' };
+  const saveChanges = useCallback(async (): Promise<boolean> => {
+    if (!tripId || !entry || validation) return false;
+    if (!dirty.any) return true;
+    const saveScope = saveScopeRef.current;
     setSubmitting(true);
-    const currentSegment = captureSegmentScope(tripId);
-    const isCurrent = () => editLifetime.active && currentSegment();
 
-    type WriteResult = { scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string };
-    const requests: Array<{ scope: WriteResult['scope']; request: Promise<WriteResult> }> = [];
+    const requests: Promise<{ scope: 'entry' | 'segment'; ok: boolean; status: number; text?: string }>[] = [];
 
     if (dirty.entryDirty) {
       const body: Record<string, unknown> = {};
@@ -1283,18 +1306,14 @@ export default function EditEntryPage() {
       // v2.55.x: entry.description（活動說明）可編輯。空/純空白 → null 清除。
       if (description !== originalRef.current.description) body.description = description.trim() ? description : null;
       // v2.34.0: note 移除 — entry-level note 已 DROP，PATCH /entries 不再帶 note。
-      // v2.33.136 fix: race guard — dirty.entryDirty memo 跟 body 各自比 originalRef，
-      // 但 originalRef 是 ref 不在 memo deps。若 dirty 計算後、handleSave 跑前外部
-      // 路徑（entry refetch useEffect、prior save 成功 hook）把 originalRef 寫到
-      // 跟 current state 一致，dirty 仍 stale=true 但 body={} → backend 400
-      // "DATA_VALIDATION: 無有效欄位可更新"（api_logs 過去多次此 error）。
-      // Empty body 表示資料其實沒變，跳過 request。
+      // v2.33.136 fix: race guard。refetch 或前一筆儲存可能已更新 originalRef；
+      // 空 body 不送給後端，避免 DATA_VALIDATION: 無有效欄位可更新。
       if (Object.keys(body).length > 0) {
-        requests.push({ scope: 'entry', request:
+        requests.push(
           // #1261：entry 欄位走 entry 變更 module（時間變動後 module 內重算車程 + emit）。
           updateEntry(tripId, entryId, entryDayNumRef.current, body)
             .then((r) => (r.ok ? { scope: 'entry', ok: true, status: 200, text: undefined } : { scope: 'entry', ok: false, status: r.status, text: r.message })),
-        });
+        );
       }
     }
 
@@ -1309,10 +1328,11 @@ export default function EditEntryPage() {
       if (!noTravel && mode === 'transit' && transitMin.trim() !== '') {
         body.min = parseInt(transitMin, 10);
       }
-      requests.push({ scope: 'segment', request:
-        saveManualSegment({ tripId, segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId, body })
-          .then(async ({ response }) => ({ scope: 'segment', ok: response.ok, status: response.status, text: response.ok ? undefined : await response.text() })),
-      });
+      requests.push(
+        saveSegment(tripId, { segmentId: segment?.id, fromEntryId: prevEntry.id, toEntryId: entryId }, body)
+          .then(() => ({ scope: 'segment', ok: true, status: 200 }),
+            (err: unknown) => ({ scope: 'segment', ok: false, status: err instanceof ApiError ? err.status : 0 })),
+      );
     }
 
     // v2.33.136 race guard：若 entry race-empty + segmentDirty false → 整 requests
@@ -1320,113 +1340,137 @@ export default function EditEntryPage() {
     // 鎖死的怪行為，直接 setSubmitting(false) early return。
     if (requests.length === 0) {
       setSubmitting(false);
-      return { status: 'saved' };
+      if (!hasFormChanges()) return true;
+      failedAutoSaveRef.current = draftSignature;
+      return false;
     }
 
     try {
-      const results = await Promise.all(requests.map(async ({ scope, request }): Promise<WriteResult> => {
-        try { return await request; }
-        catch (err) {
-          return { scope, ok: false, status: err instanceof ApiError ? err.status : 0,
-            text: err instanceof Error ? err.message : '網路錯誤' };
-        }
-      }));
-      if (!isCurrent()) return { status: 'superseded' };
+      const results = await Promise.all(requests);
+      if (saveScope !== saveScopeRef.current) return false;
       const failures = results.filter((r) => !r.ok);
-      if (results.some((r) => r.scope === 'entry' && r.ok)) {
-        originalRef.current = { ...originalRef.current, startTime, endTime, description };
-      }
-      if (results.some((r) => r.scope === 'segment' && r.ok)) {
-        originalRef.current = { ...originalRef.current, mode, transitMin, noTravel };
-      }
-      if (failures.length === 0) {
-        // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page），update
-        // originalRef 讓 dirty 重置避免重複 save，setSubmitting(false) 讓 SaveStatus
-        // 從 saving → saved transit。
+      if (results.some((r) => r.ok)) {
+        // 各 scope 獨立提交：另一個 scope 失敗也不能重送已儲存的修改。
         originalRef.current = {
           ...originalRef.current,
-          startTime, endTime, description, mode, transitMin, noTravel,
+          ...(results.some((r) => r.scope === 'entry' && r.ok) ? { startTime, endTime, description } : {}),
+          ...(results.some((r) => r.scope === 'segment' && r.ok) ? { mode, transitMin, noTravel } : {}),
         };
-        setSubmitting(false);
-        return { status: 'saved' };
       }
+      if (failures.length === 0) {
+        failedAutoSaveRef.current = null;
+        setSubmitting(false);
+        return true;
+      }
+      failedAutoSaveRef.current = draftSignature;
       const msg = failures
-        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status || f.text || '網路錯誤'})`)
+        .map((f) => `${f.scope === 'entry' ? '景點' : '移動方式'}儲存失敗 (${f.status})`)
         .join('；');
       // v2.33.136-139: 對齊 mockup spec「儲存失敗 → 重試 + toast error」+
       // user feedback「右上角不用顯示狀態」。失敗走 toast，無 inline / titleBar
       // 顯示。
       showToast(msg, 'error', 6000);
       setSubmitting(false);
-      return { status: 'error', error: msg };
+      return false;
     } catch (err) {
-      if (!isCurrent()) return { status: 'superseded' };
+      if (saveScope !== saveScopeRef.current) return false;
       const msg = err instanceof Error ? err.message : '儲存失敗';
+      failedAutoSaveRef.current = draftSignature;
       showToast(msg, 'error', 6000);
       setSubmitting(false);
-      return { status: 'error', error: msg };
+      return false;
     }
   }, [
-    tripId, entry, entryId, validation, dirty, editLifetime,
-    startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry,
+    tripId, entry, entryId, validation, dirty.any, dirty.entryDirty, dirty.segmentDirty,
+    startTime, endTime, description, mode, transitMin, noTravel, segment, prevEntry, draftSignature, hasFormChanges,
   ]);
 
-  const failedFormSnapshot = useRef<string | null>(null);
-  const formFlight = useRef<Promise<SaveResult> | null>(null);
-  useEffect(() => {
-    formFlight.current = null;
-    failedFormSnapshot.current = null;
-    setSubmitting(false);
-  }, [editLifetime]);
-  const latestFormSave = useRef(saveFormBatch);
-  latestFormSave.current = saveFormBatch;
-  const handleSave = useCallback((): Promise<SaveResult> => {
-    if (formFlight.current) return formFlight.current;
-    const task = latestFormSave.current().then(result => {
-      if (formFlight.current === task) failedFormSnapshot.current = result.status === 'error' ? JSON.stringify(currentFields.current) : null;
-      return result;
-    }).finally(() => { if (formFlight.current === task) formFlight.current = null; });
-    formFlight.current = task;
+  const saveTaskRef = useRef<Promise<boolean> | null>(null);
+  const handleSave = useCallback((): Promise<boolean> => {
+    if (saveTaskRef.current) return saveTaskRef.current;
+    const task = saveChanges();
+    saveTaskRef.current = task;
+    void task.finally(() => { if (saveTaskRef.current === task) saveTaskRef.current = null; });
     return task;
+  }, [saveChanges]);
+
+  // v2.55.x：per-POI 備註 autosave 的 flush 註冊表。回前頁前先 await 沖出 pending 備註 PATCH，
+  // 確保返回時重新 fetch 的 days 讀到已 commit 的新值（否則 debounce PATCH 未 commit 就被返回的
+  // GET 搶先讀到舊值 = 「改備註返回沒生效、F5 才對」的 stale race）。
+  const noteSavesRef = useRef<Set<NoteSave>>(new Set());
+  const registerNoteFlush = useCallback((save: NoteSave) => {
+    noteSavesRef.current.add(save);
+    return () => { noteSavesRef.current.delete(save); };
   }, []);
-  const currentFields = useRef({ startTime, endTime, description, mode, transitMin, noTravel });
-  currentFields.current = { startTime, endTime, description, mode, transitMin, noTravel };
-  const hasFormPending = useCallback(() => {
-    const value = currentFields.current; const saved = originalRef.current;
-    return !!formFlight.current || Object.keys(value).some(key => value[key as keyof typeof value] !== saved[key as keyof typeof saved]);
+
+  // 1.2 秒只停止等待；逾時、離線與失敗都留在原處，由使用者重試或明確放棄。
+  const leaveAttemptRef = useRef(0);
+  useEffect(() => () => { leaveAttemptRef.current++; }, []);
+  const allowLeaveRef = useRef(false);
+  const blockedResetRef = useRef<(() => void) | null>(null);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+  const cappedSave = useCallback((task: Promise<boolean>): Promise<boolean> => {
+    let timer: ReturnType<typeof setTimeout>;
+    return Promise.race([
+      task.catch(() => false),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(false), 1200); }),
+    ]).finally(() => clearTimeout(timer));
   }, []);
-  type NoteEditor = { flush: () => Promise<SaveResult>; hasPending: () => boolean; discard: () => void };
-  const noteEditors = useRef(new Set<NoteEditor>());
-  const registerNoteFlush = useCallback((editor: NoteEditor) => {
-    noteEditors.current.add(editor);
-    return () => { noteEditors.current.delete(editor); };
-  }, []);
-  const flushEdits = useCallback(async (): Promise<SaveResult> => {
-    do {
-      const result = await handleSave();
-      if (result.status !== 'saved') return result;
-    } while (hasFormPending());
-    const notes = await Promise.all([...noteEditors.current].map(editor => editor.flush()));
-    return notes.find(result => result.status !== 'saved') ?? { status: 'saved' };
-  }, [handleSave, hasFormPending]);
+  const attemptLeave = useCallback(async (proceed: () => void) => {
+    const attempt = ++leaveAttemptRef.current;
+    pendingLeaveRef.current = proceed;
+    setShowDiscardModal(false);
+    setLeaveBusy(true);
+    const results = await Promise.all([
+      cappedSave(saveTaskRef.current ?? (hasFormChanges() ? handleSave() : Promise.resolve(true))),
+      ...[...noteSavesRef.current].map((save) => cappedSave(save.flush())),
+    ]);
+    if (attempt !== leaveAttemptRef.current) return;
+    setLeaveBusy(false);
+    if (results.every(Boolean) && !hasFormChanges() && ![...noteSavesRef.current].some((save) => save.pending())) {
+      pendingLeaveRef.current = null;
+      proceed();
+    } else {
+      setShowDiscardModal(true);
+    }
+  }, [cappedSave, handleSave, hasFormChanges]);
+
   const goBackFocused = useCallback(() => {
     if (!tripId) { navigate('/trips'); return; }
     const day = entryDayNumRef.current;
     const dayQuery = typeof day === 'number' ? `&focusDay=${day}` : '';
     navigate(`/trips?selected=${encodeURIComponent(tripId)}&focus=${entryId}${dayQuery}`);
   }, [tripId, entryId, navigate]);
-  const handleCancel = goBackFocused;
+
+  const handleCancel = useCallback(() => {
+    void attemptLeave(goBackFocused);
+  }, [attemptLeave, goBackFocused]);
+
+  const shouldBlockRoute = useCallback(() => !allowLeaveRef.current && (
+    hasFormChanges() || !!saveTaskRef.current || [...noteSavesRef.current].some((save) => save.pending())
+  ), [hasFormChanges]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasFormChanges() && !saveTaskRef.current && ![...noteSavesRef.current].some((save) => save.pending())) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasFormChanges]);
 
   // v2.33.108: debounce auto-save effect — dirty+valid+!submitting 800ms 後 fire handleSave。
   // 取代「儲存」button reassurance（user 改完 800ms 自動 PATCH，SaveStatus 顯示進度）。
   useEffect(() => {
-    if (failedFormSnapshot.current !== JSON.stringify(currentFields.current)) failedFormSnapshot.current = null;
-    if (!dirty.any || validation || submitting || failedFormSnapshot.current !== null) return;
+    if (failedAutoSaveRef.current !== draftSignature) failedAutoSaveRef.current = null;
+    if (!dirty.any || validation || submitting || failedAutoSaveRef.current === draftSignature) return;
     const timer = setTimeout(() => {
       void handleSave();
     }, 800);
     return () => clearTimeout(timer);
-  }, [dirty.any, validation, submitting, startTime, endTime, description, mode, transitMin, handleSave]);
+  }, [dirty.any, validation, submitting, startTime, endTime, description, mode, transitMin, handleSave, draftSignature]);
 
   // v2.27.0 multi-POI handlers ----------------------------------------------
 
@@ -1629,7 +1673,7 @@ export default function EditEntryPage() {
       if (e.repeat) return;
       // 任一 modal 開著 → 讓 modal 自己的 Escape handler 接 (ConfirmModal 內部
       // 有 onCancel)，page-level shortcut 不介入。
-      if (altSwapConfirm || isAnySheetOpen()) return;
+      if (showDiscardModal || altSwapConfirm) return;
       if ((e.metaKey || e.ctrlKey) && (e.key === 'Enter' || e.key === 's')) {
         e.preventDefault();
         void handleSave();
@@ -1643,7 +1687,7 @@ export default function EditEntryPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleSave, handleCancel, altSwapConfirm]);
+  }, [handleSave, handleCancel, showDiscardModal, altSwapConfirm]);
 
   // v2.33.139: titleBar 拔 SaveStatus indicator — user feedback「右上角不用
   // 顯示狀態」。靜默 auto-save，只在失敗時 showToast (v2.33.137 已實作對齊
@@ -1654,6 +1698,8 @@ export default function EditEntryPage() {
       shellClassName="tp-app"
       title={tripName ? `編輯景點 · ${tripName}` : '編輯景點'}
       back={handleCancel}
+      close={handleCancel}
+      confirmBeforeBack={(proceed) => { void attemptLeave(proceed); }}
       scopedStyles={SCOPED_STYLES}
     >
       <main className="tp-page-content">
@@ -2026,14 +2072,39 @@ export default function EditEntryPage() {
         </div>
       </main>
 
-      <SaveBeforeLeave
-        hasPending={() => hasFormPending() || [...noteEditors.current].some(editor => editor.hasPending())}
-        flush={flushEdits}
-        discard={() => {
-          originalRef.current = { ...currentFields.current };
-          noteEditors.current.forEach(editor => editor.discard());
+      {/* Failed or slow save: stay, retry, or explicitly discard before leaving. */}
+      <ConfirmModal
+        open={showDiscardModal}
+        title="尚未確認儲存"
+        message={`尚未確認儲存：${[
+          dirty.entryDirty && '時間／活動說明',
+          dirty.segmentDirty && '移動方式',
+          [...noteSavesRef.current].some((save) => save.pending()) && '景點備註／訂位資訊',
+        ].filter(Boolean).join('、') || '目前編輯'}。其他已保存的修改會保留；可重試、繼續編輯或放棄。`}
+        confirmLabel="放棄變更"
+        cancelLabel="繼續編輯"
+        busy={leaveBusy}
+        onConfirm={() => {
+          leaveAttemptRef.current++;
+          allowLeaveRef.current = true;
+          for (const save of noteSavesRef.current) save.cancel();
+          setShowDiscardModal(false);
+          const proceed = pendingLeaveRef.current;
+          pendingLeaveRef.current = null;
+          proceed?.();
         }}
-      />
+        onCancel={() => {
+          leaveAttemptRef.current++;
+          blockedResetRef.current?.();
+          pendingLeaveRef.current = null;
+          setShowDiscardModal(false);
+        }}
+      >
+        <button type="button" disabled={leaveBusy} onClick={() => {
+          const proceed = pendingLeaveRef.current;
+          if (proceed) void attemptLeave(proceed);
+        }}>重試儲存</button>
+      </ConfirmModal>
 
       {/* Master swap confirm (v2.27.0) with optional cross-region warning */}
       <ConfirmModal
@@ -2080,6 +2151,11 @@ export default function EditEntryPage() {
 
   return (
     <>
+      <EditRouteBlocker
+        shouldBlock={shouldBlockRoute}
+        onBlocked={(proceed) => { void attemptLeave(proceed); }}
+        resetRef={blockedResetRef}
+      />
       <ToastContainer />
       {main}
     </>
