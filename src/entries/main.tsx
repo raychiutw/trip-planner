@@ -98,6 +98,8 @@ const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
 const AppearanceSettingsPage = lazyWithRetry(() => import('../pages/AppearanceSettingsPage'));
 const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/NotificationsSettingsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
+// PROTOTYPE（throwaway）：AI 資料同意三個新畫面的變體比較，只在 dev 掛載，不進 main
+const AiConsentPrototype = lazyWithRetry(() => import('../pages/prototype/AiConsentPrototype'));
 const OauthAuthorizePage = lazyWithRetry(() => import('../pages/OauthAuthorizePage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
 const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
@@ -318,6 +320,7 @@ if (el) {
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
+              {import.meta.env.DEV && <Route path="/prototype/ai-consent" element={<AiConsentPrototype />} />}
               {/* 新 api 的第一方 App「瀏覽器登入」授權頁（登入＋一鍵繼續）；不看新 api 旗標 */}
               <Route path="/oauth/authorize" element={<OauthAuthorizePage />} />
               <Route path="/invite" element={<InvitePage />} />
