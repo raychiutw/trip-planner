@@ -96,6 +96,7 @@ const SessionsPage = lazyWithRetry(() => import('../pages/SessionsPage'));
 // Section 2 (terracotta-account-hub-page) — unified Account hub + sub-settings
 const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
 const AppearanceSettingsPage = lazyWithRetry(() => import('../pages/AppearanceSettingsPage'));
+const ChangePasswordPage = lazyWithRetry(() => import('../pages/ChangePasswordPage'));
 const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/NotificationsSettingsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
 const OauthAuthorizePage = lazyWithRetry(() => import('../pages/OauthAuthorizePage'));
@@ -211,6 +212,7 @@ function AccountModalRoutes({ children }: { children: (loc: ReturnType<typeof us
               <Route path="/account/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/account/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/account/sessions" element={<SessionsPage />} />
+              <Route path="/account/password" element={<ChangePasswordPage />} />
               <Route path="/account/connected-apps" element={<ConnectedAppsPage />} />
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
@@ -314,6 +316,7 @@ if (el) {
               {/* v2.32.4 cross-prefix aliases: account hub 用 /account/*, sessions/connected-apps
                   歷史在 /settings/*。User 直接打 URL 或舊書籤可能用任一 prefix → 兩個都 valid。 */}
               <Route path="/account/sessions" element={<SessionsPage />} />
+              <Route path="/account/password" element={<ChangePasswordPage />} />
               <Route path="/account/connected-apps" element={<ConnectedAppsPage />} />
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
