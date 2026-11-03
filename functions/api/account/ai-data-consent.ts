@@ -46,7 +46,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const { uid } = await requireAccountActor(context);
   const wrote = await recordWithdrawn(context.env.DB, uid);
-  if (wrote) await terminateQueuedRequests(context.env.DB, uid);
+  // 已是 withdrawn（重試）也再清一次：先前清理若中途失敗（500），重試時 wrote=false 不能讓排隊請求永遠留著。
+  // terminateQueuedRequests 只動 status='open' 的列、onlyIfActive，重複執行是冪等的；從未同意（none）不終結任何請求。
+  if (wrote || (await getConsentState(context.env.DB, uid)).status === 'withdrawn') await terminateQueuedRequests(context.env.DB, uid);
   return stateResponse(context.env, uid);
 };
 

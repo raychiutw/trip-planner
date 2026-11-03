@@ -19,6 +19,11 @@ describe('errorResponse extra', () => {
     expect(e.status).toBe(500);
     expect((await body(e)).error).not.toHaveProperty('secret');
   });
+  it('extra 帶了 code／message／detail 同名鍵也不能蓋掉標準欄位', async () => {
+    const b = await body(new AppError('PERM_DENIED', '無權限', { code: 'EVIL', message: 'evil', detail: 'evil', keep: 1 }));
+    expect(b.error).toMatchObject({ code: 'PERM_DENIED', detail: '無權限', keep: 1 });
+    expect(b.error.message).not.toBe('evil');
+  });
   it('沒有 extra 的錯誤：形狀不變（只有 code／message／detail）', async () => {
     const b = await body(new AppError('PERM_DENIED', '無權限'));
     expect(Object.keys(b.error).sort()).toEqual(['code', 'detail', 'message']);

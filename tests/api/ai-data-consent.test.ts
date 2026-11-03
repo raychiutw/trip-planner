@@ -424,6 +424,14 @@ describe('撤回：排隊中尚未開始的請求被終結', () => {
       expect(r!.reply).toContain('AI 資料同意已撤回');
     }
   });
+  it('重試撤回（已是 withdrawn）也會清掉殘留的排隊請求：先前清理失敗不會讓請求永遠留著', async () => {
+    await clearEvents();
+    await accept(COLLAB); await withdraw(COLLAB);          // 已撤回、事件已寫入
+    const leftover = await insertReq(COLLAB, 'open');      // 模擬上一次清理失敗而殘留的排隊請求
+    expect((await row(leftover))!.status).toBe('open');
+    await withdraw(COLLAB);                                // 重試：wrote=false，但仍須清理
+    expect(await row(leftover)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
+  });
   it('從未同意者「撤回」不終結任何請求', async () => {
     await clearEvents();
     const open = await insertReq(OTHER, 'open');

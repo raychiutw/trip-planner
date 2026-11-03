@@ -99,10 +99,11 @@ export function errorResponse(err: AppError): Response {
   return new Response(
     JSON.stringify({
       error: {
+        // extra 放最前面：即使 extra 帶了 code／message／detail 同名鍵，也不能蓋掉標準欄位
+        ...(err.status < 500 ? err.extra : undefined),
         code: err.code,
         message: err.message,
         detail: err.detail || undefined,
-        ...(err.status < 500 ? err.extra : undefined),
       },
     }),
     {
