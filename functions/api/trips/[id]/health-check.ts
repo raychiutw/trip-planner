@@ -19,6 +19,7 @@
 
 import { hasPermission, requireAuth, requireTripWrite } from '../../_auth';
 import { AppError } from '../../_errors';
+import { assertAiConsent } from '../../_aiDataConsent';
 import { json } from '../../_utils';
 import { recordEmailEvent } from '../../_audit';
 import { alertAdminTelegram } from '../../_alert';
@@ -211,6 +212,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const tripId = params.id as string;
 
   await requireTripWrite(env.DB, auth, tripId);
+  await assertAiConsent(env, auth, tripId);
 
   // v2.31.58 guard：empty trip（沒有任何 entry）不該觸發 AI 健檢 —
   // 浪費 Claude quota + 給 user 沒用的 findings。Frontend 也 disable
