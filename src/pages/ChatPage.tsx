@@ -37,6 +37,8 @@ import TitleBar from '../components/shell/TitleBar';
 import AccountCircle from '../components/shell/AccountCircle';
 import Icon from '../components/shared/Icon';
 import AiConsentSheet from '../components/AiConsentSheet';
+import AiDataConsentSheet from '../components/AiDataConsentSheet';
+import { useAiDataConsent } from '../hooks/useAiDataConsent';
 import MarkdownText from '../components/shared/MarkdownText';
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
@@ -531,7 +533,16 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   currentTripIdRef.current = activeTripId;
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  // AI 資料同意（ADR-0012）：送出前本地已知需要同意 → 攔下跳就地同意 sheet；或後端以 AI_CONSENT_* 擋下
+  // （owner-missing＝旅伴送出但行程擁有者未同意，沒有同意動作）。被攔訊息保留，同意後續送。
+  const dataConsent = useAiDataConsent();
+  const [dataGate, setDataGate] = useState<{ text: string; tripId: string; mode: 'consent' | 'owner-missing' } | null>(null);
+  const dataOkRef = useRef(false); // 剛同意完的那一次續送跳過檢查（send 的 closure 還是舊的 needsConsent）
+  const [dataBusy, setDataBusy] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   useEffect(() => {
+    setDataGate(null);
+    setDataError(null);
     consentGateRef.current = null;
     setConsentGate(null);
     setConsentBusy(false);
@@ -616,14 +627,26 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   const doSend = useCallback(async (text: string) => {
     setInput('');
-    await sendMessage(text, user);
-  }, [sendMessage, user, setInput]);
+    await sendMessage(text, user, (code) => {
+      // 後端擋下（雙方同意）：保留輸入，跳對應 sheet；本地沒有同意狀態可顯示時退回一般錯誤訊息
+      if (!dataConsent.consent || !activeTripId) return false;
+      setInput(text);
+      setDataGate({ text, tripId: activeTripId, mode: code === 'AI_CONSENT_OWNER_REQUIRED' ? 'owner-missing' : 'consent' });
+      return true;
+    });
+  }, [sendMessage, user, setInput, dataConsent.consent, activeTripId]);
 
   const send = useCallback((raw: string) => {
     const text = raw.trim();
     if (!text) return;
     if (!activeTripId) return;
     if (inflightId) return; // busy
+    // 資料同意先於操作授權：隱私同意是前提。本地尚未載入狀態時不攔，由後端 AI_CONSENT_* 當最終關卡（見 doSend）。
+    if (dataConsent.needsConsent && !dataOkRef.current) {
+      setDataGate({ text, tripId: activeTripId, mode: 'consent' });
+      setDataError(null);
+      return;
+    }
     // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
@@ -636,7 +659,28 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       return;
     }
     void doSend(text);
-  }, [activeTripId, inflightId, aiAuthorized, doSend]);
+  }, [activeTripId, inflightId, aiAuthorized, doSend, dataConsent.needsConsent]);
+
+  // 同意資料處理後續送被攔的訊息（切換行程後不續送）。
+  const acceptDataAndSend = useCallback(async () => {
+    const pending = dataGate;
+    if (!pending) return;
+    setDataBusy(true);
+    setDataError(null);
+    try {
+      await dataConsent.accept();
+      setDataGate(null);
+      if (currentTripIdRef.current === pending.tripId) {
+        dataOkRef.current = true;
+        send(pending.text);
+        dataOkRef.current = false;
+      }
+    } catch {
+      setDataError('同意失敗，請稍後再試。');
+    } finally {
+      setDataBusy(false);
+    }
+  }, [dataGate, dataConsent, send]);
 
   // 授權後續送：POST Consent → 標記已授權 → 送出原被攔訊息。
   const authorizeAndSend = useCallback(async () => {
@@ -964,6 +1008,18 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         </button>
       </form>
 
+      {dataConsent.consent && (
+        <AiDataConsentSheet
+          open={dataGate !== null}
+          consent={dataConsent.consent}
+          mode={dataGate?.mode}
+          message={dataGate?.text}
+          busy={dataBusy}
+          error={dataError}
+          onAccept={acceptDataAndSend}
+          onDecline={() => { setDataGate(null); setDataError(null); }}
+        />
+      )}
       <AiConsentSheet
         open={consentGate !== null}
         message={consentGate?.text ?? ''}

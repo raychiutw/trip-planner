@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.132] - 2026-11-03
+
+### Added
+- **版本化的「AI 資料同意」（旗標預設關閉，上線後行為完全不變）**：使用者要先同意「把行程內容交給 AI 處理」，AI 聊天、行程健檢與 AI 筆記才會執行；旅伴送出的要求需要送出者與行程擁有者**雙方**都同意。說明文字與版本由 server 提供，說明有實質更新時要重新同意。
+  - **三個畫面**（沿用 owner 簽核的版型）：聊天送出被攔下時的就地同意 sheet（輸入保留、同意後自動接續送出；行程擁有者未同意時顯示「暫時無法使用」、沒有同意鈕）、開新行程的合併授權卡（「操作授權」與「資料同意」一步完成，同意前可看到說明全文）、帳號設定的「AI 與資料」（查看說明、撤回前先確認並如實說明效力）。
+  - **撤回**：新的 AI 要求立即被拒絕，排隊中尚未開始的要求被終結並顯示「AI 資料同意已撤回，這個請求沒有被處理」；已開始的工作不保證能停止，已簽發的 token 不撤銷（沿用 ADR-0007，文案照實寫）。
+  - **agent 取得 owner 權限 token 時再檢查一次**（`/api/oauth/mint-restricted`）：涵蓋旗標啟用前已排隊、以及撤回與建立請求同時發生漏網的請求；缺任一方同意就不簽發、請求終結並留稽核紀錄。服務／系統送出的請求只看 owner。
+  - 新增資料表 `ai_data_consent_events`（只追加的同意／撤回事件，migration 0101，含 rollback）；帳號刪除會明確清掉該人的事件。
+
+### Changed
+- **交給 AI 的請求資料最小化**：對服務 token 與單一行程受限 token（agent 用的），`/api/requests` 的列表、單筆與 PATCH 回應不再帶送出者的 email（只留顯示名稱）；一般使用者的回應不變。
+- API 錯誤回應可帶額外欄位（`AI_CONSENT_*` 帶 `currentVersion`／`requiredVersion`／`status`），只在 4xx 輸出，且不能覆蓋標準欄位。
+
+### For contributors
+- 對應新 api repo 的 PR（同契約、同 migration 檔名；共用 D1，**先把 0101 套到 prod 再合併本 PR**，旗標開啟前還要填妥文案的責任人、聯絡信箱、條款連結）。ADR-0012 補上「mint 是第二個執法點」。
+- 測試：unit 4600+、api 1536+；新增 `tests/api/ai-data-consent*.test.ts`（4 檔）、`tests/unit/ai-data-consent-ui.test.tsx`、`chat-page-data-consent-gate.test.tsx`、`error-response-extra.test.ts`，閘門、資料最小化、撤回終結、mint 檢查、erasure、焦點與失敗路徑都做過 mutation（拿掉即轉紅）。`vitest.config.api` 是 `isolate:false`，文案以就地替換共用物件而非 `vi.mock`。
+- 審查：9 位專家＋Red Team 共 4 輪、adversarial 1 輪（Codex 未安裝，外部覆蓋缺失）。最後一輪 adversarial 後的兩個小修正（撤回重試也清理、`extra` 展開順序）**未經專家重審**，已附測試與 mutation 證據（owner 同意此綁定例外）。
+
 ## [2.57.131] - 2026-11-03
 
 ### Removed

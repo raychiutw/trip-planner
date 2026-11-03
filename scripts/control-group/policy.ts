@@ -37,6 +37,7 @@ export const POLICY: Record<string, TablePolicy> = {
   pois_search_cache: skip('使用者搜尋字串的快取'),
   app_settings: skip('系統設定與 API 設定（預設值由 migration 種）'),
   error_reports: skip('自由文字錯誤與 user agent'),
+  ai_data_consent_events: skip('個人的 AI 資料同意／撤回紀錄（誰、哪一版、何時；稽核用，對照組不需要）'),
   d1_migrations: skip('migration 紀錄由套用 migration 自己產生'),
 
   // ── 複製：身分 ──

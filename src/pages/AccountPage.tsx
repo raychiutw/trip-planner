@@ -20,6 +20,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import AiDataConsentSettings from '../components/AiDataConsentSettings';
 import { writeAuthHint } from '../lib/authHint';
 
 /** 新 api 模式：重新驗證的 challenge id 在導去 Google 前存起來，回到 /account 後 DELETE 要帶它（跨頁面導向，只能放 sessionStorage）。 */
@@ -670,6 +671,8 @@ export default function AccountPage() {
           </section>
         ))}
         </div>
+        {/* AI 資料同意（ADR-0012）：enforced=false 時整區不渲染 */}
+        <AiDataConsentSettings />
 
         {/* 版本頁尾 —— 使用者回報問題時第一個要問的就是「你用哪一版」。
             值由 vite define 注入，與 Sentry release tag 同源（vite.config.ts），

@@ -24,6 +24,7 @@
 
 import { requireAuth, requireTripWrite } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { assertAiConsent } from '../../../../_aiDataConsent';
 import {
   isNoteAiDocType,
   type NoteAiDocType,
@@ -104,6 +105,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const docType = type;
 
   await requireTripWrite(env.DB, auth, tripId);
+  await assertAiConsent(env, auth, tripId);
 
   await expireNoteAiJobs(env.DB, tripId, docType);
 

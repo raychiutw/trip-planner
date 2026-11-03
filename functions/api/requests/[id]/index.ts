@@ -7,6 +7,7 @@ import { hasOpsScope, hasPermission, hasWritePermission, requireAuth } from '../
 import { AppError } from '../../_errors';
 import { reapIfStale, updateRequest, type RequestPatch } from '../../_requestTermination';
 import { json, parseJsonBody } from '../../_utils';
+import { omitSubmitterEmail } from '../../_requestPrivacy';
 import type { Env } from '../../_types';
 
 // GET /api/requests/:id
@@ -34,7 +35,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     reaped.submitted_by_display_name = (row as Record<string, unknown>).submitted_by_display_name;
   }
 
-  return json(reaped);
+  return json(omitSubmitterEmail(auth, reaped));
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
@@ -60,7 +61,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const body = await parseJsonBody<RequestPatch>(context.request);
 
   const result = await updateRequest(env.DB, oldRow, body, { changedBy: auth.email });
-  return json(result);
+  return json(omitSubmitterEmail(auth, result));
 };
 
 export { sanitizeSchemaWords } from '../../_requestHealthCompletion';
