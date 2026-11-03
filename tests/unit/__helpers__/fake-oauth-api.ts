@@ -8,6 +8,8 @@
 export const FAKE_API_BASE = 'https://api.test';
 export const FAKE_EMAIL = 'ray@example.test';
 export const FAKE_PASSWORD = 'correct-horse-battery';
+/** 假 api 登記給 tripline-web 的回跳網址（精確比對，同後端 validateAuthorizeRequest）。 */
+export const FAKE_WEB_REDIRECT_URI = 'https://web.test/auth/callback';
 
 const B64URL_43 = /^[A-Za-z0-9_-]{43}$/;
 
@@ -218,6 +220,30 @@ export function createFakeOAuthApi() {
     isRefreshRevoked(refreshToken: string) {
       const r = refreshTokens.get(refreshToken);
       return r ? revokedFamilies.has(r.family) : true;
+    },
+    /**
+     * 模擬 GET /api/oauth/login/google 加上 Google 授權完成後的 callback：驗發起參數（契約來源：api repo
+     * src/routes/handlers/oauth/login/google.ts 與 callback/google.ts），通過就發第一方 code（綁 dpop_jkt、無 redirect_uri）
+     * 並回傳 302 的 Location（redirect_uri?code=&state=）；參數不合回 null。`deny` 模擬使用者在 Google 取消（error=access_denied）。
+     */
+    googleLogin(loginUrl: string, opts: { deny?: boolean; email?: string } = {}): string | null {
+      const u = new URL(loginUrl);
+      if (u.origin + u.pathname !== `${FAKE_API_BASE}/api/oauth/login/google`) return null;
+      const q = u.searchParams;
+      if (q.get('client_id') !== 'tripline-web' || q.get('redirect_uri') !== FAKE_WEB_REDIRECT_URI) return null;
+      const challenge = q.get('code_challenge');
+      if (q.get('code_challenge_method') !== 'S256' || !challenge || !B64URL_43.test(challenge)) return null;
+      const jkt = q.get('dpop_jkt');
+      if (jkt !== null && !B64URL_43.test(jkt)) return null;
+      const back = new URL(FAKE_WEB_REDIRECT_URI);
+      if (opts.deny) back.searchParams.set('error', 'access_denied');
+      else {
+        const code = randomToken();
+        codes.set(code, { challenge, jkt, email: opts.email ?? FAKE_EMAIL, used: false });
+        back.searchParams.set('code', code);
+      }
+      if (q.get('state')) back.searchParams.set('state', q.get('state')!);
+      return back.toString();
     },
     tokenRequests() { return requests.filter((r) => new URL(r.url).pathname === '/api/oauth/token'); },
   };

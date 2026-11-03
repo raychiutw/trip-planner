@@ -9,6 +9,8 @@
  */
 import { exportPublicJwk, generateDpopKeyPair, createDpopProof, jwkThumbprint } from './dpop';
 import { createPkcePair } from './pkce';
+import { bytesToBase64Url } from './encoding';
+import { sanitizeRedirectAfter } from '../redirect';
 import type { AuthStorage } from './storage';
 
 export const CLIENT_ID = 'tripline-web';
@@ -52,6 +54,16 @@ export interface AuthClient {
   /** 頁面載入時用持久的 refresh token＋金鑰換新 access token；沒有憑證回 false。 */
   restoreSession(): Promise<boolean>;
   logout(): Promise<void>;
+  /**
+   * 發起 Google 登入：產生 PKCE／state／DPoP 金鑰並暫存（IndexedDB），回傳要導向的新 api 入口網址。
+   * `redirectUri` 必須與授權伺服器登記的回跳網址精確相同。
+   */
+  startGoogleLogin(opts: { redirectUri: string; redirectAfterLogin?: string | null }): Promise<string>;
+  /**
+   * 處理 Google 登入的回跳（query 帶 code／state 或 error）：驗 state（不符一律拒絕）、用暫存的 verifier 與金鑰換 token。
+   * 不論成敗，暫存都會被刪除。回傳暫存的 redirect_after_login（沒有為 null）。
+   */
+  finishGoogleLogin(params: URLSearchParams): Promise<{ redirectAfterLogin: string | null }>;
   apiFetch(input: string | URL, init?: RequestInit): Promise<Response>;
   isAuthenticated(): boolean;
 }
@@ -175,6 +187,47 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     accessToken = tokens.access_token;
   }
 
+  async function startGoogleLogin(o: { redirectUri: string; redirectAfterLogin?: string | null }): Promise<string> {
+    const keyPair = await generateDpopKeyPair();
+    const jkt = await jwkThumbprint(await exportPublicJwk(keyPair));
+    const { verifier, challenge } = await createPkcePair();
+    const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+    await storage.savePendingLogin({ state, verifier, keyPair, redirectAfterLogin: sanitizeRedirectAfter(o.redirectAfterLogin ?? null) });
+    const target = new URL(url('/api/oauth/login/google'));
+    target.search = new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: o.redirectUri,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      state,
+      scope: LOGIN_SCOPE,
+      dpop_jkt: jkt,
+    }).toString();
+    return target.href;
+  }
+
+  async function finishGoogleLogin(params: URLSearchParams): Promise<{ redirectAfterLogin: string | null }> {
+    // 先領出暫存（同時刪掉）再驗：任何結果都不會留下可重用的 verifier／金鑰
+    const pending = await storage.takePendingLogin();
+    const state = params.get('state');
+    if (!pending || !state || state !== pending.state) {
+      throw new AuthError('OAUTH_STATE_MISMATCH', 'state 不符或登入不是從這個瀏覽器發起');
+    }
+    const providerError = params.get('error');
+    if (providerError) throw new AuthError(providerError, params.get('error_description') ?? providerError);
+    const code = params.get('code');
+    if (!code) throw new AuthError('AUTH_PROTOCOL', '回跳缺少 code');
+
+    // 第一方 code 沒有 redirect_uri，兌換時不可帶（後端 token-lifecycle 會比對兩邊必須一致）
+    const tokens = await postToken(
+      { grant_type: 'authorization_code', client_id: CLIENT_ID, code, code_verifier: pending.verifier }, pending.keyPair,
+    );
+    await storage.saveSession({ refreshToken: tokens.refresh_token, keyPair: pending.keyPair });
+    keyPairCache = pending.keyPair;
+    accessToken = tokens.access_token;
+    return { redirectAfterLogin: pending.redirectAfterLogin };
+  }
+
   async function doRefresh(): Promise<void> {
     // 鎖內才讀：別的分頁剛輪替過的話，這裡讀到的就是新的那顆
     const refreshToken = await storage.getRefreshToken();
@@ -249,5 +302,5 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     }
   }
 
-  return { login, refresh, restoreSession, logout, apiFetch, isAuthenticated: () => accessToken !== null };
+  return { login, startGoogleLogin, finishGoogleLogin, refresh, restoreSession, logout, apiFetch, isAuthenticated: () => accessToken !== null };
 }

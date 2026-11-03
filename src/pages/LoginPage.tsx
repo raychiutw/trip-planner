@@ -3,11 +3,13 @@
  *
  * Flow:
  *   - Primary: email + password form → POST /api/oauth/login → navigate redirect_after
- *   - Alt: 「使用 Google 登入」→ /api/oauth/login/google
+ *   - Alt: 「使用 Google 登入」→ 旗標關：/api/oauth/login/google（舊 cookie 流程）；
+ *          旗標開（VITE_NEW_API_AUTH=1）：導向新 api 的 Google 入口（PKCE＋DPoP），回跳頁是 /auth/callback
  *
  * Query params handled:
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
+ *   ?google_error=<code> → Google 登入失敗／取消的提示（由 /auth/callback 帶回）
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
  *   ?invitation=token → 登入後接受邀請；失敗回原邀請頁顯示結果
  */
@@ -15,7 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { apiFetchRaw } from '../lib/apiClient';
-import { AuthError, getNewApiAuth } from '../lib/auth';
+import { AuthError, getNewApiAuth, type AuthClient } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
@@ -251,6 +253,15 @@ function GoogleLogo() {
 
 const RATE_LIMIT_WARN_THRESHOLD = 4;
 
+/** /auth/callback 帶回的錯誤碼 → 登入頁提示。不信任 query 內容，只認得下列碼，其餘一律通用訊息。 */
+function googleErrorMessage(code: string): string {
+  switch (code) {
+    case 'access_denied': return 'Google 登入已取消';
+    case 'OAUTH_STATE_MISMATCH': return '登入驗證已失效，請重新登入';
+    default: return 'Google 登入失敗，請稍後再試';
+  }
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -264,7 +275,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [bannerError, setBannerError] = useState<string | null>(null);
+  const googleErrorCode = params.get('google_error');
+  const [bannerError, setBannerError] = useState<string | null>(
+    googleErrorCode ? googleErrorMessage(googleErrorCode) : null,
+  );
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
   const isLocked = lockedRetryAfter !== null;
@@ -282,6 +296,7 @@ export default function LoginPage() {
   // Whether the deployment has Google OIDC env configured. We optimistically
   // assume "no" so the button doesn't flash on slow networks; the probe flips
   // it on if /api/public-config confirms.
+  const newApiAuth = getNewApiAuth();
   const [googleAvailable, setGoogleAvailable] = useState(false);
 
   // Probe public-config to know which providers are enabled. Side-effect-free.
@@ -339,6 +354,20 @@ export default function LoginPage() {
     if (res.ok) return { ok: true };
     const errJson = (await res.json().catch(() => null)) as ApiError | null;
     return { ok: false, code: errJson?.error?.code ?? 'UNKNOWN', retryAfter: res.headers.get('Retry-After') };
+  }
+
+  /** 新 api 的 Google 登入：發起（暫存 PKCE／state／金鑰）後整頁導向新 api 入口。 */
+  async function startNewApiGoogleLogin(auth: AuthClient) {
+    setBannerError(null);
+    try {
+      const target = await auth.startGoogleLogin({
+        redirectUri: `${globalThis.location.origin}/auth/callback`,
+        redirectAfterLogin: googleRedirect,
+      });
+      globalThis.location.assign(target);
+    } catch {
+      setBannerError('Google 登入失敗，請稍後再試');
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -575,14 +604,26 @@ export default function LoginPage() {
         {googleAvailable && (
           <>
             <div className="tp-divider">或</div>
-            <a
-              className="tp-btn tp-btn-secondary"
-              href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
-              data-testid="login-google"
-            >
-              <GoogleLogo />
-              <span>使用 Google 登入</span>
-            </a>
+            {newApiAuth ? (
+              <button
+                type="button"
+                className="tp-btn tp-btn-secondary"
+                onClick={() => { void startNewApiGoogleLogin(newApiAuth); }}
+                data-testid="login-google"
+              >
+                <GoogleLogo />
+                <span>使用 Google 登入</span>
+              </button>
+            ) : (
+              <a
+                className="tp-btn tp-btn-secondary"
+                href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
+                data-testid="login-google"
+              >
+                <GoogleLogo />
+                <span>使用 Google 登入</span>
+              </a>
+            )}
           </>
         )}
 

@@ -9,6 +9,18 @@ export interface AuthSession {
   keyPair: CryptoKeyPair;
 }
 
+/**
+ * Google 登入發起後、整頁跳到 Google 再回來之間要暫存的東西（瀏覽器端，同一個 origin）。
+ * 金鑰是不可匯出的 CryptoKey，只能放 IndexedDB；所以這幾項一起放這裡，不進 localStorage／sessionStorage。
+ */
+export interface PendingLogin {
+  state: string;
+  verifier: string;
+  keyPair: CryptoKeyPair;
+  /** 登入完成後要去的站內路徑（發起時已 sanitize）；沒有就 null。 */
+  redirectAfterLogin: string | null;
+}
+
 export interface AuthStorage {
   getRefreshToken(): Promise<string | null>;
   getKeyPair(): Promise<CryptoKeyPair | null>;
@@ -16,18 +28,24 @@ export interface AuthStorage {
   /** refresh 輪替後只換 refresh token。 */
   saveRefreshToken(refreshToken: string): Promise<void>;
   clear(): Promise<void>;
+  savePendingLogin(pending: PendingLogin): Promise<void>;
+  /** 讀出並刪除（用過即刪）；沒有回 null。 */
+  takePendingLogin(): Promise<PendingLogin | null>;
 }
 
 /** 記憶體實作（測試用、也可當 IndexedDB 不可用時的退路 —— 此時重新整理即登出）。 */
 export function createMemoryAuthStorage(): AuthStorage & { dumpValues(): string[] } {
   let refreshToken: string | null = null;
   let keyPair: CryptoKeyPair | null = null;
+  let pending: PendingLogin | null = null;
   return {
     async getRefreshToken() { return refreshToken; },
     async getKeyPair() { return keyPair; },
     async saveSession(s) { refreshToken = s.refreshToken; keyPair = s.keyPair; },
     async saveRefreshToken(t) { refreshToken = t; },
-    async clear() { refreshToken = null; keyPair = null; },
+    async clear() { refreshToken = null; keyPair = null; pending = null; },
+    async savePendingLogin(p) { pending = p; },
+    async takePendingLogin() { const p = pending; pending = null; return p; },
     /** 測試用：目前存著的所有字串值（金鑰以標記代替）。 */
     dumpValues() { return [refreshToken ?? '', keyPair ? '[CryptoKeyPair]' : '']; },
   };
@@ -37,6 +55,7 @@ const DB_NAME = 'tripline-auth';
 const STORE = 'kv';
 const KEY_REFRESH = 'refreshToken';
 const KEY_PAIR = 'keyPair';
+const KEY_PENDING = 'pendingLogin';
 
 /**
  * IndexedDB 轉接層。CryptoKey 可結構化複製，所以不可匯出的私鑰可以直接存進去。
@@ -87,6 +106,14 @@ export function createIdbAuthStorage(opts: { indexedDB?: IDBFactory } = {}): Aut
     },
     async clear() {
       await run('readwrite', (s) => { s.clear(); });
+    },
+    async savePendingLogin(pending) {
+      await run('readwrite', (s) => { s.put(pending, KEY_PENDING); });
+    },
+    async takePendingLogin() {
+      // 同一個 transaction 先讀後刪：回跳頁被重複載入時，只有第一次拿得到
+      const v = await run('readwrite', (s) => { const req = s.get(KEY_PENDING); s.delete(KEY_PENDING); return req; }) as PendingLogin | undefined;
+      return v && typeof v.state === 'string' && typeof v.verifier === 'string' && v.keyPair?.privateKey ? v : null;
     },
   };
 }
