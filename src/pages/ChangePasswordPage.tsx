@@ -2,6 +2,8 @@
  * ChangePasswordPage — 已登入的「變更密碼」（flutter#529）
  *
  * Route: /account/password
+ * 版面：設定列式（inset grouped）＋標題列右上角主要動作（本 repo 表單頁慣例；owner 選定的變體 B，
+ * 並依 Apple HIG／WCAG 研究調整，見 docs/research/2026-11-03-change-password-apple-hig.md）。
  * 成功後後端會登出其他裝置、保留目前這台；這裡只負責表單、前端檢查與錯誤呈現。
  * 與「忘記密碼」（寄信重設）是兩件事。
  */
@@ -15,26 +17,30 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 
 const MIN_LEN = 8;
 
 const SCOPED_STYLES = `
 .tp-chgpw-shell { min-height: 100%; background: var(--color-secondary); overflow-y: auto; }
-.tp-chgpw-inner { max-width: 480px; margin: 0 auto; padding: 24px 16px 64px; }
-.tp-chgpw-form {
-  background: var(--color-background); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg); padding: 20px; display: flex; flex-direction: column; gap: 16px;
-}
-.tp-chgpw-field { display: flex; flex-direction: column; gap: 6px; }
-.tp-chgpw-field label { font-size: var(--font-size-callout); font-weight: 700; color: var(--color-foreground); }
-.tp-chgpw-helper, .tp-chgpw-error { font-size: var(--font-size-footnote); margin: 0; }
-.tp-chgpw-helper { color: var(--color-muted); }
+.tp-chgpw-inner { max-width: 640px; margin: 0 auto; padding: 16px 16px 64px; }
+.tp-chgpw-group { background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.tp-chgpw-row { display: grid; grid-template-columns: 7rem 1fr auto; align-items: center; gap: 8px; padding: 4px 16px; min-height: 52px; }
+.tp-chgpw-row + .tp-chgpw-row { border-top: 1px solid var(--color-border); }
+/* 輸入框自己不畫外框，焦點指示畫在整列上（WCAG 2.4.7：焦點必須看得見，不能只靠底色） */
+.tp-chgpw-row:focus-within { background: var(--color-accent-subtle); outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.tp-chgpw-row label { font-weight: 600; }
+/* 16px：iOS Safari 對小於 16px 的輸入框聚焦時會自動放大頁面 */
+.tp-chgpw-row input { border: 0; background: transparent; font: inherit; font-size: 16px; color: inherit; padding: 12px 0; outline: none; min-width: 0; }
+.tp-chgpw-toggle { background: none; border: 0; min-height: 44px; min-width: 44px; padding: 0 4px; font: inherit;
+  font-size: var(--font-size-footnote); color: var(--color-accent-text); cursor: pointer; }
+.tp-chgpw-foot, .tp-chgpw-error { margin: 8px 16px 0; font-size: var(--font-size-footnote); }
+.tp-chgpw-foot { color: var(--color-muted); }
 .tp-chgpw-error { color: var(--color-destructive); }
-.tp-chgpw-toggle { align-self: flex-start; background: none; border: 0; padding: 0 4px; font: inherit;
-  min-height: 44px; font-size: var(--font-size-footnote); color: var(--color-accent-text); cursor: pointer; }
+@media (max-width: 480px) { .tp-chgpw-row { grid-template-columns: 5.5rem 1fr auto; } }
 `;
 
-/** 後端的 CHANGE_PASSWORD_* 錯誤碼已登記人話文案（types/api.ts）；其餘（含網路失敗）一律通用的「稍後再試」。 */
+/** 後端的 CHANGE_PASSWORD_* 錯誤碼已登記人話文案（types/api.ts）；429 帶 Retry-After 時告訴使用者要等多久。 */
 function messageFor(err: unknown): string {
   if (err instanceof ApiError && err.code === 'CHANGE_PASSWORD_RATE_LIMITED' && err.retryAfter) {
     const wait = err.retryAfter < 60 ? `${err.retryAfter} 秒` : `${Math.ceil(err.retryAfter / 60)} 分鐘`;
@@ -51,15 +57,25 @@ export default function ChangePasswordPage() {
   const [next, setNext] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /** 後端回的錯誤與它屬於哪一欄（目前密碼錯標在目前密碼，其餘標在新密碼）；使用者改動任一欄就清掉。 */
+  const [server, setServer] = useState<{ message: string; field: 'current' | 'next' } | null>(null);
+  /** 本地規則（過短、與目前相同）離開新密碼欄位後，或按下主要動作後才顯示；打字中不跳錯。 */
+  const [showLocal, setShowLocal] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    if (!current) { setError('請輸入目前密碼'); return; }
-    if (next.length < MIN_LEN) { setError(`新密碼至少 ${MIN_LEN} 字元`); return; }
-    if (next === current) { setError('新密碼不能和目前密碼相同'); return; }
-    setError(null);
+  const localError = !next ? null
+    : next.length < MIN_LEN ? `新密碼至少 ${MIN_LEN} 字元`
+    : next === current ? '新密碼不能和目前密碼相同'
+    : null;
+  const shown = server ?? (showLocal && localError ? { message: localError, field: 'next' as const } : null);
+
+  function edit(setter: (v: string) => void, v: string) {
+    setter(v);
+    setServer(null);
+  }
+
+  async function submit() {
+    if (busy || !current || !next) return;
+    if (localError) { setShowLocal(true); return; }
     setBusy(true);
     try {
       await apiFetch('/account/password', {
@@ -69,35 +85,60 @@ export default function ChangePasswordPage() {
       showToast('密碼已更新，其他裝置已登出', 'success');
       navigate('/account');
     } catch (err) {
-      setError(messageFor(err));
+      setServer({
+        message: messageFor(err),
+        field: err instanceof ApiError && err.code === 'CHANGE_PASSWORD_CURRENT_INVALID' ? 'current' : 'next',
+      });
       setBusy(false);
     }
   }
 
+  const invalid = (field: 'current' | 'next') => (shown?.field === field ? true : undefined);
+  const describedBy = (field: 'current' | 'next') => (shown?.field === field ? 'chgpw-error' : undefined);
+
   const main = (
     <div className="tp-chgpw-shell" data-testid="change-password-page">
-      <TitleBar title="變更密碼" back={() => navigate('/account')} />
+      <TitleBar
+        title="變更密碼"
+        back={() => navigate('/account')}
+        actions={(
+          <TitleBarPrimaryAction
+            label="變更"
+            busyLabel="處理中…"
+            busy={busy}
+            disabled={!current || !next}
+            onClick={() => void submit()}
+            testId="change-password-submit"
+          />
+        )}
+      />
       <div className="tp-chgpw-inner">
-        <form className="tp-chgpw-form" onSubmit={onSubmit} noValidate>
-          <div className="tp-chgpw-field">
-            <label htmlFor="chgpw-current">目前密碼</label>
-            <input id="chgpw-current" className="tp-input-long" data-testid="change-password-current" type="password"
-              autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        <form onSubmit={(e: FormEvent) => { e.preventDefault(); void submit(); }} noValidate>
+          <div className="tp-chgpw-group">
+            <div className="tp-chgpw-row">
+              <label htmlFor="chgpw-current">目前密碼</label>
+              <input id="chgpw-current" data-testid="change-password-current" type="password" placeholder="必填"
+                autoComplete="current-password" value={current} onChange={(e) => edit(setCurrent, e.target.value)}
+                aria-invalid={invalid('current')} aria-describedby={describedBy('current')} />
+              <span />
+            </div>
+            <div className="tp-chgpw-row">
+              <label htmlFor="chgpw-new">新密碼</label>
+              <input id="chgpw-new" data-testid="change-password-new" type={show ? 'text' : 'password'} placeholder="必填"
+                autoComplete="new-password" value={next} onChange={(e) => edit(setNext, e.target.value)}
+                onBlur={() => setShowLocal(true)}
+                aria-invalid={invalid('next')} aria-describedby={describedBy('next')} />
+              {/* 標籤固定、狀態只用 aria-pressed 表達（W3C APG：不要同時換文字又設 aria-pressed） */}
+              <button type="button" className="tp-chgpw-toggle" data-testid="change-password-toggle" aria-pressed={show}
+                onClick={() => setShow((v) => !v)}>顯示密碼</button>
+            </div>
           </div>
-          <div className="tp-chgpw-field">
-            <label htmlFor="chgpw-new">新密碼</label>
-            <input id="chgpw-new" className="tp-input-long" data-testid="change-password-new" type={show ? 'text' : 'password'}
-              autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)}
-              aria-invalid={error ? true : undefined} aria-describedby={error ? 'chgpw-error' : undefined} />
-            <button type="button" className="tp-chgpw-toggle" data-testid="change-password-toggle" aria-pressed={show}
-              onClick={() => setShow((v) => !v)}>{show ? '隱藏密碼' : '顯示密碼'}</button>
-            <p className="tp-chgpw-helper">至少 {MIN_LEN} 字元。變更後，其他裝置會被登出，這台維持登入。</p>
-          </div>
-          {error && <p id="chgpw-error" className="tp-chgpw-error" role="alert">{error}</p>}
-          <button type="submit" className="tp-btn tp-btn-primary" data-testid="change-password-submit" disabled={busy}>
-            {busy ? '處理中…' : '變更密碼'}
-          </button>
+          {/* 表單的預設送出鈕：主要動作在標題列（表單外），這顆讓 Enter 鍵可以送出 */}
+          <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
         </form>
+        {shown && <p id="chgpw-error" className="tp-chgpw-error" role="alert">{shown.message}</p>}
+        {/* 常駐說明：規則不能只放在 placeholder（輸入後就消失） */}
+        <p className="tp-chgpw-foot">新密碼至少 {MIN_LEN} 字元。變更後，其他裝置會被登出，這台維持登入。</p>
       </div>
     </div>
   );

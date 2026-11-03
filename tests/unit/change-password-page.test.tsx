@@ -56,10 +56,73 @@ describe('ChangePasswordPage', () => {
     expect(field('change-password-new').type).toBe('password');
   });
 
-  it('輸入框用共用的 tp-input-long（保有 focus 樣式與 16px 防 iOS 縮放）', () => {
+  it('主要動作在標題列右上角（對齊表單頁慣例），不在表單裡；表單仍有預設送出鈕讓 Enter 鍵可送出', () => {
     renderPage();
-    expect(field('change-password-current').classList.contains('tp-input-long')).toBe(true);
-    expect(field('change-password-new').classList.contains('tp-input-long')).toBe(true);
+    const action = screen.getByTestId('change-password-submit');
+    expect(action.closest('form')).toBeNull();
+    expect(action.className).toContain('tp-titlebar-action');
+    const form = screen.getByTestId('change-password-page').querySelector('form')!;
+    expect(form.querySelector('button[type="submit"]')).not.toBeNull();
+  });
+
+  it('Enter 鍵（表單 submit）送出：與按標題列動作相同', async () => {
+    apiFetchMock.mockResolvedValueOnce({ ok: true });
+    renderPage();
+    fill(OLD, NEW);
+    fireEvent.submit(screen.getByTestId('change-password-page').querySelector('form')!);
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/account'));
+    expect(passwordCalls()).toHaveLength(1);
+  });
+
+  it('「至少 8 字元」是常駐說明（不只在 placeholder），出現錯誤時也還在', () => {
+    renderPage();
+    const page = screen.getByTestId('change-password-page');
+    expect(page.textContent).toContain('至少 8 字元');
+    fill(OLD, 'short');
+    fireEvent.blur(field('change-password-new'));
+    expect(screen.getByRole('alert').textContent).toContain('至少 8 字元');
+    expect(page.querySelector('.tp-chgpw-foot')?.textContent).toContain('至少 8 字元');
+  });
+
+  it('顯示／隱藏：標籤固定，只用 aria-pressed 表達狀態（不同時換文字）', () => {
+    renderPage();
+    const toggle = screen.getByTestId('change-password-toggle');
+    const label = toggle.textContent;
+    fireEvent.click(toggle);
+    expect(toggle.textContent).toBe(label);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('主要動作：任一欄空白時停用；兩欄都有填就啟用，即使內容不合法（讓使用者按了看原因）', () => {
+    renderPage();
+    const action = () => screen.getByTestId('change-password-submit') as HTMLButtonElement;
+    expect(action().disabled).toBe(true);
+    fill(OLD, '');
+    expect(action().disabled).toBe(true);
+    fill('', NEW);
+    expect(action().disabled).toBe(true);
+    fill(OLD, 'short');
+    expect(action().disabled).toBe(false);
+  });
+
+  it('本地規則（過短、與目前相同）離開新密碼欄位後才顯示，打字中不跳錯', () => {
+    renderPage();
+    fill(OLD, 'short');
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.blur(field('change-password-new'));
+    expect(screen.getByRole('alert').textContent).toContain('至少 8 字元');
+    fill(OLD, NEW); // 改對了，錯誤就消失
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('後端錯誤在使用者改動任一欄位後消失（不留著過時的錯誤）', async () => {
+    rejectWith('CHANGE_PASSWORD_CURRENT_INVALID', 403);
+    renderPage();
+    fill(OLD, NEW);
+    submit();
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('目前密碼不正確'));
+    fireEvent.change(field('change-password-current'), { target: { value: `${OLD}x` } });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('切換按鈕有 aria-pressed 反映顯示狀態', () => {
@@ -124,12 +187,14 @@ describe('ChangePasswordPage', () => {
     expect(passwordCalls()).toHaveLength(0);
   });
 
-  it('目前密碼錯（CHANGE_PASSWORD_CURRENT_INVALID）：顯示錯誤、保留已輸入內容、不離開頁面', async () => {
+  it('目前密碼錯（CHANGE_PASSWORD_CURRENT_INVALID）：顯示錯誤、錯誤標在目前密碼欄位、保留已輸入內容、不離開頁面', async () => {
     rejectWith('CHANGE_PASSWORD_CURRENT_INVALID', 403);
     renderPage();
     fill(OLD, NEW);
     submit();
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('目前密碼不正確'));
+    expect(field('change-password-current').getAttribute('aria-invalid')).toBe('true');
+    expect(field('change-password-new').getAttribute('aria-invalid')).toBeNull();
     expect(field('change-password-current').value).toBe(OLD);
     expect(field('change-password-new').value).toBe(NEW);
     expect(navigateMock).not.toHaveBeenCalled();
