@@ -1,0 +1,93 @@
+/**
+ * AiDataConsentSheet — 就地「AI 資料同意」底部 sheet（spec #1553、ADR-0012；已簽核變體 A）。
+ * 使用者在原畫面碰到受管制入口被擋時出現，同意後由上層接續原操作並保留輸入。
+ * 與 AiConsentSheet（AI 操作授權）是兩個獨立概念。純呈現：狀態與 POST 都在上層（useAiDataConsent）。
+ * mode='owner-missing'：旅伴送出但行程擁有者未同意——沒有「同意」動作（那是 owner 的決定），只告知。
+ */
+import { useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useSheetBehavior } from '../hooks/useSheetBehavior';
+import type { AiDataConsent } from '../hooks/useAiDataConsent';
+
+export const CONSENT_STYLES = `
+.tp-dc-backdrop { position: fixed; inset: 0; z-index: var(--z-modal, 9000); background: rgba(20,14,9,.42); display: flex; align-items: flex-end; justify-content: center; }
+.tp-dc-sheet { width: min(480px, 100%); max-height: 86dvh; overflow: auto; background: var(--color-background); color: var(--color-foreground); border-radius: 22px 22px 0 0; box-shadow: 0 -8px 30px rgba(0,0,0,.25); padding: 16px 18px max(20px, env(safe-area-inset-bottom)); }
+.tp-dc-title { font-size: 1.125rem; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.01em; }
+.tp-dc-lead { font-size: .875rem; color: var(--color-muted); margin: 0 0 12px; line-height: 1.5; }
+.tp-dc-banner { border-radius: var(--radius-md); padding: 10px 12px; font-size: .8125rem; margin-bottom: 12px; background: var(--color-accent-subtle); }
+.tp-dc-banner.warn { background: var(--color-destructive-bg); color: var(--color-destructive); }
+.tp-dc-acc { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 8px; }
+.tp-dc-acc summary { padding: 12px 14px; font-size: .875rem; font-weight: 600; cursor: pointer; min-height: var(--spacing-tap-min); display: flex; align-items: center; }
+.tp-dc-acc ul { margin: 0; padding: 0 14px 12px 32px; font-size: .8125rem; line-height: 1.55; }
+.tp-dc-row { display: flex; gap: 10px; margin-top: 12px; } .tp-dc-row > * { flex: 1; }
+.tp-dc-btn { font: inherit; font-size: 1rem; font-weight: 600; min-height: var(--spacing-tap-min); padding: 12px 18px; border-radius: var(--radius-md); cursor: pointer; border: 1px solid var(--color-border); background: var(--color-background); color: var(--color-foreground); }
+.tp-dc-btn.primary { background: var(--color-accent-fill); border-color: var(--color-accent-fill); color: var(--color-accent-foreground); }
+.tp-dc-btn[disabled] { opacity: .5; cursor: default; }
+.tp-dc-keep, .tp-dc-ver { font-size: .8125rem; color: var(--color-muted); margin: 10px 0 0; }
+.tp-dc-ver { font-size: .75rem; margin-top: 6px; }
+.tp-dc-err { margin-top: 8px; font-size: .8125rem; color: var(--color-destructive); }
+`;
+
+/** 說明文字（server 回的那一份）：每個章節一個可展開區，第一個預設展開。 */
+export function ConsentSections({ consent }: { consent: AiDataConsent }) {
+  return <>{consent.text.sections.map((s, i) => (
+    <details className="tp-dc-acc" key={s.heading} open={i === 0}>
+      <summary>{s.heading}</summary>
+      <ul>{s.items.map((it) => <li key={it}>{it}</li>)}</ul>
+    </details>
+  ))}</>;
+}
+
+export interface AiDataConsentSheetProps {
+  open: boolean;
+  consent: AiDataConsent;
+  mode?: 'consent' | 'owner-missing';
+  /** 被攔下、同意後會接續送出的訊息（有才顯示「已保留」提示） */
+  message?: string;
+  busy?: boolean;
+  error?: string | null;
+  onAccept: () => void;
+  onDecline: () => void;
+}
+
+export default function AiDataConsentSheet({ open, consent, mode = 'consent', message, busy = false, error = null, onAccept, onDecline }: AiDataConsentSheetProps) {
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onDecline, { initialFocusRef: primaryRef, canDismiss: !busy });
+  if (!open || typeof document === 'undefined') return null;
+  const ownerMissing = mode === 'owner-missing';
+
+  return createPortal(
+    <>
+      <style>{CONSENT_STYLES}</style>
+      <div ref={backdropRef} className="tp-dc-backdrop" role="presentation" onClick={busy ? undefined : onDecline}>
+        <div ref={panelRef} tabIndex={-1} className="tp-dc-sheet" role="dialog" aria-modal="true" aria-labelledby="tp-dc-title"
+          onClick={(e) => e.stopPropagation()} onKeyDown={handlePanelKeyDown} data-testid="ai-data-consent-sheet">
+          {ownerMissing ? (
+            <>
+              <h2 className="tp-dc-title" id="tp-dc-title">暫時無法使用 AI 助理</h2>
+              <div className="tp-dc-banner warn"><b>行程擁有者尚未同意 AI 資料處理。</b>這個行程的內容屬於擁有者，需要他同意後，AI 才能處理你的要求。</div>
+              <p className="tp-dc-lead">你的訊息已保留，沒有送出。請通知行程擁有者到「帳號設定 → AI 與資料」同意；其餘功能（手動編輯、共同編輯）不受影響。</p>
+              <div className="tp-dc-row"><button ref={primaryRef} type="button" className="tp-dc-btn primary" onClick={onDecline} data-testid="ai-data-consent-decline">知道了</button></div>
+            </>
+          ) : (
+            <>
+              <h2 className="tp-dc-title" id="tp-dc-title">{consent.text.title}</h2>
+              {consent.status === 'stale' && <div className="tp-dc-banner" data-testid="ai-data-consent-banner"><b>說明已更新</b>：請重新確認後才能繼續使用 AI。你仍可使用不需要 AI 的功能。</div>}
+              {consent.status === 'withdrawn' && <div className="tp-dc-banner" data-testid="ai-data-consent-banner">你先前已撤回同意。要再使用 AI 助理，請重新同意。</div>}
+              <p className="tp-dc-lead">{consent.text.intro}</p>
+              <ConsentSections consent={consent} />
+              <div className="tp-dc-row">
+                <button type="button" className="tp-dc-btn" onClick={onDecline} disabled={busy} data-testid="ai-data-consent-decline">暫不使用</button>
+                <button ref={primaryRef} type="button" className="tp-dc-btn primary" onClick={onAccept} disabled={busy} data-testid="ai-data-consent-accept">{busy ? '處理中⋯' : '同意並繼續'}</button>
+              </div>
+              {message && <p className="tp-dc-keep" data-testid="ai-data-consent-keep">你輸入的內容已保留，同意後會自動接續送出</p>}
+              <div className="tp-dc-ver" data-testid="ai-data-consent-version">版本 {consent.currentVersion}</div>
+              {error && <p className="tp-dc-err" data-testid="ai-data-consent-error">{error}</p>}
+            </>
+          )}
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}

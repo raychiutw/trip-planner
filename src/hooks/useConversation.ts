@@ -109,7 +109,8 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
     } finally { if (scopeRef.current === scope && scope.active) setStopping(false); }
   }, [inflightId, stopping, applyTerminal, scope]);
 
-  const sendMessage = useCallback(async (text: string, actor?: { email?: string; displayName?: string | null } | null) => {
+  /** onConsentGate：後端以 AI_CONSENT_* 擋下時呼叫；回傳 true＝呼叫端接手（移除樂觀訊息、不顯示「送出失敗」）。 */
+  const sendMessage = useCallback(async (text: string, actor?: { email?: string; displayName?: string | null } | null, onConsentGate?: (code: string) => boolean) => {
     if (!activeTripId || scopeRef.current !== scope || !scope.active || scope.sending || inflightId) return;
     scope.sending = true; setSending(true);
     const now = Math.max(Date.now(), lastLocalId.current + 2);
@@ -129,6 +130,11 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
           : message)));
     } catch (error) {
       if (scopeRef.current !== scope || !scope.active) return;
+      const code = (error as { code?: string }).code;
+      if (code?.startsWith('AI_CONSENT_') && onConsentGate?.(code)) {
+        setMessages((previous) => previous.filter((message) => message.id !== now && message.id !== now + 1));
+        return;
+      }
       setMessages((previous) => previous.map((message) => message.id === now + 1
         ? { ...message, text: `送出失敗：${error instanceof Error ? error.message : '網路錯誤'}`, pendingRequestId: null, failed: true }
         : message));

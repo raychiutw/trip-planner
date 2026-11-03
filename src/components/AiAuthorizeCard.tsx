@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { useAiDataConsent } from '../hooks/useAiDataConsent';
 
 // 對應 mockup V1 的 .ai-card；mockup 的 --accent/--sage/--radius 映射到 tokens.css 真值：
 // --accent→--color-accent、--sage-subtle/-deep→--color-accent-2-subtle/-deep、--radius→--radius-xl。
@@ -42,6 +43,10 @@ export default function AiAuthorizeCard() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // AI 資料同意（ADR-0012）：enforced 時，卡片把「操作授權」與「資料同意」合成同一步；
+  // 未強制（旗標關／文案未填妥）時完全照舊。
+  const dataConsent = useAiDataConsent();
+  const needData = dataConsent.needsConsent;
   // 使用者按授權後可能離開表單（送出/取消 NewTripPage）→ POST 未 resolve 前卸載；guard 掉 late setState。
   const mountedRef = useRef(true);
   useEffect(() => () => {
@@ -68,6 +73,7 @@ export default function AiAuthorizeCard() {
     setError(null);
     try {
       const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
+      if (needData) await dataConsent.accept();
       if (mountedRef.current) setAuthorized(r.authorized);
     } catch {
       if (mountedRef.current) setError('授權失敗，請稍後再試。');
@@ -92,7 +98,7 @@ export default function AiAuthorizeCard() {
         </div>
       </div>
 
-      {authorized === true && (
+      {authorized === true && !needData && (
         <div className="tp-ai-card__on" data-testid="ai-authorize-on">
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
@@ -105,7 +111,7 @@ export default function AiAuthorizeCard() {
         </div>
       )}
 
-      {authorized === false && (
+      {(authorized === false || (authorized === true && needData)) && (
         <button
           type="button"
           className="tp-ai-card__btn"
@@ -113,10 +119,15 @@ export default function AiAuthorizeCard() {
           disabled={busy}
           data-testid="ai-authorize-btn"
         >
-          {busy ? '授權中⋯' : '授權 AI'}
+          {busy ? '授權中⋯' : needData ? '同意並授權 AI' : '授權 AI'}
         </button>
       )}
 
+      {needData && (
+        <p className="tp-ai-card__desc" data-testid="ai-data-consent-summary">
+          同意後，你的行程內容與要求會交給 Anthropic（Claude）處理；可隨時在「帳號設定 → AI 與資料」撤回。
+        </p>
+      )}
       {error && (
         <p className="tp-ai-card__err" data-testid="ai-authorize-error">
           {error}
