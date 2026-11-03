@@ -14,6 +14,8 @@ export class ApiError extends Error {
   readonly severity: ErrorSeverity;
   /** v2.21.0: full response body for structured error payloads (e.g. 409 conflictWith). */
   readonly payload?: unknown;
+  /** 429 等回應的 `Retry-After`（秒）；沒有或不是正整數秒就是 undefined。跨網域要後端 CORS 暴露此標頭。 */
+  retryAfter?: number;
 
   constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown) {
     super(ERROR_MESSAGES[code] || code);
@@ -33,8 +35,15 @@ export class ApiError extends Error {
     this.severity = classifySeverity(this.code);
   }
 
-  /** 從 fetch Response 解析（支援新舊格式） */
+  /** 從 fetch Response 解析（支援新舊格式），並保存 `Retry-After`。 */
   static async fromResponse(res: Response): Promise<ApiError> {
+    const err = await ApiError.parseResponse(res);
+    const seconds = Number(res.headers.get('Retry-After'));
+    if (Number.isInteger(seconds) && seconds > 0) err.retryAfter = seconds;
+    return err;
+  }
+
+  private static async parseResponse(res: Response): Promise<ApiError> {
     try {
       const body = await res.json() as Record<string, unknown>;
 

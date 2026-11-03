@@ -84,6 +84,22 @@ describe('severity mapping', () => {
     expect(new ApiError('DATA_VALIDATION', 400).severity).toBe('minor');
   });
 
+  it('429 帶 Retry-After：保存等待秒數（新舊格式都要）', async () => {
+    const newFmt = new Response(JSON.stringify({ error: { code: 'CHANGE_PASSWORD_RATE_LIMITED' } }), { status: 429, headers: { 'Retry-After': '1800' } });
+    expect((await ApiError.fromResponse(newFmt)).retryAfter).toBe(1800);
+    const oldFmt = new Response(JSON.stringify({ error: '太頻繁' }), { status: 429, headers: { 'Retry-After': '30' } });
+    expect((await ApiError.fromResponse(oldFmt)).retryAfter).toBe(30);
+    const notJson = new Response('oops', { status: 429, headers: { 'Retry-After': '60' } });
+    expect((await ApiError.fromResponse(notJson)).retryAfter).toBe(60);
+  });
+
+  it('沒有 Retry-After 或不是正整數秒：retryAfter 為 undefined', async () => {
+    for (const headers of [{}, { 'Retry-After': 'abc' }, { 'Retry-After': '0' }, { 'Retry-After': '-5' }] as Record<string, string>[]) {
+      const err = await ApiError.fromResponse(new Response('{}', { status: 429, headers }));
+      expect(err.retryAfter).toBeUndefined();
+    }
+  });
+
   it('DATA_NOT_FOUND → severe', () => {
     expect(new ApiError('DATA_NOT_FOUND', 404).severity).toBe('severe');
   });
