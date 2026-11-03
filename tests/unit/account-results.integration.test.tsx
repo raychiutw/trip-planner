@@ -136,19 +136,16 @@ it('lets the user leave a failed delete preview and returns focus to the trigger
 it('ignores a cancelled preview that resolves after a newer delete preview', async () => {
   let resolveOld!: (response: Response) => void;
   previewReplies = [
-    // 帳號頁掛載時會先取一次預覽（決定要不要顯示「變更密碼」入口），這是第 1 次
-    Promise.resolve(json({ hasPassword: true, tripsOwned: 0, collaboratorsAffected: 0 })),
     new Promise<Response>((resolve) => { resolveOld = resolve; }),
     Promise.resolve(json({ hasPassword: true, tripsOwned: 2, collaboratorsAffected: 1 })),
   ];
   showAccount();
   const trigger = await screen.findByTestId('account-row-delete-account');
-  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(1));
   fireEvent.click(trigger);
-  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(2));
+  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(1));
   fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
   fireEvent.click(trigger);
-  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(3));
+  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(2));
   expect(await screen.findByText(/你的 2 個行程/)).toBeVisible();
   await act(async () => { resolveOld(json({ hasPassword: false, reauthProvider: 'google', reauthenticated: false, tripsOwned: 99, collaboratorsAffected: 80 })); });
   expect(screen.getByText(/你的 2 個行程/)).toBeVisible();
