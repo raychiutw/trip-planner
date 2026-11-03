@@ -75,10 +75,37 @@ describe('startGoogleLogin（發起）', () => {
   it('暫存不進 localStorage／sessionStorage／cookie（金鑰只能在 IndexedDB）', async () => {
     const { client } = setup();
     const writes: string[] = [];
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => { writes.push(`${k}=${v}`); });
-    await client.startGoogleLogin({ redirectUri: FAKE_WEB_REDIRECT_URI });
-    spy.mockRestore();
+    // node 環境沒有 Storage：以全域 stub 記錄任何寫入
+    const recorder = { setItem: (k: string, v: string) => { writes.push(`${k}=${v}`); } };
+    vi.stubGlobal('localStorage', recorder);
+    vi.stubGlobal('sessionStorage', recorder);
+    try {
+      await client.startGoogleLogin({ redirectUri: FAKE_WEB_REDIRECT_URI });
+    } finally {
+      vi.unstubAllGlobals();
+    }
     expect(writes).toEqual([]);
+  });
+});
+
+describe('假 api 的把關（避免測試因假後端太寬鬆而假綠）', () => {
+  it('回跳網址未登記（例如預覽網域）：假 api 拒絕發起', async () => {
+    const { api, client } = setup();
+    const href = await client.startGoogleLogin({ redirectUri: 'https://abc123.trip-planner-dby.pages.dev/auth/callback' });
+    expect(api.googleLogin(href)).toBeNull();
+  });
+
+  it('已登記的正式網址可以發起', async () => {
+    const { api, client } = setup();
+    const href = await client.startGoogleLogin({ redirectUri: 'https://trip-planner-dby.pages.dev/auth/callback' });
+    expect(api.googleLogin(href)).toContain('https://trip-planner-dby.pages.dev/auth/callback?code=');
+  });
+
+  it('scope 超出 client 的 allowed_scopes：假 api 拒絕', async () => {
+    const { api, client } = setup();
+    const u = new URL(await client.startGoogleLogin({ redirectUri: FAKE_WEB_REDIRECT_URI }));
+    u.searchParams.set('scope', `${LOGIN_SCOPE} admin:all`);
+    expect(api.googleLogin(u.toString())).toBeNull();
   });
 });
 
