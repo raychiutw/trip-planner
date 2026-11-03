@@ -8,7 +8,7 @@
  * ⚠️ 舊入口與新 api 各有一份，文字與版本號必須一致（web／Flutter 只顯示 server 回的內容）；改文案時兩個 repo 同步修改。
  *
  * - 責任人、聯絡信箱、處理方條款連結三處是**待填占位符**（{{...}}）。只要還有占位符，isConsentTextComplete() 就是 false，
- *   旗標 AI_CONSENT_ENFORCED 開了也不會強制（見 ai-data-consent.ts）。owner 填妥後以 PR 取代占位符。
+ *   旗標 AI_CONSENT_ENFORCED 開了也不會強制（見 _aiDataConsent.ts）。owner 填妥後以 PR 取代占位符。
  */
 
 export interface ConsentSection {

@@ -24,6 +24,7 @@ beforeAll(async () => {
   cookie = (await api.sessionFor(OWNER, userIdFor(OWNER))).cookie; // 帳號端點走瀏覽器 session
 });
 afterAll(async () => {
+  await db.prepare('DELETE FROM ai_data_consent_events WHERE user_id = ?').bind(userIdFor(OWNER)).run(); // DELETE 可能留下 withdrawn 事件
   await db.prepare('DELETE FROM trip_requests WHERE trip_id = ?').bind(TRIP).run();
   await db.prepare('DELETE FROM trip_health_reports WHERE trip_id = ?').bind(TRIP).run();
   await db.prepare('DELETE FROM trip_note_ai_jobs WHERE trip_id = ?').bind(TRIP).run();
@@ -74,7 +75,7 @@ describe('文案未填妥：POST 不得記錄同意', () => {
     const b = await res.json() as any;
     expect(b.error.code).toBe('AI_CONSENT_NOT_READY');
     expect(b.error.currentVersion).toBe('ai-data-v1');
-    const n = await db.prepare('SELECT COUNT(*) AS n FROM ai_data_consent_events').first<{ n: number }>();
+    const n = await db.prepare('SELECT COUNT(*) AS n FROM ai_data_consent_events WHERE user_id = ?').bind(userIdFor(OWNER)).first<{ n: number }>();
     expect(n!.n).toBe(0);
     expect((await api.get('/api/account/ai-data-consent', { cookie })).status).toBe(200);
     expect((await api.request('DELETE', '/api/account/ai-data-consent', { cookie })).status).toBe(200);

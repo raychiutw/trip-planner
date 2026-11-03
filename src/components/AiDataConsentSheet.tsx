@@ -20,7 +20,7 @@ export const CONSENT_STYLES = `
 .tp-dc-acc summary, .tp-dc-outer > summary { padding: 12px 14px; font-size: .875rem; font-weight: 600; cursor: pointer; min-height: var(--spacing-tap-min); display: flex; align-items: center; justify-content: space-between; list-style: none; }
 .tp-dc-outer > summary { padding-left: 0; padding-right: 0; }
 .tp-dc-acc summary::-webkit-details-marker, .tp-dc-outer > summary::-webkit-details-marker { display: none; }
-.tp-dc-acc summary::after, .tp-dc-outer > summary::after { content: '›' / ''; color: var(--color-muted); transition: transform 150ms; }
+.tp-dc-acc summary::after, .tp-dc-outer > summary::after { content: '›'; content: '›' / ''; color: var(--color-muted); transition: transform 150ms; }
 .tp-dc-acc[open] > summary::after, .tp-dc-outer[open] > summary::after { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .tp-dc-acc summary::after, .tp-dc-outer > summary::after { transition: none; } }
 .tp-dc-acc ul { margin: 0; padding: 0 14px 12px 32px; font-size: .8125rem; line-height: 1.55; }
