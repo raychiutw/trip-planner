@@ -5,20 +5,20 @@
  * 涵蓋：三個動作（狀態／同意／撤回）、四種狀態、雙方同意閘門（三個受管制入口）、旗標關閉＝現況、服務 token 不受閘門、
  * 撤回對排隊中請求的終結、請求列表對服務 token 的資料最小化。
  */
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
 import { mockEnv, seedTrip, seedUser, seedEntry, getDayId, userIdFor } from './helpers';
 import { createApi, type Api } from './http';
 import { serviceToken } from './service-token';
 import { cleanupTrips } from './cleanup-trips';
 import { assertAiConsent } from '../../functions/api/_aiDataConsent';
+import { CONSENT_TEXTS } from '../../functions/api/_aiDataConsentText';
 import { D1Adapter } from '../../src/server/oauth-d1-adapter';
 
-vi.mock('../../functions/api/_aiDataConsentText', async (importOriginal) => {
-  const m = await importOriginal<typeof import('../../functions/api/_aiDataConsentText')>();
-  const fill = (s: string) => s.replaceAll('{{RESPONSIBLE_PARTY}}', '測試責任人').replaceAll('{{CONTACT_EMAIL}}', 'privacy@example.test').replaceAll('{{TERMS_URL}}', 'https://example.test/terms');
-  return { ...m, CONSENT_TEXTS: Object.fromEntries(Object.entries(m.CONSENT_TEXTS).map(([k, v]) => [k, JSON.parse(fill(JSON.stringify(v)))])) };
-});
+// 文案填妥：vitest.config.api 為 isolate:false（模組快取跨檔案共用），vi.mock 會依檔案順序外洩或失效，
+// 所以改成就地替換共用的 CONSENT_TEXTS（beforeAll 換、afterAll 還原），讓讀真實文案的 incomplete 檔不受影響。
+const fill = (s: string) => s.replaceAll('{{RESPONSIBLE_PARTY}}', '測試責任人').replaceAll('{{CONTACT_EMAIL}}', 'privacy@example.test').replaceAll('{{TERMS_URL}}', 'https://example.test/terms');
+const originalTexts = { ...CONSENT_TEXTS };
 
 const SESSION_SECRET = 'test-secret-32-chars-long-enough';
 const P = 'aic';
@@ -56,6 +56,7 @@ const clearEvents = () => db.prepare("DELETE FROM ai_data_consent_events WHERE u
 const body = async (r: Response) => (await r.json()) as Record<string, any>;
 
 beforeAll(async () => {
+  for (const [k, v] of Object.entries(originalTexts)) CONSENT_TEXTS[k] = JSON.parse(fill(JSON.stringify(v)));
   db = await createTestDb();
   apiOn = createApi({ env: mockEnv(db, { AI_CONSENT_ENFORCED: 'true', ALLOWED_ORIGINS: ORIGIN, SESSION_SECRET }) });
   apiOff = createApi({ env: mockEnv(db, { ALLOWED_ORIGINS: ORIGIN, SESSION_SECRET }) });
@@ -67,6 +68,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  Object.assign(CONSENT_TEXTS, originalTexts);
   await clearEvents();
   await db.prepare('DELETE FROM trip_requests WHERE trip_id = ?').bind(TRIP).run();
   await db.prepare('DELETE FROM trip_health_reports WHERE trip_id = ?').bind(TRIP).run();
