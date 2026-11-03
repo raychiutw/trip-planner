@@ -189,6 +189,14 @@ describe('login 往返', () => {
     expect(await res.json()).toEqual({ email: FAKE_EMAIL });
   });
 
+  it('登入請求明確帶 scope：保留 openid profile email，並加上 trips:read trips:write（#521）', async () => {
+    const { api, client } = setup();
+    await client.login(FAKE_EMAIL, FAKE_PASSWORD);
+    const body = JSON.parse(api.requests.find((r) => r.url.endsWith('/api/oauth/login'))!.body);
+    expect(typeof body.scope).toBe('string');
+    expect(body.scope.split(' ').sort()).toEqual(['email', 'openid', 'profile', 'trips:read', 'trips:write']);
+  });
+
   it('密碼錯誤 → AuthError(LOGIN_INVALID, 401)，沒有任何東西被存起來', async () => {
     const { storage, client } = setup();
     await expect(client.login(FAKE_EMAIL, 'wrong')).rejects.toMatchObject({ code: 'LOGIN_INVALID', status: 401 });
