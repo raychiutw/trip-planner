@@ -119,6 +119,26 @@ describe('AiAuthorizeCard 合併卡 A', () => {
     expect(calls).toContain('POST /account/ai-authorization');
     expect(calls).toContain('POST /account/ai-data-consent');
   });
+  it('卡片同意前就能看到 server 的說明全文與版本（資料類別、處理方、撤回），stale 有橫幅', async () => {
+    fakeApi(state({ status: 'stale', acceptedVersion: 'ai-data-v0' }));
+    render(<AiAuthorizeCard />);
+    const box = await screen.findByTestId('ai-data-consent-summary');
+    expect(box.textContent).toContain('我們會交給 AI 的資料');
+    expect(box.textContent).toContain('Anthropic（Claude）');
+    expect(box.textContent).toContain('版本 ai-data-v1');
+    expect(box.textContent).toContain('說明已更新');
+  });
+  it('資料同意失敗：不送操作授權（狀態一致），顯示錯誤、按鈕仍在可重試', async () => {
+    const calls = fakeApi(state());
+    const base = mockApiFetch.getMockImplementation()!;
+    mockApiFetch.mockImplementation((path: string, o?: { method?: string }) =>
+      path === '/account/ai-data-consent' && o?.method === 'POST' ? Promise.reject(new Error('x')) : base(path, o));
+    render(<AiAuthorizeCard />);
+    fireEvent.click(await screen.findByTestId('ai-authorize-btn'));
+    expect(await screen.findByTestId('ai-authorize-error')).toBeTruthy();
+    expect(calls).not.toContain('POST /account/ai-authorization');
+    expect(screen.getByTestId('ai-authorize-btn')).toBeTruthy();
+  });
   it('已授權操作但資料同意未做：仍顯示按鈕（不能當完成）', async () => {
     fakeApi(state(), { authorized: true });
     render(<AiAuthorizeCard />);
@@ -153,6 +173,13 @@ describe('AiDataConsentSettings（帳號設定 B）', () => {
     fireEvent.click(screen.getByTestId('ai-data-withdraw-confirm-yes'));
     await waitFor(() => expect(calls).toContain('DELETE /account/ai-data-consent'));
     await waitFor(() => expect(screen.getByTestId('ai-data-settings-status').textContent).toContain('已關閉'));
+  });
+  it('已同意時仍可查看目前說明全文', async () => {
+    fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));
+    render(<AiDataConsentSettings />);
+    const box = await screen.findByTestId('ai-data-settings-text');
+    expect(box.textContent).toContain('我們會交給 AI 的資料');
+    expect(box.textContent).toContain('版本 ai-data-v1');
   });
   it('none／stale／withdrawn：顯示「查看說明並同意」，同意後轉 valid', async () => {
     fakeApi(state({ status: 'stale', acceptedVersion: 'ai-data-v0' }));

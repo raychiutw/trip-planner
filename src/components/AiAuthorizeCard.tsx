@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
 import { useAiDataConsent } from '../hooks/useAiDataConsent';
+import { ConsentSections, CONSENT_STYLES } from './AiDataConsentSheet';
 
 // 對應 mockup V1 的 .ai-card；mockup 的 --accent/--sage/--radius 映射到 tokens.css 真值：
 // --accent→--color-accent、--sage-subtle/-deep→--color-accent-2-subtle/-deep、--radius→--radius-xl。
@@ -72,8 +73,9 @@ export default function AiAuthorizeCard() {
     setBusy(true);
     setError(null);
     try {
-      const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
+      // 先資料同意（隱私前提）：失敗時操作授權尚未送出，狀態與訊息才一致
       if (needData) await dataConsent.accept();
+      const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
       if (mountedRef.current) setAuthorized(r.authorized);
     } catch {
       if (mountedRef.current) setError('授權失敗，請稍後再試。');
@@ -84,7 +86,7 @@ export default function AiAuthorizeCard() {
 
   return (
     <div className="tp-ai-card" data-testid="ai-authorize-card">
-      <style>{SCOPED_STYLES}</style>
+      <style>{SCOPED_STYLES}{needData ? CONSENT_STYLES : ''}</style>
       <div className="tp-ai-card__row">
         <div className="tp-ai-card__badge" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -123,10 +125,14 @@ export default function AiAuthorizeCard() {
         </button>
       )}
 
-      {needData && (
-        <p className="tp-ai-card__desc" data-testid="ai-data-consent-summary">
-          同意後，你的行程內容與要求會交給 Anthropic（Claude）處理；可隨時在「帳號設定 → AI 與資料」撤回。
-        </p>
+      {needData && dataConsent.consent && (
+        <div data-testid="ai-data-consent-summary" style={{ marginTop: 12 }}>
+          {dataConsent.consent.status === 'stale' && <div className="tp-dc-banner"><b>說明已更新</b>：請重新確認後才能繼續使用 AI。</div>}
+          {dataConsent.consent.status === 'withdrawn' && <div className="tp-dc-banner">你先前已撤回同意。要再使用 AI 助理，請重新同意。</div>}
+          <p className="tp-ai-card__desc" style={{ marginBottom: 8 }}>{dataConsent.consent.text.intro}</p>
+          <ConsentSections consent={dataConsent.consent} />
+          <div className="tp-dc-ver">版本 {dataConsent.consent.currentVersion}</div>
+        </div>
       )}
       {error && (
         <p className="tp-ai-card__err" data-testid="ai-authorize-error">

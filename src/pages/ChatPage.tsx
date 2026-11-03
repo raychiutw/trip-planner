@@ -641,14 +641,15 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     if (!text) return;
     if (!activeTripId) return;
     if (inflightId) return; // busy
-    // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
-    // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
-    // 讓後端 mint 當最終關卡。
+    // 資料同意先於操作授權：隱私同意是前提。本地尚未載入狀態時不攔，由後端 AI_CONSENT_* 當最終關卡（見 doSend）。
     if (dataConsent.needsConsent && !dataOkRef.current) {
       setDataGate({ text, tripId: activeTripId, mode: 'consent' });
       setDataError(null);
       return;
     }
+    // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
+    // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
+    // 讓後端 mint 當最終關卡。
     if (aiAuthorized === false) {
       const pending = { text, tripId: activeTripId };
       consentGateRef.current = pending;

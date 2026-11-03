@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useAiDataConsent } from '../hooks/useAiDataConsent';
-import AiDataConsentSheet, { CONSENT_STYLES } from './AiDataConsentSheet';
+import AiDataConsentSheet, { CONSENT_STYLES, ConsentSections } from './AiDataConsentSheet';
 
 const HEAD = { valid: 'AI 助理已開啟', stale: 'AI 助理已暫停：說明已更新', withdrawn: 'AI 助理已關閉', none: 'AI 助理尚未開啟' } as const;
 
@@ -35,6 +35,10 @@ export default function AiDataConsentSettings() {
       <p className="tp-dc-lead" style={{ margin: 0 }}>
         {valid ? `你在 ${when} 同意了這個版本。` : '同意前，AI 聊天、行程健檢與 AI 筆記無法使用；其餘功能不受影響。'}
       </p>
+      <details data-testid="ai-data-settings-text">
+        <summary className="tp-dc-lead" style={{ cursor: 'pointer', margin: 0 }}>查看目前的說明（版本 {consent.currentVersion}）</summary>
+        <div style={{ marginTop: 8 }}><ConsentSections consent={consent} /></div>
+      </details>
       {valid ? (
         confirming ? (
           <div data-testid="ai-data-withdraw-confirm">
