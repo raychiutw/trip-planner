@@ -1,5 +1,5 @@
 /** 帳號頁「變更密碼」入口：只有有 local 密碼的帳號才顯示（flutter#529）。 */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -28,13 +28,28 @@ function setup(accountResult: () => Promise<unknown>) {
 }
 const row = () => screen.queryByText('變更密碼');
 
-beforeEach(() => { apiFetchMock.mockReset(); });
+beforeEach(() => {
+  apiFetchMock.mockReset();
+  // 變更密碼端點只存在於新 api：旗標開啟才有這個功能
+  vi.stubEnv('VITE_NEW_API_AUTH', '1');
+});
+afterEach(() => { vi.unstubAllEnvs(); });
 
 describe('AccountPage 的變更密碼入口', () => {
   it('有 local 密碼：顯示，連到 /account/password', async () => {
     setup(() => Promise.resolve(preview(true)));
     await waitFor(() => expect(row()).not.toBeNull());
     expect(row()!.closest('a')?.getAttribute('href')).toBe('/account/password');
+  });
+
+  it('有 local 密碼但新 api 旗標關閉（舊入口沒有這個端點）：不顯示', async () => {
+    vi.stubEnv('VITE_NEW_API_AUTH', '');
+    setup(() => Promise.resolve(preview(true)));
+    await waitFor(() => expect(apiFetchMock.mock.calls.some((c) => c[0] === '/account/stats')).toBe(true));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(row()).toBeNull();
+    // 入口不會顯示，就不該白打一次 GET /account
+    expect(apiFetchMock.mock.calls.some((c) => c[0] === '/account')).toBe(false);
   });
 
   it('只用 Google 登入（沒有密碼）：不顯示', async () => {
