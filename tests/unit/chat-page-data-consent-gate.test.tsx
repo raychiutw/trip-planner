@@ -84,6 +84,20 @@ describe('ChatPage AI 資料同意閘門', () => {
     await waitFor(() => expect(screen.queryByTestId('ai-data-consent-sheet')).toBeNull());
   });
 
+  it('同意 API 失敗：sheet 保留並顯示錯誤、不 POST /requests、輸入保留（可重試）', async () => {
+    installMock(true);
+    const base = apiFetchMock.getMockImplementation()!;
+    apiFetchMock.mockImplementation((path: string, opts?: { method?: string }) =>
+      path === '/account/ai-data-consent' && opts?.method === 'POST' ? Promise.reject(new Error('boom')) : base(path, opts));
+    renderPage(); await ready();
+    await typeAndSend('把第三天晚餐改海鮮');
+    fireEvent.click(await screen.findByTestId('ai-data-consent-accept'));
+    expect((await screen.findByTestId('ai-data-consent-error')).textContent).toContain('同意失敗');
+    expect(screen.getByTestId('ai-data-consent-sheet')).toBeTruthy();
+    expect(requestPosts()).toHaveLength(0);
+    expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('把第三天晚餐改海鮮');
+  });
+
   it('暫不使用：不 POST /requests、sheet 關閉、輸入保留', async () => {
     installMock(true);
     renderPage(); await ready();

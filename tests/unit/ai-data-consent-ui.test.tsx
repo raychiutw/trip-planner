@@ -174,6 +174,21 @@ describe('AiDataConsentSettings（帳號設定 B）', () => {
     await waitFor(() => expect(calls).toContain('DELETE /account/ai-data-consent'));
     await waitFor(() => expect(screen.getByTestId('ai-data-settings-status').textContent).toContain('已關閉'));
   });
+  it('撤回失敗：顯示錯誤、狀態不變（仍已開啟）；撤回確認可取消', async () => {
+    const calls = fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));
+    const base = mockApiFetch.getMockImplementation()!;
+    mockApiFetch.mockImplementation((path: string, o?: { method?: string }) =>
+      o?.method === 'DELETE' ? Promise.reject(new Error('x')) : base(path, o));
+    render(<AiDataConsentSettings />);
+    fireEvent.click(await screen.findByTestId('ai-data-settings-withdraw'));
+    fireEvent.click(screen.getByText('取消')); // 取消 → 回到未確認，沒有送 DELETE
+    expect(screen.queryByTestId('ai-data-withdraw-confirm')).toBeNull();
+    expect(calls).not.toContain('DELETE /account/ai-data-consent');
+    fireEvent.click(screen.getByTestId('ai-data-settings-withdraw'));
+    fireEvent.click(screen.getByTestId('ai-data-withdraw-confirm-yes'));
+    expect((await screen.findByTestId('ai-data-settings-error')).textContent).toContain('撤回失敗');
+    expect(screen.getByTestId('ai-data-settings-status').textContent).toContain('已開啟');
+  });
   it('已同意時仍可查看目前說明全文', async () => {
     fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));
     render(<AiDataConsentSettings />);
