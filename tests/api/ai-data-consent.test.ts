@@ -396,6 +396,34 @@ describe('撤回：排隊中尚未開始的請求被終結', () => {
       await db.prepare('DELETE FROM trip_note_ai_jobs WHERE request_id = ?').bind(noteReq).run();
     }
   });
+  it('連動健檢報告的排隊請求：即使佇列很長，報告也被收尾（不留 pending）', async () => {
+    await clearEvents();
+    await accept(COLLAB);
+    for (let i = 0; i < 8; i++) await insertReq(COLLAB, 'open');
+    const healthReq = await insertReq(COLLAB, 'open');
+    await db.prepare("DELETE FROM trip_health_reports WHERE trip_id = ?").bind(TRIP).run();
+    await db.prepare("INSERT INTO trip_health_reports (trip_id, user_id, status, request_id) VALUES (?, ?, 'pending', ?)").bind(TRIP, uid(COLLAB), healthReq).run();
+    try {
+      await withdraw(COLLAB);
+      expect(await row(healthReq)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
+      const rep = await db.prepare('SELECT status FROM trip_health_reports WHERE trip_id = ?').bind(TRIP).first<{ status: string }>();
+      expect(rep!.status).not.toBe('pending');
+    } finally {
+      await db.prepare("DELETE FROM trip_health_reports WHERE trip_id = ?").bind(TRIP).run();
+    }
+  });
+  it('被終結的請求都帶說明（完整流程與批次收尾兩條路徑），不是預設的「已停止等待」', async () => {
+    await clearEvents();
+    await accept(COLLAB);
+    const ids: number[] = [];
+    for (let i = 0; i < 9; i++) ids.push(await insertReq(COLLAB, 'open')); // 前 5 筆走完整流程，後 4 筆批次
+    await withdraw(COLLAB);
+    for (const id of ids) {
+      const r = await db.prepare('SELECT status, reply FROM trip_requests WHERE id = ?').bind(id).first<{ status: string; reply: string | null }>();
+      expect(r!.status).toBe('failed');
+      expect(r!.reply).toContain('AI 資料同意已撤回');
+    }
+  });
   it('從未同意者「撤回」不終結任何請求', async () => {
     await clearEvents();
     const open = await insertReq(OTHER, 'open');

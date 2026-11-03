@@ -208,6 +208,14 @@ describe('AiDataConsentSettings（帳號設定 B）', () => {
     fireEvent.click(screen.getByText('取消'));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('ai-data-settings-withdraw')));
   });
+  it('撤回成功後：撤回按鈕被取代，焦點移到「查看說明並同意」，狀態列是 role=status', async () => {
+    fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));
+    render(<AiDataConsentSettings />);
+    expect((await screen.findByTestId('ai-data-settings-status')).getAttribute('role')).toBe('status');
+    fireEvent.click(screen.getByTestId('ai-data-settings-withdraw'));
+    fireEvent.click(screen.getByTestId('ai-data-withdraw-confirm-yes'));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('ai-data-settings-open')));
+  });
   it('同意失敗的錯誤只顯示在 sheet 內（頁面背後不重複），且為 role=alert', async () => {
     fakeApi(state({ status: 'stale', acceptedVersion: 'ai-data-v0' }));
     const base = mockApiFetch.getMockImplementation()!;

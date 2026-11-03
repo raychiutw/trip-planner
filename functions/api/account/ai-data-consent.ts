@@ -50,9 +50,18 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   return stateResponse(context.env, uid);
 };
 
+/** 完整流程每筆約 5–8 個 D1 subrequest，Pages 上限 50：無連動的一般聊天請求只對前 FULL_CLOSE_LIMIT 筆走完整流程。 */
+const FULL_CLOSE_LIMIT = 5;
+/** D1 單一語句最多 100 個綁定參數，留一點餘裕。 */
+const D1_BIND_BATCH = 90;
+/** 寫回 chat 的說明：這些請求從未開始，不是「停止等待」（預設的 cancelled 文案會讓人以為 AI 可能已動過行程）。 */
+const WITHDRAWN_REPLY = 'AI 資料同意已撤回，這個請求沒有被處理。';
+
 /**
  * 終結「排隊中尚未開始」（status=open）的請求：本人送出的，以及本人擁有的行程上別人送出的
- * （owner 撤回後，旅伴的請求也不該再被處理）。processing 的不動——已開始的工作不保證能停。
+ * （owner 撤回後，旅伴的請求也不該再被處理）。processing 的不動——已開始的工作不保證能停（ADR-0007）。
+ * 有連動健檢報告／筆記 job 的請求一律走完整流程（updateRequest 會一併收尾那些 job；每個行程同類只會有一個進行中，數量有限）。
+ * 無連動的一般聊天請求：前 FULL_CLOSE_LIMIT 筆走完整流程（留 audit），其餘以批次 UPDATE 收尾——這些超額的請求不留 audit 紀錄。
  */
 async function terminateQueuedRequests(db: D1Database, userId: string): Promise<void> {
   const { results } = await db
@@ -67,22 +76,22 @@ async function terminateQueuedRequests(db: D1Database, userId: string): Promise<
     .bind(userId, userId)
     .all<Record<string, unknown>>();
   const rows = results ?? [];
-  // 有連動健檢報告／筆記 job 的請求一律走完整流程（updateRequest 會一併收尾那些 job；每個行程同類只會有一個進行中，數量有限）。
-  // 沒有連動的一般聊天請求：前幾筆也走完整流程（留 audit），其餘以單一語句收尾——
-  // updateRequest 每筆約 5–8 個 D1 subrequest，Pages 上限 50。
   const linked = rows.filter((r) => r.linked);
   const plain = rows.filter((r) => !r.linked);
-  const FULL = 5;
-  for (const row of [...linked, ...plain.slice(0, FULL)]) {
-    await updateRequest(db, row, { status: 'failed', terminalReason: 'cancelled' }, { changedBy: 'system:ai-consent-withdrawn', onlyIfActive: true });
+  for (const row of [...linked, ...plain.slice(0, FULL_CLOSE_LIMIT)]) {
+    try {
+      await updateRequest(db, row, { status: 'failed', terminalReason: 'cancelled', reply: WITHDRAWN_REPLY }, { changedBy: 'system:ai-consent-withdrawn', onlyIfActive: true });
+    } catch (err) {
+      // 單筆失敗不能讓後面的請求留著不終結；已寫入 withdrawn，重試 DELETE 不會再清理，所以這裡吞掉並記錄
+      console.error('[ai-data-consent] terminate queued request failed:', err);
+    }
   }
-  const rest = plain.slice(FULL).map((r) => r.id as number);
-  // D1 單一語句最多 100 個綁定參數：以 90 為一批
-  for (let i = 0; i < rest.length; i += 90) {
-    const ids = rest.slice(i, i + 90);
+  const rest = plain.slice(FULL_CLOSE_LIMIT).map((r) => r.id as number);
+  for (let i = 0; i < rest.length; i += D1_BIND_BATCH) {
+    const ids = rest.slice(i, i + D1_BIND_BATCH);
     await db
-      .prepare(`UPDATE trip_requests SET status = 'failed', terminal_reason = 'cancelled' WHERE status = 'open' AND id IN (${ids.map(() => '?').join(',')})`)
-      .bind(...ids)
+      .prepare(`UPDATE trip_requests SET status = 'failed', terminal_reason = 'cancelled', reply = ?, updated_at = datetime('now') WHERE status = 'open' AND id IN (${ids.map(() => '?').join(',')})`)
+      .bind(WITHDRAWN_REPLY, ...ids)
       .run();
   }
 }

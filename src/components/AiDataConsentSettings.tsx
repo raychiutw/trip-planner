@@ -18,6 +18,8 @@ export default function AiDataConsentSettings() {
   const [error, setError] = useState<string | null>(null); // 撤回的錯誤（頁面內）
   const [sheetError, setSheetError] = useState<string | null>(null); // 同意的錯誤（顯示在 sheet 內，避免頁面背後重複一份）
   const withdrawRef = useRef<HTMLButtonElement>(null);
+  const openRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   const confirmRef = useRef<HTMLDivElement>(null);
   if (!consent?.enforced) return null;
 
@@ -28,6 +30,8 @@ export default function AiDataConsentSettings() {
   // 確認區出現／收起時移動焦點（原按鈕被卸載，焦點會掉到 body）
   const openConfirm = () => { setConfirming(true); setTimeout(() => confirmRef.current?.focus(), 0); };
   const closeConfirm = () => { setConfirming(false); setTimeout(() => withdrawRef.current?.focus(), 0); };
+  // 撤回成功後撤回按鈕已被「查看說明並同意」取代：焦點移到新的主按鈕（沒有就移到狀態列）
+  const afterWithdraw = () => { setConfirming(false); setTimeout(() => (openRef.current ?? statusRef.current)?.focus(), 0); };
   const valid = consent.status === 'valid';
   const when = consent.acceptedAt ? new Date(consent.acceptedAt).toLocaleDateString('zh-TW') : '';
 
@@ -35,15 +39,15 @@ export default function AiDataConsentSettings() {
     <section className="tp-dc-settings" data-testid="ai-data-settings" aria-label="AI 與資料">
       <style>{CONSENT_STYLES}{`.tp-dc-settings { border-radius: var(--radius-xl); padding: 16px; background: var(--color-accent-subtle); display: flex; flex-direction: column; gap: 8px; }`}</style>
       <h3 className="tp-dc-title" style={{ margin: 0 }}>AI 與資料</h3>
-      <div data-testid="ai-data-settings-status" style={{ fontWeight: 600 }}>
+      <div ref={statusRef} tabIndex={-1} role="status" data-testid="ai-data-settings-status" style={{ fontWeight: 600 }}>
         {HEAD[consent.status]}{valid && ` · 版本 ${consent.acceptedVersion}`}
       </div>
       <p className="tp-dc-lead" style={{ margin: 0 }}>
         {valid ? `你在 ${when} 同意了這個版本。` : '同意前，AI 聊天、行程健檢與 AI 筆記無法使用；其餘功能不受影響。'}
       </p>
-      <details className="tp-dc-acc" data-testid="ai-data-settings-text" style={{ background: 'var(--color-background)' }}>
+      <details className="tp-dc-outer" data-testid="ai-data-settings-text">
         <summary>查看目前的說明（版本 {consent.currentVersion}）</summary>
-        <div style={{ padding: '0 8px 8px' }}><ConsentSections consent={consent} /></div>
+        <div style={{ paddingBottom: 8 }}><ConsentSections consent={consent} /></div>
       </details>
       {valid ? (
         confirming ? (
@@ -53,14 +57,14 @@ export default function AiDataConsentSettings() {
             <div className="tp-dc-row">
               <button type="button" className="tp-dc-btn" onClick={closeConfirm} disabled={busy}>取消</button>
               <button type="button" className="tp-dc-btn" style={{ color: 'var(--color-destructive)' }} disabled={busy} data-testid="ai-data-withdraw-confirm-yes"
-                onClick={() => run(withdraw, closeConfirm, '撤回失敗，請稍後再試。', setError)}>撤回同意</button>
+                onClick={() => run(withdraw, afterWithdraw, '撤回失敗，請稍後再試。', setError)}>撤回同意</button>
             </div>
           </div>
         ) : (
           <button ref={withdrawRef} type="button" className="tp-dc-btn" style={{ color: 'var(--color-destructive)' }} onClick={openConfirm} data-testid="ai-data-settings-withdraw">撤回同意</button>
         )
       ) : (
-        <button type="button" className="tp-dc-btn primary" onClick={() => setSheet(true)} data-testid="ai-data-settings-open">查看說明並同意</button>
+        <button ref={openRef} type="button" className="tp-dc-btn primary" onClick={() => setSheet(true)} data-testid="ai-data-settings-open">查看說明並同意</button>
       )}
       {error && <p className="tp-dc-err" role="alert" data-testid="ai-data-settings-error">{error}</p>}
       <AiDataConsentSheet open={sheet} consent={consent} busy={busy} error={sheetError} onDecline={() => { setSheet(false); setSheetError(null); }}

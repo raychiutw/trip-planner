@@ -86,7 +86,7 @@ export default function AiAuthorizeCard() {
 
   return (
     <div className="tp-ai-card" data-testid="ai-authorize-card">
-      <style>{SCOPED_STYLES}{needData ? CONSENT_STYLES : ''}</style>
+      <style>{SCOPED_STYLES}{needData ? CONSENT_STYLES + '.tp-ai-card .tp-dc-banner { background: var(--color-background); border: 1px solid var(--color-border); }' : ''}</style>
       <div className="tp-ai-card__row">
         <div className="tp-ai-card__badge" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
