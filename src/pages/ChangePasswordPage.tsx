@@ -36,6 +36,10 @@ const SCOPED_STYLES = `
 
 /** 後端的 CHANGE_PASSWORD_* 錯誤碼已登記人話文案（types/api.ts）；其餘（含網路失敗）一律通用的「稍後再試」。 */
 function messageFor(err: unknown): string {
+  if (err instanceof ApiError && err.code === 'CHANGE_PASSWORD_RATE_LIMITED' && err.retryAfter) {
+    const wait = err.retryAfter < 60 ? `${err.retryAfter} 秒` : `${Math.ceil(err.retryAfter / 60)} 分鐘`;
+    return `嘗試次數過多，請在 ${wait}後再試`;
+  }
   if (err instanceof ApiError && err.code.startsWith('CHANGE_PASSWORD_')) return err.message;
   return '無法變更密碼，請稍後再試';
 }

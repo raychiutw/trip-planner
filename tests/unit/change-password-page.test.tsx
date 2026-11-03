@@ -151,6 +151,20 @@ describe('ChangePasswordPage', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Google'));
   });
 
+  it('被限流且有 Retry-After：告訴使用者要等多久（≥60 秒換分鐘進位，<60 秒用秒）', async () => {
+    for (const [seconds, text] of [[1800, '請在 30 分鐘後再試'], [90, '請在 2 分鐘後再試'], [45, '請在 45 秒後再試']] as const) {
+      apiFetchMock.mockReset();
+      const err = new ApiError('CHANGE_PASSWORD_RATE_LIMITED' as never, 429);
+      err.retryAfter = seconds;
+      apiFetchMock.mockRejectedValueOnce(err);
+      const { unmount } = renderPage();
+      fill(OLD, NEW);
+      submit();
+      await waitFor(() => expect(screen.getByRole('alert').textContent).toContain(text));
+      unmount();
+    }
+  });
+
   it('其他後端錯誤（非 CHANGE_PASSWORD_*）：顯示通用文案，不直接秀後端訊息', async () => {
     rejectWith('SYS_INTERNAL', 500);
     renderPage();
