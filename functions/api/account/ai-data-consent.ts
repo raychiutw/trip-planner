@@ -57,20 +57,26 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 async function terminateQueuedRequests(db: D1Database, userId: string): Promise<void> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM trip_requests
-       WHERE status = 'open'
-         AND (submitted_by = (SELECT email FROM users WHERE id = ?) OR trip_id IN (SELECT id FROM trips WHERE owner_user_id = ?))`,
+      `SELECT r.*,
+              (EXISTS (SELECT 1 FROM trip_note_ai_jobs j WHERE j.request_id = r.id)
+               OR EXISTS (SELECT 1 FROM trip_health_reports h WHERE h.request_id = r.id)) AS linked
+       FROM trip_requests r
+       WHERE r.status = 'open'
+         AND (r.submitted_by = (SELECT email FROM users WHERE id = ?) OR r.trip_id IN (SELECT id FROM trips WHERE owner_user_id = ?))`,
     )
     .bind(userId, userId)
     .all<Record<string, unknown>>();
   const rows = results ?? [];
-  // updateRequest 每筆約 5–8 個 D1 subrequest（audit、連動收尾）；Pages 上限 50，所以只對前幾筆走完整流程，
-  // 其餘以單一語句收尾（排隊中的一般聊天請求沒有連動的健檢／筆記 job）。
+  // 有連動健檢報告／筆記 job 的請求一律走完整流程（updateRequest 會一併收尾那些 job；每個行程同類只會有一個進行中，數量有限）。
+  // 沒有連動的一般聊天請求：前幾筆也走完整流程（留 audit），其餘以單一語句收尾——
+  // updateRequest 每筆約 5–8 個 D1 subrequest，Pages 上限 50。
+  const linked = rows.filter((r) => r.linked);
+  const plain = rows.filter((r) => !r.linked);
   const FULL = 5;
-  for (const row of rows.slice(0, FULL)) {
+  for (const row of [...linked, ...plain.slice(0, FULL)]) {
     await updateRequest(db, row, { status: 'failed', terminalReason: 'cancelled' }, { changedBy: 'system:ai-consent-withdrawn', onlyIfActive: true });
   }
-  const rest = rows.slice(FULL).map((r) => r.id as number);
+  const rest = plain.slice(FULL).map((r) => r.id as number);
   // D1 單一語句最多 100 個綁定參數：以 90 為一批
   for (let i = 0; i < rest.length; i += 90) {
     const ids = rest.slice(i, i + 90);

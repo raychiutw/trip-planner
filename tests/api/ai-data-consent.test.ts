@@ -381,6 +381,21 @@ describe('撤回：排隊中尚未開始的請求被終結', () => {
     await withdraw(COLLAB);
     for (const id of ids) expect(await row(id)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
   });
+  it('連動筆記 job／健檢報告的排隊請求：即使佇列很長，job 也被收尾（不留孤兒 pending）', async () => {
+    await clearEvents();
+    await accept(COLLAB);
+    for (let i = 0; i < 8; i++) await insertReq(COLLAB, 'open'); // 先塞滿無連動請求，超過完整流程上限
+    const noteReq = await insertReq(COLLAB, 'open');
+    await db.prepare("INSERT INTO trip_note_ai_jobs (request_id, trip_id, doc_type, status) VALUES (?, ?, 'tips', 'pending')").bind(noteReq, TRIP).run();
+    try {
+      await withdraw(COLLAB);
+      expect(await row(noteReq)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
+      const job = await db.prepare('SELECT status FROM trip_note_ai_jobs WHERE request_id = ?').bind(noteReq).first<{ status: string }>();
+      expect(job!.status).not.toBe('pending'); // 被終結而非留在 pending
+    } finally {
+      await db.prepare('DELETE FROM trip_note_ai_jobs WHERE request_id = ?').bind(noteReq).run();
+    }
+  });
   it('從未同意者「撤回」不終結任何請求', async () => {
     await clearEvents();
     const open = await insertReq(OTHER, 'open');
