@@ -150,7 +150,7 @@ it('ignores a cancelled preview that resolves after a newer delete preview', asy
   fireEvent.click(trigger);
   await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(3));
   expect(await screen.findByText(/你的 2 個行程/)).toBeVisible();
-  await act(async () => { resolveOld(json({ hasPassword: false, tripsOwned: 99, collaboratorsAffected: 80 })); });
+  await act(async () => { resolveOld(json({ hasPassword: false, reauthProvider: 'google', reauthenticated: false, tripsOwned: 99, collaboratorsAffected: 80 })); });
   expect(screen.getByText(/你的 2 個行程/)).toBeVisible();
   expect(screen.queryByText(/99 個行程/)).toBeNull();
 });
