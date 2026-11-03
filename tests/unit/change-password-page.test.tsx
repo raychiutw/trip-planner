@@ -151,6 +151,14 @@ describe('ChangePasswordPage', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Google'));
   });
 
+  it('其他後端錯誤（非 CHANGE_PASSWORD_*）：顯示通用文案，不直接秀後端訊息', async () => {
+    rejectWith('SYS_INTERNAL', 500);
+    renderPage();
+    fill(OLD, NEW);
+    submit();
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('無法變更密碼，請稍後再試'));
+  });
+
   it('網路失敗：顯示可重試的錯誤並保留輸入', async () => {
     apiFetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     renderPage();
