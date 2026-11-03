@@ -6,6 +6,7 @@
   },
   "private": true,
   "scripts": {
+    "prototype:change-password": "vite --open \"/prototype/change-password?variant=A\"",
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788 --d1 DB\"",
     "predev": "node scripts/sync-local-d1-migrations.mjs || true",
     "dev:vite": "vite",

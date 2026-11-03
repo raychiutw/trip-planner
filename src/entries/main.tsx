@@ -92,6 +92,7 @@ const VerifyEmailPage = lazyWithRetry(() => import('../pages/VerifyEmailPage'));
 const ConnectedAppsPage = lazyWithRetry(() => import('../pages/ConnectedAppsPage'));
 const DeveloperAppsPage = lazyWithRetry(() => import('../pages/DeveloperAppsPage'));
 const DeveloperAppNewPage = lazyWithRetry(() => import('../pages/DeveloperAppNewPage'));
+const ChangePasswordPrototype = lazyWithRetry(() => import('../pages/prototype/ChangePasswordPrototype'));
 const SessionsPage = lazyWithRetry(() => import('../pages/SessionsPage'));
 // Section 2 (terracotta-account-hub-page) — unified Account hub + sub-settings
 const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
@@ -295,6 +296,7 @@ if (el) {
               <Route path="/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
               {/* 未登入可讀 —— 不可放進需要 auth 的區塊 */}
               <Route path="/privacy" element={<PrivacyPage />} />
+              {import.meta.env.DEV && <Route path="/prototype/change-password" element={<ChangePasswordPrototype />} />}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />
