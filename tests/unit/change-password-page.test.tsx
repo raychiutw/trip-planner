@@ -56,6 +56,30 @@ describe('ChangePasswordPage', () => {
     expect(field('change-password-new').type).toBe('password');
   });
 
+  it('輸入框用共用的 tp-input-long（保有 focus 樣式與 16px 防 iOS 縮放）', () => {
+    renderPage();
+    expect(field('change-password-current').classList.contains('tp-input-long')).toBe(true);
+    expect(field('change-password-new').classList.contains('tp-input-long')).toBe(true);
+  });
+
+  it('切換按鈕有 aria-pressed 反映顯示狀態', () => {
+    renderPage();
+    const toggle = screen.getByTestId('change-password-toggle');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('有錯誤時：錯誤訊息與輸入框關聯（aria-invalid、aria-describedby），沒錯誤時不標', () => {
+    renderPage();
+    expect(field('change-password-new').getAttribute('aria-invalid')).toBeNull();
+    fill(OLD, 'short');
+    submit();
+    const alert = screen.getByRole('alert');
+    expect(field('change-password-new').getAttribute('aria-invalid')).toBe('true');
+    expect(field('change-password-new').getAttribute('aria-describedby')).toContain(alert.id);
+  });
+
   it('顯示／隱藏切換新密碼', () => {
     renderPage();
     fireEvent.click(screen.getByTestId('change-password-toggle'));
