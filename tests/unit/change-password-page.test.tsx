@@ -145,6 +145,8 @@ describe('ChangePasswordPage', () => {
     submit();
     await waitFor(() => expect((screen.getByTestId('change-password-submit') as HTMLButtonElement).disabled).toBe(true));
     submit();
+    // 繞過按鈕（例如 Enter 鍵、程式觸發）直接送出表單，也不會重複送出
+    fireEvent.submit(screen.getByTestId('change-password-page').querySelector('form')!);
     expect(passwordCalls()).toHaveLength(1);
     release({ ok: true });
     await waitFor(() => expect(navigateMock).toHaveBeenCalled());
