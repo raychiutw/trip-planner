@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
 import { useAiDataConsent } from '../hooks/useAiDataConsent';
-import { ConsentSections, CONSENT_STYLES } from './AiDataConsentSheet';
+import { ConsentSections, ConsentStatusBanner, CONSENT_STYLES } from './AiDataConsentSheet';
 
 // 對應 mockup V1 的 .ai-card；mockup 的 --accent/--sage/--radius 映射到 tokens.css 真值：
 // --accent→--color-accent、--sage-subtle/-deep→--color-accent-2-subtle/-deep、--radius→--radius-xl。
@@ -127,15 +127,14 @@ export default function AiAuthorizeCard() {
 
       {needData && dataConsent.consent && (
         <div data-testid="ai-data-consent-summary" style={{ marginTop: 12 }}>
-          {dataConsent.consent.status === 'stale' && <div className="tp-dc-banner"><b>說明已更新</b>：請重新確認後才能繼續使用 AI。</div>}
-          {dataConsent.consent.status === 'withdrawn' && <div className="tp-dc-banner">你先前已撤回同意。要再使用 AI 助理，請重新同意。</div>}
+          <ConsentStatusBanner status={dataConsent.consent.status} />
           <p className="tp-ai-card__desc" style={{ marginBottom: 8 }}>{dataConsent.consent.text.intro}</p>
           <ConsentSections consent={dataConsent.consent} />
           <div className="tp-dc-ver">版本 {dataConsent.consent.currentVersion}</div>
         </div>
       )}
       {error && (
-        <p className="tp-ai-card__err" data-testid="ai-authorize-error">
+        <p className="tp-ai-card__err" role="alert" data-testid="ai-authorize-error">
           {error}
         </p>
       )}

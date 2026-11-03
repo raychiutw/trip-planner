@@ -63,7 +63,20 @@ async function terminateQueuedRequests(db: D1Database, userId: string): Promise<
     )
     .bind(userId, userId)
     .all<Record<string, unknown>>();
-  for (const row of results ?? []) {
+  const rows = results ?? [];
+  // updateRequest 每筆約 5–8 個 D1 subrequest（audit、連動收尾）；Pages 上限 50，所以只對前幾筆走完整流程，
+  // 其餘以單一語句收尾（排隊中的一般聊天請求沒有連動的健檢／筆記 job）。
+  const FULL = 5;
+  for (const row of rows.slice(0, FULL)) {
     await updateRequest(db, row, { status: 'failed', terminalReason: 'cancelled' }, { changedBy: 'system:ai-consent-withdrawn', onlyIfActive: true });
+  }
+  const rest = rows.slice(FULL).map((r) => r.id as number);
+  // D1 單一語句最多 100 個綁定參數：以 90 為一批
+  for (let i = 0; i < rest.length; i += 90) {
+    const ids = rest.slice(i, i + 90);
+    await db
+      .prepare(`UPDATE trip_requests SET status = 'failed', terminal_reason = 'cancelled' WHERE status = 'open' AND id IN (${ids.map(() => '?').join(',')})`)
+      .bind(...ids)
+      .run();
   }
 }

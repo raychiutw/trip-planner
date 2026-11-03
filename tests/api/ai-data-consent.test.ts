@@ -215,18 +215,18 @@ describe('跨帳號、並行、不碰其他同意', () => {
 
 // ───────── 受管制入口 ─────────
 
-interface Entry { name: string; call: (as: string, api?: Api) => Promise<Response>; ok: number[]; count: () => Promise<number> }
+interface Entry { name: string; path: string; call: (as: string, api?: Api) => Promise<Response>; ok: number[]; count: () => Promise<number> }
 const reqCount = async () => (await db.prepare('SELECT COUNT(*) AS n FROM trip_requests WHERE trip_id = ?').bind(TRIP).first<{ n: number }>())!.n;
 let seq = 0;
 const ENTRIES: Entry[] = [
-  { name: 'POST /api/requests', ok: [201], count: reqCount,
+  { name: 'POST /api/requests', path: '/api/requests', ok: [201], count: reqCount,
     call: (as, api = apiOn) => api.request('POST', '/api/requests', { as, json: { tripId: TRIP, message: `請幫我排行程 ${++seq} ${Math.random()}` } }) },
-  { name: 'POST /api/trips/:id/health-check', ok: [202, 200], count: reqCount,
+  { name: 'POST /api/trips/:id/health-check', path: `/api/trips/${TRIP}/health-check`, ok: [202, 200], count: reqCount,
     call: async (as, api = apiOn) => {
       await db.prepare("DELETE FROM trip_health_reports WHERE trip_id = ?").bind(TRIP).run(); // 避開 30 秒去重
       return api.request('POST', `/api/trips/${TRIP}/health-check`, { as });
     } },
-  { name: 'POST /api/trips/:id/notes/:type/generate', ok: [202, 200], count: reqCount,
+  { name: 'POST /api/trips/:id/notes/:type/generate', path: `/api/trips/${TRIP}/notes/tips/generate`, ok: [202, 200], count: reqCount,
     call: async (as, api = apiOn) => {
       await db.prepare("DELETE FROM trip_note_ai_jobs WHERE trip_id = ?").bind(TRIP).run(); // 避開進行中 job 去重
       return api.request('POST', `/api/trips/${TRIP}/notes/tips/generate`, { as, json: {} });
@@ -324,7 +324,7 @@ describe.each(ENTRIES)('受管制入口：$name', (entry) => {
   it('服務 token（無 userId）不套用閘門：行為與旗標關閉時相同', async () => {
     await clearEvents();
     const as = async (api: Api) => {
-      const r = await api.request('POST', entry.name.includes('/api/requests') ? '/api/requests' : entry.name.includes('health') ? `/api/trips/${TRIP}/health-check` : `/api/trips/${TRIP}/notes/tips/generate`, { bearer: companion, json: { tripId: TRIP, message: 'x' } });
+      const r = await api.request('POST', entry.path, { bearer: companion, json: { tripId: TRIP, message: 'x' } });
       return { status: r.status, code: ((await r.json()) as any)?.error?.code };
     };
     const on = await as(apiOn);
@@ -372,6 +372,14 @@ describe('撤回：排隊中尚未開始的請求被終結', () => {
     const collabOpen = await insertReq(COLLAB, 'open');
     await withdraw(OWNER);
     expect(await row(collabOpen)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
+  });
+  it('排隊中的請求很多（超過完整流程上限）：全部終結，不會留下孤兒', async () => {
+    await clearEvents();
+    await accept(COLLAB);
+    const ids: number[] = [];
+    for (let i = 0; i < 12; i++) ids.push(await insertReq(COLLAB, 'open'));
+    await withdraw(COLLAB);
+    for (const id of ids) expect(await row(id)).toEqual({ status: 'failed', terminal_reason: 'cancelled' });
   });
   it('從未同意者「撤回」不終結任何請求', async () => {
     await clearEvents();
@@ -423,8 +431,31 @@ describe('GET /api/requests：對服務 token 省略 submittedBy（email）', ()
     expect(ob.submittedByDisplayName).toBe(OWNER.split('@')[0]);
     expect(JSON.stringify([arr, page, ob])).not.toContain('@test.com');
   });
+  it('PATCH /api/requests/:id（AI 回覆時呼叫的那條）對 restrict_trip token 也省略 submittedBy', async () => {
+    const restricted = await apiOn.tokenFor(OWNER, ['trips:read', 'trips:write'], { restrictTrip: TRIP });
+    const res = await apiOn.request('PATCH', `/api/requests/${reqId}`, { bearer: restricted, json: { reply: 'ok', status: 'processing' } });
+    expect(res.status).toBe(200);
+    const b = await res.json() as Record<string, unknown>;
+    expect(b).not.toHaveProperty('submittedBy');
+    expect(JSON.stringify(b)).not.toContain('@test.com');
+  });
   it('GET /api/requests/:id 對服務 token 仍是 403（沒有任何 email 外洩路徑）', async () => {
     const res = await apiOn.request('GET', `/api/requests/${reqId}`, { bearer: svc });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('帳號刪除（eraseUserAccount）明確清掉同意事件，不單靠 FK cascade', () => {
+  it('tablesCleared 含 ai_data_consent_events，且該人的事件被清空、別人的保留', async () => {
+    await clearEvents();
+    await seedEvent(STRANGER, 'ai-data-v1', 'accepted');
+    await seedEvent(OTHER, 'ai-data-v1', 'accepted');
+    const { eraseUserAccount } = await import('../../functions/api/_erasure');
+    const summary = await eraseUserAccount(db, uid(STRANGER));
+    expect(summary.tablesCleared.ai_data_consent_events).toBe(1);
+    expect(await events(STRANGER)).toEqual([]);
+    expect(await events(OTHER)).toHaveLength(1);
+    await seedUser(db, STRANGER); // 還原，避免影響後面共用 D1 的測試
+    await clearEvents();
   });
 });

@@ -128,6 +128,16 @@ describe('AiAuthorizeCard 合併卡 A', () => {
     expect(box.textContent).toContain('版本 ai-data-v1');
     expect(box.textContent).toContain('說明已更新');
   });
+  it('資料同意成功但操作授權失敗：資料同意保留、顯示錯誤、按鈕回到「授權 AI」可重試', async () => {
+    fakeApi(state());
+    const base = mockApiFetch.getMockImplementation()!;
+    mockApiFetch.mockImplementation((path: string, o?: { method?: string }) =>
+      path === '/account/ai-authorization' && o?.method === 'POST' ? Promise.reject(new Error('x')) : base(path, o));
+    render(<AiAuthorizeCard />);
+    fireEvent.click(await screen.findByTestId('ai-authorize-btn'));
+    expect((await screen.findByTestId('ai-authorize-error')).getAttribute('role')).toBe('alert');
+    expect(screen.getByTestId('ai-authorize-btn').textContent).toBe('授權 AI'); // 資料同意已完成，只剩操作授權
+  });
   it('資料同意失敗：不送操作授權（狀態一致），顯示錯誤、按鈕仍在可重試', async () => {
     const calls = fakeApi(state());
     const base = mockApiFetch.getMockImplementation()!;
@@ -188,6 +198,27 @@ describe('AiDataConsentSettings（帳號設定 B）', () => {
     fireEvent.click(screen.getByTestId('ai-data-withdraw-confirm-yes'));
     expect((await screen.findByTestId('ai-data-settings-error')).textContent).toContain('撤回失敗');
     expect(screen.getByTestId('ai-data-settings-status').textContent).toContain('已開啟');
+  });
+  it('撤回確認：開啟時焦點移到確認區、取消時回到撤回按鈕', async () => {
+    fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));
+    render(<AiDataConsentSettings />);
+    const withdraw = await screen.findByTestId('ai-data-settings-withdraw');
+    fireEvent.click(withdraw);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('ai-data-withdraw-confirm')));
+    fireEvent.click(screen.getByText('取消'));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('ai-data-settings-withdraw')));
+  });
+  it('同意失敗的錯誤只顯示在 sheet 內（頁面背後不重複），且為 role=alert', async () => {
+    fakeApi(state({ status: 'stale', acceptedVersion: 'ai-data-v0' }));
+    const base = mockApiFetch.getMockImplementation()!;
+    mockApiFetch.mockImplementation((path: string, o?: { method?: string }) =>
+      path === '/account/ai-data-consent' && o?.method === 'POST' ? Promise.reject(new Error('x')) : base(path, o));
+    render(<AiDataConsentSettings />);
+    fireEvent.click(await screen.findByTestId('ai-data-settings-open'));
+    fireEvent.click(await screen.findByTestId('ai-data-consent-accept'));
+    const err = await screen.findByTestId('ai-data-consent-error');
+    expect(err.getAttribute('role')).toBe('alert');
+    expect(screen.queryByTestId('ai-data-settings-error')).toBeNull();
   });
   it('已同意時仍可查看目前說明全文', async () => {
     fakeApi(state({ status: 'valid', acceptedVersion: 'ai-data-v1', acceptedAt: '2026-11-03T00:00:00Z' }));

@@ -61,7 +61,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const body = await parseJsonBody<RequestPatch>(context.request);
 
   const result = await updateRequest(env.DB, oldRow, body, { changedBy: auth.email });
-  return json(result);
+  return json(omitSubmitterEmail(auth, result));
 };
 
 export { sanitizeSchemaWords } from '../../_requestHealthCompletion';

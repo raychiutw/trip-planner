@@ -17,7 +17,10 @@ export const CONSENT_STYLES = `
 .tp-dc-banner { border-radius: var(--radius-md); padding: 10px 12px; font-size: .8125rem; margin-bottom: 12px; background: var(--color-accent-subtle); }
 .tp-dc-banner.warn { background: var(--color-destructive-bg); color: var(--color-destructive); }
 .tp-dc-acc { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 8px; }
-.tp-dc-acc summary { padding: 12px 14px; font-size: .875rem; font-weight: 600; cursor: pointer; min-height: var(--spacing-tap-min); display: flex; align-items: center; }
+.tp-dc-acc summary { padding: 12px 14px; font-size: .875rem; font-weight: 600; cursor: pointer; min-height: var(--spacing-tap-min); display: flex; align-items: center; justify-content: space-between; list-style: none; }
+.tp-dc-acc summary::-webkit-details-marker { display: none; }
+.tp-dc-acc summary::after { content: '›'; color: var(--color-muted); transition: transform 150ms; }
+.tp-dc-acc[open] > summary::after { transform: rotate(90deg); }
 .tp-dc-acc ul { margin: 0; padding: 0 14px 12px 32px; font-size: .8125rem; line-height: 1.55; }
 .tp-dc-row { display: flex; gap: 10px; margin-top: 12px; } .tp-dc-row > * { flex: 1; }
 .tp-dc-btn { font: inherit; font-size: 1rem; font-weight: 600; min-height: var(--spacing-tap-min); padding: 12px 18px; border-radius: var(--radius-md); cursor: pointer; border: 1px solid var(--color-border); background: var(--color-background); color: var(--color-foreground); }
@@ -27,6 +30,13 @@ export const CONSENT_STYLES = `
 .tp-dc-ver { font-size: .75rem; margin-top: 6px; }
 .tp-dc-err { margin-top: 8px; font-size: .8125rem; color: var(--color-destructive); }
 `;
+
+/** 說明已更新（stale）／已撤回（withdrawn）的橫幅；其他狀態不顯示。就地 sheet 與合併卡共用同一份文案。 */
+export function ConsentStatusBanner({ status }: { status: AiDataConsent['status'] }) {
+  if (status === 'stale') return <div className="tp-dc-banner" data-testid="ai-data-consent-banner"><b>說明已更新</b>：請重新確認後才能繼續使用 AI。你仍可使用不需要 AI 的功能。</div>;
+  if (status === 'withdrawn') return <div className="tp-dc-banner" data-testid="ai-data-consent-banner">你先前已撤回同意。要再使用 AI 助理，請重新同意。</div>;
+  return null;
+}
 
 /** 說明文字（server 回的那一份）：每個章節一個可展開區，第一個預設展開。 */
 export function ConsentSections({ consent }: { consent: AiDataConsent }) {
@@ -72,8 +82,7 @@ export default function AiDataConsentSheet({ open, consent, mode = 'consent', me
           ) : (
             <>
               <h2 className="tp-dc-title" id="tp-dc-title">{consent.text.title}</h2>
-              {consent.status === 'stale' && <div className="tp-dc-banner" data-testid="ai-data-consent-banner"><b>說明已更新</b>：請重新確認後才能繼續使用 AI。你仍可使用不需要 AI 的功能。</div>}
-              {consent.status === 'withdrawn' && <div className="tp-dc-banner" data-testid="ai-data-consent-banner">你先前已撤回同意。要再使用 AI 助理，請重新同意。</div>}
+              <ConsentStatusBanner status={consent.status} />
               <p className="tp-dc-lead">{consent.text.intro}</p>
               <ConsentSections consent={consent} />
               <div className="tp-dc-row">
@@ -82,7 +91,7 @@ export default function AiDataConsentSheet({ open, consent, mode = 'consent', me
               </div>
               {message && <p className="tp-dc-keep" data-testid="ai-data-consent-keep">你輸入的內容已保留，同意後會自動接續送出</p>}
               <div className="tp-dc-ver" data-testid="ai-data-consent-version">版本 {consent.currentVersion}</div>
-              {error && <p className="tp-dc-err" data-testid="ai-data-consent-error">{error}</p>}
+              {error && <p className="tp-dc-err" role="alert" data-testid="ai-data-consent-error">{error}</p>}
             </>
           )}
         </div>
