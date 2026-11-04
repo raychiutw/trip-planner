@@ -7,7 +7,7 @@
   "lang": "zh-TW",
   "description": "旅遊行程規劃：每日景點、餐廳推薦、地圖導航、交通安排、預算規劃，一頁搞定。",
   "display": "standalone",
-  "background_color": "#FBF3E8",
+  "background_color": "#FFFBF5",
   "theme_color": "#8A6038",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
