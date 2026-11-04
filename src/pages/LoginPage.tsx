@@ -22,8 +22,8 @@ const SCOPED_STYLES = `
 .tp-login-shell {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 20% 0%, rgba(169, 122, 74, 0.06), transparent 50%),
-    radial-gradient(circle at 80% 100%, rgba(169, 122, 74, 0.04), transparent 50%),
+    radial-gradient(circle at 20% 0%, rgba(138, 96, 56, 0.06), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(138, 96, 56, 0.04), transparent 50%),
     var(--color-secondary);
   /* mobile fallback: single-column centered */
   display: flex; align-items: center; justify-content: center;
@@ -87,7 +87,7 @@ const SCOPED_STYLES = `
   position: absolute;
   bottom: -80px; left: -80px;
   width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(169, 122, 74, 0.24) 0%, transparent 68%);
+  background: radial-gradient(circle, rgba(138, 96, 56, 0.24) 0%, transparent 68%);
   pointer-events: none;
 }
 .tp-bs-eyebrow {

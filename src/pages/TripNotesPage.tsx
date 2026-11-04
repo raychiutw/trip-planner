@@ -280,6 +280,8 @@ const SCOPED_STYLES = `
   cursor: pointer;
 }
 .tp-notes-exclusions-btn.is-empty { color: var(--color-muted); font-weight: 500; }
+/* 錯誤框（priority-high-bg 紅調淡底）內的重試鈕：品牌棕疊在紅調底只有 4.45，改用前景色＋底線（#1572） */
+.tp-notes-ai-status.is-failed .tp-notes-exclusions-btn { color: var(--color-foreground); text-decoration: underline; }
 .tp-notes-exclusions-btn:hover { text-decoration: underline; }
 .tp-notes-exclusions-btn:focus-visible {
   outline: 2px solid var(--color-focus-ring); outline-offset: 2px;

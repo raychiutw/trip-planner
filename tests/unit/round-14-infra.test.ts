@@ -3,7 +3,7 @@
  *
  * Source-grep guard（auth-cleanup.js 的 retention sweep 屬 agent repo，已隨 T16 階段 C 移除）:
  *   1. _headers CSP narrow + global security headers (Referrer-Policy / COOP / nosniff)
- *   2. index.html theme-color sync to manifest #F47B5E
+ *   2. index.html theme-color sync to manifest #8A6038（#1572 起為品牌棕）
  *   3. vite.config 拔 leaflet optimizeDeps + 補 manualChunks
  *   4. _routes.json 加 /og/* exclude
  *   5. manifest scope/id/lang/description + icon purpose
@@ -54,14 +54,14 @@ describe('v2.33.60 #1 — _headers CSP tighten + global security headers', () =>
 });
 
 describe('v2.33.60 #2 — index.html theme-color sync', () => {
-  it('theme-color 對齊 manifest terracotta (#F47B5E)', () => {
-    expect(INDEX_HTML).toMatch(/theme-color["']\s*content=["']#F47B5E/);
+  it('theme-color 對齊 manifest 品牌棕 (#8A6038)', () => {
+    expect(INDEX_HTML).toMatch(/theme-color["']\s*content=["']#8A6038/);
     // 不允許 active meta tag 仍用舊 ocean blue (comment 提到無妨)
     expect(INDEX_HTML).not.toMatch(/content=["']#0077B6/);
   });
 
-  it('manifest theme_color 仍是 #F47B5E', () => {
-    expect(MANIFEST.theme_color).toBe('#F47B5E');
+  it('manifest theme_color 是 #8A6038', () => {
+    expect(MANIFEST.theme_color).toBe('#8A6038');
   });
 });
 

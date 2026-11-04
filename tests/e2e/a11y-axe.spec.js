@@ -300,14 +300,15 @@ test('a11y: 地圖頁 trip switcher 下拉無 serious/critical 違規（鎖住 #
 
   // Negative control —— 這是本檔唯一「一開始就是綠」的守衛，沒有這段就沒有任何證據
   // 證明它抓得到東西（縮範圍的 include 打錯、選擇器失效都會靜默全綠）。
-  // 把選中列的文字改回修正前的 --color-accent，同一支掃描必須立刻紅。
+  // 把選中列的文字改成對比不足的淡棕 #C9A27A（品牌色收斂為 #8A6038 後，--color-accent 本身已達標，
+  // 不能再當壞值），同一支掃描必須立刻紅。
   await page.addStyleTag({
-    content: '.tp-titlebar-trip-row.is-active { color: var(--color-accent) !important; }',
+    content: '.tp-titlebar-trip-row.is-active { color: #C9A27A !important; }',
   });
   const injected = await scanSeriousCritical(page, '.tp-titlebar-trip-dropdown');
   expect(
     injected.some((v) => v.id === 'color-contrast'),
-    'negative control 失效：把選中列改回 --color-accent 後掃描仍是綠的，代表這支守衛沒有在守',
+    'negative control 失效：把選中列改成低對比色後掃描仍是綠的，代表這支守衛沒有在守',
   ).toBe(true);
 });
 

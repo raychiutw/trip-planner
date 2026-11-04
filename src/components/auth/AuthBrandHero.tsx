@@ -66,7 +66,7 @@ const HERO_STYLES = `
   bottom: -80px; left: -80px;
   width: 300px; height: 300px;
   border-radius: 50%;
-  background: rgba(169, 122, 74, 0.18);
+  background: rgba(138, 96, 56, 0.18);
   pointer-events: none;
 }
 .tp-bs-eyebrow {

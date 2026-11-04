@@ -12,7 +12,7 @@
  * tests/unit/trip-print-styles-contrast.test.ts 從最終字串算對比，守住這幾個值。
  */
 const PAPER_ACCENT_FILL = '#8A6038';
-const PAPER_ACCENT_DEEP = '#7A5430';
+const PAPER_ACCENT_DEEP = '#8A6038';
 
 export const PRINT_CSS = `
 /* The print preview is always LIGHT (the document is white paper) — use fixed
@@ -108,7 +108,7 @@ export const PRINT_PDF_DOC_CSS = `.tp-print-doc{box-shadow:none;margin:0;width:7
  */
 export const SHARE_CHROME_CSS = `
 .tp-share-page{min-height:100vh;background:#e6e3dd;color:#1d1813;}
-/* #1423：原漸層 #A97A4A→#C49A6E 的白字只有 3.77／2.4（13px 小字會落在漸層任一位置）。壓深到 accent-fill 色階，兩端白字 ≥ 4.5。 */
+/* #1423：原漸層（舊淺棕到金）的白字只有 3.77／2.4（13px 小字會落在漸層任一位置）。壓深到 accent-fill 色階，兩端白字 ≥ 4.5。 */
 .tp-share-hero{background:linear-gradient(135deg,${PAPER_ACCENT_FILL},${PAPER_ACCENT_DEEP});color:#fff;padding:26px 20px 20px;}
 .tp-share-eyebrow{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;margin-bottom:8px;}
 .tp-share-eyebrow svg{width:15px;height:15px;}
