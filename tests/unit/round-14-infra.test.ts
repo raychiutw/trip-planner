@@ -54,14 +54,17 @@ describe('v2.33.60 #1 — _headers CSP tighten + global security headers', () =>
 });
 
 describe('v2.33.60 #2 — index.html theme-color sync', () => {
-  it('theme-color 對齊 manifest terracotta (#F47B5E)', () => {
-    expect(INDEX_HTML).toMatch(/theme-color["']\s*content=["']#F47B5E/);
+  it('theme-color 對齊 manifest brand brown (#8A6038, #1573)', () => {
+    expect(INDEX_HTML).toMatch(/theme-color["']\s*content=["']#8A6038/);
     // 不允許 active meta tag 仍用舊 ocean blue (comment 提到無妨)
     expect(INDEX_HTML).not.toMatch(/content=["']#0077B6/);
+    // 不允許 active meta tag 仍用珊瑚/赤陶（#1573 品牌色收斂）
+    expect(INDEX_HTML).not.toMatch(/content=["']#F47B5E/);
   });
 
-  it('manifest theme_color 仍是 #F47B5E', () => {
-    expect(MANIFEST.theme_color).toBe('#F47B5E');
+  it('manifest theme_color 是品牌棕 #8A6038 (#1573)', () => {
+    expect(MANIFEST.theme_color).toBe('#8A6038');
+    expect(MANIFEST.theme_color).not.toBe('#F47B5E');
   });
 });
 

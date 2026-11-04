@@ -1,7 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Tripline favicon: three waves (triple line) -->
-  <rect width="64" height="64" rx="14" fill="#C4704F"/>
-  <path d="M12 28 Q22 24, 32 28 Q42 32, 52 28" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M12 36 Q18 33, 24 36 Q30 39, 36 36 Q42 33, 48 36" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.7"/>
-  <path d="M12 43 Q16 41, 20 43 Q24 45, 28 43 Q32 41, 36 43 Q40 45, 44 43" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.45"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="#8A6038"/>
+  <g transform="translate(0 -62) scale(1)">
+    <path d="M512 94 C710 94 854 238 854 435 C854 660 620 880 520 930 C514 933 510 933 512 930 C404 880 170 660 170 435 C170 238 314 94 512 94 Z" fill="none" stroke="#FFFBF5" stroke-width="76" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M512 205 L622 330 L512 455 L402 330 Z" fill="#FFFBF5"/>
+    
+  </g>
 </svg>
