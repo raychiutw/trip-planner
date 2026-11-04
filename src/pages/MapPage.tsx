@@ -62,17 +62,9 @@ const SCOPED_STYLES = `
   position: absolute;
   top: 70px;
   left: 12px; right: 12px;
-  padding: 14px;
-  color: var(--color-destructive);
-  background: var(--color-destructive-bg);
-  border: 1px solid color-mix(in srgb, var(--color-destructive) 24%, transparent);
-  border-radius: 8px;
   max-height: calc(100% - 170px);
   overflow-y: auto;
 }
-.map-page-body .tp-page-error-title { margin: 0 0 5px; font-weight: 700; }
-.map-page-body .tp-page-error-desc { margin: 0 0 12px; }
-.map-page-body .tp-page-error-btn,
 .map-page-body .tp-page-error-link {
   display: inline-flex; align-items: center; justify-content: center;
   min-height: var(--spacing-tap-min);
@@ -81,7 +73,7 @@ const SCOPED_STYLES = `
   font-weight: 700;
   text-decoration: none;
 }
-.map-page-body .tp-page-error-btn { border: 1px solid var(--color-destructive); background: var(--color-destructive); color: var(--color-accent-foreground); margin-right: 8px; cursor: pointer; }
+.map-page-body .tp-page-error-btn { margin-right: 8px; }
 .map-page-body .tp-page-error-link { border: 1px solid var(--color-destructive); background: var(--color-background); color: var(--color-destructive); }
 
 /* ===== Loading state — shimmer canvas + accent spinner（mockup Section 20） ===== */

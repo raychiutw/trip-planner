@@ -69,9 +69,11 @@ export function TripDatePicker({
   const triggerId = id ?? `tp-date-${autoId}`;
   const popoverId = `${triggerId}-popover`;
   const visibleText = value || placeholder;
+  const requiredId = `${triggerId}-required`;
   /* WCAG 2.5.3：accessible name 要含可見文字（語音操控說出看得到的字），所以以可見文字開頭、後接欄位名稱。
-   * 必填不用 aria-required（button 角色不允許該屬性，axe critical），改寫進名稱。 */
-  const accessibleName = ariaLabel ? `${visibleText}，${ariaLabel}${required ? '（必填）' : ''}` : undefined;
+   * 必填不用 aria-required（button 角色不允許該屬性，axe critical），改用 aria-describedby 指到隱藏的「必填」說明，
+   * 螢幕閱讀器仍會讀到，且不污染 accessible name。 */
+  const accessibleName = ariaLabel ? `${visibleText}，${ariaLabel}` : undefined;
 
   const selected = useMemo(() => parseISO(value), [value]);
   const fromDate = useMemo(() => parseISO(min ?? ''), [min]);
@@ -135,6 +137,7 @@ export function TripDatePicker({
         aria-expanded={open}
         aria-controls={open ? popoverId : undefined}
         aria-label={accessibleName}
+        aria-describedby={required ? requiredId : undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
       >
@@ -145,6 +148,7 @@ export function TripDatePicker({
           <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
+      {required && <span id={requiredId} hidden>必填</span>}
       {open && (
         <div
           ref={popoverRef}

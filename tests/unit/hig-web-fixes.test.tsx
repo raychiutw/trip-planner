@@ -50,16 +50,19 @@ describe('TripDatePicker 觸發鈕（WCAG 2.5.3、ARIA）', () => {
     expectNameStartsWithVisibleText(btn);
   });
 
-  it('必填不用 button 角色不允許的 aria-required，改在名稱中說明', () => {
+  it('必填不用 button 角色不允許的 aria-required，改用 aria-describedby 指到「必填」說明，名稱不夾帶必填', () => {
     render(<TripDatePicker value="" onChange={() => {}} ariaLabel="出發日期" required />);
     const btn = screen.getByRole('button', { name: /出發日期/ });
     expect(btn.hasAttribute('aria-required')).toBe(false);
-    expect(btn.getAttribute('aria-label')).toMatch(/必填/);
+    expect(btn.getAttribute('aria-label')).not.toMatch(/必填/);
+    expect(btn).toHaveAccessibleDescription('必填');
   });
 
   it('非必填不加「必填」', () => {
     render(<TripDatePicker value="" onChange={() => {}} ariaLabel="回程日期" />);
-    expect(screen.getByRole('button', { name: /回程日期/ }).getAttribute('aria-label')).not.toMatch(/必填/);
+    const btn = screen.getByRole('button', { name: /回程日期/ });
+    expect(btn.getAttribute('aria-label')).not.toMatch(/必填/);
+    expect(btn).not.toHaveAccessibleDescription('必填');
   });
 });
 

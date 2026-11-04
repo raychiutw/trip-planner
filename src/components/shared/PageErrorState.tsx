@@ -24,8 +24,6 @@ export interface PageErrorStateProps {
   testId?: string;
   /** retry button data-testid */
   retryTestId?: string;
-  /** 額外套在 retry button 的 class（例如專案按鈕 `tp-btn tp-btn-primary`）；沒有對應 `<root>-btn` 樣式的容器靠它避免原生灰色鈕 */
-  retryButtonClassName?: string;
   children?: ReactNode;
 }
 
@@ -37,7 +35,6 @@ export default function PageErrorState({
   className = 'tp-page-error',
   testId,
   retryTestId,
-  retryButtonClassName,
   children,
 }: PageErrorStateProps) {
   return (
@@ -47,7 +44,7 @@ export default function PageErrorState({
       {onRetry && retryLabel !== null && (
         <button
           type="button"
-          className={retryButtonClassName ? `${className}-btn ${retryButtonClassName}` : `${className}-btn`}
+          className={`${className}-btn`}
           onClick={onRetry}
           data-testid={retryTestId}
         >

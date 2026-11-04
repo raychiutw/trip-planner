@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 const { setupApiMocks } = require('./api-mocks');
 const { SCENES, setupSceneExtras } = require('./hig-scene-fixtures');
-const { KNOWN_TAP_VIOLATIONS } = require('./hig-known-violations');
+const { KNOWN_TAP_VIOLATIONS, LABEL_MAX, diffViolations } = require('./hig-known-violations');
 
 // 量測的尺寸與字型度量依瀏覽器引擎而異；已知違規清單只以 chromium 為準，其他 project 不跑，避免棘輪在 webkit 誤紅。
 test.beforeEach(async ({}, testInfo) => {
@@ -41,7 +41,7 @@ const INTERACTIVE =
 /** 手機寬下，可見且可點擊、最短邊小於 44px 的元素（回傳 `標籤 寬x高`）。 */
 async function tapViolations(page) {
   return page.evaluate(
-    ({ selector, min }) => {
+    ({ selector, min, labelMax }) => {
       const out = new Set();
       for (const el of document.querySelectorAll(selector)) {
         const style = getComputedStyle(el);
@@ -66,13 +66,13 @@ async function tapViolations(page) {
           )
             .trim()
             .replace(/\s+/g, ' ')
-            .slice(0, 24);
+            .slice(0, labelMax);
           out.add(`${label || '(無標籤)'} ${Math.round(r.width)}x${Math.round(r.height)}`);
         }
       }
       return [...out].sort();
     },
-    { selector: INTERACTIVE, min: MIN },
+    { selector: INTERACTIVE, min: MIN, labelMax: LABEL_MAX },
   );
 }
 
@@ -130,13 +130,7 @@ for (const scene of SCENES) {
         const found = await tapViolations(page);
         console.log(`HIGWEB\t${scene.name}\t${JSON.stringify(found)}`);
         if (COLLECT) return;
-        // 違規只看最短邊（< 44），輸入框的寬度會隨建置與捲軸而差幾 px，不該讓棘輪因此紅燈；
-        // 所以比對「標籤＋最短邊」，不比對完整的 寬x高。
-        const norm = (v) => v.replace(/ (\d+)x(\d+)$/, (_m, w, h) => ` 最短邊${Math.min(Number(w), Number(h))}`);
-        const known = new Set((KNOWN_TAP_VIOLATIONS[scene.name] ?? []).map(norm));
-        const foundNorm = found.map(norm);
-        const fresh = found.filter((v) => !known.has(norm(v)));
-        const fixed = [...known].filter((v) => !foundNorm.includes(v));
+        const { fresh, fixed } = diffViolations(found, KNOWN_TAP_VIOLATIONS[scene.name] ?? []);
         expect(fresh, `新增的觸控目標違規（HIG 檢查表 A1）：${scene.name}`).toEqual([]);
         expect(fixed, `已知違規已被修好，請從 hig-known-violations.js 移除：${scene.name}`).toEqual([]);
       });

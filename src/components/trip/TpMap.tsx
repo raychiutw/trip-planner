@@ -110,18 +110,8 @@ const SCOPED_STYLES = `
   min-height: 0;
   border-radius: 0;
 }
-/* #1571：錯誤態（地圖載入失敗）在沒有頁面專屬樣式的容器（行程詳情右側面板）也要像個面板，
- * 不是裸文字加原生灰色按鈕。地圖頁（.map-page-body）另有定位規則，疊在這之上。 */
+/* #1571：錯誤態的面板／按鈕樣式改放 tokens.css 的 .tp-page-error*（PageErrorState 預設樣式）；這裡只留面板內距。 */
 .tp-map-error-overlay { padding: 16px; overflow-y: auto; }
-.tp-map-container .tp-page-error {
-  padding: 14px;
-  color: var(--color-destructive);
-  background: var(--color-destructive-bg);
-  border: 1px solid color-mix(in srgb, var(--color-destructive) 24%, transparent);
-  border-radius: var(--radius-md, 8px);
-}
-.tp-map-container .tp-page-error-title { margin: 0 0 5px; font-weight: 700; }
-.tp-map-container .tp-page-error-desc { margin: 0 0 12px; }
 `;
 
 /* ===== Single polyline component (per segment, lazy via useRoute) ===== */
@@ -330,7 +320,6 @@ const TpMap = memo(function TpMap({
               }
               onRetry={() => window.location.reload()}
               className="tp-page-error"
-              retryButtonClassName="tp-btn tp-btn-destructive is-filled"
             >{errorAction}</PageErrorState>
           </div>
         )}

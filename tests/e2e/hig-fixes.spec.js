@@ -49,10 +49,17 @@ test('地圖面板錯誤態的重試按鈕有專案樣式：trip-detail · 桌�
   await open(page, 'trip-detail', DESKTOP);
   const btn = page.getByRole('button', { name: '重試' }).first();
   await expect(btn).toBeVisible();
+  // 與專案 destructive 實心鈕（.tp-btn-destructive.is-filled）的底色同一個 token，且不是原生灰
   const s = await btn.evaluate((el) => {
     const cs = getComputedStyle(el);
-    return { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius), h: el.getBoundingClientRect().height };
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = 'var(--color-destructive)';
+    document.body.appendChild(probe);
+    const token = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { bg: cs.backgroundColor, token, radius: parseFloat(cs.borderTopLeftRadius), h: el.getBoundingClientRect().height };
   });
+  expect(s.bg, '底色應為專案 destructive token').toBe(s.token);
   expect(s.bg, '原生按鈕底色是 rgb(239, 239, 239)').not.toBe('rgb(239, 239, 239)');
   expect(s.radius, '圓角').toBeGreaterThanOrEqual(6);
   expect(s.h, '觸控高度').toBeGreaterThanOrEqual(44);
