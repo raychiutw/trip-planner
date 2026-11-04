@@ -1260,8 +1260,9 @@ body.dark .tp-toast { background: var(--color-secondary); }
 
 /* ===== Page eyebrow + meta helpers (TitleBar 下方 context label + description) =====
  * 用於 settings 子頁 / list page。Used by ConnectedAppsPage / DeveloperAppsPage / SessionsPage. */
+/* #1571：頂端 16px 與固定頁首（.tp-titlebar）隔開 —— 原本 margin-top 0，小標緊貼頁首下緣被壓住。 */
 .tp-page-eyebrow {
-  margin: 0 0 4px;
+  margin: 16px 0 4px;
   font-size: var(--font-size-eyebrow);
   font-weight: 700;
   letter-spacing: 0.18em;

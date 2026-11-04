@@ -126,6 +126,8 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
 
   const hasTime = !!(start || end);
   const disabled = entryId == null || tripId == null;
+  // WCAG 2.5.3：accessible name 以可見文字開頭（原本 aria-label 整個蓋掉可見的時間）
+  const chipText = hasTime ? formatTimeRange(start ?? '', end ?? '') : '設定時間';
 
   return (
     <>
@@ -136,10 +138,10 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
         onClick={(e) => { e.stopPropagation(); if (disabled) return; if (open) closeAndSave(); else setOpen(true); }}
         disabled={disabled}
         aria-expanded={open}
-        aria-label="編輯起訖時間"
+        aria-label={`${chipText}，編輯起訖時間`}
         data-testid={entryId != null ? `timeline-rail-time-chip-${entryId}` : undefined}
       >
-        <span>{hasTime ? formatTimeRange(start ?? '', end ?? '') : '設定時間'}</span>
+        <span>{chipText}</span>
         <Icon name="pencil" />
       </button>
       {open && pos && createPortal(

@@ -68,6 +68,10 @@ export function TripDatePicker({
   const autoId = useId();
   const triggerId = id ?? `tp-date-${autoId}`;
   const popoverId = `${triggerId}-popover`;
+  const visibleText = value || placeholder;
+  /* WCAG 2.5.3：accessible name 要含可見文字（語音操控說出看得到的字），所以以可見文字開頭、後接欄位名稱。
+   * 必填不用 aria-required（button 角色不允許該屬性，axe critical），改寫進名稱。 */
+  const accessibleName = ariaLabel ? `${visibleText}，${ariaLabel}${required ? '（必填）' : ''}` : undefined;
 
   const selected = useMemo(() => parseISO(value), [value]);
   const fromDate = useMemo(() => parseISO(min ?? ''), [min]);
@@ -130,13 +134,12 @@ export function TripDatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? popoverId : undefined}
-        aria-label={ariaLabel}
-        aria-required={required || undefined}
+        aria-label={accessibleName}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
       >
         <span className={`tp-date-value ${value ? '' : 'is-placeholder'}`}>
-          {value || placeholder}
+          {visibleText}
         </span>
         <svg className="tp-date-chev" viewBox="0 0 20 20" aria-hidden="true">
           <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

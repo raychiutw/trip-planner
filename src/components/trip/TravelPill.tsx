@@ -31,6 +31,8 @@ const SCOPED_STYLES = `
   /* v2.30.12: time col 移除後 dot 中心 110→56px desktop / mobile 媒體查詢 → 44px */
   margin: 6px 0 6px 56px;
   flex-wrap: wrap;
+  /* #1571：手機寬時整顆膠囊不超出右緣（扣掉左邊的 margin）；描述文字用省略號收尾而不是撐出去 */
+  max-width: calc(100% - 56px);
 }
 .tp-travel-pill {
   display: inline-flex;
@@ -45,6 +47,8 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
   width: fit-content;
   font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  min-width: 0;
 }
 .tp-travel-pill.is-interactive {
   cursor: pointer;
@@ -69,6 +73,7 @@ const SCOPED_STYLES = `
 .tp-travel-pill-meta {
   display: inline-flex; align-items: baseline; gap: 6px;
   white-space: nowrap;
+  min-width: 0;
 }
 /* v2.55.45 方式 label 與 min 同樣式（單軌/地鐵/火車/高鐵共用 train icon → 文字 label 區分）。 */
 .tp-travel-pill-min, .tp-travel-pill-method { font-weight: 700; color: var(--color-accent-2-deep); }
@@ -118,7 +123,7 @@ const SCOPED_STYLES = `
 @media (max-width: 760px) {
   .tp-travel-sameplace { margin-left: 44px; }
   /* v2.30.12: mobile dot 中心 56→44px (page padding 16 + grip 20 + gap 8 + dot/2 12 — 對齊 .tp-rail-detail mobile margin-left). */
-  .tp-travel-pill-wrap { margin: 6px 0 6px 44px; }
+  .tp-travel-pill-wrap { margin: 6px 0 6px 44px; max-width: calc(100% - 44px); }
   .tp-travel-pill {
     padding: 4px 12px;
     gap: 8px;
@@ -355,6 +360,13 @@ export default function TravelPill({
   // transit 才在 pill 顯示方式 label（train-family 同 icon 需文字區分；driving/walking icon 已足夠）。
   const methodLabel = segment && segment.mode === 'transit' && segment.submode ? a11yMethod : null;
   const isInteractive = !!tripId && (!!segment || canCreate);
+  // WCAG 2.5.3：互動膠囊的 accessible name 以可見文字（與畫面同順序）開頭，再補方式與動作說明。
+  const visibleText = [
+    methodLabel,
+    hasMin ? `${effectiveMin} min` : null,
+    hasDist ? formatDistance(effectiveDist!) : null,
+    hasDesc ? desc : null,
+  ].filter(Boolean).join(' · ');
 
   // Pill 內部內容 — 必須只含 non-interactive elements（pill 本身可能 wrap 成 <button>，
   // 內部不可再有 <button>/<a>，否則 HTML5 違規 + a11y 破）。Stale ⚠ chip 含 recompute
@@ -409,7 +421,7 @@ export default function TravelPill({
             type="button"
             className="tp-travel-pill is-interactive"
             onClick={() => setDialogOpen(true)}
-            aria-label={`交通方式 ${a11yMethod}${hasMin ? ` ${effectiveMin} 分鐘` : ''}（點擊變更）`}
+            aria-label={`${visibleText ? `${visibleText}，` : ''}交通方式 ${a11yMethod}，點擊變更`}
             data-testid="travel-pill"
           >
             {inner}

@@ -48,7 +48,7 @@ describe('EditTripPage 日期變更', () => {
     const cancel = within(dialog).getByRole('button', { name: '取消' });
     cancel.focus();
     fireEvent.keyDown(dialog, { key: 'Tab' });
-    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: '變更出發日期' }));
+    expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: /變更出發日期/ }));
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByTestId('edit-trip-shift-modal')).not.toBeInTheDocument());
     expect(document.activeElement).toBe(trigger);
@@ -73,14 +73,14 @@ describe('EditTripPage 日期變更', () => {
     mount();
     fireEvent.click(await screen.findByTestId('edit-trip-day-shift-btn'));
     const dialog = screen.getByRole('dialog', { name: '變更出發日期' });
-    fireEvent.click(within(dialog).getByRole('button', { name: '變更出發日期' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /變更出發日期/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Friday, April 3rd, 2026' }));
     expect(within(dialog).getByTestId('edit-trip-shift-preview')).toHaveTextContent('3 天日期將往後平移 2 天');
     expect(within(dialog).getByTestId('edit-trip-shift-preview')).toHaveTextContent('4/3');
     fireEvent.click(within(dialog).getByRole('button', { name: '確認變更' }));
     expect(await screen.findByText('暫時無法變更')).toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: '變更出發日期' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: '變更出發日期' })).toHaveTextContent('2026-04-03');
+    expect(within(dialog).getByRole('button', { name: /變更出發日期/ })).toHaveTextContent('2026-04-03');
     expect(screen.getByTestId('edit-trip-desc-input')).toHaveValue('保留的描述');
     expect(screen.getByRole('radio', { name: '上線' })).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(within(dialog).getByRole('button', { name: '確認變更' }));
