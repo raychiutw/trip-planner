@@ -3,6 +3,7 @@
 module.exports = {
   KNOWN_TAP_VIOLATIONS: {
     "login": ["忘記密碼？ 64x19"],
+    "login-error": ["忘記密碼？ 64x19"],
     "signup": ["signup-privacy-consent 20x20", "個資條款與隱私權政策 149x24"],
     "trips-list": ["開啟搜尋 24x24"],
     "explore": ["搜尋 62x38", "搜尋景點、餐廳、住宿… 228x28"],

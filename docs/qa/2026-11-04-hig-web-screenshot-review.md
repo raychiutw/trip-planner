@@ -1,6 +1,6 @@
 # web 截圖逐張檢查報告（flutter#531／trip-planner#1568 素材）
 
-檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 27 個場景，手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 108 張。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
+檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 36 個場景（原 27 個加第三輪補的 9 個認證流程、邀請、清單空與錯誤態），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 144 張。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
 
 ## 怎麼檢查的
 
@@ -10,6 +10,7 @@
 
 - 桌機寬：27 個場景的淺深並排圖都看過。
 - 手機寬：27 個場景的淺深並排圖都看過（第一輪 15 個，第二輪補看 12 個）。
+- **第三輪補的 9 個場景**（`login-error`、`login-rate-limited`、`signup-check-email`、`reset-password`、`verify-email`、`invite`、`invite-invalid`、`trips-list-empty`、`trips-list-error`）：**手機寬淺深都看過；桌機寬的 18 張新圖我沒有逐張看**，只有 proof（畫面上一定出現的文字或 testid）與 axe 掃描。
 - 只跑 chromium；webkit、firefox 沒截。
 
 ## 需要處理的發現
@@ -25,6 +26,10 @@
 | 7 | `trip-detail` | WCAG 2.5.3 | 9 個起訖時間 chip（`EntryTimeChip.tsx:140`）的 `aria-label="編輯起訖時間"` 蓋掉可見的時間文字（如 09:00–12:00），語音操控說出看得到的字會失敗 | axe 加程式碼 |
 | 8 | `trips-new` | WCAG 2.5.3、ARIA | 出發／回程日期欄（`TripDatePicker`，`NewTripPage.tsx:817-`）：`aria-label` 與可見文字不一致；`aria-required` 加在不允許該屬性的角色上（axe：critical） | axe（TripDatePicker 內部未讀） |
 | 9 | `trip-print` | C5 | 列印預覽分區的數量標籤 `#8a7a68`、11px，對比 4.14:1（`tripPrintStyles.ts:66`），低於 4.5:1 | axe 加程式碼 |
+
+| 10 | `trips-list-error` | G6、G7 | 行程清單載入失敗只有一行「無法載入你的行程清單。」，**沒有重試**（程式碼確認：`TripsListPage` 的錯誤態沒有任何重試或重新載入動作）；使用者只能手動重新整理整頁 | 看圖加程式碼 |
+| 11 | `invite-invalid` | G6、G7 | 邀請連結無效（404，永久失效）卻只提供「重試載入」，重試不可能成功，也沒有回首頁或登入的出口 | 看圖 |
+| 12 | `signup-check-email`、`invite` | B7、WCAG 1.4.10 | 320px 寬加 200% 文字時出現橫向捲動（scrollWidth 354、366 對 320）；逐元素掃描找不到右緣超出的元素，**尚未定位** | 量測（未定位） |
 
 另有三項觀察、需要設計確認：`trip-print` 淺色與深色圖完全相同（列印預覽固定淺色）；`login`、`signup`、`forgot-password` 的桌機右側宣傳面板與外觀反相；`login` 手機寬卡片內外各一個 Tripline 標誌。
 
@@ -59,6 +64,15 @@
 | `trip-print` | 淺深已看 | 淺深已看 | 觀察 | H2 | 淺色與深色圖完全相同（列印預覽固定淺色）；列印情境可接受，但深色模式下不跟隨 |
 | `trips-list` | 淺深已看 | 淺深已看 | 未見明顯問題 | — | 桌機、手機寬目視未發現與檢查表衝突之處；僅看圖，未量字級與對比 |
 | `trips-new` | 淺深已看 | 淺深已看 | 疑慮 | B | 手機寬日期欄位的「選擇日期」字級明顯大於同頁其他欄位的 placeholder；底部固定操作列蓋住「讓 AI 幫你把行程填滿」卡片的下半（可捲動） |
+| `invite` | 手機已看、桌機未看 | 未見明顯問題 | — | 「註冊並加入」為主要、「登入並加入」為次要，說明與有效期齊全；axe 無違規。**200% 文字有橫向捲動（發現 12）** |
+| `invite-invalid` | 手機已看、桌機未看 | 疑慮 | G6、G7 | 見發現 11 |
+| `login-error` | 手機已看、桌機未看 | 符合 | G6 | 就地橫幅（圖示加文字）「電子郵件或密碼錯誤」，輸入保留；axe 無違規；「忘記密碼？」64×19 為既有違規 |
+| `login-rate-limited` | 手機已看、桌機未看 | 符合 | G6 | 鎖頭圖示、說明、15:00 倒數與「重設密碼」出口；axe 無違規 |
+| `reset-password` | 手機已看、桌機未看 | 符合 | F | 兩個密碼欄、強度條與規則清單（長度、字母與數字）；axe 無違規 |
+| `signup-check-email` | 手機已看、桌機未看 | 疑慮 | B7 | 內容齊全（信箱、有效期、打開信箱、重寄倒數停用、改用其他信箱）；**200% 文字有橫向捲動（發現 12）** |
+| `trips-list-empty` | 手機已看、桌機未看 | 符合 | G10 | 圖示、標題、說明與「新增行程」主要動作 |
+| `trips-list-error` | 手機已看、桌機未看 | 疑慮 | G6、G7 | 見發現 10 |
+| `verify-email` | 手機已看、桌機未看 | 未見明顯問題 | — | 說明與單一主要按鈕；axe 無違規；200% 文字檢查沒有生效（該頁字級不隨 root 變） |
 
 ## 補掃：axe、重排、縮放、鍵盤焦點（工具量測）
 

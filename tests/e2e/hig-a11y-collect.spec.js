@@ -35,9 +35,11 @@ async function open(page, scene, { width, height, scheme }) {
     await page.route(/\/api\/oauth\/userinfo$/, (r) =>
       r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' }));
   }
+  if (scene.stub) await scene.stub(page);
   await page.goto(scene.path);
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(400);
+  if (scene.act) await scene.act(page);
 }
 
 for (const scene of SCENES) {

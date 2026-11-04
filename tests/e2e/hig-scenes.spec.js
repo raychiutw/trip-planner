@@ -93,22 +93,28 @@ for (const scene of SCENES) {
         });
         const consoleErrors = [];
         page.on('pageerror', (e) => consoleErrors.push(String(e)));
+        if (scene.stub) await scene.stub(page);
         await page.goto(scene.path);
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(400);
+        if (scene.act) await scene.act(page);
 
         // 證明渲染的是該頁面：有 proof 就必須出現；否則至少要有內容、沒有未捕捉的頁面錯誤。
         if (scene.proof) await expect(page.getByTestId(scene.proof)).toBeVisible();
+        if (scene.proofText) await expect(page.getByText(scene.proofText).first(), `${scene.name} 沒有出現預期的文字`).toBeVisible();
         const textLength = await page.evaluate(() => document.body.innerText.trim().length);
-        expect(textLength, `${scene.name} 幾乎沒有內容（空白頁？）`).toBeGreaterThan(20);
+        // 有 proof／proofText 就已經證明內容是對的；錯誤頁（如邀請無效）本來就只有幾個字，不套用空白頁檢查。
+        if (!scene.proof && !scene.proofText) expect(textLength, `${scene.name} 幾乎沒有內容（空白頁？）`).toBeGreaterThan(20);
         expect(consoleErrors, `${scene.name} 有未捕捉的頁面錯誤`).toEqual([]);
 
         // 場景用的 API 都該有 mock；回 4xx/5xx 代表畫面其實是錯誤態，不是想取證的那一頁
         // （未登入場景的 userinfo 401 是刻意的）。
         // 另外三個端點讀不到＝功能關閉（useAiDataConsent 與 LoginPage 都定義為「不強制」），不是錯誤態。
         const BENIGN = ['/account/ai-data-consent', '/account/ai-authorization', '/public-config'];
+        // 這些場景刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
+        const INTENDED = { 'login-error': '/oauth/login', 'login-rate-limited': '/oauth/login', 'invite-invalid': '/invitations', 'trips-list-error': '/my-trips' };
         const unexpected = apiFailures.filter(
-          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')),
+          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])),
         );
         expect(unexpected, `${scene.name}：場景用的 API 沒有 mock，畫面可能是錯誤態`).toEqual([]);
         if (unexpected.length) console.log(`HIGNET\t${scene.name}\t${JSON.stringify([...new Set(unexpected)])}`);
@@ -121,9 +127,13 @@ for (const scene of SCENES) {
         const found = await tapViolations(page);
         console.log(`HIGWEB\t${scene.name}\t${JSON.stringify(found)}`);
         if (COLLECT) return;
-        const known = new Set(KNOWN_TAP_VIOLATIONS[scene.name] ?? []);
-        const fresh = found.filter((v) => !known.has(v));
-        const fixed = [...known].filter((v) => !found.includes(v));
+        // 違規只看最短邊（< 44），輸入框的寬度會隨建置與捲軸而差幾 px，不該讓棘輪因此紅燈；
+        // 所以比對「標籤＋最短邊」，不比對完整的 寬x高。
+        const norm = (v) => v.replace(/ (\d+)x(\d+)$/, (_m, w, h) => ` 最短邊${Math.min(Number(w), Number(h))}`);
+        const known = new Set((KNOWN_TAP_VIOLATIONS[scene.name] ?? []).map(norm));
+        const foundNorm = found.map(norm);
+        const fresh = found.filter((v) => !known.has(norm(v)));
+        const fixed = [...known].filter((v) => !foundNorm.includes(v));
         expect(fresh, `新增的觸控目標違規（HIG 檢查表 A1）：${scene.name}`).toEqual([]);
         expect(fixed, `已知違規已被修好，請從 hig-known-violations.js 移除：${scene.name}`).toEqual([]);
       });

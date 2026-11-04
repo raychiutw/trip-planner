@@ -7,9 +7,32 @@ const { MOCK_TRIPS_LIST } = require('./api-mocks');
 
 const TRIP = MOCK_TRIPS_LIST[0].tripId;
 
+const errBody = (code, message = '') => ({ error: { code, message } });
+const stubLogin = (status, code, headers = {}) => (page) =>
+  page.route(/\/api\/oauth\/login$/, (r) =>
+    r.fulfill({ status, contentType: 'application/json', headers, body: JSON.stringify(errBody(code)) }));
+const submitLogin = async (page) => {
+  await page.locator('input[type=email]').fill('ray@example.com');
+  await page.locator('input[type=password]').fill('wrong-password');
+  await page.locator('button[type=submit]').click();
+  await page.waitForTimeout(500);
+};
+const INVITE = { tripId: TRIP, tripTitle: '沖繩家族之旅', invitedEmail: 'ray@example.com', role: 'member', inviterDisplayName: 'Mia', inviterEmail: 'mia@example.com', expiresAt: '2026-12-31T00:00:00Z' };
+const stubInvite = (page) =>
+  page.route(/\/api\/invitations(\?.*)?$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(INVITE) }));
+const stubInviteInvalid = (page) =>
+  page.route(/\/api\/invitations(\?.*)?$/, (r) =>
+    r.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: { code: 'INVITATION_NOT_FOUND', message: '邀請連結無效', detail: '邀請連結無效' } }) }));
+const stubTripsEmpty = (page) =>
+  page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+const stubTripsError = (page) =>
+  page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify(errBody('INTERNAL')) }));
+
 /**
- * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string }} Scene
- * proof：頁面渲染完成時一定存在的 data-testid；沒有時退而求其次檢查沒有錯誤頁。
+ * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void> }} Scene
+ * proof：頁面渲染完成時一定存在的 data-testid；proofText 是畫面上一定要出現的文字（錯誤態、空狀態用，
+ * 證明拍到的是想取證的那一種狀態，不是任意一種）；沒有時退而求其次檢查沒有錯誤頁。
+ * stub：進頁前追加的 API 覆寫（後註冊的 route 優先）；act：進頁後的互動（例如送出表單）。
  */
 /** @type {Scene[]} */
 const SCENES = [
@@ -40,6 +63,16 @@ const SCENES = [
   { name: 'trip-edit', path: `/trip/${TRIP}/edit` },
   { name: 'trip-add-stop', path: `/trip/${TRIP}/add-stop` },
   { name: 'trip-add-entry', path: `/trip/${TRIP}/add-entry` },
+  // ── 認證流程的各狀態、邀請與清單的空／錯誤態（取證補強）──
+  { name: 'login-error', path: '/login', loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤' },
+  { name: 'login-rate-limited', path: '/login', loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked' },
+  { name: 'signup-check-email', path: '/signup/check-email?email=ray%40example.com', loggedIn: false, proofText: /ray@example\.com/ },
+  { name: 'reset-password', path: '/auth/password/reset?token=demo-token', loggedIn: false, proofText: /新密碼|設定新密碼|重設密碼/ },
+  { name: 'verify-email', path: '/auth/verify-email?token=demo-token', loggedIn: false, proofText: '點此完成驗證' },
+  { name: 'invite', path: '/invite?token=demo-invite', loggedIn: false, stub: stubInvite, proofText: '沖繩家族之旅' },
+  { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error' },
+  { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
+  { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: /載入失敗|無法載入|重試/ },
 ];
 
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
