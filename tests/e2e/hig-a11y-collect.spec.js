@@ -20,7 +20,7 @@ const { SCENES, setupSceneExtras } = require('./hig-scene-fixtures');
 const axePath = require.resolve('axe-core');
 
 test.beforeEach(async ({}, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑');
+  test.skip(!['chromium', 'webkit'].includes(testInfo.project.name), '只在 chromium 與 webkit 專案跑');
   test.skip(!process.env.HIG_COLLECT, '收集用；HIG_COLLECT=1 才執行');
 });
 

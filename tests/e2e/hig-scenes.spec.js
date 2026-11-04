@@ -21,7 +21,9 @@ const { KNOWN_TAP_VIOLATIONS } = require('./hig-known-violations');
 
 // 量測的尺寸與字型度量依瀏覽器引擎而異；已知違規清單只以 chromium 為準，其他 project 不跑，避免棘輪在 webkit 誤紅。
 test.beforeEach(async ({}, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium', 'HIG 場景只在 chromium 專案跑');
+  // 棘輪只以 chromium 為準；webkit 只在 HIG_COLLECT 模式下截圖（不下棘輪斷言），用來看跨瀏覽器的畫面差異。
+  const name = testInfo.project.name;
+  test.skip(!(name === 'chromium' || (name === 'webkit' && !!process.env.HIG_COLLECT)), 'HIG 場景只在 chromium 專案跑（webkit 需 HIG_COLLECT）');
 });
 const SHOT_DIR = process.env.HIG_SHOT_DIR || 'test-results/hig';
 const COLLECT = !!process.env.HIG_COLLECT;

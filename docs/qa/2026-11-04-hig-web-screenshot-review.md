@@ -89,4 +89,4 @@
 
 - 對比、重排（B7）、鍵盤焦點（J5、J6）已用上面的補掃做過，有各自的限制；沒有 dialog 行為檢查（D16、G9），也沒有實際用螢幕閱讀器走過。
 - 場景沒涵蓋：登入流程各狀態、分享／邀請／oauth 頁、停留點編輯頁、各種彈出層、空狀態與錯誤狀態、限流。
-- 只跑 chromium；webkit 要另外下載瀏覽器，沒有跑，Safari 的行為（含焦點樣式、`aria-*` 處理）沒驗證。
+- **webkit（Safari 引擎）**：已跑 36 個場景的截圖與 axe／重排／縮放／焦點掃描（`playwright.hig-webkit.config.js`，需先安裝 webkit）。**axe 違規集合與 chromium 完全相同**（`trips-new` 的 ARIA 與標籤、`trip-print` 對比、時間 chip 標籤）；320px 重排無溢位；200% 文字同樣兩頁溢位（`signup-check-email` 354、`invite` 366，與 chromium 的數字一致，說明是版面本身的問題）；焦點無樣式同樣只有 `explore` 搜尋欄。注意：webkit 下 6 個場景 Tab 一個都跳不到（`landing`、`login-error`、`login-rate-limited`、`signup-check-email`、`invite`、`invite-invalid`），那是 Safari 預設不 Tab 到連結與按鈕的行為，不是缺陷。**沒做**：chromium 與 webkit 的畫面差異沒有逐張比對，只比了掃描結果。
