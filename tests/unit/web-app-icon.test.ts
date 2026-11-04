@@ -120,3 +120,25 @@ describe('manifest 與 index.html 顏色欄位', () => {
     expect(existsSync(path.join(root, 'images/icon-512.png'))).toBe(false);
   });
 });
+
+describe('圖示與 App 母圖同源（#1573 驗收：引用 #548 的素材，不另畫）', () => {
+  const MOTHER = 'scripts/app-icon/source/flutter-app-icon-1024.png';
+
+  it('產生腳本以 App 母圖為輸入', () => {
+    expect(existsSync(path.join(root, MOTHER))).toBe(true);
+    expect(read('scripts/generate-app-icons.mjs')).toContain('flutter-app-icon-1024.png');
+  });
+
+  it('母圖底色是品牌棕 #8A6038', () => {
+    expect(near(px(png(MOTHER), 8, 8), BROWN)).toBe(true);
+  });
+
+  it('PWA any 512 與母圖縮圖幾乎一致（平均每通道差 < 1/255）', async () => {
+    const sharp = (await import('sharp')).default;
+    const ref = await sharp(path.join(root, MOTHER)).resize(512, 512, { kernel: 'lanczos3' }).ensureAlpha().raw().toBuffer();
+    const img = png('public/icons/icon-512.png');
+    let sum = 0;
+    for (let i = 0; i < ref.length; i++) sum += Math.abs(ref[i] - img.data[i]);
+    expect(sum / ref.length).toBeLessThan(1);
+  });
+});
