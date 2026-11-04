@@ -19,7 +19,7 @@ const OUTPUT_PATH = resolve(__dirname, '../public/og/tripline-default.png')
 mkdirSync(resolve(__dirname, '../public/og'), { recursive: true })
 
 const BROWN = '#8A6038'
-const CREAM = '#FFFBF5' // 米白，對 #8A6038 對比 5.5:1（≥ 4.5）
+const CREAM = '#FFFBF5' // 米白，對 #8A6038 對比約 5.35:1（≥ 4.5）
 
 // App icon 內層圖案（拿掉外層 <svg>，改嵌進 OG 版面；viewBox 1024）
 const iconInner = readFileSync(resolve(__dirname, 'app-icon/app-icon.svg'), 'utf-8')

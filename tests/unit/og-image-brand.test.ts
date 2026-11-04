@@ -7,7 +7,9 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'fs'
 import { resolve, join } from 'path'
 import { PNG } from 'pngjs'
+import sharp from 'sharp'
 import { contrastRatio } from './__helpers__/wcag'
+import { coverage, diffStats } from './__helpers__/coverage'
 
 const ROOT = resolve(__dirname, '../..')
 const img = PNG.sync.read(readFileSync(join(ROOT, 'public/og/tripline-default.png')))
@@ -37,6 +39,53 @@ describe('OG 分享圖', () => {
     }
     expect(cream(110, 410), 'icon 區').toBeGreaterThan(5000)
     expect(cream(480, 1000), '文字區').toBeGreaterThan(5000)
+  })
+
+  it('icon 區的圖案與 app-icon.svg 渲染結果逐像素相符（換成別的圖形會紅）', async () => {
+    const SIZE = 300
+    const { data, info } = await sharp(join(ROOT, 'scripts/app-icon/app-icon.svg'), { density: 72 })
+      .resize(SIZE, SIZE).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+    const want = coverage(data, info.channels, 0x8a)
+    const got = new Float32Array(SIZE * SIZE)
+    for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) got[y * SIZE + x] = coverage(Uint8Array.of(px(110 + x, 165 + y)[0]), 1, 0x8a)[0]
+    // 圓角與外框屬於 OG 版面、不屬於圖案：只比內縮 30px 的方形內部
+    const inner = (a: Float32Array) => {
+      const o: number[] = []
+      for (let y = 30; y < SIZE - 30; y++) for (let x = 30; x < SIZE - 30; x++) o.push(a[y * SIZE + x])
+      return Float32Array.from(o)
+    }
+    const st = diffStats(inner(want), inner(got))
+    expect(st.mean).toBeLessThan(0.01)
+    expect(st.badRatio).toBeLessThan(0.01)
+  })
+
+  it('標題「Tripline」與副標的字形幾何特徵（欄位分段數、橫向與縱向範圍）', () => {
+    const cream = (x: number, y: number) => px(x, y)[0] > 200 && px(x, y)[2] > 200
+    const runs = (y0: number, y1: number) => {
+      const r: Array<[number, number]> = []
+      let s = -1
+      for (let x = 480; x <= 1200; x++) {
+        let on = false
+        for (let y = y0; y < y1 && !on; y++) on = x < 1200 && cream(x, y)
+        if (on && s < 0) s = x
+        if (!on && s >= 0) { r.push([s, x - 1]); s = -1 }
+      }
+      return r
+    }
+    const rows = (y0: number, y1: number) => {
+      const r: number[] = []
+      for (let y = y0; y < y1; y++) for (let x = 480; x < 1200; x++) if (cream(x, y)) { r.push(y); break }
+      return [r[0], r[r.length - 1]]
+    }
+    const near = (v: number, t: number, tol = 8) => Math.abs(v - t) <= tol
+    const t = runs(210, 345)
+    expect(t.length, '標題欄位分段').toBe(7)
+    expect(near(t[0][0], 492) && near(t[t.length - 1][1], 900), '標題橫向範圍').toBe(true)
+    expect(near(rows(210, 345)[0], 242) && near(rows(210, 345)[1], 344), '標題縱向範圍').toBe(true)
+    const s = runs(370, 420)
+    expect(s.length, '副標欄位分段').toBeGreaterThanOrEqual(12)
+    expect(near(s[0][0], 496) && near(s[s.length - 1][1], 936), '副標橫向範圍').toBe(true)
+    expect(near(rows(370, 420)[0], 377) && near(rows(370, 420)[1], 413), '副標縱向範圍').toBe(true)
   })
 
   it('文字（米白）對底色 ≥ 4.5:1', () => {
