@@ -28,7 +28,7 @@
 ## Aesthetic Direction
 - **Direction:** Warm editorial — 明信片／旅遊雜誌的暖色排版，cream-paper + 焦糖陶土
 - **Decoration level:** Restrained — 靠排版、留白、hairline、柔褐三色（主柔褐 + sage + 粉）支撐畫面，不靠裝飾 SVG
-- **Mood:** 旅途上的溫度、紙本旅遊書的安心感。奶油底（`#FFFBF5`）+ 柔褐 焦糖（`#A97A4A`）accent 把行程資訊保持主角，避免 SaaS 冷藍感
+- **Mood:** 旅途上的溫度、紙本旅遊書的安心感。奶油底（`#FFFBF5`）+ 柔褐 焦糖（`#8A6038`，淺色全站唯一品牌色，#1572）accent 把行程資訊保持主角，避免 SaaS 冷藍感
 - **Differentiation:** 暖調 V2 柔褐三色（主柔褐 + sage 交通 + 粉 活動/收藏；非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
 - **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
 
@@ -37,13 +37,13 @@
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
 |-------|-----|------|
-| `--color-accent` | `#A97A4A` | UI chrome 唯一主色（active 指示、邊框、裝飾圖示、tint 底）。**不可當文字色**，見下方 §Color Approach 的通則；**實心 CTA + 白字請用 `--color-accent-fill`**（白字疊 `#A97A4A` 僅 3.77:1） |
+| `--color-accent` | `#8A6038` | UI chrome 唯一主色（active 指示、邊框、裝飾圖示、tint 底），淺色全部 accent 系列 token 同值（#1572 收斂） |
 | `--color-accent-deep` | `#8A6038` | hover / pressed |
 | `--color-accent-text` | `#8A6038` | 疊頁面／表面色（`-background`／`-secondary`／`-tertiary`／`-hover`）的**文字色** |
-| `--color-accent-text-on-tonal` | `#7A5430` | 疊同色系 tint（`-subtle`／`-bg`）的**文字色** |
+| `--color-accent-text-on-tonal` | `#8A6038` | 疊同色系 tint（`-subtle`／`-bg`）的**文字色** |
 | `--color-accent-fill` | `#8A6038` | 實心填色面（主要按鈕、tab 選中膠囊）+ `--color-accent-foreground` 白字 |
-| `--color-accent-subtle` | `#F4EDE3` | badge bg、selected row |
-| `--color-accent-bg` | `#E9DBC8` | accent panel |
+| `--color-accent-subtle` | `#F6EFE6` | badge bg、selected row |
+| `--color-accent-bg` | `#F1E8DE` | accent panel |
 | `--color-background` | `#FFFBF5` | page bg |
 | `--color-secondary` | `#FAF4EA` | card bg |
 | `--color-foreground` | `#2A1F18` | body text |
@@ -186,7 +186,7 @@
 ### Light Mode (柔褐三色 — Default)
 | Token | Hex | 用途 |
 |-------|-----|------|
-| accent（柔褐） | `#A97A4A` | 主強調：CTA 填色、active 指示、邊框、一般 POI icon/卡。**文字與連結請用 `-text` / `-text-on-tonal`**（見 §Color Approach） |
+| accent（柔褐） | `#8A6038` | 主強調：CTA 填色、active 指示、邊框、一般 POI icon/卡。**文字與連結請用 `-text` / `-text-on-tonal`**（見 §Color Approach） |
 | accent-deep | `#8A6038` | hover / pressed、icon glyph/描邊 |
 | accent-subtle | `#F4EDE3` | 卡片淡底、hover、selected row、chip bg |
 | accent-bg | `#E9DBC8` | icon 底、卡片邊、badge |

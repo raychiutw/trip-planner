@@ -15,43 +15,42 @@ body:not(.dark) { color-scheme: light; }
 /* ===== @theme: design token source of truth (V2 Terracotta light) =====
  * Source: docs/design-sessions/mockup-trip-v2.html (V2 Terracotta Final).
  * Values mirror the canonical mockup palette so design ↔ implementation stay
- * in lock-step. UI chrome primary is 柔褐 accent (`#A97A4A`); the 10-color
+ * in lock-step. UI chrome primary is 柔褐 accent (`#8A6038`，淺色全站唯一品牌色，#1572); the 10-color
  * day palette (Tailwind -500) is the documented exception per DESIGN.md
  * Data Visualization. */
 @theme {
     /* Colors — generate bg-*, text-*, border-* utilities */
-    --color-accent: #A97A4A;
-    --color-accent-subtle: #F4EDE3;
-    --color-accent-bg: #E9DBC8;
+    --color-accent: #8A6038;
+    --color-accent-subtle: #F6EFE6;
+    --color-accent-bg: #F1E8DE;
     --color-accent-deep: #8A6038;
     /* 焦點框自己的角色 —— HIG Color 的 macOS 動態系統色表把 `Keyboard focus indicator
      * color` 與 `Control accent` 列為兩個分開的條目。值目前與 accent-deep 相同，但角色
      * 分開了，之後要單獨調不必動 accent。對頁面底色 5.35:1（WCAG 1.4.11 門檻 3:1）。 */
     --color-focus-ring: #8A6038;
-    /* 前景專用（HIG 淺色稽核 2026-07-20）：柔褐 #A97A4A 當**文字**在奶油底上只有 3.66，
-     * 未達 WCAG AA 4.5。文字／連結／選中標籤一律用 -text 變體（同色相僅壓明度，不換色系）；
-     * 填色、邊框、裝飾圓點維持 --color-accent 不動。
-     *   -text          #8A6038 → on bg 5.35 / secondary 5.04 / accent-subtle 4.74 ✅
-     *   -text-on-tonal #7A5430 → 疊在 tonal/玻璃底（如 day tab 選中 ≈#EFE3D4）5.29 ✅
-     *                            （該底上 #8A6038 僅 4.36，故另立一階） */
+    /* #1572 品牌色收斂：淺色的 accent／-deep／-text／-text-on-tonal／-fill／focus-ring 與
+     * accent-2／-3 全部解析成同一個 #8A6038（與 App 單一 tint 同值）。角色名稱暫留，
+     * 逐處改呼叫端、刪多餘 token 是之後的清理。
+     * 淡底由品牌色衍生（疊在頁面底 #FFFBF5 上：subtle 約 8%、bg 約 12%），
+     * 而不是沿用舊值 —— 舊 bg 對 #8A6038 文字只有 4.05，12% 這階是對比 ≥ 4.5 的上限。
+     *   文字 #8A6038 → on bg 5.35 / secondary 5.04 / accent-subtle 4.9 / accent-bg 4.55 ✅
+     * 前景專用（HIG 淺色稽核 2026-07-20）：文字／連結／選中標籤仍用 -text 變體（語意不變）。 */
     --color-accent-text: #8A6038;
-    --color-accent-text-on-tonal: #7A5430;
-    /* 填色面專用（owner 2026-07-20 拍板「餘裕」檔）：白字疊 #A97A4A 只有 3.77 未達 AA
-     * （深色同一顆鈕有 7.12 → 淺色反而比深色難讀）。填色底改 #8A6038 → 白字 5.51 ✅。
-     * 用於「實心填色 + accent-foreground 白字」的場景（主要按鈕、側欄 active、底部 tab
-     * 選中膠囊…）。深色維持 #CBA06E（深字 7.12 已通過）。 */
+    --color-accent-text-on-tonal: #8A6038;
+    /* 填色面專用：「實心填色 + accent-foreground 白字」（主要按鈕、側欄 active、底部 tab
+     * 選中膠囊…），白字 5.51 ✅。深色維持 #CBA06E（深字 7.12 已通過）。 */
     --color-accent-fill: #8A6038;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
      * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
-    --color-accent-2: #A97A4A;
+    --color-accent-2: #8A6038;
     --color-accent-2-deep: #8A6038;
-    --color-accent-2-subtle: #F4EDE3;
-    --color-accent-2-bg: #E9DBC8;
-    --color-accent-3: #A97A4A;
+    --color-accent-2-subtle: #F6EFE6;
+    --color-accent-2-bg: #F1E8DE;
+    --color-accent-3: #8A6038;
     --color-accent-3-deep: #8A6038;
-    --color-accent-3-subtle: #F4EDE3;
-    --color-accent-3-bg: #E9DBC8;
+    --color-accent-3-subtle: #F6EFE6;
+    --color-accent-3-bg: #F1E8DE;
     --color-background: #FFFBF5;
     --color-secondary: #FAF4EA;
     --color-tertiary: #F2EAD9;
@@ -87,7 +86,7 @@ body:not(.dark) { color-scheme: light; }
     /* ⚠ Day palette「文字用」深階（--day-text-1..10）**不能放在 @theme**，已移到本檔下方的
      * plain :root 區塊。原因見那裡的註解（Tailwind 4 會 tree-shake @theme 裡沒被掃描到的
      * 變數，而它們的名字是 JS 動態組出來的）。這行留著當路標，不要把它們搬回來。 */
-    /* G14: info 語意色必須獨立於 accent（原本兩者都 #A97A4A 柔褐 → 資訊/連結與品牌 tint
+    /* G14: info 語意色必須獨立於 accent（原本兩者都是柔褐 → 資訊/連結與品牌 tint
      * 無法區分）。改 iOS systemBlue，light #007AFF。 */
     --color-info: #007AFF;
     --color-info-bg: #E6EEF6;
@@ -1043,7 +1042,7 @@ body.dark {
          * 實心鈕上會變成 1.00:1。#E0BC90 對頁面底 9.53:1、對 accent-fill 1.34:1
          * （後者靠雙帶的內圈隔開，見 DESIGN.md §Focus Indicator）。 */
         --color-focus-ring: #E0BC90;
-        /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038/#7A5430，
+        /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038，
          * 否則深底疊深字破版。深色 accent 當文字本就 7.12 通過，這裡對齊 accent-deep 更寬裕。
          * #E0BC90 on #1C1C1E = 9.53 ✅ */
         --color-accent-text: #E0BC90;
@@ -1200,7 +1199,7 @@ body.dark {
     max-width: 360px;
     padding: 12px 16px 12px 14px;
     border-radius: var(--radius-lg);
-    border: 1px solid var(--color-info-border, rgba(169, 122, 74, 0.34));
+    border: 1px solid var(--color-info-border, rgba(138, 96, 56, 0.34));
     background: var(--color-background);
     box-shadow: var(--shadow-md);
     color: var(--color-foreground);
