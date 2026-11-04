@@ -22,6 +22,9 @@
 | 4 | `trip-map`、`map` | — | 場景擋掉 Google Maps，畫面是「地圖暫停服務」錯誤態，**不是真實地圖**；這兩個場景不能當地圖畫面的證據 | 看圖加 spec 原始碼（`maps.googleapis.com` 被 abort） |
 | 5 | `explore` | — | 手機寬的篩選膠囊「Sight 1」與卡片類別「SIGHT」是未在地化的英文原值 | 看圖 |
 | 6 | `trips-new` | B | 手機寬日期欄位「選擇日期」字級明顯大於同頁其他 placeholder | 看圖 |
+| 7 | `trip-detail` | WCAG 2.5.3 | 9 個起訖時間 chip（`EntryTimeChip.tsx:140`）的 `aria-label="編輯起訖時間"` 蓋掉可見的時間文字（如 09:00–12:00），語音操控說出看得到的字會失敗 | axe 加程式碼 |
+| 8 | `trips-new` | WCAG 2.5.3、ARIA | 出發／回程日期欄（`TripDatePicker`，`NewTripPage.tsx:817-`）：`aria-label` 與可見文字不一致；`aria-required` 加在不允許該屬性的角色上（axe：critical） | axe（TripDatePicker 內部未讀） |
+| 9 | `trip-print` | C5 | 列印預覽分區的數量標籤 `#8a7a68`、11px，對比 4.14:1（`tripPrintStyles.ts:66`），低於 4.5:1 | axe 加程式碼 |
 
 另有三項觀察、需要設計確認：`trip-print` 淺色與深色圖完全相同（列印預覽固定淺色）；`login`、`signup`、`forgot-password` 的桌機右側宣傳面板與外觀反相；`login` 手機寬卡片內外各一個 Tripline 標誌。
 
@@ -57,8 +60,20 @@
 | `trips-list` | 淺深已看 | 淺深已看 | 未見明顯問題 | — | 桌機、手機寬目視未發現與檢查表衝突之處；僅看圖，未量字級與對比 |
 | `trips-new` | 淺深已看 | 淺深已看 | 疑慮 | B | 手機寬日期欄位的「選擇日期」字級明顯大於同頁其他欄位的 placeholder；底部固定操作列蓋住「讓 AI 幫你把行程填滿」卡片的下半（可捲動） |
 
+## 補掃：axe、重排、縮放、鍵盤焦點（工具量測）
+
+`tests/e2e/hig-a11y-collect.spec.js`（收集用，`HIG_COLLECT=1` 才執行，否則 skip；場景清單與 mock 與截圖 spec 共用 `hig-scene-fixtures.js`）。27 個場景、chromium、共 135 筆輸出。
+
+| 項目 | 範圍 | 結果 |
+|---|---|---|
+| axe（WCAG 2.0／2.1／2.2 A、AA） | 手機寬，淺深各一次 | 只有 3 類違規，即上表發現 7、8、9；其他場景 axe 沒有違規 |
+| axe「需人工」（incomplete） | — | `color-contrast` 15 筆、`label-content-name-mismatch` 12 筆。多半是背景圖或漸層上的文字，axe 無法判定，**不算通過**；沒有逐筆人工複核 |
+| 重排（WCAG 1.4.10） | 320×568 | 27 個場景都沒有橫向捲動 |
+| 文字放大 200% | `html` font-size 200% | 27 個場景都沒有橫向捲動。**限制**：這只對 rem／em 排版有意義；`landing` 的字級量到沒有跟著放大（比值 1.0），這一頁沒有被檢查到；其餘約 1.88 倍 |
+| 鍵盤焦點（WCAG 2.4.7） | 桌機寬，每頁連按 Tab 最多 14 次 | 只有 `explore` 的搜尋欄沒有偵測到外框或陰影（可能用邊框變色，本檢查不認，需目視確認）。**限制**：卡片本來就有陰影的元素會被誤判為有焦點樣式，所以「沒問題」不等於焦點一定清楚 |
+
 ## 沒做的事
 
-- 沒有量對比（C5、C6）、沒有放大 200% 與 320px 重排檢查（B7）、沒有鍵盤與焦點檢查（J5、J6）、沒有 dialog 行為檢查（D16、G9）。
+- 對比、重排（B7）、鍵盤焦點（J5、J6）已用上面的補掃做過，有各自的限制；沒有 dialog 行為檢查（D16、G9），也沒有實際用螢幕閱讀器走過。
 - 場景沒涵蓋：登入流程各狀態、分享／邀請／oauth 頁、停留點編輯頁、各種彈出層、空狀態與錯誤狀態、限流。
-- 只跑 chromium。
+- 只跑 chromium；webkit 要另外下載瀏覽器，沒有跑，Safari 的行為（含焦點樣式、`aria-*` 處理）沒驗證。
