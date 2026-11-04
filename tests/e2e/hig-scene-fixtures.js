@@ -14,15 +14,19 @@ const stubLogin = (status, code, headers = {}) => (page) =>
 const submitLogin = async (page) => {
   await page.locator('input[type=email]').fill('ray@example.com');
   await page.locator('input[type=password]').fill('wrong-password');
-  await page.locator('button[type=submit]').click();
-  await page.waitForTimeout(500);
+  await Promise.all([
+    page.waitForResponse(/\/api\/oauth\/login$/),
+    page.locator('button[type=submit]').click(),
+  ]);
 };
 const INVITE = { tripId: TRIP, tripTitle: '沖繩家族之旅', invitedEmail: 'ray@example.com', role: 'member', inviterDisplayName: 'Mia', inviterEmail: 'mia@example.com', expiresAt: '2026-12-31T00:00:00Z' };
 const stubInvite = (page) =>
   page.route(/\/api\/invitations(\?.*)?$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(INVITE) }));
+// 真實契約：GET /api/invitations?token= 對無效／過期／已接受都回 410（functions/api/_errors.ts），
+// 訊息來自 src/types/api.ts。用不存在的錯誤碼會讓頁面走到「未知錯誤→重試」分支，拍到不真實的畫面。
 const stubInviteInvalid = (page) =>
   page.route(/\/api\/invitations(\?.*)?$/, (r) =>
-    r.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: { code: 'INVITATION_NOT_FOUND', message: '邀請連結無效', detail: '邀請連結無效' } }) }));
+    r.fulfill({ status: 410, contentType: 'application/json', body: JSON.stringify(errBody('INVITATION_INVALID', '邀請連結無效，請聯絡邀請者重寄')) }));
 const stubTripsEmpty = (page) =>
   page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 const stubTripsError = (page) =>
@@ -67,12 +71,12 @@ const SCENES = [
   { name: 'login-error', path: '/login', loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤' },
   { name: 'login-rate-limited', path: '/login', loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked' },
   { name: 'signup-check-email', path: '/signup/check-email?email=ray%40example.com', loggedIn: false, proofText: /ray@example\.com/ },
-  { name: 'reset-password', path: '/auth/password/reset?token=demo-token', loggedIn: false, proofText: /新密碼|設定新密碼|重設密碼/ },
+  { name: 'reset-password', path: '/auth/password/reset?token=demo-token', loggedIn: false, proofText: '設定新密碼' },
   { name: 'verify-email', path: '/auth/verify-email?token=demo-token', loggedIn: false, proofText: '點此完成驗證' },
   { name: 'invite', path: '/invite?token=demo-invite', loggedIn: false, stub: stubInvite, proofText: '沖繩家族之旅' },
-  { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error' },
+  { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄' },
   { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
-  { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: /載入失敗|無法載入|重試/ },
+  { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單' },
 ];
 
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });

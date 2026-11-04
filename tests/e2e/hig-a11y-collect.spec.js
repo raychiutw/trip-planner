@@ -14,7 +14,7 @@
  * 限制：axe 在 mock 資料與外部地圖被擋的畫面上量；半透明背景、背景圖上的文字，axe 會標「needs review」
  * 而不是違規，這裡一併列出（incomplete），不算通過也不算失敗。
  */
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
 const { SCENES, setupSceneExtras } = require('./hig-scene-fixtures');
 const axePath = require.resolve('axe-core');
@@ -40,6 +40,9 @@ async function open(page, scene, { width, height, scheme }) {
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(400);
   if (scene.act) await scene.act(page);
+  // 量到錯的畫面比沒量更糟：有 proof 就先確認真的是想量的那一種狀態。
+  if (scene.proof) await expect(page.getByTestId(scene.proof)).toBeVisible();
+  if (scene.proofText) await expect(page.getByText(scene.proofText).first()).toBeVisible();
 }
 
 for (const scene of SCENES) {

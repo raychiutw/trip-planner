@@ -112,7 +112,8 @@ for (const scene of SCENES) {
         // 另外三個端點讀不到＝功能關閉（useAiDataConsent 與 LoginPage 都定義為「不強制」），不是錯誤態。
         const BENIGN = ['/account/ai-data-consent', '/account/ai-authorization', '/public-config'];
         // 這些場景刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
-        const INTENDED = { 'login-error': '/oauth/login', 'login-rate-limited': '/oauth/login', 'invite-invalid': '/invitations', 'trips-list-error': '/my-trips' };
+        // 連狀態碼一起比對（`狀態碼 路徑`），其他狀態碼或其他端點的失敗仍然算「沒有 mock」。
+        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips' };
         const unexpected = apiFailures.filter(
           (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])),
         );
