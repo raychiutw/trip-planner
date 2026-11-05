@@ -24,11 +24,14 @@ const MIN_LEN = 8;
 const SCOPED_STYLES = `
 .tp-chgpw-shell { min-height: 100%; background: var(--color-secondary); overflow-y: auto; }
 .tp-chgpw-inner { max-width: 640px; margin: 0 auto; padding: 16px 16px 64px; }
-.tp-chgpw-group { background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.tp-chgpw-group { background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
 .tp-chgpw-row { display: grid; grid-template-columns: 7rem 1fr auto; align-items: center; gap: 8px; padding: 4px 16px; min-height: 52px; }
 .tp-chgpw-row + .tp-chgpw-row { border-top: 1px solid var(--color-border); }
+/* 群組不裁切（outline 要畫在列外），圓角改由首尾列自己負責 */
+.tp-chgpw-row:first-child { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.tp-chgpw-row:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
 /* 輸入框自己不畫外框，焦點指示畫在整列上（WCAG 2.4.7：焦點必須看得見，不能只靠底色） */
-.tp-chgpw-row:focus-within { background: var(--color-accent-subtle); outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.tp-chgpw-row:focus-within { position: relative; z-index: 1; background: var(--color-accent-subtle); outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-chgpw-row label { font-weight: 600; }
 /* 16px：iOS Safari 對小於 16px 的輸入框聚焦時會自動放大頁面 */
 .tp-chgpw-row input { border: 0; background: transparent; font: inherit; font-size: 16px; color: inherit; padding: 12px 0; outline: none; min-width: 0; }
