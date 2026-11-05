@@ -386,6 +386,21 @@ export default function AccountPage() {
     }
   }, [draftName, reloadUser, user]);
 
+  /**
+   * 只有有 local 密碼的帳號才顯示「變更密碼」（只用 Google 登入的沒有密碼可改）；
+   * 而且要新 api 旗標開啟：這個端點只存在於新 api，舊入口（旗標關閉，目前正式站的狀態）沒有。
+   * 旗標關閉時下面的 effect 不取預覽，hasPassword 就永遠是 false，入口不會出現。
+   */
+  const [hasPassword, setHasPassword] = useState(false);
+  useEffect(() => {
+    if (!auth.user || !isNewApiAuthEnabled()) return;
+    let cancelled = false;
+    apiFetch<unknown>('/account')
+      .then((preview) => { if (!cancelled && isDeleteAccountPreview(preview)) setHasPassword(preview.hasPassword); })
+      .catch(() => { /* 預覽失敗就不顯示入口，不影響其他功能 */ });
+    return () => { cancelled = true; };
+  }, [auth.user]);
+
   useEffect(() => {
     if (!auth.user) return;
     let cancelled = false;
@@ -553,6 +568,7 @@ export default function AccountPage() {
       label: '帳號',
       tone: 'pink',
       rows: [
+        ...(hasPassword ? [{ key: 'change-password', icon: 'gear', title: '變更密碼', helper: '變更後其他裝置會登出', to: '/account/password' }] : []),
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有登入中的裝置', to: '/settings/sessions' },
         // Google Play 要求 app 內可直接取得隱私權政策，不能只放在網站頁尾。
         { key: 'privacy', icon: 'document', title: '隱私權政策', helper: '我們收集什麼資料、如何使用', to: '/privacy' },
