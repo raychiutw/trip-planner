@@ -47,6 +47,7 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-callout);
   color: var(--color-muted);
   text-align: center;
+  overflow-wrap: anywhere;
 }
 .tp-invite-cta {
   display: flex; flex-direction: column; gap: 10px;

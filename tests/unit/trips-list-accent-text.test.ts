@@ -259,7 +259,7 @@ describe('TripsListPage 柔褐文字對比 call-site 守衛（#1156）', () => {
 
     // 尾端那條規則仍在掃描範圍內（截斷在它之前就會漏掉）。
     const selectors = flatRules(extractScopedStyles(src)).map((r) => r.selector);
-    expect(selectors).toContain('.tp-trips-error');
+    expect(selectors).toContain('.tp-trips-load-error-btn:focus-visible');
   });
 
   it('抽取遇到裸 backtick 會炸而不是靜默截斷（守衛自身的 fail-open 防線）', () => {

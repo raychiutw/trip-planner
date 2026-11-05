@@ -46,6 +46,9 @@ const listeners = new Set<() => void>();
 
 function notify() { for (const listener of listeners) listener(); }
 
+/** 手動重試（錯誤態的「重試」按鈕用）。 */
+export function refreshMyTrips() { if (!inflight) refresh(); }
+
 function refresh() {
   if (!ownerId) return;
   const owner = ownerId;

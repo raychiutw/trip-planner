@@ -64,6 +64,7 @@ ${AUTH_LAYOUT_STYLES}
   font-weight: 700;
   color: var(--color-foreground);
   margin: 0 0 24px;
+  overflow-wrap: anywhere;
 }
 .tp-verify-banner {
   display: flex; gap: 12px;

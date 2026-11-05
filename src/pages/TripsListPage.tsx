@@ -42,13 +42,13 @@ import TripActionsMenu from '../components/trip/TripActionsMenu';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
-import ErrorBanner from '../components/shared/ErrorBanner';
+import PageErrorState from '../components/shared/PageErrorState';
 import { TripSelect } from '../components/TripSelect';
 import TripPage, { type TripPageHandle } from './TripPage';
 import { useTripPageHandle } from '../contexts/TripPageHandleContext';
 import { useTripMainPortal } from '../contexts/TripMainPortalContext';
 import { TRIP_MAIN_PORTAL_ID } from '../lib/tripStackRoutes';
-import { useTripSelection, type MyTrip } from '../hooks/useMyTrips';
+import { useTripSelection, refreshMyTrips, type MyTrip } from '../hooks/useMyTrips';
 
 const SCOPED_STYLES = `
 /* Terracotta preview v2 Section 16 parity: desktop 240px auto-fill cards,
@@ -461,7 +461,7 @@ body.dark .tp-trips-sort {
 }
 .tp-trips-empty-hero .tp-hero-cta:hover { filter: brightness(0.92); }
 
-.tp-trips-loading, .tp-trips-error {
+.tp-trips-loading {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -470,7 +470,20 @@ body.dark .tp-trips-sort {
   color: var(--color-muted);
   margin-top: 24px;
 }
-.tp-trips-error { color: var(--color-destructive); }
+.tp-trips-load-error {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  margin-top: 24px; padding: 32px 24px; text-align: center;
+  background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+}
+.tp-trips-load-error-title { margin: 0; font-weight: 700; color: var(--color-destructive); }
+.tp-trips-load-error-desc { margin: 0; font-size: var(--font-size-footnote); color: var(--color-muted); }
+.tp-trips-load-error-btn {
+  min-height: var(--spacing-tap-min); padding: 8px 16px;
+  border: 1px solid var(--color-border-control); border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+.tp-trips-load-error-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 `;
 
 type TripInfo = MyTrip;
@@ -568,7 +581,7 @@ export default function TripsListPage() {
     () => sharedTrips?.map((trip) => ({ ...trip, dayCount: trip.dayCount ?? trip.totalDays })) ?? [],
     [sharedTrips],
   );
-  const error = tripsStatus === 'error' && !sharedTrips ? '無法載入你的行程清單。' : null;
+  const error = tripsStatus === 'error' && !sharedTrips;
 
   // v2.31.89：embedded TitleBar「切換行程」改 dropdown picker（對齊 ChatPage UX）。
   const [tripPickerOpen, setTripPickerOpen] = useState(false);
@@ -821,7 +834,16 @@ export default function TripsListPage() {
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
           )}
 
-          {error && <ErrorBanner message={error} testId="trips-list-error" />}
+          {error && (
+            <PageErrorState
+              className="tp-trips-load-error"
+              title="無法載入你的行程清單。"
+              message="資料暫時無法取得。你的內容仍在伺服器上。"
+              onRetry={refreshMyTrips}
+              testId="trips-list-error"
+              retryTestId="trips-list-error-retry"
+            />
+          )}
 
           {!loading && !error && myTrips.length > 0 && (
             <div className="tp-trips-toolbar" data-testid="trips-list-toolbar">
