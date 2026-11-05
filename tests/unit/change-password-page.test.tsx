@@ -2,7 +2,7 @@
  * 變更密碼頁（flutter#529）：已登入、知道目前密碼；成功後其他裝置登出、本機保持登入。
  * 後端契約：POST /api/account/password（trip-planner-api#50）。
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ApiError } from '../../src/lib/errors';
@@ -14,6 +14,21 @@ vi.mock('../../src/lib/apiClient', () => ({
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'ray@x.com' }, reload: () => {} }),
 }));
+// 進入守衛（旗標＋hasPassword）另有 change-password-guard.test.tsx；這裡固定為「可進入」
+vi.mock('../../src/hooks/useAccountPreview', () => ({
+  useAccountPreview: () => ({ status: 'ready', preview: { hasPassword: true }, reload: vi.fn(), patch: vi.fn() }),
+}));
+const logoutMock = vi.fn();
+const authLogoutMock = vi.fn();
+vi.mock('../../src/lib/logout', () => ({ logoutSession: () => logoutMock() }));
+vi.mock('../../src/lib/auth', async (orig) => {
+  const m = await orig<typeof import('../../src/lib/auth')>();
+  return {
+    ...m,
+    isNewApiAuthEnabled: () => true,
+    getNewApiAuth: () => ({ isAuthenticated: () => true, logout: authLogoutMock }),
+  };
+});
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
 const toastMock = vi.fn();
@@ -45,7 +60,10 @@ beforeEach(() => {
   apiFetchMock.mockReset();
   toastMock.mockReset();
   navigateMock.mockReset();
+  logoutMock.mockReset();
+  authLogoutMock.mockReset();
 });
+afterEach(() => { vi.restoreAllMocks(); });
 
 describe('ChangePasswordPage', () => {
   it('欄位帶正確的自動填入提示：目前密碼 current-password、新密碼 new-password，且預設遮蔽', () => {
@@ -162,6 +180,23 @@ describe('ChangePasswordPage', () => {
     expect(init?.method).toBe('POST');
     expect(JSON.parse(String(init?.body))).toEqual({ current_password: OLD, new_password: NEW });
     expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('密碼已更新'), expect.anything());
+  });
+
+  it('成功後不清憑證、不登出（後端只登出其他裝置，這台要維持登入）', async () => {
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+    const clear = vi.spyOn(Storage.prototype, 'clear');
+    apiFetchMock.mockResolvedValueOnce({ ok: true });
+    renderPage();
+    fill(OLD, NEW);
+    submit();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/account'));
+    expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('密碼已更新'), 'success');
+    expect(logoutMock).not.toHaveBeenCalled();
+    expect(authLogoutMock).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+    // 唯一的 API 請求就是變更密碼本身（沒有額外的 logout／revoke）
+    expect(apiFetchMock.mock.calls.map((c) => c[0])).toEqual(['/account/password']);
   });
 
   it('新密碼少於 8 字元：不送出，當場提示', () => {

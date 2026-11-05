@@ -7,19 +7,20 @@
  * 成功後後端會登出其他裝置、保留目前這台；這裡只負責表單、前端檢查與錯誤呈現。
  * 與「忘記密碼」（寄信重設）是兩件事。
  */
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { isNewApiAuthEnabled } from '../lib/auth';
+import { useAccountPreview } from '../hooks/useAccountPreview';
+import { CHANGE_PASSWORD_MIN_LENGTH, ERROR_MESSAGES } from '../types/api';
 import { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
-
-const MIN_LEN = 8;
 
 const SCOPED_STYLES = `
 .tp-chgpw-shell { min-height: 100%; background: var(--color-secondary); overflow-y: auto; }
@@ -54,8 +55,15 @@ function messageFor(err: unknown): string {
 }
 
 export default function ChangePasswordPage() {
-  useRequireAuth();
+  const { user } = useRequireAuth();
   const navigate = useNavigate();
+  // 進入守衛：端點只存在於新 api（旗標開啟），而且只有有 local 密碼的帳號能改；
+  // 其餘（含預覽取失敗，無法確認）一律導回帳號頁，不顯示一張必定失敗的表單。
+  const newApi = isNewApiAuthEnabled();
+  const { status, preview } = useAccountPreview(!!user && newApi);
+  const allowed = newApi && preview?.hasPassword === true;
+  const denied = !newApi || (status === 'error' && !preview) || (status === 'ready' && preview?.hasPassword !== true);
+  useEffect(() => { if (denied) navigate('/account', { replace: true }); }, [denied, navigate]);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [show, setShow] = useState(false);
@@ -66,8 +74,8 @@ export default function ChangePasswordPage() {
   const [showLocal, setShowLocal] = useState(false);
 
   const localError = !next ? null
-    : next.length < MIN_LEN ? `新密碼至少 ${MIN_LEN} 字元`
-    : next === current ? '新密碼不能和目前密碼相同'
+    : next.length < CHANGE_PASSWORD_MIN_LENGTH ? ERROR_MESSAGES.CHANGE_PASSWORD_TOO_SHORT
+    : next === current ? ERROR_MESSAGES.CHANGE_PASSWORD_SAME
     : null;
   const shown = server ?? (showLocal && localError ? { message: localError, field: 'next' as const } : null);
 
@@ -99,6 +107,8 @@ export default function ChangePasswordPage() {
   const invalid = (field: 'current' | 'next') => (shown?.field === field ? true : undefined);
   const describedBy = (field: 'current' | 'next') => (shown?.field === field ? 'chgpw-error' : undefined);
 
+  if (!allowed) return null;
+
   const main = (
     <div className="tp-chgpw-shell" data-testid="change-password-page">
       <TitleBar
@@ -123,7 +133,6 @@ export default function ChangePasswordPage() {
               <input id="chgpw-current" data-testid="change-password-current" type="password" placeholder="必填"
                 autoComplete="current-password" value={current} onChange={(e) => edit(setCurrent, e.target.value)}
                 aria-invalid={invalid('current')} aria-describedby={describedBy('current')} />
-              <span />
             </div>
             <div className="tp-chgpw-row">
               <label htmlFor="chgpw-new">新密碼</label>
@@ -137,11 +146,11 @@ export default function ChangePasswordPage() {
             </div>
           </div>
           {/* 表單的預設送出鈕：主要動作在標題列（表單外），這顆讓 Enter 鍵可以送出 */}
-          <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+          <button type="submit" hidden tabIndex={-1} />
         </form>
         {shown && <p id="chgpw-error" className="tp-chgpw-error" role="alert">{shown.message}</p>}
         {/* 常駐說明：規則不能只放在 placeholder（輸入後就消失） */}
-        <p className="tp-chgpw-foot">新密碼至少 {MIN_LEN} 字元。變更後，其他裝置會被登出，這台維持登入。</p>
+        <p className="tp-chgpw-foot">新密碼至少 {CHANGE_PASSWORD_MIN_LENGTH} 字元。變更後，其他裝置會被登出，這台維持登入。</p>
       </div>
     </div>
   );

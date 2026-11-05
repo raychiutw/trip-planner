@@ -17,6 +17,8 @@ export interface PendingLogin {
   state: string;
   verifier: string;
   keyPair: CryptoKeyPair;
+  /** 發起時間（epoch ms）；超過有效期限的暫存回跳時視同不存在，見 PENDING_LOGIN_TTL_MS。 */
+  createdAt: number;
   /** 登入完成後要去的站內路徑（發起時已 sanitize）；沒有就 null。 */
   redirectAfterLogin: string | null;
 }
@@ -113,7 +115,7 @@ export function createIdbAuthStorage(opts: { indexedDB?: IDBFactory } = {}): Aut
     async takePendingLogin() {
       // 同一個 transaction 先讀後刪：回跳頁被重複載入時，只有第一次拿得到
       const v = await run('readwrite', (s) => { const req = s.get(KEY_PENDING); s.delete(KEY_PENDING); return req; }) as PendingLogin | undefined;
-      return v && typeof v.state === 'string' && typeof v.verifier === 'string' && v.keyPair?.privateKey ? v : null;
+      return v && typeof v.state === 'string' && typeof v.verifier === 'string' && typeof v.createdAt === 'number' && v.keyPair?.privateKey ? v : null;
     },
   };
 }

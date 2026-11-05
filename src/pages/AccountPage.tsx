@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useAccountPreview } from '../hooks/useAccountPreview';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { isNewApiAuthEnabled } from '../lib/auth';
@@ -30,31 +31,10 @@ const writeDeleteChallenge = (id: string | null) => {
   try { if (id) sessionStorage.setItem(DELETE_CHALLENGE_KEY, id); else sessionStorage.removeItem(DELETE_CHALLENGE_KEY); } catch { /* 無痕或被禁用：之後會要求重新驗證 */ }
 };
 
-/** GET /api/account 的刪除影響預覽。 */
-interface DeleteAccountPreview {
-  /** 有 local 密碼身分 → 用密碼確認；純 OAuth → 先完成 Google 重新驗證，再輸入確認字串 */
-  hasPassword: boolean;
-  reauthProvider: 'google' | null;
-  reauthenticated: boolean;
-  tripsOwned: number;
-  collaboratorsAffected: number;
-}
-
 interface AccountStats {
   tripCount: number;
   totalDays: number;
   collaboratorCount: number;
-}
-
-function isDeleteAccountPreview(value: unknown): value is DeleteAccountPreview {
-  if (!value || typeof value !== 'object') return false;
-  const preview = value as Record<string, unknown>;
-  return typeof preview.hasPassword === 'boolean'
-    && (preview.hasPassword || ((preview.reauthProvider === 'google' || preview.reauthProvider === null)
-      && typeof preview.reauthenticated === 'boolean'))
-    && typeof preview.tripsOwned === 'number' && Number.isSafeInteger(preview.tripsOwned) && preview.tripsOwned >= 0
-    && typeof preview.collaboratorsAffected === 'number' && Number.isSafeInteger(preview.collaboratorsAffected)
-    && preview.collaboratorsAffected >= 0;
 }
 
 const SCOPED_STYLES = `
@@ -240,6 +220,7 @@ const SCOPED_STYLES = `
 }
 .tp-account-row:last-child { border-bottom: none; }
 .tp-account-row:hover { background: var(--color-hover); }
+.tp-account-row-static:hover { background: transparent; }
 .tp-account-row-icon {
   width: 36px; height: 36px; border-radius: var(--radius-md);
   background: var(--color-accent-subtle);
@@ -320,8 +301,12 @@ export default function AccountPage() {
    * 所以確認畫面一定要先讓使用者看到「會刪掉幾個行程、影響幾位共編者」——
    * 那兩個數字前端算不出來，由 GET /api/account 提供。 */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePreview, setDeletePreview] = useState<DeleteAccountPreview | null>(null);
-  const deletePreviewGeneration = useRef(0);
+  /** 與「變更密碼」入口共用同一份 GET /api/account；旗標關閉（舊入口）時不主動取，開刪除確認才取。 */
+  const accountPreview = useAccountPreview(!!auth.user && isNewApiAuthEnabled());
+  // 只有「剛取到」的預覽才可用於刪除確認；重取中或重取失敗時為 null（確認鈕不可按）
+  const deletePreview = accountPreview.status === 'ready' ? accountPreview.preview : null;
+  const patchPreview = accountPreview.patch;
+  const reloadPreview = accountPreview.reload;
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -389,17 +374,13 @@ export default function AccountPage() {
   /**
    * 只有有 local 密碼的帳號才顯示「變更密碼」（只用 Google 登入的沒有密碼可改）；
    * 而且要新 api 旗標開啟：這個端點只存在於新 api，舊入口（旗標關閉，目前正式站的狀態）沒有。
-   * 旗標關閉時下面的 effect 不取預覽，hasPassword 就永遠是 false，入口不會出現。
+   * 旗標關閉時不主動取預覽，hasPassword 就永遠是 false，入口不會出現。
+   * 預覽取失敗時入口位置改顯示一列錯誤與「重試」（見 previewFailed）。
    */
-  const [hasPassword, setHasPassword] = useState(false);
-  useEffect(() => {
-    if (!auth.user || !isNewApiAuthEnabled()) return;
-    let cancelled = false;
-    apiFetch<unknown>('/account')
-      .then((preview) => { if (!cancelled && isDeleteAccountPreview(preview)) setHasPassword(preview.hasPassword); })
-      .catch(() => { /* 預覽失敗就不顯示入口，不影響其他功能 */ });
-    return () => { cancelled = true; };
-  }, [auth.user]);
+  const newApiEnabled = isNewApiAuthEnabled();
+  const hasPassword = newApiEnabled && accountPreview.preview?.hasPassword === true;
+  // 重試列只在「完全沒有預覽」時出現；已知 hasPassword 後的暫時性失敗不影響入口
+  const previewFailed = newApiEnabled && accountPreview.status === 'error' && !accountPreview.preview;
 
   useEffect(() => {
     if (!auth.user) return;
@@ -417,24 +398,16 @@ export default function AccountPage() {
 
   /** 開啟刪除確認前先抓預覽 —— 沒有數字就不該讓使用者按下不可逆的按鈕。 */
   const openDeleteModal = useCallback(async () => {
-    const generation = ++deletePreviewGeneration.current;
     setDeleteError(null);
     setDeleteInput('');
-    setDeletePreview(null);
     setShowDeleteModal(true);
-    try {
-      const preview = await apiFetch<unknown>('/account');
-      if (!isDeleteAccountPreview(preview)) throw new Error('Invalid delete preview');
-      if (deletePreviewGeneration.current === generation) setDeletePreview(preview);
-    } catch {
-      if (deletePreviewGeneration.current === generation) setDeleteError('無法取得刪除影響範圍，請稍後再試');
-    }
-  }, []);
+    // 每次開啟都重取最新影響範圍（不可逆動作不能用過期數字）；取的期間 status=loading，deletePreview 為 null。
+    // 載入中開啟會與進行中的請求去重（同一個 promise）。
+    const preview = await reloadPreview();
+    if (!preview) setDeleteError('無法取得刪除影響範圍，請稍後再試');
+  }, [reloadPreview]);
 
-  const closeDeleteModal = useCallback(() => {
-    deletePreviewGeneration.current += 1;
-    setShowDeleteModal(false);
-  }, []);
+  const closeDeleteModal = useCallback(() => setShowDeleteModal(false), []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -478,7 +451,7 @@ export default function AccountPage() {
       challengeId = readDeleteChallenge();
       if (!challengeId) {
         setDeleteError('近期身分驗證已失效，請重新驗證。帳號尚未刪除。');
-        setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
+        patchPreview((current) => ({ ...current, reauthenticated: false }));
         return;
       }
     }
@@ -508,10 +481,10 @@ export default function AccountPage() {
       );
       if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
         writeDeleteChallenge(null);
-        setDeletePreview(current => current ? { ...current, reauthenticated: false } : current);
+        patchPreview((current) => ({ ...current, reauthenticated: false }));
       }
     }
-  }, [deletePreview, canConfirmDelete, deleteInput, deleting]);
+  }, [deletePreview, canConfirmDelete, deleteInput, deleting, patchPreview]);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -658,6 +631,15 @@ export default function AccountPage() {
           <section key={group.key} className="tp-account-group">
             <div className="tp-account-group-label" data-testid={`account-group-label-${group.key}`}>{group.label}</div>
             <div className="tp-account-rows" data-tone={group.tone} data-testid={`account-rows-${group.key}`}>
+              {group.key === 'account' && previewFailed && (
+                <div className="tp-account-row tp-account-row-static" role="alert">
+                  <div className="tp-account-row-body">
+                    <div className="tp-account-row-helper">無法確認是否可變更密碼</div>
+                  </div>
+                  <button type="button" className="tp-btn tp-btn-ghost" onClick={() => void accountPreview.reload()}
+                    data-testid="account-preview-retry">重試</button>
+                </div>
+              )}
               {group.rows.map((row) => {
                 const className = `tp-account-row${row.danger ? ' is-danger' : ''}`;
                 const inner = (

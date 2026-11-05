@@ -15,9 +15,9 @@ export class ApiError extends Error {
   /** v2.21.0: full response body for structured error payloads (e.g. 409 conflictWith). */
   readonly payload?: unknown;
   /** 429 等回應的 `Retry-After`（秒）；沒有或不是正整數秒就是 undefined。跨網域要後端 CORS 暴露此標頭。 */
-  retryAfter?: number;
+  readonly retryAfter?: number;
 
-  constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown) {
+  constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown, retryAfter?: number) {
     super(ERROR_MESSAGES[code] || code);
     // v2.33.38 round 3: cap code length too — malicious server could return
     // `{ error: { code: 'AUTH'.repeat(1e5) } }` and propagate giant string.
@@ -32,18 +32,17 @@ export class ApiError extends Error {
       ? detail.replace(/[\r\n]+/g, ' ').slice(0, 200)
       : detail;
     this.payload = payload;
+    this.retryAfter = retryAfter;
     this.severity = classifySeverity(this.code);
   }
 
   /** 從 fetch Response 解析（支援新舊格式），並保存 `Retry-After`。 */
   static async fromResponse(res: Response): Promise<ApiError> {
-    const err = await ApiError.parseResponse(res);
     const seconds = Number(res.headers.get('Retry-After'));
-    if (Number.isInteger(seconds) && seconds > 0) err.retryAfter = seconds;
-    return err;
+    return ApiError.parseResponse(res, Number.isInteger(seconds) && seconds > 0 ? seconds : undefined);
   }
 
-  private static async parseResponse(res: Response): Promise<ApiError> {
+  private static async parseResponse(res: Response, retryAfter?: number): Promise<ApiError> {
     try {
       const body = await res.json() as Record<string, unknown>;
 
@@ -59,6 +58,7 @@ export class ApiError extends Error {
             res.status,
             detail,
             body, // payload preserves full body for structured 409 etc.
+            retryAfter,
           );
         }
       }
@@ -66,12 +66,12 @@ export class ApiError extends Error {
       // 舊格式：{ error: "string message" }
       if (typeof body.error === 'string') {
         const code = sniffErrorCode(res.status, body.error);
-        return new ApiError(code, res.status, body.error, body);
+        return new ApiError(code, res.status, body.error, body, retryAfter);
       }
 
-      return new ApiError(statusToCode(res.status), res.status, undefined, body);
+      return new ApiError(statusToCode(res.status), res.status, undefined, body, retryAfter);
     } catch {
-      return new ApiError(statusToCode(res.status), res.status);
+      return new ApiError(statusToCode(res.status), res.status, undefined, undefined, retryAfter);
     }
   }
 

@@ -104,11 +104,21 @@ describe('AuthCallbackPage（/auth/callback）', () => {
     const ctx = await boot('1');
     const auth = ctx.auth.getNewApiAuth()!;
     const href = await auth.startGoogleLogin({ redirectUri: `${WEB_ORIGIN}/auth/callback`, redirectAfterLogin: opts.redirectAfterLogin });
-    const back = api.googleLogin(href.replace(`${WEB_ORIGIN}/auth/callback`, 'https://web.test/auth/callback'), { deny: opts.deny });
+    const back = api.googleLogin(href, { deny: opts.deny });
     return { ...ctx, back: new URL(back ?? 'https://invalid.test/') };
   }
   const renderCallback = (C: React.ComponentType, search: string) =>
     render(<MemoryRouter initialEntries={[`/auth/callback${search}`]}><C /></MemoryRouter>);
+
+  it('回跳頁恰好一個 h1（DESIGN：每頁一個，可 sr-only），且版面不用 inline style', async () => {
+    const { AuthCallbackPage, back } = await startAndGetCallback();
+    renderCallback(AuthCallbackPage, back.search);
+    const headings = screen.getAllByRole('heading', { level: 1, hidden: true });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]!.className).toContain('sr-only');
+    expect(screen.getByTestId('auth-callback-page').getAttribute('style')).toBeNull();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+  });
 
   it('成功：換到 token 後導向 redirect_after_login（replace）', async () => {
     const { AuthCallbackPage, back } = await startAndGetCallback({ redirectAfterLogin: '/trips?selected=t1' });
