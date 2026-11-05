@@ -126,7 +126,7 @@ describe('SignupPage', () => {
     const email = screen.getByTestId('signup-email');
     expect(email.getAttribute('aria-invalid')).toBe('true');
     expect(email.getAttribute('aria-describedby')).toBe('signup-email-error');
-    expect(document.activeElement).toBe(email);
+    await waitFor(() => expect(document.activeElement).toBe(email));
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe('SignupPage', () => {
     const password = screen.getByTestId('signup-password');
     expect(password.getAttribute('aria-invalid')).toBe('true');
     expect(password.getAttribute('aria-describedby')).toContain('signup-password-error');
-    expect(document.activeElement).toBe(password);
+    await waitFor(() => expect(document.activeElement).toBe(password));
     expect((screen.getByTestId('signup-email') as HTMLInputElement).value).toBe('new@example.com');
     expect((screen.getByTestId('signup-display-name') as HTMLInputElement).value).toBe('Traveler');
   });
@@ -172,7 +172,7 @@ describe('SignupPage', () => {
     expect(screen.getByTestId('signup-email-error').textContent).toContain('已註冊');
     expect(email.getAttribute('aria-invalid')).toBe('true');
     expect(email.getAttribute('aria-describedby')).toBe('signup-email-error');
-    expect(document.activeElement).toBe(email);
+    await waitFor(() => expect(document.activeElement).toBe(email));
     expect(email.value).toBe('taken@x.com');
     expect(banner.querySelector('a[href="/login"]')).toBeTruthy();
     expect(banner.querySelector('a[href="/login/forgot"]')).toBeTruthy();
