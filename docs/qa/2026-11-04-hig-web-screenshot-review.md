@@ -30,6 +30,17 @@
 | 10 | `trips-list-error` | G6、G7 | 行程清單載入失敗只有一行「無法載入你的行程清單。」，**沒有重試**（程式碼確認：`TripsListPage` 的錯誤態沒有任何重試或重新載入動作）；使用者只能手動重新整理整頁 | 看圖加程式碼 |
 | 11 | `signup-check-email`、`invite` | B7 | 以「320px 寬、html 字級 200%」近似量測，scrollWidth 為 354、366（對 320）；逐元素掃描找不到右緣超出的元素，**原因未定位**。這只是近似（不是瀏覽器縮放），是否構成 WCAG 1.4.10 違規仍待驗證 | 量測（未定位） |
 
+### 修正狀態（trip-planner#1571）
+
+已修並以測試守住（版面類：`tests/e2e/hig-fixes.spec.js`；名稱、ARIA、對比、分類：`tests/unit/hig-web-fixes.test.tsx`）：發現 **1、2、3、5、6、7、8、9**。重跑 axe 收集（144 個場景輸出）：違規由 3 類（`aria-allowed-attr`、`label-content-name-mismatch`、`color-contrast`）降為 0，「需人工」清單前後相同。
+
+- 發現 5：`explore` 的 Sight 是場景 mock 用的分類值 `sight`（真實資料是 Google Places 的 primaryType，未收錄者依 v2.55.73 的設計刻意顯示英文）；補上 `sight` → 景點的對照。真實資料是否出現 `sight` 未驗證。
+- 發現 6：placeholder 縮到與同頁一致（1rem），以固定 min-height 維持有值與無值兩欄等高。手機寬 390 下「有值」的日期（如 2026-11-11）會折成兩行，是另一個既有問題，**未處理**。
+- 發現 3 的修正讓膠囊文字不再被截出視窗，axe 因而量得到膠囊的 `aria-label` 沒有包含可見文字（先前落在「需人工」），一併修正（名稱改以可見文字開頭）。
+- 觸控目標棘輪：起訖 chip 與移動方式膠囊的 accessible name 改變，`hig-known-violations.js` 內兩筆同一元素的標籤跟著更名（尺寸問題本身未改，不算修好）。
+
+**未處理**（不在 #1571 範圍）：發現 4（場景限制）、10（清單載入失敗無重試）、11（200% 文字溢位，原因未定位），以及下列觀察。
+
 另有三項觀察、需要設計確認：`trip-print` 淺色與深色圖完全相同（列印預覽固定淺色）；`login`、`signup`、`forgot-password` 的桌機右側宣傳面板與外觀反相；`login` 手機寬卡片內外各一個 Tripline 標誌。
 
 ## 逐場景結果

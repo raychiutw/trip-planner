@@ -95,7 +95,7 @@ const ESC_CASES = [
   },
   {
     name: 'entry-time-popover',
-    trigger: (page) => page.getByRole('button', { name: '編輯起訖時間' }).first(),
+    trigger: (page) => page.getByRole('button', { name: /編輯起訖時間/ }).first(),
     overlay: (page) => page.getByRole('dialog', { name: '起訖時間' }),
   },
 ];

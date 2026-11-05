@@ -76,7 +76,7 @@ const GOOGLE_PRIMARY_TYPE_LABELS: Record<string, string> = {
   park: '公園', garden: '花園', botanical_garden: '植物園', beach: '海灘', hiking_area: '健行步道',
   plaza: '廣場', tourist_information_center: '遊客中心', planetarium: '天文館', ferris_wheel: '摩天輪',
   point_of_interest: '景點', landmark: '地標',
-  scenic_spot: '觀景點', castle: '城堡', island: '島嶼', tourism: '觀光景點',
+  sight: '景點', scenic_spot: '觀景點', castle: '城堡', island: '島嶼', tourism: '觀光景點',
   // 購物（買 → 柔褐）
   shopping_mall: '購物中心', shopping_center: '購物中心', department_store: '百貨公司', supermarket: '超市',
   convenience_store: '便利商店', grocery_store: '雜貨店', market: '市場', clothing_store: '服飾店',

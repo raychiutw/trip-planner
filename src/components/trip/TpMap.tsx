@@ -110,6 +110,8 @@ const SCOPED_STYLES = `
   min-height: 0;
   border-radius: 0;
 }
+/* #1571：錯誤態的面板／按鈕樣式改放 tokens.css 的 .tp-page-error*（PageErrorState 預設樣式）；這裡只留面板內距。 */
+.tp-map-error-overlay { padding: 16px; overflow-y: auto; }
 `;
 
 /* ===== Single polyline component (per segment, lazy via useRoute) ===== */
@@ -306,7 +308,7 @@ const TpMap = memo(function TpMap({
           </div>
         )}
         {showError && (
-          <div style={MAP_OVERLAY_STYLE}>
+          <div style={MAP_OVERLAY_STYLE} className="tp-map-error-overlay">
             <PageErrorState
               title="地圖暫停服務"
               message={

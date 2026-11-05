@@ -27,7 +27,7 @@ function renderChip() {
 }
 
 async function openAndEdit() {
-  fireEvent.click(screen.getByRole('button', { name: '編輯起訖時間' }));
+  fireEvent.click(screen.getByRole('button', { name: /編輯起訖時間/ }));
   const dialog = await screen.findByRole('dialog', { name: '起訖時間' });
   fireEvent.click(screen.getByRole('button', { name: '抵達時間' })); // draft 改成 10:00，讓存檔有東西可送
   return dialog;
@@ -43,7 +43,7 @@ describe('EntryTimeChip：Esc 關閉', () => {
     renderChip();
     await openAndEdit();
     // 把焦點移出 popup，模擬「滑鼠點開後焦點仍在 chip」的情境。
-    (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
+    (screen.getByRole('button', { name: /編輯起訖時間/ }) as HTMLElement).focus();
     let notPrevented = true;
     await act(async () => { notPrevented = fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' }); });
     expect(screen.queryByRole('dialog', { name: '起訖時間' })).toBeNull();
@@ -55,7 +55,7 @@ describe('EntryTimeChip：Esc 關閉', () => {
   it('IME 組字中的 Esc（isComposing）不關閉也不存檔', async () => {
     renderChip();
     await openAndEdit();
-    (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
+    (screen.getByRole('button', { name: /編輯起訖時間/ }) as HTMLElement).focus();
     await act(async () => { fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape', isComposing: true }); });
     expect(screen.queryByRole('dialog', { name: '起訖時間' })).not.toBeNull();
     expect(updateEntry).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe('EntryTimeChip：Esc 關閉', () => {
   it('長按 Esc（repeat）只處理第一下，不會存檔兩次', async () => {
     renderChip();
     await openAndEdit();
-    (screen.getByRole('button', { name: '編輯起訖時間' }) as HTMLElement).focus();
+    (screen.getByRole('button', { name: /編輯起訖時間/ }) as HTMLElement).focus();
     await act(async () => {
       fireEvent.keyDown(document.body, { key: 'Escape' });
       fireEvent.keyDown(document.body, { key: 'Escape', repeat: true });

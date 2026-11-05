@@ -49,12 +49,15 @@ export const TRIP_DATE_PICKER_STYLES = `
   flex: 1;
   text-align: center;
   pointer-events: none;
+  /* #1571：高度由固定 min-height 撐住，不再靠 placeholder 放大到 value 的字級。
+   * 否則「選擇日期」比同頁其他 placeholder 大一截；有值／無值兩欄的高度仍一致（v2.33.120 要避免的落差）。 */
+  display: flex; align-items: center; justify-content: center;
+  min-height: 2.125rem;
 }
-/* v2.33.120: placeholder 字體 16px → 22px 對齊 value，避免「出發」(有值) 與「回程」(placeholder) trigger 高度落差 */
 .tp-date-value.is-placeholder {
   color: var(--color-muted);
   font-weight: 500;
-  font-size: 1.375rem;
+  font-size: 1rem;
 }
 .tp-date-chev {
   width: 18px;

@@ -63,7 +63,7 @@ export const PRINT_CSS = `
 /* section = chapter: prominent header + divider line + count badge */
 .tp-print-nh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.03em;color:#1d1813;border-bottom:1.5px solid #1d1813;padding-bottom:4px;margin:14px 0 6px;break-inside:avoid;}
 .tp-print-nh svg{width:15px;height:15px;}
-.tp-print-nh-cnt{margin-left:auto;font-size:11px;font-weight:600;color:#8a7a68;letter-spacing:0;}
+.tp-print-nh-cnt{margin-left:auto;font-size:11px;font-weight:600;color:#6f5a47;letter-spacing:0;}
 /* block = note item separated by a hairline (last in a chapter has none) */
 .tp-print-note-item{padding:6px 0;border-bottom:1px solid #efe9df;}
 .tp-print-nsec .tp-print-note-item:last-child{border-bottom:none;}
