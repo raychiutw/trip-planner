@@ -28,7 +28,7 @@ function setup() {
 }
 const callbackParams = (location: string) => new URL(location).searchParams;
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 describe('startGoogleLogin（發起）', () => {
   it('回傳新 api 的 Google 入口，帶齊參數：client_id、redirect_uri、S256 challenge、state、scope、dpop_jkt，且沒有多餘參數', async () => {
@@ -183,22 +183,28 @@ describe('finishGoogleLogin（回跳換 token）', () => {
     expect(api.tokenRequests()).toHaveLength(1);
   });
 
+  // 只假造 Date（不動計時器）：發起時間固定在 T0，之後把時鐘撥到邊界；不依賴兩次 Date.now() 的實際間隔
+  const T0 = Date.parse('2026-11-05T00:00:00Z');
+  async function beginAt() {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    return begin();
+  }
+
   it('暫存超過有效期限：當作不存在（拒絕、不打 token 端點）並清掉殘留的金鑰', async () => {
-    const { api, storage, client, href } = await begin();
+    const { api, storage, client, href } = await beginAt();
     const back = api.googleLogin(href)!;
-    const t0 = Date.now();
-    vi.spyOn(Date, 'now').mockReturnValue(t0 + PENDING_LOGIN_TTL_MS + 1);
+    vi.setSystemTime(T0 + PENDING_LOGIN_TTL_MS + 1);
     await expect(client.finishGoogleLogin(callbackParams(back))).rejects.toMatchObject({ code: 'OAUTH_STATE_MISMATCH' });
     expect(api.tokenRequests()).toHaveLength(0);
     expect(client.isAuthenticated()).toBe(false);
     expect(await storage.takePendingLogin()).toBeNull();
   });
 
-  it('暫存在有效期限內：照常換 token；用過即刪', async () => {
-    const { api, storage, client, href } = await begin();
+  it('暫存在有效期限內（剛好差 1ms）：照常換 token；用過即刪', async () => {
+    const { api, storage, client, href } = await beginAt();
     const back = api.googleLogin(href)!;
-    const t0 = Date.now();
-    vi.spyOn(Date, 'now').mockReturnValue(t0 + PENDING_LOGIN_TTL_MS - 1);
+    vi.setSystemTime(T0 + PENDING_LOGIN_TTL_MS - 1);
     await client.finishGoogleLogin(callbackParams(back));
     expect(client.isAuthenticated()).toBe(true);
     expect(await storage.takePendingLogin()).toBeNull();

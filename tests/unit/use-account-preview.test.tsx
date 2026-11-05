@@ -54,29 +54,27 @@ describe('useAccountPreview', () => {
     await waitFor(() => expect(result.current.status).toBe('error'));
   });
 
-  it('競態：reload() 發出的新請求先回來，舊請求晚到也不覆蓋', async () => {
-    const first = deferred<unknown>();
-    const second = deferred<unknown>();
-    apiFetchMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  it('reload() 對進行中的請求去重：同時多次呼叫只打一次、回傳同一份結果', async () => {
+    const d = deferred<unknown>();
+    apiFetchMock.mockReturnValueOnce(d.promise);
     const { result } = renderHook(() => useAccountPreview(true));
-    act(() => { void result.current.reload(); });
-    await act(async () => { second.resolve(preview(9)); await Promise.resolve(); });
-    await waitFor(() => expect(result.current.preview?.tripsOwned).toBe(9));
-    await act(async () => { first.resolve(preview(1)); await Promise.resolve(); });
-    expect(result.current.preview?.tripsOwned).toBe(9);
-    expect(result.current.status).toBe('ready');
+    let a: unknown; let b: unknown;
+    act(() => { void result.current.reload().then((v) => { a = v; }); void result.current.reload().then((v) => { b = v; }); });
+    await act(async () => { d.resolve(preview(5)); await d.promise; });
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+    expect(a).toBe(b);
+    expect(result.current.preview?.tripsOwned).toBe(5);
   });
 
-  it('舊請求失敗晚到，也不會把新請求的成功結果蓋成 error', async () => {
-    const first = deferred<unknown>();
-    const second = deferred<unknown>();
-    apiFetchMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  it('已載入之後 reload() 失敗：保留既有預覽（status=error 但 preview 不清）', async () => {
+    apiFetchMock.mockResolvedValueOnce(preview(7)).mockRejectedValueOnce(new Error('boom'));
     const { result } = renderHook(() => useAccountPreview(true));
-    act(() => { void result.current.reload(); });
-    await act(async () => { second.resolve(preview(4)); await Promise.resolve(); });
-    await act(async () => { first.reject(new Error('late')); await Promise.resolve(); });
-    expect(result.current.status).toBe('ready');
-    expect(result.current.preview?.tripsOwned).toBe(4);
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    let got: unknown = 'x';
+    await act(async () => { got = await result.current.reload(); });
+    expect(got).toBeNull();
+    expect(result.current.status).toBe('error');
+    expect(result.current.preview?.tripsOwned).toBe(7);
   });
 
   it('patch()：就地修改已載入的預覽（刪除流程標記 reauthenticated=false）', async () => {

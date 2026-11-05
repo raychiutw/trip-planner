@@ -38,13 +38,11 @@ export class ApiError extends Error {
 
   /** 從 fetch Response 解析（支援新舊格式），並保存 `Retry-After`。 */
   static async fromResponse(res: Response): Promise<ApiError> {
-    const err = await ApiError.parseResponse(res);
     const seconds = Number(res.headers.get('Retry-After'));
-    if (!(Number.isInteger(seconds) && seconds > 0)) return err;
-    return new ApiError(err.code, err.status, err.detail, err.payload, seconds);
+    return ApiError.parseResponse(res, Number.isInteger(seconds) && seconds > 0 ? seconds : undefined);
   }
 
-  private static async parseResponse(res: Response): Promise<ApiError> {
+  private static async parseResponse(res: Response, retryAfter?: number): Promise<ApiError> {
     try {
       const body = await res.json() as Record<string, unknown>;
 
@@ -60,6 +58,7 @@ export class ApiError extends Error {
             res.status,
             detail,
             body, // payload preserves full body for structured 409 etc.
+            retryAfter,
           );
         }
       }
@@ -67,12 +66,12 @@ export class ApiError extends Error {
       // 舊格式：{ error: "string message" }
       if (typeof body.error === 'string') {
         const code = sniffErrorCode(res.status, body.error);
-        return new ApiError(code, res.status, body.error, body);
+        return new ApiError(code, res.status, body.error, body, retryAfter);
       }
 
-      return new ApiError(statusToCode(res.status), res.status, undefined, body);
+      return new ApiError(statusToCode(res.status), res.status, undefined, body, retryAfter);
     } catch {
-      return new ApiError(statusToCode(res.status), res.status);
+      return new ApiError(statusToCode(res.status), res.status, undefined, undefined, retryAfter);
     }
   }
 

@@ -133,21 +133,16 @@ it('lets the user leave a failed delete preview and returns focus to the trigger
   expect(screen.getByRole('dialog', { name: '帳號' })).toBeVisible();
 });
 
-it('ignores a cancelled preview that resolves after a newer delete preview', async () => {
-  let resolveOld!: (response: Response) => void;
-  previewReplies = [
-    new Promise<Response>((resolve) => { resolveOld = resolve; }),
-    Promise.resolve(json({ hasPassword: true, tripsOwned: 2, collaboratorsAffected: 1 })),
-  ];
+it('reopening the delete dialog while the preview is loading shares the in-flight request', async () => {
+  let resolveFirst!: (response: Response) => void;
+  previewReplies = [new Promise<Response>((resolve) => { resolveFirst = resolve; })];
   showAccount();
   const trigger = await screen.findByTestId('account-row-delete-account');
   fireEvent.click(trigger);
   await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(1));
   fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
   fireEvent.click(trigger);
-  await waitFor(() => expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(2));
+  await act(async () => { resolveFirst(json({ hasPassword: true, tripsOwned: 2, collaboratorsAffected: 1 })); });
   expect(await screen.findByText(/你的 2 個行程/)).toBeVisible();
-  await act(async () => { resolveOld(json({ hasPassword: false, reauthProvider: 'google', reauthenticated: false, tripsOwned: 99, collaboratorsAffected: 80 })); });
-  expect(screen.getByText(/你的 2 個行程/)).toBeVisible();
-  expect(screen.queryByText(/99 個行程/)).toBeNull();
+  expect(requests.filter((request) => request.path === '/api/account' && request.method === 'GET')).toHaveLength(1);
 });

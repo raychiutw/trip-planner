@@ -219,8 +219,8 @@ const SCOPED_STYLES = `
   transition: background 120ms;
 }
 .tp-account-row:last-child { border-bottom: none; }
-.tp-account-row-static:hover { background: transparent; }
 .tp-account-row:hover { background: var(--color-hover); }
+.tp-account-row-static:hover { background: transparent; }
 .tp-account-row-icon {
   width: 36px; height: 36px; border-radius: var(--radius-md);
   background: var(--color-accent-subtle);
@@ -303,9 +303,8 @@ export default function AccountPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   /** 與「變更密碼」入口共用同一份 GET /api/account；旗標關閉（舊入口）時不主動取，開刪除確認才取。 */
   const accountPreview = useAccountPreview(!!auth.user && isNewApiAuthEnabled());
+  // 只有「剛取到」的預覽才可用於刪除確認；重取中或重取失敗時為 null（確認鈕不可按）
   const deletePreview = accountPreview.status === 'ready' ? accountPreview.preview : null;
-  const deletePreviewRef = useRef(deletePreview);
-  deletePreviewRef.current = deletePreview;
   const patchPreview = accountPreview.patch;
   const reloadPreview = accountPreview.reload;
   const [deleteInput, setDeleteInput] = useState('');
@@ -380,7 +379,8 @@ export default function AccountPage() {
    */
   const newApiEnabled = isNewApiAuthEnabled();
   const hasPassword = newApiEnabled && accountPreview.preview?.hasPassword === true;
-  const previewFailed = newApiEnabled && accountPreview.status === 'error';
+  // 重試列只在「完全沒有預覽」時出現；已知 hasPassword 後的暫時性失敗不影響入口
+  const previewFailed = newApiEnabled && accountPreview.status === 'error' && !accountPreview.preview;
 
   useEffect(() => {
     if (!auth.user) return;
@@ -401,8 +401,8 @@ export default function AccountPage() {
     setDeleteError(null);
     setDeleteInput('');
     setShowDeleteModal(true);
-    // 已載入就沿用（與變更密碼入口同一份）；否則按需取
-    if (deletePreviewRef.current) return;
+    // 每次開啟都重取最新影響範圍（不可逆動作不能用過期數字）；取的期間 status=loading，deletePreview 為 null。
+    // 載入中開啟會與進行中的請求去重（同一個 promise）。
     const preview = await reloadPreview();
     if (!preview) setDeleteError('無法取得刪除影響範圍，請稍後再試');
   }, [reloadPreview]);

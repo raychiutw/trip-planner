@@ -61,8 +61,8 @@ export default function ChangePasswordPage() {
   // 其餘（含預覽取失敗，無法確認）一律導回帳號頁，不顯示一張必定失敗的表單。
   const newApi = isNewApiAuthEnabled();
   const { status, preview } = useAccountPreview(!!user && newApi);
-  const allowed = newApi && status === 'ready' && preview?.hasPassword === true;
-  const denied = !newApi || status === 'error' || (status === 'ready' && preview?.hasPassword !== true);
+  const allowed = newApi && preview?.hasPassword === true;
+  const denied = !newApi || (status === 'error' && !preview) || (status === 'ready' && preview?.hasPassword !== true);
   useEffect(() => { if (denied) navigate('/account', { replace: true }); }, [denied, navigate]);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
