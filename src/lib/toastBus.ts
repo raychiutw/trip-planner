@@ -12,7 +12,7 @@
 
 import type { ErrorSeverity } from './errors';
 
-export type ToastType = 'error' | 'success' | 'info' | 'offline' | 'online';
+export type ToastType = 'error' | 'success' | 'info' | 'online';
 
 export interface ToastItem {
   id: number;
@@ -42,19 +42,7 @@ export function subscribeToasts(fn: Listener): () => void {
   };
 }
 
-// 全域離線橫幅（ServerStatusBanner）在場時，它就是唯一的離線提示：不再另跳「離線」Toast（#1587 14）。
-// 只抑制 offline 這一類；其他種類不受影響。
-let offlineBannerVisible = false;
-export function setOfflineBannerVisible(visible: boolean): void {
-  offlineBannerVisible = visible;
-  if (visible && toasts.some((t) => t.type === 'offline')) {
-    toasts = toasts.filter((t) => t.type !== 'offline');
-    notify();
-  }
-}
-
 export function showToast(message: string, type: ToastType = 'info', duration = 3000): void {
-  if (type === 'offline' && offlineBannerVisible) return;
   toasts = [...toasts, { id: nextId++, message, type, duration }];
   notify();
 }
@@ -67,7 +55,6 @@ export function dismissToast(id: number): void {
 /** @internal — for testing only */
 export function resetToasts(): void {
   toasts = [];
-  offlineBannerVisible = false;
   notify();
 }
 

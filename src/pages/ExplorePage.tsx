@@ -19,6 +19,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import InlineError from '../components/shared/InlineError';
 import InputModal from '../components/shared/InputModal';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -113,7 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border); border-radius: var(--radius-full);
   padding: 8px 16px; min-height: 48px;
 }
-.explore-field-error { margin: 0; padding: 0 16px; font-size: var(--font-size-footnote); color: var(--color-destructive); }
+.explore-field-error { padding: 0 16px; } /* 與膠囊搜尋欄的內縮對齊 */
 .explore-search:focus-within { border-color: var(--color-accent); }
 .explore-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .explore-search input {
@@ -913,7 +914,7 @@ export default function ExplorePage() {
               </button>
             </form>
             {queryError && (
-              <p id="explore-search-error" className="explore-field-error" role="alert" data-testid="explore-search-error">{queryError}</p>
+              <InlineError message={queryError} testId="explore-search-error" className="explore-field-error" />
             )}
 
             <div className="explore-subtabs" role="group" aria-label="景點類別">

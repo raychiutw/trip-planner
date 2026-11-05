@@ -282,6 +282,40 @@ export default function SessionsPage() {
     }
   }
 
+  // 登出此帳號。失敗時橫幅都帶「重試」（重跑同一個動作）；進行中 loggingOut 停用按鈕，不重複送出。
+  async function logoutAccount() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setError(null);
+    setRetryAction(null);
+    const failed = (message: string) => { setError(message); setRetryAction(() => () => void logoutAccount()); };
+    try {
+      const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
+      if (!response.ok) throw new Error('Logout failed');
+      writeAuthHint(false);
+      navigate('/login', { replace: true });
+    } catch {
+      // The server may have revoked the session even if its response was lost.
+      try {
+        const status = await apiFetchRaw('/oauth/userinfo');
+        if (status.status === 401) {
+          writeAuthHint(false);
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (status.ok) {
+          failed('登出失敗，你目前仍保持登入。');
+          return;
+        }
+      } catch {
+        // The session result remains unknown until connectivity returns.
+      }
+      failed('無法確認登出結果，目前不確定是否仍登入。請檢查連線後再試。');
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   const otherSessions = sessions?.filter((s) => !s.is_current) ?? [];
 
   return (
@@ -413,7 +447,7 @@ export default function SessionsPage() {
             className="tp-sessions-error"
             message={error}
             testId="sessions-error"
-            action={retryAction ? { label: '重試', onClick: retryAction, disabled: revokingSid !== null || revokingAll } : undefined}
+            action={retryAction ? { label: '重試', onClick: retryAction, disabled: revokingSid !== null || revokingAll || loggingOut } : undefined}
           />
         )}
 
@@ -444,37 +478,7 @@ export default function SessionsPage() {
             className="tp-account-logout-btn"
             data-testid="sessions-logout"
             disabled={loggingOut}
-            onClick={async () => {
-              if (loggingOut) return;
-              setLoggingOut(true);
-              setError(null);
-              setRetryAction(null); // 登出此帳號的錯誤沒有重試（結果可能未知，見下方文案）
-              try {
-                const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
-                if (!response.ok) throw new Error('Logout failed');
-                writeAuthHint(false);
-                navigate('/login', { replace: true });
-              } catch {
-                // The server may have revoked the session even if its response was lost.
-                try {
-                  const status = await apiFetchRaw('/oauth/userinfo');
-                  if (status.status === 401) {
-                    writeAuthHint(false);
-                    navigate('/login', { replace: true });
-                    return;
-                  }
-                  if (status.ok) {
-                    setError('登出失敗，請稍後再試。');
-                    return;
-                  }
-                } catch {
-                  // The session result remains unknown until connectivity returns.
-                }
-                setError('無法確認登出結果，請檢查連線後再試。');
-              } finally {
-                setLoggingOut(false);
-              }
-            }}
+            onClick={() => void logoutAccount()}
           >
             {loggingOut ? '登出中…' : '登出此帳號'}
           </button>

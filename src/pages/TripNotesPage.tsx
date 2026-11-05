@@ -295,6 +295,7 @@ const SCOPED_STYLES = `
 }
 
 .tp-notes-section-chevron {
+  pointer-events: none; /* 點擊穿透到標題按鈕：展開時 rotate 建立 stacking context，會疊在按鈕的 ::after 之上吃掉點擊 */
   width: 28px; height: 28px;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--color-muted);
@@ -511,7 +512,7 @@ export default function TripNotesPage() {
                         className="tp-notes-ai-btn"
                         aria-label={isActiveAiJob(aiJobs.tips) ? 'AI 生成中…' : 'AI 生成一般行前須知'}
                         data-testid="trip-notes-ai-btn-pretrip"
-                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
+                        onClick={() => { void handleAiTrigger('tips'); }}
                         disabled={aiUnavailable || posting.includes('tips') || isActiveAiJob(aiJobs.tips)}
                         title={isActiveAiJob(aiJobs.tips) ? '一般行前須知正在生成' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
                       >
@@ -523,8 +524,7 @@ export default function TripNotesPage() {
                         className="tp-notes-ai-btn"
                         aria-label={isActiveAiJob(aiJobs['lodging-tips']) ? 'AI 生成中…' : 'AI 生成住宿在地建議'}
                         data-testid="trip-notes-ai-btn-pretrip-lodging"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           // PR24 guard: lodging-tips 依賴 trip 飯店資料，0 lodging 時不應觸發
                           if (counts.lodgings === 0) {
                             showToast('請先在住宿 section 填寫至少 1 間飯店才能 AI 生成在地建議', 'info', 4000);
@@ -550,7 +550,7 @@ export default function TripNotesPage() {
                       className="tp-notes-ai-btn"
                       aria-label={isActiveAiJob(aiJobs.emergency) ? 'AI 生成中…' : 'AI 生成緊急聯絡'}
                       data-testid="trip-notes-ai-btn-emergency"
-                      onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
+                      onClick={() => { void handleAiTrigger('emergency'); }}
                       disabled={aiUnavailable || posting.includes('emergency') || isActiveAiJob(aiJobs.emergency)}
                       title={isActiveAiJob(aiJobs.emergency) ? '緊急聯絡正在生成' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
                     >

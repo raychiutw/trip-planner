@@ -11,7 +11,6 @@
  */
 import { useLayoutEffect, useRef } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { setOfflineBannerVisible } from '../lib/toastBus';
 
 export function ServerStatusBanner(): React.JSX.Element | null {
   const isOnline = useOnlineStatus();
@@ -25,13 +24,11 @@ export function ServerStatusBanner(): React.JSX.Element | null {
     const root = document.documentElement;
     const publish = () => root.style.setProperty('--server-banner-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
     publish();
-    setOfflineBannerVisible(true);
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
     ro?.observe(el);
     return () => {
       ro?.disconnect();
       root.style.removeProperty('--server-banner-h');
-      setOfflineBannerVisible(false);
     };
   }, [isOnline]);
 

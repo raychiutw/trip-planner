@@ -62,7 +62,7 @@
 
 - **12 已處理**：橫幅改用存在的 `--color-destructive`（文字）與不透明的 `--color-destructive-bg`（底），不再落到寫死的 `#8b2828`；淺色 4.85:1、深色 4.78:1。
 - **13 已處理**：橫幅離線時把自己的高度發布成 `--server-banner-h`，`.app-shell` 的高度改為 `calc(100dvh - var(--server-banner-h, 0px))`，總高不變；e2e 量離線前後 `scrollHeight` 相同、shell 下緣不超出視窗。
-- **14 已處理（owner 決定）**：（場景 `popup-toast-offline` 因此改名為 `popup-toast-online`，取證恢復連線 Toast。）全域橫幅是唯一的離線提示。橫幅在場時 `showToast(…, 'offline')` 直接丟棄、已在畫面上的離線 Toast 收掉；其他種類 Toast 不受影響，橫幅消失後離線 Toast 恢復。行程頁「目前是離線模式」卡片帶頁面專屬資訊，保留。
+- **14 已處理（owner 決定）**：全域橫幅是唯一的離線提示，**離線 Toast 類型整個移除**（`ToastType` 不再有 `'offline'`，`useOfflineToast` 只在恢復連線時跳「已恢復連線」，不留永遠不會跑的路徑與模組層級旗標）。行程頁「目前是離線模式」卡片帶頁面專屬資訊，保留。場景 `popup-toast-offline` 因此改名為 `popup-toast-online`。
 - **15 已處理**：Toast 容器改為 `.tp-toast-region`：compact 在底部且高於 bottom nav（`--nav-height-mobile`）；≥1024px 在右上、titlebar 下方（`--titlebar-h`，離線橫幅在場時再讓出橫幅高度）。移除不再使用的 `--spacing-toast-top`。
 - **16 已處理**：Toast 只有 `error` 用 `role="alert"`（隱含 assertive），其餘用 `role="status"`（隱含 polite），不再另設 `aria-live`。探索頁少於 2 字改為搜尋欄下方的欄位錯誤文字（`role="alert"`、`aria-invalid`、`aria-describedby`），繼續輸入才清除，不再發 Toast（場景 `popup-toast-error` 因此改取證「搜尋失敗」error Toast，只讓 `q=ab` 失敗）。
 - **17 已處理（owner 決定）**：ConflictModal 先不接「改插入到後面」「取代既有」（那需要另外定義兩個動作對行程資料的語意，之後另開票）。呼叫端 `AddPoiFavoriteToTripPage` 改傳 `message`（只陳述「這個時段已經安排了景點，這次沒有加入」）與 `cancelLabel="知道了"`；元件預設文案與選項不動，其他呼叫端（目前沒有）不受影響。
@@ -72,7 +72,7 @@
 - **21 已處理**：筆記區塊標題列改為 `div.tp-notes-section-head` 內並列「標題 `<button>`」與 AI `<button>`（兄弟，不再巢狀）；標題按鈕的 `::after` 鋪滿整列，點列上任何位置仍可展開，鍵盤 Enter／Space 由原生 button 處理，焦點環畫在整列。單元以 axe 的 `nested-interactive` 守門。
 - **22 已處理**：彈出層標題一律 `h2`（DESIGN.md「Modal 標題 `<h2>`」、頁面只有一個 `h1`）：AI 授權 sheet（`h4`）與交通方式（`h3`）改 `h2`，並設 `margin: 0` 保持版面。設定頁內嵌的「AI 與資料」`h3` 不是彈出層，不動。
 - **23 待決定**：圖示庫（`src/components/shared/Icon.tsx`）只有 `train`、`bus`、`ship`、`plane`、`car`、`walking`、`route`，**沒有**單軌、地鐵、高鐵專用圖示，挑不出四個彼此可分辨的；專案規定不引入外部圖示套件、也不自行畫 SVG。缺的是：單軌、地鐵、高鐵（火車可沿用 `train`）。替代方案：圖示維持，三者在 chip 圖示旁加縮寫字角標；或請設計提供三個圖示後新增到 Icon 元件。請 owner 擇一。
-- **24 已處理**：`ErrorBanner` 新增 `action`；登出裝置失敗訊息改為「登出此裝置失敗，該裝置可能仍保持登入。」並帶「重試」（重跑同一個動作），「登出其他裝置」同理；橫幅上緣補 16px，與清單卡、下方說明卡間距一致。（「可能」是因為網路中斷時伺服器端是否已處理未知。）
+- **24 已處理**：`ErrorBanner` 新增 `action`；登出裝置失敗訊息改為「登出此裝置失敗，該裝置可能仍保持登入。」並帶「重試」（重跑同一個動作），「登出其他裝置」同理；「登出此帳號」失敗也補齊：確定仍登入時說「登出失敗，你目前仍保持登入。」，結果無法確認時說「不確定是否仍登入」，兩者都帶「重試」（進行中登出鈕停用，不重複送出）。橫幅上緣補 16px，與清單卡、下方說明卡間距一致。（「可能」是因為網路中斷時伺服器端是否已處理未知。）
 
 **重拍與檢視（#1587）**：受影響場景（`popup-server-status-banner`、`popup-toast-error`、`popup-toast-online`、`popup-conflict-modal`、`popup-travel-pill-dialog`、`popup-share-link-modal`、`popup-error-banner`、`popup-account-sheet`、`popup-trip-sheet`、`popup-ai-consent-sheet`、`trip-notes`、`chat`、`account`）已在 Linux 容器（Playwright v1.64.1 noble）重拍；逐張目視的是：手機寬——橫幅淺深、Toast 錯誤與恢復連線、衝突對話框淺深、交通方式、分享對話框、登出失敗橫幅（深色）；桌機寬——橫幅（深色）、Toast 錯誤（淺色）、恢復連線（深色）、筆記頁。其餘重拍圖（含 `popup-account-sheet`、`popup-trip-sheet`、`popup-ai-consent-sheet`、`chat`、`account` 與未列出的淺深組合）只有場景 proof、axe 與觸控棘輪，**沒有逐張看**。
 

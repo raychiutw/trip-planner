@@ -1007,7 +1007,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 ### Visual Style
 
 - Error surfaces 使用 semantic error，不使用 柔褐。柔褐保留給品牌、active state、CTA。
-- `error`（`--color-destructive`）: `#C13515`；**`--color-destructive-bg` 是不透明的 `#FDECEC`**（深色為 `rgba(255, 107, 82, 0.16)`）；border 可用 `rgba(193, 53, 21, 0.24)`。
+- `error`（`--color-destructive`）: `#C13515`；**`--color-destructive-bg` 是不透明的 `#FDECEC`**（深色同樣是不透明的 `#402926`；#1587 起 `ServerStatusBanner` 的文字對比以這兩組不透明色驗證，淺色 4.85:1、深色 4.78:1）；border 可用 `rgba(193, 53, 21, 0.24)`。
 - Warning 使用 `#F48C06`；info 使用 `#007AFF`（iOS systemBlue）；success 使用 `#06A77D`。
 
 > ⚠️ **2026-07-26 更正兩處**：(a) `error-bg` 原寫成半透明 `rgba(193, 53, 21, 0.08)`，實際是**不透明**的 `#FDECEC` —— 這個差別是有意義的，§語意色的角色分離正是拿它當「不透明底所以對比可預測」的對照組（全站 51 處 destructive 當文字都沒有對比問題，而半透明的 success/warning 有）。(b) warning / info 沿用了已作廢的 `#C88500` / `#3B7EA1`。

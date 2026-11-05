@@ -79,37 +79,39 @@ const STYLE = `
  * （純 --color-accent 白字對比 3.77 未過 AA，owner 2026-07-20 已裁決）；tonal 態（seg.on/badge/new）
  * 用 --color-accent-subtle + --color-accent-text；backdrop/shadow 的 rgba 屬 overlay/陰影、雙態通用保留。 */
 .tp-sharemodal{background:var(--color-background);color:var(--color-foreground);width:100%;max-width:460px;border-radius:14px;box-shadow:0 16px 48px rgba(42,31,24,.3);padding:20px;font-family:inherit;margin:auto;}
+/* 觸控目標 ≥ 44（#1587 20）：一條規則涵蓋所有可點元素，新增按鈕時加進這個選擇器。 */
+.tp-sharemodal-x,.tp-sharemodal-input,.tp-sharemodal-pill,.tp-sharemodal-seg button,.tp-sharemodal-anon,.tp-sharemodal-create,.tp-sharemodal-act,.tp-sharemodal-copy,.tp-sharemodal-newrow2 button{min-height:var(--spacing-tap-min);}
 .tp-sharemodal-head{display:flex;align-items:center;gap:8px;}
 .tp-sharemodal-head h2{font-size:1.125rem;font-weight:700;margin:0;margin-right:auto;}
-.tp-sharemodal-x{min-width:var(--spacing-tap-min);min-height:var(--spacing-tap-min);margin:-8px -10px -8px 0;border:none;background:transparent;font-size:1.125rem;color:var(--color-muted);cursor:pointer;line-height:1;padding:4px;}
+.tp-sharemodal-x{min-width:var(--spacing-tap-min);/* ✕ 撐到 44px 比原本約 27px 高出 17px：上下負 margin 各 8px 抵銷，標題列高度不變；右側 -10px 讓字形視覺右緣仍對齊對話框內距 */margin:-8px -10px -8px 0;border:none;background:transparent;font-size:1.125rem;color:var(--color-muted);cursor:pointer;line-height:1;padding:4px;}
 .tp-sharemodal-sub{font-size:0.8125rem;color:var(--color-muted);line-height:1.5;margin:8px 0 14px;}
 .tp-sharemodal-seclabel{font-size:0.75rem;font-weight:700;color:var(--color-muted);letter-spacing:.04em;margin:13px 0 8px;}
 .tp-sharemodal-createbox{background:var(--color-secondary);border:1px solid var(--color-border);border-radius:12px;padding:14px;}
 .tp-sharemodal-createbox .tp-sharemodal-seclabel:first-child{margin-top:0;}
-.tp-sharemodal-input{width:100%;min-height:var(--spacing-tap-min);font-size:0.8125rem;font-family:inherit;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-background);color:var(--color-foreground);}
+.tp-sharemodal-input{width:100%;font-size:0.8125rem;font-family:inherit;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-background);color:var(--color-foreground);}
 .tp-sharemodal-pills{display:flex;flex-wrap:wrap;gap:7px;}
-.tp-sharemodal-pill{min-height:var(--spacing-tap-min);font-size:0.8125rem;font-weight:600;padding:6px 12px;border-radius:9999px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);cursor:pointer;font-family:inherit;}
+.tp-sharemodal-pill{font-size:0.8125rem;font-weight:600;padding:6px 12px;border-radius:9999px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);cursor:pointer;font-family:inherit;}
 .tp-sharemodal-pill.on{background:var(--color-accent-fill);border-color:var(--color-accent-fill);color:var(--color-accent-foreground);}
 .tp-sharemodal-hint{font-size:0.75rem;color:var(--color-muted);margin-top:7px;line-height:1.5;}
 /* 單列、等寬分配；窄螢幕放不下時橫向捲動，不再折成只剩「自訂」的孤列（#1587 19） */
 .tp-sharemodal-seg{display:flex;flex-wrap:nowrap;border:1px solid var(--color-border);border-radius:8px;overflow-x:auto;max-width:100%;}
-.tp-sharemodal-seg button{min-height:var(--spacing-tap-min);flex:1 0 auto;white-space:nowrap;font-size:0.8125rem;font-family:inherit;padding:7px 10px;border:none;background:var(--color-background);color:var(--color-muted);cursor:pointer;border-right:1px solid var(--color-border);}
+.tp-sharemodal-seg button{flex:1 0 auto;white-space:nowrap;font-size:0.8125rem;font-family:inherit;padding:7px 10px;border:none;background:var(--color-background);color:var(--color-muted);cursor:pointer;border-right:1px solid var(--color-border);}
 .tp-sharemodal-seg button:last-child{border-right:none;}
 .tp-sharemodal-seg button.on{background:var(--color-accent-subtle);color:var(--color-accent-text);font-weight:700;}
 .tp-sharemodal-datefield{margin-top:8px;}
-.tp-sharemodal-anon{min-height:var(--spacing-tap-min);display:flex;align-items:center;gap:8px;font-size:0.8125rem;margin-top:13px;cursor:pointer;}
+.tp-sharemodal-anon{display:flex;align-items:center;gap:8px;font-size:0.8125rem;margin-top:13px;cursor:pointer;}
 .tp-sharemodal-anon input{width:17px;height:17px;accent-color:var(--color-accent-fill);}
-.tp-sharemodal-create{width:100%;margin-top:13px;min-height:var(--spacing-tap-min);border:none;border-radius:9px;background:var(--color-accent-fill);color:var(--color-accent-foreground);font-weight:700;font-size:0.875rem;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
+.tp-sharemodal-create{width:100%;margin-top:13px;border:none;border-radius:9px;background:var(--color-accent-fill);color:var(--color-accent-foreground);font-weight:700;font-size:0.875rem;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
 .tp-sharemodal-create:disabled{opacity:.55;cursor:default;}
 .tp-sharemodal-create svg{width:16px;height:16px;}
 .tp-sharemodal-new{background:var(--color-accent-subtle);border:1px solid var(--color-accent-bg);border-radius:10px;padding:12px;margin-top:14px;}
 .tp-sharemodal-new-lbl{font-size:0.75rem;font-weight:600;color:var(--color-accent-text);margin-bottom:8px;}
 .tp-sharemodal-urlrow{display:flex;gap:8px;}
 .tp-sharemodal-url{flex:1;min-width:0;font-size:0.8125rem;font-family:inherit;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-background);color:var(--color-foreground);}
-.tp-sharemodal-copy{min-height:var(--spacing-tap-min);flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;border:none;border-radius:8px;background:var(--color-accent-fill);color:var(--color-accent-foreground);font-weight:600;font-size:0.8125rem;font-family:inherit;padding:0 12px;cursor:pointer;}
+.tp-sharemodal-copy{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;border:none;border-radius:8px;background:var(--color-accent-fill);color:var(--color-accent-foreground);font-weight:600;font-size:0.8125rem;font-family:inherit;padding:0 12px;cursor:pointer;}
 .tp-sharemodal-copy svg{width:15px;height:15px;}
 .tp-sharemodal-newrow2{display:flex;gap:8px;margin-top:8px;}
-.tp-sharemodal-newrow2 button{min-height:var(--spacing-tap-min);flex:1;border:1px solid var(--color-accent-bg);border-radius:8px;background:var(--color-background);color:var(--color-accent-text);font-weight:600;font-size:0.8125rem;font-family:inherit;padding:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
+.tp-sharemodal-newrow2 button{flex:1;border:1px solid var(--color-accent-bg);border-radius:8px;background:var(--color-background);color:var(--color-accent-text);font-weight:600;font-size:0.8125rem;font-family:inherit;padding:8px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;}
 .tp-sharemodal-newrow2 svg{width:15px;height:15px;}
 .tp-sharemodal-qr{margin-top:10px;text-align:center;}
 .tp-sharemodal-qr img{width:180px;height:180px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-background);}
@@ -129,7 +131,7 @@ const STYLE = `
 .tp-sharemodal-exp{font-size:0.75rem;color:var(--color-muted);margin-top:8px;display:flex;align-items:center;gap:5px;}
 .tp-sharemodal-exp svg{width:13px;height:13px;}
 .tp-sharemodal-acts{display:flex;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid var(--color-border);flex-wrap:wrap;}
-.tp-sharemodal-act{min-height:var(--spacing-tap-min);font-size:0.8125rem;font-family:inherit;padding:6px 10px;border-radius:7px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+.tp-sharemodal-act{font-size:0.8125rem;font-family:inherit;padding:6px 10px;border-radius:7px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
 .tp-sharemodal-act:disabled{opacity:.55;cursor:default;}
 .tp-sharemodal-act svg{width:14px;height:14px;}
 .tp-sharemodal-act.rotate{color:var(--color-accent-text);border-color:var(--color-accent-bg);}

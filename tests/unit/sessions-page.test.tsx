@@ -399,6 +399,51 @@ describe('SessionsPage', () => {
     expect(readAuthHint()).toBe(false);
   });
 
+  it('#1587 24：登出此帳號失敗（確定仍登入）→ 說明仍保持登入，橫幅「重試」重跑同一個登出，進行中停用', async () => {
+    let releaseRetry!: () => void;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('server error', { status: 500 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'u1' }), { status: 200 }))
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { releaseRetry = () => resolve(new Response(null, { status: 200 })); }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    writeAuthHint(true);
+
+    render(<MemoryRouter initialEntries={['/settings/sessions']}><SessionsPage /><LocationProbe /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+    const banner = await screen.findByTestId('sessions-error');
+    expect(banner.textContent).toContain('仍保持登入');
+    const retry = within(banner).getByRole('button', { name: '重試' });
+    fireEvent.click(retry);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/oauth/logout');
+    // 進行中：橫幅收起、登出鈕停用，再點不會重複送出
+    expect((screen.getByTestId('sessions-logout') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    releaseRetry();
+    await waitFor(() => expect(screen.getByTestId('current-path').textContent).toBe('/login'));
+  });
+
+  it('#1587 24：登出結果無法確認 → 說明無法確認是否仍登入，並提供重試', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+
+    render(<MemoryRouter initialEntries={['/settings/sessions']}><SessionsPage /><LocationProbe /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('sessions-row-sess_current')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('sessions-logout'));
+    const banner = await screen.findByTestId('sessions-error');
+    expect(banner.textContent).toMatch(/無法確認/);
+    expect(banner.textContent).toMatch(/是否仍(?:保持)?登入/);
+    expect(within(banner).getByRole('button', { name: '重試' })).toBeTruthy();
+  });
+
   it('encodes sid in DELETE URL (path injection defence)', async () => {
     const trickySession = {
       ...SAMPLE_SESSIONS[1]!,

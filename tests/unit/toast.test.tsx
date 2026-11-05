@@ -75,11 +75,6 @@ describe('v2.31.38 Toast V1 redesign — dot indicator, no SVG icon', () => {
     expect(getByRole('status').className).toContain('tp-toast');
   });
 
-  it('offline 不再含 SVG line（type icon 全拔）', () => {
-    const { container } = render(<ToastContainer />);
-    act(() => { showToast('離線', 'offline'); });
-    expect(container.querySelector('line')).toBeNull();
-  });
 
   it('online 不再含 SVG checkmark', () => {
     const { container } = render(<ToastContainer />);

@@ -141,12 +141,12 @@ describe('#16 Toast 語意：role 與 aria-live 不互相矛盾', () => {
     expect(el.hasAttribute('aria-live')).toBe(false);
   });
 
-  it('非錯誤（info／success／offline／online）用 role=status（隱含 polite），不是 alert', () => {
+  it('非錯誤（info／success／online）用 role=status（隱含 polite），不是 alert', () => {
     render(<ToastContainer />);
-    act(() => { showToast('提示', 'info'); showToast('好了', 'success'); showToast('離線', 'offline'); showToast('恢復', 'online'); });
+    act(() => { showToast('提示', 'info'); showToast('好了', 'success'); showToast('恢復', 'online'); });
     expect(screen.queryByRole('alert')).toBeNull();
     const all = screen.getAllByRole('status');
-    expect(all).toHaveLength(4);
+    expect(all).toHaveLength(3);
     for (const el of all) expect(el.hasAttribute('aria-live')).toBe(false);
   });
 });
@@ -217,8 +217,11 @@ describe('分享對話框', () => {
   it.each([
     '.tp-sharemodal-x', '.tp-sharemodal-input', '.tp-sharemodal-pill', '.tp-sharemodal-seg button',
     '.tp-sharemodal-create', '.tp-sharemodal-act', '.tp-sharemodal-anon',
-  ])('#20 %s 的觸控高度 ≥ 44（--spacing-tap-min）', (sel) => {
-    expect(cssRule(STYLE, sel)).toMatch(/min-height:\s*var\(--spacing-tap-min\)/);
+  ])('#20 %s 的觸控高度 ≥ 44（--spacing-tap-min，由共用規則涵蓋）', (sel) => {
+    const rules = [...STYLE.matchAll(/([^{}]+)\{([^}]*)\}/g)];
+    const covered = rules.some(([, selectors, body]) => selectors.split(',').map((x) => x.trim()).includes(sel)
+      && /min-height:\s*var\(--spacing-tap-min\)/.test(body));
+    expect(covered, `${sel} 沒有被任何 min-height: var(--spacing-tap-min) 規則涵蓋`).toBe(true);
   });
 
   it('#20 ✕ 是 44×44', () => {
@@ -350,35 +353,27 @@ describe('#24 SessionsPage 登出此裝置失敗', () => {
 });
 
 // ── 14：全域橫幅是唯一的離線提示 ───────────────────────────────────────────
-describe('#14 橫幅在場時不再跳「離線」Toast（只抑制離線這一類）', () => {
+describe('#14 離線只有全域橫幅一個提示；恢復連線 Toast 仍在', () => {
   beforeEach(() => resetToasts());
 
-  it('橫幅在場：離線 Toast 不出現；其他種類照常；橫幅消失後離線 Toast 恢復', () => {
-    onlineMock.value = false;
-    const banner = render(<ServerStatusBanner />);
-    render(<ToastContainer />);
-    act(() => { showToast('已離線 — 顯示快取資料', 'offline'); });
-    expect(screen.queryByText('已離線 — 顯示快取資料')).toBeNull();
-    act(() => { showToast('已複製', 'info'); showToast('壞了', 'error'); showToast('已恢復連線', 'online'); });
-    expect(screen.getByText('已複製')).toBeTruthy();
-    expect(screen.getByText('壞了')).toBeTruthy();
-    expect(screen.getByText('已恢復連線')).toBeTruthy();
-    onlineMock.value = true;
-    banner.rerender(<ServerStatusBanner />);
-    act(() => { showToast('已離線 — 顯示快取資料', 'offline'); });
-    expect(screen.getByText('已離線 — 顯示快取資料')).toBeTruthy();
+  it('離線 Toast 類型已移除（不留永遠不會跑的路徑）', () => {
+    const bus = read('src/lib/toastBus.ts');
+    expect(bus).not.toMatch(/'offline'/);
+    expect(bus).not.toMatch(/setOfflineBannerVisible|offlineBannerVisible/);
+    expect(read('src/hooks/useOfflineToast.ts')).not.toMatch(/'offline'/);
+    expect(read('src/components/ServerStatusBanner.tsx')).not.toMatch(/setOfflineBannerVisible/);
   });
 
-  it('離線 Toast 先出現、橫幅後到：橫幅出現時把既有的離線 Toast 收掉', () => {
-    onlineMock.value = true;
-    const banner = render(<ServerStatusBanner />);
+  it('useOfflineToast：離線時不跳 Toast；恢復連線時跳「已恢復連線」', async () => {
+    const { renderHook } = await import('@testing-library/react');
+    const { useOfflineToast } = await import('../../src/hooks/useOfflineToast');
     render(<ToastContainer />);
-    act(() => { showToast('已離線 — 顯示快取資料', 'offline'); showToast('已複製', 'info'); });
-    expect(screen.getByText('已離線 — 顯示快取資料')).toBeTruthy();
-    onlineMock.value = false;
-    banner.rerender(<ServerStatusBanner />);
-    expect(screen.queryByText('已離線 — 顯示快取資料')).toBeNull();
-    expect(screen.getByText('已複製')).toBeTruthy();
+    const hook = renderHook(({ on }) => useOfflineToast(on), { initialProps: { on: true } });
+    hook.rerender({ on: false });
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    hook.rerender({ on: true });
+    expect(screen.getByText('已恢復連線')).toBeTruthy();
   });
 });
 

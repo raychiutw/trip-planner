@@ -72,7 +72,6 @@ const TYPE_CLASS: Record<ToastType, string> = {
   error: 'tp-toast tp-toast--error',
   success: 'tp-toast tp-toast--success',
   info: 'tp-toast tp-toast--info',
-  offline: 'tp-toast tp-toast--warning',
   online: 'tp-toast tp-toast--success',
 };
 
