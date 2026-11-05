@@ -1,16 +1,17 @@
 # web 截圖逐張檢查報告（flutter#531／trip-planner#1568 素材）
 
-檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 36 個場景（原 27 個加第三輪補的 9 個認證流程、邀請、清單空與錯誤態），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 144 張。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
+檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 50 個場景（原 27 個、第三輪補的 9 個認證流程／邀請／清單空與錯誤態，加第四輪補的 14 個彈出層場景），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 198 張（`popup-trip-sheet` 只有桌機寬，其餘各 4 張）。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
 
 ## 怎麼檢查的
 
-把每個場景同一寬度下的淺色與深色拼成一張並排圖，由我逐張目視。**沒有自動量測對比或字級**；觸控目標另由 `tests/e2e/hig-scenes.spec.js` 的棘輪守門，本報告不重複。
+把每個場景同一寬度下的淺色與深色拼成一張並排圖，由我逐張目視（第四輪的彈出層場景改為逐張個別開啟檢視，沒有拼圖）。**沒有自動量測對比或字級**；觸控目標另由 `tests/e2e/hig-scenes.spec.js` 的棘輪守門，本報告不重複。
 
 ## 範圍與沒看到的
 
 - 桌機寬：27 個場景的淺深並排圖都看過。
 - 手機寬：27 個場景的淺深並排圖都看過（第一輪 15 個，第二輪補看 12 個）。
 - **第三輪補的 9 個場景**（`login-error`、`login-rate-limited`、`signup-check-email`、`reset-password`、`verify-email`、`invite`、`invite-invalid`、`trips-list-empty`、`trips-list-error`）：**手機寬淺深都看過；桌機寬的 18 張新圖我沒有逐張看**，只有 proof（畫面上一定出現的文字或 testid）與 axe 掃描。
+- **第四輪補的 14 個彈出層場景**（`popup-*`）：手機寬淺深 13 個都個別看過（`popup-trip-sheet` 沒有手機寬）；桌機寬淺色看過 14 個、深色只看了 `popup-trip-sheet`，**其餘 13 個場景的桌機寬深色圖沒有逐張看**，只有 proof 與棘輪。圖是在 Linux 容器（Playwright v1.64.1 noble）截的，前 36 個場景不是本輪重截，截圖環境未重新確認，字型可能不同；Linux 的無頭 Chromium 會畫出傳統捲軸，圖右緣常有約 10px 的窄條，那是環境產物，不是產品問題。
 - 只跑 chromium；webkit、firefox 沒截。
 
 ## 需要處理的發現
@@ -29,17 +30,31 @@
 
 | 10 | `trips-list-error` | G6、G7 | 行程清單載入失敗只有一行「無法載入你的行程清單。」，**沒有重試**（程式碼確認：`TripsListPage` 的錯誤態沒有任何重試或重新載入動作）；使用者只能手動重新整理整頁 | 看圖加程式碼 |
 | 11 | `signup-check-email`、`invite` | B7 | 以「320px 寬、html 字級 200%」近似量測，scrollWidth 為 354、366（對 320）；逐元素掃描找不到右緣超出的元素，**原因未定位**。這只是近似（不是瀏覽器縮放），是否構成 WCAG 1.4.10 違規仍待驗證 | 量測（未定位） |
+| 12 | `popup-server-status-banner` | C（WCAG 1.4.3） | **深色**：橫幅文字色寫成 `var(--color-priority-high-text, #8b2828)`，但 `css/` 全無這個 token，永遠落到寫死的 `#8b2828`（`ServerStatusBanner.tsx:26`）；深色底（`rgba(232,160,160,.18)` 疊深色頁底，約 `#413435`）上對比 **1.37:1**，幾乎讀不到 | axe（serious）加看圖加程式碼 |
+| 13 | `popup-server-status-banner` | 版面 | 橫幅是 `position: sticky; top: 0`，卻放在 100dvh 的 app-shell 之外，多佔 59px：手機寬離線前後量測 `scrollHeight` 844→903（視窗 844）、shell 上緣 0→59，整頁多出捲軸；桌機寬左側欄底部的使用者卡被擠出視窗下緣 | 量測（離線事件前後）加看圖 |
+| 14 | `popup-toast-offline` | G7 | 離線時同時有三個提示：全域橫幅（z-index 9999）、離線 Toast（z-index 250，被橫幅蓋住一半，文字疊在一起）、行程頁自己的「目前是離線模式」卡片。橫幅在場時，Toast 等於看不到 | 看圖（手機寬、桌機寬） |
+| 15 | `popup-toast-error` | 版面、規範 | Toast 固定在視窗頂端（`top: max(16px, safe-area)`，`tokens.css:238`），手機寬蓋住 TitleBar 的標題與返回鈕；DESIGN.md「Error & Status Messaging」寫的是桌機右上 titlebar 下方、compact 底部且高於 bottom nav，實作與規範不一致 | 看圖加 DESIGN.md |
+| 16 | `popup-toast-error` | G6、WCAG 3.3.1 | 探索頁搜尋少於 2 字，只出現 2 秒的 error Toast「至少輸入 2 個字」；欄位本身沒有錯誤文字，Toast 消失後沒有任何殘留提示（DESIGN.md：欄位格式錯用 FieldError）。另外 Toast 同時設 `role="alert"` 與 `aria-live="polite"`（`Toast.tsx:100-101`），兩者語意互相矛盾（alert 隱含 assertive） | 看圖加程式碼 |
+| 17 | `popup-conflict-modal` | G2、G7 | 對話框問「要怎麼處理？」，元件也支援「改插入到後面」「取代既有」，但呼叫端 `AddPoiFavoriteToTripPage.tsx:561` 只傳 `onCancel`，畫面上只有一顆「取消」：文案承諾的選項不存在，使用者無法在對話框內處理衝突，只能關掉後自己改時間 | 看圖加程式碼 |
+| 18 | `popup-share-link-modal` | WCAG 2.5.3、4.1.2 | 同一個對話框內有兩個可存取名稱都是「關閉」的按鈕，動作卻不同：標題列 ✕（關閉對話框，`ShareLinkModal.tsx:313`）與連結卡的「關閉」（停用該連結，`:458`）。螢幕閱讀器與語音控制說「關閉」無法區分，且後者影響較大 | 程式碼加看圖 |
+| 19 | `popup-share-link-modal` | 版面 | 手機寬的「有效期限」分段控制（永久／24 小時／7 天／30 天／自訂）折成兩列，第二列只有「自訂」，右側留空白格，像是漏了選項 | 看圖 |
+| 20 | `popup-share-link-modal`、`popup-account-sheet`、`popup-trip-sheet` | A1 | 彈出層內觸控目標 < 44（只量彈出層本身，Linux）：分享對話框 18 項（✕ 27×27、區塊 pill 與期限分段高 34、匿名勾選 17×17、連結名稱輸入高 34、建立分享連結高 42、編輯／重新產生／關閉／刪除高 34）；帳號 sheet「編輯名稱」32×32；TripSheet 聊天建議 chip 高 39、送出 40×40。有可點擊元素的 10 個彈出層中，其餘 7 個（AI 授權、AI 資料同意、確認、衝突、輸入、排除項目、交通方式）全部 ≥ 44 | 量測 |
+| 21 | `popup-note-ai-exclusions-dialog`（背景頁 `trip-notes`） | WCAG 4.1.2 | axe `nested-interactive`（serious）：筆記區塊標題列是 `div[role=button]`，展開後內含 AI 的 `<button>`。先前 `trip-notes` 場景手機寬只展開第一區（航班，沒有 AI 鈕）所以沒掃到；桌機寬各區預設全展開就會出現。違規在彈出層背後的頁面，不是對話框本身 | axe 加程式碼 |
+| 22 | `popup-ai-consent-sheet` 等 | 標題層級 | 彈出層標題層級不一致：AI 授權 sheet 用 `h4`、AI 資料同意與確認類用 `h2`、交通方式用 `h3`（觀察，不影響功能） | 程式碼 |
+| 23 | `popup-travel-pill-dialog` | E4 | 交通方式八個模式中，單軌、地鐵、火車、高鐵的圖示看起來相同，只能靠文字分辨（圖示小，判讀有限） | 看圖 |
+| 24 | `popup-error-banner` | G6、DESIGN.md 文案規則 | 「登出此裝置失敗，請稍後再試。」說了發生什麼，但沒有重試動作，也沒說明該裝置是否仍登入（文案規則三問缺一）；橫幅與上方清單卡的間距只有幾 px，下方卻是 16px | 看圖 |
+| 25 | `TripPickerPopover`、`CollabSheet`、`InfoSheet` | — | 三個元件沒有任何使用者走得到的入口（死碼，見下「彈出層缺口」），所以無法取證；已另開 PR #1584 移除 | 程式碼（grep 全 `src/`） |
 
 ### 修正狀態（trip-planner#1571）
 
-已修並以測試守住（版面類：`tests/e2e/hig-fixes.spec.js`；名稱、ARIA、對比、分類：`tests/unit/hig-web-fixes.test.tsx`）：發現 **1、2、3、5、6、7、8、9**。重跑 axe 收集（144 個場景輸出）：違規由 3 類（`aria-allowed-attr`、`label-content-name-mismatch`、`color-contrast`）降為 0，「需人工」清單前後相同。
+已修並以測試守住（版面類：`tests/e2e/hig-fixes.spec.js`；名稱、ARIA、對比、分類：`tests/unit/hig-web-fixes.test.tsx`）：發現 **1、2、3、5、6、7、8、9**。重跑 axe 收集（當時 36 個場景的 144 筆輸出）：違規由 3 類（`aria-allowed-attr`、`label-content-name-mismatch`、`color-contrast`）降為 0，「需人工」清單前後相同。
 
 - 發現 5：`explore` 的 Sight 是場景 mock 用的分類值 `sight`（真實資料是 Google Places 的 primaryType，未收錄者依 v2.55.73 的設計刻意顯示英文）；補上 `sight` → 景點的對照。真實資料是否出現 `sight` 未驗證。
 - 發現 6：placeholder 縮到與同頁一致（1rem），以固定 min-height 維持有值與無值兩欄等高。手機寬 390 下「有值」的日期（如 2026-11-11）會折成兩行，是另一個既有問題，**未處理**。
 - 發現 3 的修正讓膠囊文字不再被截出視窗，axe 因而量得到膠囊的 `aria-label` 沒有包含可見文字（先前落在「需人工」），一併修正（名稱改以可見文字開頭）。
 - 觸控目標棘輪：起訖 chip 與移動方式膠囊的 accessible name 改變，`hig-known-violations.js` 內兩筆同一元素的標籤跟著更名（尺寸問題本身未改，不算修好）。
 
-**未處理**（不在 #1571 範圍）：發現 4（場景限制）、10（清單載入失敗無重試）、11（200% 文字溢位，原因未定位），以及下列觀察。
+**未處理**（不在 #1571 範圍）：發現 4（場景限制）、10（清單載入失敗無重試）、11（200% 文字溢位，原因未定位），以及下列觀察。第四輪（彈出層）新增的發現 12～25 **一律只記錄、未修**，修正另開票。
 
 另有三項觀察、需要設計確認：`trip-print` 淺色與深色圖完全相同（列印預覽固定淺色）；`login`、`signup`、`forgot-password` 的桌機右側宣傳面板與外觀反相；`login` 手機寬卡片內外各一個 Tripline 標誌。
 
@@ -83,6 +98,29 @@
 | `trips-list-empty` | 手機已看、桌機未看 | 符合 | G10 | 圖示、標題、說明與「新增行程」主要動作 |
 | `trips-list-error` | 手機已看、桌機未看 | 疑慮 | G6、G7 | 見發現 10 |
 | `verify-email` | 手機已看、桌機未看 | 未見明顯問題 | — | 說明與單一主要按鈕；axe 無違規；200% 文字檢查沒有生效（該頁字級不隨 root 變） |
+| `popup-account-sheet` | 淺色已看 | 淺深已看 | 疑慮（已知） | A1、D12 | 桌機右側面板、手機全屏，有 ✕ 關閉，名稱「帳號」；「編輯名稱」32×32（與 `account` 頁同一元件）；axe 無違規 |
+| `popup-ai-consent-sheet` | 淺色已看 | 淺深已看 | 觀察 | D8、D12、發現 22 | 底部 sheet，主要動作「授權並送出」滿版、次要「取消」為文字鈕，引用將送出的訊息；沒有右上關閉與 grabber（固定高度 sheet 刻意不放，見 DESIGN.md）；觸控目標全 ≥ 44；axe 無違規 |
+| `popup-ai-data-consent-sheet` | 淺色已看 | 淺深已看 | 未見明顯問題 | D12 | 標題、可展開章節（第一個預設展開）、「暫不使用」「同意並繼續」並排、輸入已保留提示與版本；觸控 ≥ 44；axe 無違規。只取證 consent 模式（owner-missing 模式未造） |
+| `popup-share-link-modal` | 淺色已看 | 淺深已看 | 疑慮 | A1、D16、發現 18、19、20 | 內容完整（名稱、區塊、期限、匿名、既有連結的編輯／重新產生／關閉／刪除）；axe 無違規 |
+| `popup-confirm-modal` | 淺色已看 | 淺深已看 | 符合 | G2、G3、G4、G9、E3 | alertdialog，標題具體、有說明；取消（左，預設焦點，e2e 已守）與破壞性「登出全部」（右，紅）；按鈕 ≥ 44；axe 無違規。只有「登出其他所有裝置」一個呼叫端被取證 |
+| `popup-conflict-modal` | 淺色已看 | 淺深已看 | 疑慮 | G2 | 見發現 17；axe 無違規 |
+| `popup-input-modal` | 淺色已看 | 淺深已看 | 符合 | D12 | 標題、說明、輸入框（開啟即聚焦，焦點環明顯）、取消／切換；≥ 44；axe 無違規 |
+| `popup-note-ai-exclusions-dialog` | 淺色已看 | 淺深已看 | 未見明顯問題（背景頁有 axe 違規） | D12、發現 21 | 標題、說明、清單項（標籤、類別、zh-TW 日期）、「恢復」鈕與 ✕ 關閉；axe 違規在背景頁。場景 mock 的 `ai-state` 排除數是 0、對話框卻列 1 項（fixture 不一致，不是產品問題） |
+| `popup-travel-pill-dialog` | 淺色已看 | 淺深已看 | 觀察 | D12、E4、發現 23 | 手機底部 sheet、桌機置中；沒有右上關閉，底部有「關閉」；模式 chip 與輸入 ≥ 44；axe 無違規 |
+| `popup-trip-sheet` | 淺深已看 | 無（該欄 `display:none`） | 觀察 | A1、發現 20 | 桌機右欄，分頁「地圖／聊天」；只取證聊天分頁（地圖分頁受 Google Maps 被擋的限制，見發現 4） |
+| `popup-error-banner` | 淺色已看 | 淺深已看 | 觀察 | G6、發現 24 | 圖示加文字的就地橫幅，role=alert；axe 無違規 |
+| `popup-server-status-banner` | 淺色已看 | 淺深已看 | 疑慮 | C、版面、發現 12、13 | 淺色可讀；深色幾乎讀不到（axe 1.37:1），並把整個版面往下推 59px |
+| `popup-toast-error` | 淺色已看 | 淺深已看 | 疑慮 | G6、發現 15、16 | 見發現 15、16；axe 無違規 |
+| `popup-toast-offline` | 淺色已看 | 淺深已看 | 疑慮 | G7、發現 14 | 見發現 14 |
+
+## 彈出層缺口（造不出場景）
+
+| 元件 | 原因 | 證據 |
+|---|---|---|
+| `TripPickerPopover` | 沒有掛載點：全 `src/` 只有它自己的檔案與測試引用；`ExplorePage` 只剩註解、`TripsListPage` 剩一組無人使用的 `tripPickerOpen` state | grep |
+| `CollabSheet`、`InfoSheet` | 唯一掛載點是 `TripPage` 內的 `<InfoSheet open={activeSheet === 'collab'}>`；`activeSheet` 只會被 `TripPageHandle.openSheet()` 設定，全 `src/` 沒有呼叫端，而 `?sheet=collab` 會被轉址到 `/trip/:id/collab` | grep、`TripPage.tsx:576-580` |
+
+三者都是使用者走不到的元件：若硬把元件掛進測試頁來截圖，證明的是「元件單獨能渲染」，不是產品畫面，所以不造。是否移除另案決定。
 
 ## 補掃：axe、重排、縮放、鍵盤焦點（工具量測）
 
@@ -96,8 +134,20 @@
 | 文字放大 200% | `html` font-size 200% | 27 個場景都沒有橫向捲動。**限制**：這只對 rem／em 排版有意義；`landing` 的字級量到沒有跟著放大（比值 1.0），這一頁沒有被檢查到；其餘約 1.88 倍 |
 | 鍵盤焦點（WCAG 2.4.7） | 桌機寬，每頁連按 Tab 最多 14 次 | 只有 `explore` 的搜尋欄沒有偵測到外框或陰影（可能用邊框變色，本檢查不認，需目視確認）。**限制**：卡片本來就有陰影的元素會被誤判為有焦點樣式，所以「沒問題」不等於焦點一定清楚 |
 
+### 第四輪：彈出層場景的補掃（Linux 容器，chromium）
+
+`HIG_COLLECT=1`、`hig-a11y-collect.spec.js` 只對 `popup-*` 跑：axe 14 個場景 × 淺深、重排與縮放 13 個（`popup-trip-sheet` 沒有手機寬，略過）、焦點 14 個，共 68 筆輸出。
+
+| 項目 | 結果 |
+|---|---|
+| axe 違規 | 3 筆：`popup-server-status-banner` 深色 `color-contrast`（發現 12）；`popup-note-ai-exclusions-dialog` 淺深各一筆 `nested-interactive`（發現 21，在背景頁）。其餘 12 個場景無違規 |
+| axe「需人工」 | `color-contrast`、`label-content-name-mismatch` 多半來自彈出層背後的頁面（`popup-trip-sheet` 59／8、`popup-toast-offline` 60／9、`popup-travel-pill-dialog` 43／5）；axe 對整份文件執行，不只彈出層，所以數字不能當成彈出層自己的問題。沒有逐筆人工複核 |
+| 重排 320px | 13 個都沒有橫向捲動（`scrollWidth` 310，是 Linux 傳統捲軸占掉的寬度） |
+| 文字放大 200% | 13 個都沒有橫向捲動，字級比 1.88 |
+| 鍵盤焦點 | 14 個場景連按 Tab 14 次，沒有「看不出焦點樣式」的元素。**限制**：沒有驗證焦點是否被關在對話框內（那由 `aria-modal-focus-trap.test.ts` 與 `a11y-axe.spec.js` 負責，本輪未重驗）；Toast 只停留 2～3 秒，axe 掃描時是否仍在畫面上未確認 |
+
 ## 沒做的事
 
 - 對比、重排（B7）、鍵盤焦點（J5、J6）已用上面的補掃做過，有各自的限制；沒有 dialog 行為檢查（D16、G9），也沒有實際用螢幕閱讀器走過。
-- 場景沒涵蓋：登入流程各狀態、分享／邀請／oauth 頁、停留點編輯頁、各種彈出層、空狀態與錯誤狀態、限流。
-- **webkit（Safari 引擎）**：已跑 36 個場景的截圖與 axe／重排／縮放／焦點掃描（`playwright.hig-webkit.config.js`，需先安裝 webkit）。**axe 違規集合與 chromium 完全相同**（`trips-new` 的 ARIA 與標籤、`trip-print` 對比、時間 chip 標籤）；320px 重排無溢位；200% 文字同樣兩頁溢位（`signup-check-email` 354、`invite` 366，與 chromium 的數字一致，說明是版面本身的問題）；焦點無樣式同樣只有 `explore` 搜尋欄。注意：webkit 下 6 個場景 Tab 一個都跳不到（`landing`、`login-error`、`login-rate-limited`、`signup-check-email`、`invite`、`invite-invalid`），那是 Safari 預設不 Tab 到連結與按鈕的行為，不是缺陷。**沒做**：chromium 與 webkit 的畫面差異沒有逐張比對，只比了掃描結果。
+- 場景沒涵蓋：`/s/:token`、oauth 兩頁、`/add-to-trip`、停留點的地圖／copy／move／change-poi／edit 頁、`add-custom-stop`（見 inventory）；彈出層缺 3 個（見上）與各彈出層的其他狀態（AI 資料同意 owner-missing 與 stale／withdrawn 橫幅、Toast 的 success／info／online、ConfirmModal 的 busy、錨定選單與下拉面板）。
+- **webkit（Safari 引擎）**：已跑（當時的）36 個場景的截圖與 axe／重排／縮放／焦點掃描（`playwright.hig-webkit.config.js`，需先安裝 webkit）。**axe 違規集合與 chromium 完全相同**（`trips-new` 的 ARIA 與標籤、`trip-print` 對比、時間 chip 標籤）；320px 重排無溢位；200% 文字同樣兩頁溢位（`signup-check-email` 354、`invite` 366，與 chromium 的數字一致，說明是版面本身的問題）；焦點無樣式同樣只有 `explore` 搜尋欄。注意：本輪新增的 14 個彈出層場景只跑 chromium，**沒有跑 webkit**。webkit 下 6 個場景 Tab 一個都跳不到（`landing`、`login-error`、`login-rate-limited`、`signup-check-email`、`invite`、`invite-invalid`），那是 Safari 預設不 Tab 到連結與按鈕的行為，不是缺陷。**沒做**：chromium 與 webkit 的畫面差異沒有逐張比對，只比了掃描結果。

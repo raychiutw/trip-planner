@@ -14,9 +14,9 @@
  * 限制：axe 在 mock 資料與外部地圖被擋的畫面上量；半透明背景、背景圖上的文字，axe 會標「needs review」
  * 而不是違規，這裡一併列出（incomplete），不算通過也不算失敗。
  */
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, proveScene } = require('./hig-scene-fixtures');
 const axePath = require.resolve('axe-core');
 
 test.beforeEach(async ({}, testInfo) => {
@@ -40,15 +40,19 @@ async function open(page, scene, { width, height, scheme }) {
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(400);
   if (scene.act) await scene.act(page);
+  if (scene.scope) await page.waitForTimeout(600); // 等彈出層進場動畫結束，axe 才不會量到半透明的過場
   // 量到錯的畫面比沒量更糟：有 proof 就先確認真的是想量的那一種狀態。
-  if (scene.proof) await expect(page.getByTestId(scene.proof)).toBeVisible();
-  if (scene.proofText) await expect(page.getByText(scene.proofText).first()).toBeVisible();
+  await proveScene(page, scene);
 }
+
+// 只有桌機寬才有的表面（scene.viewports 不含 mobile）改在桌機寬量 axe，並略過 320px 重排。
+const mobileOk = (scene) => !scene.viewports || scene.viewports.includes('mobile');
+const axeSize = (scene) => (mobileOk(scene) ? { width: 390, height: 844 } : { width: 1280, height: 800 });
 
 for (const scene of SCENES) {
   for (const scheme of /** @type {const} */ (['light', 'dark'])) {
     test(`axe ${scene.name} ${scheme}`, async ({ page }) => {
-      await open(page, scene, { width: 390, height: 844, scheme });
+      await open(page, scene, { ...axeSize(scene), scheme });
       await page.addScriptTag({ path: axePath });
       const res = await page.evaluate(async () => {
         // @ts-ignore axe 由 addScriptTag 注入
@@ -67,6 +71,7 @@ for (const scene of SCENES) {
   }
 
   test(`reflow+zoom ${scene.name}`, async ({ page }) => {
+    test.skip(!mobileOk(scene), '桌機寬才有的表面，沒有 320px 版');
     await open(page, scene, { width: 320, height: 568, scheme: 'light' });
     const over = () => page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
