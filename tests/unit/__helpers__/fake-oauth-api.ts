@@ -8,6 +8,17 @@
 export const FAKE_API_BASE = 'https://api.test';
 export const FAKE_EMAIL = 'ray@example.test';
 export const FAKE_PASSWORD = 'correct-horse-battery';
+/** 假 api 登記給 tripline-web 的回跳網址（精確比對，同後端 validateAuthorizeRequest）。 */
+export const FAKE_WEB_REDIRECT_URI = 'https://web.test/auth/callback';
+/**
+ * 假 api 登記給 tripline-web 的全部回跳網址。第二個對應 api repo migration 0102 登記的正式網址，
+ * 未登記的網址（例如 *.pages.dev 預覽網域）一律被拒，和後端一樣。
+ */
+export const FAKE_WEB_REDIRECT_URIS = [FAKE_WEB_REDIRECT_URI, 'https://trip-planner-dby.pages.dev/auth/callback'];
+/** tripline-web 的 allowed_scopes（對應 api repo migration 0101 之後的值）；請求的 scope 必須是它的子集。 */
+export const FAKE_WEB_ALLOWED_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'trips:read', 'trips:write'];
+const DEFAULT_SCOPES = 'openid profile email';
+const scopeAllowed = (scope: string) => scope.split(/\s+/).filter(Boolean).every((x) => FAKE_WEB_ALLOWED_SCOPES.includes(x));
 
 const B64URL_43 = /^[A-Za-z0-9_-]{43}$/;
 
@@ -41,10 +52,10 @@ export interface RecordedRequest {
   dpopHeader?: Record<string, unknown>;
 }
 
-interface Grant { family: string; jkt: string | null; email: string }
+interface Grant { family: string; jkt: string | null; email: string; scope: string }
 
 export function createFakeOAuthApi() {
-  const codes = new Map<string, { challenge: string; jkt: string | null; email: string; used: boolean }>();
+  const codes = new Map<string, { challenge: string; jkt: string | null; email: string; scope: string; used: boolean }>();
   const refreshTokens = new Map<string, Grant & { used: boolean }>();
   const accessTokens = new Map<string, Grant & { expired: boolean }>();
   const revokedFamilies = new Set<string>();
@@ -95,7 +106,7 @@ export function createFakeOAuthApi() {
     refreshTokens.set(refresh, { ...grant, used: false });
     return {
       access_token: access, refresh_token: refresh, token_type: grant.jkt ? 'DPoP' : 'Bearer',
-      expires_in: 900, scope: 'openid profile email',
+      expires_in: 900, scope: grant.scope,
     };
   }
 
@@ -123,6 +134,8 @@ export function createFakeOAuthApi() {
       if (typeof b.email !== 'string' || typeof b.password !== 'string' || b.client_id !== 'tripline-web') return bad();
       if (b.code_challenge_method !== 'S256' || typeof b.code_challenge !== 'string' || !B64URL_43.test(b.code_challenge)) return bad();
       if (b.dpop_jkt !== undefined && (typeof b.dpop_jkt !== 'string' || !B64URL_43.test(b.dpop_jkt))) return bad();
+      const scope = typeof b.scope === 'string' ? b.scope : DEFAULT_SCOPES;
+      if (!scopeAllowed(scope)) return json(400, { error: { code: 'LOGIN_INVALID_INPUT', message: 'invalid_scope' } });
       if (b.email === 'locked@example.test') {
         return json(429, { error: { code: 'LOGIN_RATE_LIMITED', message: 'locked' } }, { 'Retry-After': '600' });
       }
@@ -130,7 +143,7 @@ export function createFakeOAuthApi() {
         return json(401, { error: { code: 'LOGIN_INVALID', message: 'invalid' } });
       }
       const code = randomToken();
-      codes.set(code, { challenge: b.code_challenge, jkt: (b.dpop_jkt as string | undefined) ?? null, email: b.email, used: false });
+      codes.set(code, { challenge: b.code_challenge, jkt: (b.dpop_jkt as string | undefined) ?? null, email: b.email, scope, used: false });
       return json(200, { code, expires_in: 60 });
     }
 
@@ -153,7 +166,7 @@ export function createFakeOAuthApi() {
         if (c.jkt && c.jkt !== jkt) return oauthErr('invalid_grant', 'DPoP key does not match the authorization request');
         if (!params.code_verifier) return oauthErr('invalid_grant', 'code_verifier required (PKCE)');
         if ((await sha256B64u(params.code_verifier)) !== c.challenge) return oauthErr('invalid_grant', 'code_verifier does not match code_challenge');
-        return json(200, issue({ family: crypto.randomUUID(), jkt, email: c.email }));
+        return json(200, issue({ family: crypto.randomUUID(), jkt, email: c.email, scope: c.scope }));
       }
       if (params.grant_type === 'refresh_token') {
         state.refreshCalls++;
@@ -171,7 +184,7 @@ export function createFakeOAuthApi() {
           return respond(oauthErr('invalid_grant', 'refresh_token reuse detected — token family revoked'));
         }
         r.used = true;
-        return respond(json(200, issue({ family: r.family, jkt: r.jkt, email: r.email })));
+        return respond(json(200, issue({ family: r.family, jkt: r.jkt, email: r.email, scope: r.scope })));
       }
       return oauthErr('unsupported_grant_type', 'x');
     }
@@ -218,6 +231,32 @@ export function createFakeOAuthApi() {
     isRefreshRevoked(refreshToken: string) {
       const r = refreshTokens.get(refreshToken);
       return r ? revokedFamilies.has(r.family) : true;
+    },
+    /**
+     * 模擬 GET /api/oauth/login/google 加上 Google 授權完成後的 callback：驗發起參數（契約來源：api repo
+     * src/routes/handlers/oauth/login/google.ts 與 callback/google.ts），通過就發第一方 code（綁 dpop_jkt、無 redirect_uri）
+     * 並回傳 302 的 Location（redirect_uri?code=&state=）；參數不合回 null。`deny` 模擬使用者在 Google 取消（error=access_denied）。
+     */
+    googleLogin(loginUrl: string, opts: { deny?: boolean; email?: string } = {}): string | null {
+      const u = new URL(loginUrl);
+      if (u.origin + u.pathname !== `${FAKE_API_BASE}/api/oauth/login/google`) return null;
+      const q = u.searchParams;
+      if (q.get('client_id') !== 'tripline-web' || !FAKE_WEB_REDIRECT_URIS.includes(q.get('redirect_uri') ?? '')) return null;
+      const scope = q.get('scope') ?? DEFAULT_SCOPES;
+      if (!scopeAllowed(scope)) return null;
+      const challenge = q.get('code_challenge');
+      if (q.get('code_challenge_method') !== 'S256' || !challenge || !B64URL_43.test(challenge)) return null;
+      const jkt = q.get('dpop_jkt');
+      if (jkt !== null && !B64URL_43.test(jkt)) return null;
+      const back = new URL(q.get('redirect_uri')!);
+      if (opts.deny) back.searchParams.set('error', 'access_denied');
+      else {
+        const code = randomToken();
+        codes.set(code, { challenge, jkt, email: opts.email ?? FAKE_EMAIL, scope, used: false });
+        back.searchParams.set('code', code);
+      }
+      if (q.get('state')) back.searchParams.set('state', q.get('state')!);
+      return back.toString();
     },
     tokenRequests() { return requests.filter((r) => new URL(r.url).pathname === '/api/oauth/token'); },
   };

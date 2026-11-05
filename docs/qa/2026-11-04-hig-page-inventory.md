@@ -47,6 +47,7 @@
 | `/developer/apps/new` | DeveloperAppNewPage | 已取證 | 3 | developer-apps-new |
 | `/oauth/consent` | ConsentPage | 未取證 | 1 | 無場景：需 OAuth 授權請求參數與 consent API 的 mock |
 | `/oauth/authorize` | OauthAuthorizePage | 未取證 | 0 | 無場景：需 OAuth 授權請求參數與 authorize API 的 mock |
+| `/auth/callback` | AuthCallbackPage | 未取證 | 0 | 無場景：Google 登入回跳的純轉址頁（只顯示「登入中…」），需 OAuth 回跳參數與 token 端點的 mock |
 | `/invite` | InvitePage | 已取證 | 1 | invite、invite-invalid |
 | `/trips` | TripsListPage | 已取證 | 21 | trips-list、trips-list-empty、trips-list-error |
 | `/trips/new` | NewTripPage | 已取證 | 2 | trips-new |
@@ -92,5 +93,5 @@
 ## 已知缺口
 - `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。
 - 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
-- 路由未取證 10 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
+- 路由未取證 11 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。
