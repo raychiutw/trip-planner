@@ -279,6 +279,26 @@ describe('TripsListPage', () => {
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-error')).toBeTruthy());
   });
+
+  it('載入失敗時提供「重試」，按下重新載入且成功後回到清單', async () => {
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/my-trips') {
+        calls += 1;
+        return Promise.resolve(calls === 1
+          ? new Response('boom', { status: 500 })
+          : new Response(JSON.stringify(SAMPLE), { status: 200 }));
+      }
+      return Promise.resolve(new Response('null', { status: 200 }));
+    }));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    const retry = await screen.findByTestId('trips-list-error-retry');
+    expect(retry).toHaveTextContent('重試');
+    fireEvent.click(retry);
+    expect(await screen.findByTestId('trips-list-card-okinawa')).toBeInTheDocument();
+    expect(screen.queryByTestId('trips-list-error')).not.toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
 });
 
 describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () => {
