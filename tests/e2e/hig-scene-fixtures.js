@@ -3,6 +3,7 @@
  * HIG 場景的共用資料：場景清單與 API mock。hig-scenes.spec.js（截圖與觸控目標）與
  * hig-a11y-collect.spec.js（axe、重排、鍵盤焦點的收集）共用，避免兩邊的場景清單各自過期。
  */
+const { expect } = require('@playwright/test');
 const { MOCK_TRIPS_LIST } = require('./api-mocks');
 
 const TRIP = MOCK_TRIPS_LIST[0].tripId;
@@ -32,11 +33,90 @@ const stubTripsEmpty = (page) =>
 const stubTripsError = (page) =>
   page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify(errBody('INTERNAL')) }));
 
+// ── 彈出層場景（#1565～#1568）：每個都從使用者實際走得到的操作打開彈出層 ──
+const openAccountSheet = (page) =>
+  page.locator('[data-testid=titlebar-account], [data-testid=sidebar-account-card]').filter({ visible: true }).first().click();
+// 聊天送出：授權狀態與資料同意狀態由各場景的 stub 決定，攔下送出的是 ChatPage 自己的判斷。
+const sendChat = async (page) => {
+  await page.getByTestId('chat-input').fill('幫我規劃 Day 1 的早午餐');
+  await page.getByTestId('chat-send').click();
+};
+const stubAiAuthorization = (authorized) => (page) =>
+  page.route(/\/api\/account\/ai-authorization$/, (r) => r.fulfill(json({ authorized })));
+// 形狀照 useAiDataConsent 的 isConsent 型別守衛；文案是 server 回的，這裡放同形狀的示意文字。
+const AI_DATA_CONSENT = {
+  status: 'none', currentVersion: '2026-11-01', acceptedVersion: null, acceptedAt: null, enforced: true,
+  text: {
+    version: '2026-11-01', title: 'AI 助理如何使用你的資料', intro: '使用 AI 聊天、行程健檢與 AI 筆記前，請先了解你的行程資料會如何被處理。',
+    sections: [
+      { heading: '會送出哪些資料', items: ['行程標題、日期與停留點', '你在聊天輸入的訊息'] },
+      { heading: '不會送出哪些資料', items: ['你的密碼與登入憑證', '其他行程的內容'] },
+    ],
+    withdrawal: ['撤回後 AI 功能立即停用', '已產生的內容不會被刪除'],
+  },
+};
+const stubAiDataConsent = (page) =>
+  page.route(/\/api\/account\/ai-data-consent$/, (r) => r.fulfill(json(AI_DATA_CONSENT)));
+const stubAiConsentFlow = async (page) => {
+  await stubAiAuthorization(false)(page);
+};
+const stubAiDataConsentFlow = async (page) => {
+  await stubAiAuthorization(true)(page);
+  await stubAiDataConsent(page);
+};
+const SHARE_ROW = { id: 1, label: '給爸媽', visibleSections: '["flights","lodgings"]', expiresAt: null, viewCount: 3, anonymous: 0, createdBy: 'ray@example.com', createdAt: '2026-10-20T08:00:00Z', revokedAt: null };
+const stubShares = (page) =>
+  page.route(new RegExp(`/api/trips/${TRIP}/shares$`), (r) =>
+    r.request().method() === 'GET' ? r.fulfill(json({ shares: [SHARE_ROW] })) : r.fallback());
+const FAVORITE = { id: 8001, poiId: 1, poiName: '首里城', poiAddress: '沖繩縣那霸市首里金城町 1-2', poiType: 'attraction', favoritedAt: '2026-10-01T00:00:00Z', note: null, poiLat: 26.217, poiLng: 127.719 };
+// 真實契約（functions/api/poi-favorites/[id]/add-to-trip.ts）：時段重疊回 409，body 是 { error: 'CONFLICT', conflictWith }。
+const stubFavoriteConflict = async (page) => {
+  await page.route(/\/api\/poi-favorites$/, (r) => r.fulfill(json([FAVORITE])));
+  await page.route(/\/api\/poi-favorites\/8001\/add-to-trip$/, (r) =>
+    r.fulfill(json({ error: 'CONFLICT', conflictWith: { entryId: 101, time: '09:00-10:30', title: '國際通', dayNum: 1 } }, 409)));
+};
+const submitFavoriteToTrip = async (page) => {
+  await page.getByTestId('favorites-add-to-trip-trip').locator('button').first().click();
+  await page.getByRole('option').first().click();
+  const submit = page.getByTestId('favorites-add-to-trip-submit');
+  await expect(submit).toBeEnabled();
+  await Promise.all([page.waitForResponse(/\/add-to-trip$/), submit.click()]);
+};
+const openRegionInput = async (page) => {
+  await page.getByTestId('explore-region-pill').click();
+  await page.getByTestId('explore-region-option-custom').click();
+};
+// deletedAt 是 D1 的 datetime('now') 格式（空格分隔、無時區），formatDeletedAt 只認這個格式。
+const EXCLUSION = { id: 7, docType: 'emergency', semanticKey: 'police-110', label: '日本警察（110）', deletedAt: '2026-10-28 03:00:00' };
+const stubExclusions = (page) =>
+  page.route(new RegExp(`/api/trips/${TRIP}/notes/emergency/exclusions$`), (r) => r.fulfill(json({ items: [EXCLUSION] })));
+const openEmergencyExclusions = async (page) => {
+  // 桌機寬各區塊預設全展開、手機寬只展開第一區；已展開就不要再點（會收合）。
+  const head = page.getByTestId('trip-notes-section-head-emergency');
+  if ((await head.getAttribute('aria-expanded')) !== 'true') await head.click();
+  await page.getByTestId('trip-notes-exclusions-emergency').click();
+};
+const stubSessionRevokeFails = (page) =>
+  page.route(/\/api\/account\/sessions\/iphone$/, (r) =>
+    r.request().method() === 'DELETE' ? r.fulfill(json(errBody('INTERNAL'), 500)) : r.fallback());
+// 離線狀態由 window 的 offline 事件驅動（useOnlineStatus 同時聽這個事件）；不真的斷網，避免後續請求全失敗。
+// 狀態切到離線有 3 秒 debounce，之後橫幅與（TripPage 內的）離線 Toast 才出現。
+const goOffline = (page) => page.evaluate(() => window.dispatchEvent(new Event('offline')));
+const searchTooShort = async (page) => {
+  await page.getByTestId('explore-search-input').fill('a');
+  await page.getByTestId('explore-search-submit').click();
+};
+
 /**
- * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void> }} Scene
+ * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[] }} Scene
  * proof：頁面渲染完成時一定存在的 data-testid；proofText 是畫面上一定要出現的文字（錯誤態、空狀態用，
  * 證明拍到的是想取證的那一種狀態，不是任意一種）；沒有時退而求其次檢查沒有錯誤頁。
  * stub：進頁前追加的 API 覆寫（後註冊的 route 優先）；act：進頁後的互動（例如送出表單）。
+ * scope（彈出層場景）：彈出層根元素的 CSS selector。必須可見；proof／proofText 只在它裡面找
+ *   （「只有彈出層內才會出現」才算數，背景頁面有同樣的字不行）；觸控目標也只量它裡面，
+ *   且必須至少量到一個元素（量不到代表量測沒涵蓋彈出層）。
+ * noTargets：彈出層本來就沒有可點擊元素（橫幅、Toast），不要求量到元素。
+ * viewports：只在這些寬度取證（桌機寬才有的表面，例如 TripSheet 右欄；預設兩種寬度都跑）。
  */
 /** @type {Scene[]} */
 const SCENES = [
@@ -77,7 +157,35 @@ const SCENES = [
   { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄' },
   { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
   { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單' },
+  // ── 彈出層（Sheet／Modal／Dialog／Banner／Toast）──
+  { name: 'popup-account-sheet', path: '/trips', act: openAccountSheet, scope: '[role="dialog"][aria-label="帳號"]', proof: 'account-page' },
+  { name: 'popup-ai-consent-sheet', path: '/chat', stub: stubAiConsentFlow, act: sendChat, scope: '[data-testid="ai-consent-sheet"]', proof: 'ai-consent-quoted' },
+  { name: 'popup-ai-data-consent-sheet', path: '/chat', stub: stubAiDataConsentFlow, act: sendChat, scope: '[data-testid="ai-data-consent-sheet"]', proof: 'ai-data-consent-accept' },
+  { name: 'popup-share-link-modal', path: `/trip/${TRIP}/print`, stub: stubShares, act: (page) => page.getByTestId('trip-print-share').click(), scope: '[data-testid="share-modal"]', proof: 'share-link-row' },
+  { name: 'popup-confirm-modal', path: '/account/sessions', act: (page) => page.getByTestId('sessions-revoke-all').click(), scope: '[data-testid="confirm-modal"]', proof: 'confirm-modal-confirm' },
+  { name: 'popup-conflict-modal', path: '/favorites/8001/add-to-trip', stub: stubFavoriteConflict, act: submitFavoriteToTrip, scope: '[data-testid="conflict-modal"]', proof: 'conflict-modal-summary' },
+  { name: 'popup-input-modal', path: '/explore', act: openRegionInput, scope: '[data-testid="input-modal"]', proof: 'input-modal-field' },
+  { name: 'popup-note-ai-exclusions-dialog', path: `/trip/${TRIP}/notes`, stub: stubExclusions, act: openEmergencyExclusions, scope: '[role="dialog"][aria-labelledby="tp-note-ai-exclusions-title"]', proofText: '日本警察（110）' },
+  { name: 'popup-travel-pill-dialog', path: `/trip/${TRIP}`, act: (page) => page.getByTestId('travel-pill').first().click(), scope: '[data-testid="travel-pill-dialog"]', proof: 'travel-dialog-close' },
+  { name: 'popup-trip-sheet', path: `/trips?selected=${TRIP}&sheet=chat`, viewports: ['desktop'], scope: '[data-testid="trip-sheet"]', proof: 'trip-sheet-tab-chat' },
+  { name: 'popup-error-banner', path: '/account/sessions', stub: stubSessionRevokeFails, act: (page) => page.getByTestId('sessions-revoke-iphone').click(), scope: '[data-testid="sessions-error"]', proofText: '登出此裝置失敗', noTargets: true },
+  { name: 'popup-server-status-banner', path: '/favorites', act: goOffline, scope: '[data-testid="server-status-banner"]', proofText: '連線中斷', noTargets: true },
+  { name: 'popup-toast-error', path: '/explore', act: searchTooShort, scope: '.tp-toast', proofText: '至少輸入 2 個字', noTargets: true },
+  { name: 'popup-toast-offline', path: `/trips?selected=${TRIP}`, act: goOffline, scope: '.tp-toast', proofText: '已離線', noTargets: true },
 ];
+
+/**
+ * 證明畫面是想取證的那一種狀態（兩支 spec 共用）。有 scope 時，彈出層必須可見，
+ * proof／proofText 只在彈出層內找。
+ * @param {import('@playwright/test').Page} page
+ * @param {Scene} scene
+ */
+async function proveScene(page, scene) {
+  const root = scene.scope ? page.locator(scene.scope).first() : page;
+  if (scene.scope) await expect(root, `${scene.name} 彈出層沒有開啟`).toBeVisible();
+  if (scene.proof) await expect(root.getByTestId(scene.proof)).toBeVisible();
+  if (scene.proofText) await expect(root.getByText(scene.proofText).first(), `${scene.name} 沒有出現預期的文字`).toBeVisible();
+}
 
 const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
@@ -106,4 +214,4 @@ async function setupSceneExtras(page) {
   await page.route('**/api/route**', (r) => r.fulfill(json({ polyline: [], duration: null, distance: 0, approx: true })));
 }
 
-module.exports = { TRIP, SCENES, setupSceneExtras, json };
+module.exports = { TRIP, SCENES, setupSceneExtras, proveScene, json };

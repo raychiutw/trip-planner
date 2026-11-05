@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, proveScene } = require('./hig-scene-fixtures');
 const { KNOWN_TAP_VIOLATIONS, LABEL_MAX, diffViolations } = require('./hig-known-violations');
 
 // 量測的尺寸與字型度量依瀏覽器引擎而異；已知違規清單只以 chromium 為準，其他 project 不跑，避免棘輪在 webkit 誤紅。
@@ -38,12 +38,18 @@ const SCHEMES = ['light', 'dark'];
 const INTERACTIVE =
   'a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=tab], [role=link], [role=menuitem], [role=switch], [role=checkbox], [role=radio]';
 
-/** 手機寬下，可見且可點擊、最短邊小於 44px 的元素（回傳 `標籤 寬x高`）。 */
-async function tapViolations(page) {
+/**
+ * 手機寬下，可見且可點擊、最短邊小於 44px 的元素（回傳 `標籤 寬x高`）。
+ * scope（彈出層場景）：只量該 selector 內的元素，且不剔除視窗外的元素（高於一屏的對話框，
+ * 下半截仍是真實的點擊目標）；回傳 measured＝實際量到幾個可見元素，用來確認量測真的涵蓋彈出層。
+ */
+async function tapViolations(page, scope) {
   return page.evaluate(
-    ({ selector, min, labelMax }) => {
+    ({ selector, min, labelMax, scope }) => {
       const out = new Set();
-      for (const el of document.querySelectorAll(selector)) {
+      let measured = 0;
+      const roots = scope ? [...document.querySelectorAll(scope)] : [document];
+      for (const el of roots.flatMap((root) => [...root.querySelectorAll(selector)])) {
         const style = getComputedStyle(el);
         if (style.visibility === 'hidden' || style.display === 'none' || style.pointerEvents === 'none') continue;
         if (el.closest('[aria-hidden="true"], [hidden], [inert]')) continue;
@@ -52,9 +58,10 @@ async function tapViolations(page) {
         }
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) continue;
-        if (r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth) continue;
+        if (!scope && (r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth)) continue;
         // 行內文字連結（段落內）不適用 44px 規則
         if (el.tagName === 'A' && style.display === 'inline') continue;
+        measured++;
         if (Math.min(r.width, r.height) < min) {
           const label = (
             el.getAttribute('aria-label') ||
@@ -70,14 +77,14 @@ async function tapViolations(page) {
           out.add(`${label || '(無標籤)'} ${Math.round(r.width)}x${Math.round(r.height)}`);
         }
       }
-      return [...out].sort();
+      return { found: [...out].sort(), measured };
     },
-    { selector: INTERACTIVE, min: MIN, labelMax: LABEL_MAX },
+    { selector: INTERACTIVE, min: MIN, labelMax: LABEL_MAX, scope },
   );
 }
 
 for (const scene of SCENES) {
-  for (const vp of VIEWPORTS) {
+  for (const vp of VIEWPORTS.filter((v) => !scene.viewports || scene.viewports.includes(v.key))) {
     for (const scheme of SCHEMES) {
       test(`${scene.name} · ${vp.key} · ${scheme}`, async ({ page }) => {
         await page.emulateMedia({ colorScheme: /** @type {'light'|'dark'} */ (scheme) });
@@ -100,10 +107,12 @@ for (const scene of SCENES) {
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(400);
         if (scene.act) await scene.act(page);
+        // 彈出層有 150～260ms 的進場動畫（淡入、上滑）；不等它跑完會拍到半透明的過場畫面。
+        // 上限：Toast 只停留 2～3 秒，所以只等一小段。
+        if (scene.scope) await page.waitForTimeout(600);
 
         // 證明渲染的是該頁面：有 proof 就必須出現；否則至少要有內容、沒有未捕捉的頁面錯誤。
-        if (scene.proof) await expect(page.getByTestId(scene.proof)).toBeVisible();
-        if (scene.proofText) await expect(page.getByText(scene.proofText).first(), `${scene.name} 沒有出現預期的文字`).toBeVisible();
+        await proveScene(page, scene);
         const textLength = await page.evaluate(() => document.body.innerText.trim().length);
         // 有 proof／proofText 就已經證明內容是對的；錯誤頁（如邀請無效）本來就只有幾個字，不套用空白頁檢查。
         if (!scene.proof && !scene.proofText) expect(textLength, `${scene.name} 幾乎沒有內容（空白頁？）`).toBeGreaterThan(20);
@@ -115,7 +124,7 @@ for (const scene of SCENES) {
         const BENIGN = ['/account/ai-data-consent', '/account/ai-authorization', '/public-config'];
         // 這些場景刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
         // 連狀態碼一起比對（`狀態碼 路徑`），其他狀態碼或其他端點的失敗仍然算「沒有 mock」。
-        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips' };
+        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips', 'popup-conflict-modal': '409 /api/poi-favorites', 'popup-error-banner': '500 /api/account/sessions' };
         const unexpected = apiFailures.filter(
           (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])),
         );
@@ -126,9 +135,12 @@ for (const scene of SCENES) {
         fs.mkdirSync(path.dirname(file), { recursive: true });
         await page.screenshot({ path: file, fullPage: false });
 
-        if (vp.key !== 'mobile' || scheme !== 'light') return; // 量測只在手機寬淺色做一次（尺寸與主題無關）
-        const found = await tapViolations(page);
+        // 量測只在手機寬淺色做一次（尺寸與主題無關）；只有桌機寬的表面（viewports 不含 mobile）改在桌機寬量。
+        const measureVp = scene.viewports && !scene.viewports.includes('mobile') ? 'desktop' : 'mobile';
+        if (vp.key !== measureVp || scheme !== 'light') return;
+        const { found, measured } = await tapViolations(page, scene.scope);
         console.log(`HIGWEB\t${scene.name}\t${JSON.stringify(found)}`);
+        if (scene.scope && !scene.noTargets) expect(measured, `${scene.name}：量測沒有涵蓋彈出層內的任何可點擊元素`).toBeGreaterThan(0);
         if (COLLECT) return;
         const { fresh, fixed } = diffViolations(found, KNOWN_TAP_VIOLATIONS[scene.name] ?? []);
         expect(fresh, `新增的觸控目標違規（HIG 檢查表 A1）：${scene.name}`).toEqual([]);
