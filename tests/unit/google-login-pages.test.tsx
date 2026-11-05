@@ -124,6 +124,17 @@ describe('AuthCallbackPage（/auth/callback）', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips', { replace: true }));
   });
 
+  it('暫存的 redirect_after_login 被竄改成站外網址：回跳頁不當開放轉址，改去 /trips', async () => {
+    const { AuthCallbackPage, back } = await startAndGetCallback({ redirectAfterLogin: '/trips' });
+    const { createIdbAuthStorage } = await import('../../src/lib/auth/storage');
+    const store = createIdbAuthStorage({ indexedDB: idb });
+    const pending = (await store.takePendingLogin())!;
+    await store.savePendingLogin({ ...pending, redirectAfterLogin: '//evil.example.test/x' });
+    renderCallback(AuthCallbackPage, back.search);
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+    expect(navigateMock).toHaveBeenCalledWith('/trips', { replace: true });
+  });
+
   it('state 不符：不換 token、回登入頁並帶錯誤碼', async () => {
     const { AuthCallbackPage, back } = await startAndGetCallback();
     back.searchParams.set('state', 'forged');
