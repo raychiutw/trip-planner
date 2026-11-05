@@ -134,6 +134,39 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     });
   });
 
+  it('#1587 17：衝突對話框只陳述事實，不承諾不存在的選項；唯一按鈕「知道了」關閉對話框', async () => {
+    apiFetchMock.mockImplementation((path) => {
+      if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);
+      if (path === '/my-trips') return Promise.resolve([{ tripId: 't1', name: 'T1', totalDays: 3 }]);
+      if (path.startsWith('/trips/t1/days')) return Promise.resolve([{ dayNum: 1, date: '2026-07-26', label: 'D1' }]);
+      if (path.includes('/add-to-trip')) {
+        return Promise.reject(
+          new ApiError('CONFLICT_TIME_OVERLAP', 409, '衝突', {
+            conflictWith: { entryId: 99, time: '12:00-13:00', title: '原餐廳', dayNum: 1 },
+          }),
+        );
+      }
+      return Promise.resolve({});
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
+    fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
+    const modal = await screen.findByTestId('conflict-modal');
+    expect(modal.textContent).not.toContain('要怎麼處理');
+    expect(modal.textContent).toContain('原餐廳');
+    expect(screen.queryByTestId('conflict-modal-after')).toBeNull();
+    expect(screen.queryByTestId('conflict-modal-replace')).toBeNull();
+    const ok = screen.getByTestId('conflict-modal-cancel');
+    expect(ok.textContent).toBe('知道了');
+    fireEvent.click(ok);
+    await waitFor(() => expect(screen.queryByTestId('conflict-modal')).toBeNull());
+  });
+
   it('state=optimistic: submit 中 button 顯示「加入中…」+ disable 防重 click', async () => {
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);

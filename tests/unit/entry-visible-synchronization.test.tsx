@@ -9,10 +9,19 @@ import { __resetTravelRecomputeState } from '../../src/lib/travelRecompute';
 import { resetToasts } from '../../src/lib/toastBus';
 import { __clearMyTripsCache } from '../../src/hooks/useMyTrips';
 
-// 這支測試走真實的拖曳＋多段讀寫協調；CI runner 吃緊時一個 waitFor／findBy 預設的 1 秒會不夠
-// （「切換行程後拖曳儲存完成…」在 runner 負載下約 1.6 秒才走到 writes，曾讓 master CI 偶發紅）。
-// 不是放寬斷言，只是把「等多久」放寬；等不到仍然會逾時失敗。
-configure({ asyncUtilTimeout: 5000 });
+// 這支測試走真實的拖曳＋多段讀寫協調，一個 case 要串十來個非同步步驟（載入、拖曳、寫入、重算、讀回）。
+// 全套平行負載下整體會被拉長數十倍（單跑第一個 case 約 250ms；CI 上曾量到 8 秒），
+// 而 vitest 預設的 5 秒「整個 case」上限剛好等於 asyncUtilTimeout 的 5 秒：任何一步慢一點就是
+// 「Test timed out in 5000ms」，看不出卡在哪（#1585）。
+//
+// 診斷結論：不是時序競爭——每一步都是 waitFor／findBy 等明確條件（MouseSensor 用距離啟動、沒有時間門檻），
+// 用人為延遲（每個回應晚 3 秒）能讓改前的這個 case 逾時，延遲只拉長總時間、不改變事件順序。
+// 所以只調「等多久」，不放寬任何斷言：
+//   - 整個 case 上限提高到 30 秒（與 vitest.config.js 的 unit-node 專案同值，理由相同）
+//   - 單一等待維持在遠小於整體上限的 asyncUtilTimeout：真的卡死時由 testing-library 在該步驟報出
+//     具體訊息，而不是等整個 case 逾時才報「Test timed out」
+vi.setConfig({ testTimeout: 30000 });
+configure({ asyncUtilTimeout: 10000 });
 
 function entry(id: number, name: string, dayId: number) {
   const master = { poiId: id + 1000, name, type: 'attraction', lat: 26 + id / 1000, lng: 127, note: null };

@@ -102,8 +102,19 @@ const stubSessionRevokeFails = (page) =>
 // 離線狀態由 window 的 offline 事件驅動（useOnlineStatus 同時聽這個事件）；不真的斷網，避免後續請求全失敗。
 // 狀態切到離線有 3 秒 debounce，之後橫幅與（TripPage 內的）離線 Toast 才出現。
 const goOffline = (page) => page.evaluate(() => window.dispatchEvent(new Event('offline')));
-const searchTooShort = async (page) => {
-  await page.getByTestId('explore-search-input').fill('a');
+// 離線時全域橫幅是唯一的離線提示（#1587 14，離線 Toast 不再出現）；Toast 只剩「已恢復連線」。
+// 先等橫幅出現（離線 3 秒 debounce），再送 online 事件，橫幅收掉、Toast 出現。
+const goOfflineThenOnline = async (page) => {
+  await goOffline(page);
+  await expect(page.getByTestId('server-status-banner')).toBeVisible({ timeout: 6000 });
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+};
+// 少於 2 字現在是欄位自己的錯誤文字（#1587 16，不再發 Toast）；error Toast 改取證「搜尋失敗」。
+// 只讓 q=ab 失敗，頁面載入時的自動搜尋不受影響，Toast 才會剛好出現在這一次操作之後。
+const stubSearchFails = (page) =>
+  page.route(/\/api\/poi-search\?q=ab/, (r) => r.fulfill(json(errBody('INTERNAL'), 500)));
+const searchFails = async (page) => {
+  await page.getByTestId('explore-search-input').fill('ab');
   await page.getByTestId('explore-search-submit').click();
 };
 
@@ -170,8 +181,8 @@ const SCENES = [
   { name: 'popup-trip-sheet', path: `/trips?selected=${TRIP}&sheet=chat`, viewports: ['desktop'], scope: '[data-testid="trip-sheet"]', proof: 'trip-sheet-tab-chat' },
   { name: 'popup-error-banner', path: '/account/sessions', stub: stubSessionRevokeFails, act: (page) => page.getByTestId('sessions-revoke-iphone').click(), scope: '[data-testid="sessions-error"]', proofText: '登出此裝置失敗', noTargets: true },
   { name: 'popup-server-status-banner', path: '/favorites', act: goOffline, scope: '[data-testid="server-status-banner"]', proofText: '連線中斷', noTargets: true },
-  { name: 'popup-toast-error', path: '/explore', act: searchTooShort, scope: '.tp-toast', proofText: '至少輸入 2 個字', noTargets: true },
-  { name: 'popup-toast-offline', path: `/trips?selected=${TRIP}`, act: goOffline, scope: '.tp-toast', proofText: '已離線', noTargets: true },
+  { name: 'popup-toast-error', path: '/explore', stub: stubSearchFails, act: searchFails, scope: '.tp-toast', proofText: '搜尋失敗', noTargets: true },
+  { name: 'popup-toast-online', path: `/trips?selected=${TRIP}`, act: goOfflineThenOnline, scope: '.tp-toast', proofText: '已恢復連線', noTargets: true },
 ];
 
 /**

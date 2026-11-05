@@ -107,6 +107,7 @@ const SCOPED_STYLES = `
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */
 
+.tp-sessions-error { margin-top: 16px; }
 .tp-banner {
   display: flex; gap: 12px;
   padding: 14px 16px;
@@ -210,6 +211,8 @@ export default function SessionsPage() {
   const { user } = useCurrentUser();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 上一個失敗的動作；橫幅的「重試」重跑它
+  const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(false);
   const loadPending = useRef(false);
@@ -255,7 +258,8 @@ export default function SessionsPage() {
       setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
       setError(null);
     } catch {
-      setError('登出此裝置失敗，請稍後再試。');
+      setError('登出此裝置失敗，該裝置可能仍保持登入。');
+      setRetryAction(() => () => void revokeOne(sid));
     } finally {
       setRevokingSid(null);
     }
@@ -271,7 +275,8 @@ export default function SessionsPage() {
       setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
       setError(null);
     } catch {
-      setError('登出其他裝置失敗，請稍後再試。');
+      setError('登出其他裝置失敗，其他裝置可能仍保持登入。');
+      setRetryAction(() => () => void revokeAllOthers());
     } finally {
       setRevokingAll(false);
     }
@@ -403,7 +408,14 @@ export default function SessionsPage() {
           </div>
         )}
 
-        {error && <ErrorBanner message={error} testId="sessions-error" />}
+        {error && (
+          <ErrorBanner
+            className="tp-sessions-error"
+            message={error}
+            testId="sessions-error"
+            action={retryAction ? { label: '重試', onClick: retryAction, disabled: revokingSid !== null || revokingAll } : undefined}
+          />
+        )}
 
         <div className="tp-banner tp-banner-info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -436,6 +448,7 @@ export default function SessionsPage() {
               if (loggingOut) return;
               setLoggingOut(true);
               setError(null);
+              setRetryAction(null); // 登出此帳號的錯誤沒有重試（結果可能未知，見下方文案）
               try {
                 const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
                 if (!response.ok) throw new Error('Logout failed');

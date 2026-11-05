@@ -47,7 +47,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent-fill); color: var(--color-accent-foreground);
   display: flex; align-items: center; justify-content: center;
 }
-.tp-consent-card__title { font-size: 0.9375rem; font-weight: 700; color: var(--color-foreground); }
+.tp-consent-card__title { margin: 0; font-size: 0.9375rem; font-weight: 700; color: var(--color-foreground); }
 .tp-consent-card__desc { font-size: 0.8125rem; color: var(--color-muted); margin-top: 3px; line-height: 1.5; }
 .tp-consent-quoted {
   margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-lg);
@@ -133,7 +133,7 @@ export default function AiConsentSheet({
                 </svg>
               </div>
               <div>
-                <h4 className="tp-consent-card__title" id="tp-consent-title">讓 AI 幫你把行程填滿</h4>
+                <h2 className="tp-consent-card__title" id="tp-consent-title">讓 AI 幫你把行程填滿</h2>
                 <p className="tp-consent-card__desc">
                   AI 需要你授權一次，才能以你的身分安排景點、餐廳、交通。可隨時在「已連結應用」撤銷。
                 </p>

@@ -90,10 +90,10 @@ describe('audit fix source locks', () => {
     expect(read('functions/api/pois/find-or-create.ts')).toMatch(/place_id: typeof body\.place_id === 'string'/);
   });
 
-  it('TripNotesPage accordion header is a div role=button (no nested interactive buttons)', () => {
+  it('TripNotesPage accordion header: toggle <button> 與 AI <button> 是兄弟（#1587 21，不再 div[role=button] 內含 button）', () => {
     const src = read('src/pages/TripNotesPage.tsx');
-    expect(src).toMatch(/<div\s+role="button"\s+tabIndex=\{0\}\s+className="tp-notes-section-head"/);
-    expect(src).not.toMatch(/<button\s+type="button"\s+className="tp-notes-section-head"/);
+    expect(src).not.toMatch(/role="button"\s+tabIndex=\{0\}\s+className="tp-notes-section-head"/);
+    expect(src).toMatch(/<div className="tp-notes-section-head">\s*<button\s+type="button"\s+className="tp-notes-section-toggle"/);
   });
 
   it('entries/[eid] re-throws AppError inside the OCC catch (avoids 503 misclassification)', () => {

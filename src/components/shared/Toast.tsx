@@ -55,7 +55,7 @@ export default function ToastContainer() {
   if (toastInstances[0] !== idRef.current) return null;
 
   return (
-    <div className="fixed top-toast-top left-0 right-0 z-250 flex flex-col items-center gap-2 pointer-events-none px-4">
+    <div className="tp-toast-region">
       {getToasts().map((toast) => (
         <ToastBubble key={toast.id} toast={toast} />
       ))}
@@ -97,8 +97,9 @@ function ToastBubble({ toast }: { toast: ToastItem }) {
         TYPE_CLASS[toast.type],
         exiting ? 'animate-toast-slide-up opacity-0' : 'animate-toast-slide-down',
       ].join(' ')}
-      role="alert"
-      aria-live="polite"
+      // 只有 error 用 role=alert（隱含 assertive，需要立刻讀出）；其餘是環境狀態／低風險通知，
+      // 用 role=status（隱含 polite）不打斷使用者。role 已隱含 aria-live，不再另設以免互相矛盾。
+      role={toast.type === 'error' ? 'alert' : 'status'}
       aria-atomic="true"
     >
       <span className="truncate">{toast.message}</span>

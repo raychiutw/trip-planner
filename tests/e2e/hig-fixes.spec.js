@@ -119,3 +119,63 @@ test('探索頁搜尋鈕單行且至少 44x44', async ({ page }) => {
   expect(m.lines, '搜尋鈕文字換行').toBe(1);
   expect(Math.min(m.w, m.h), `搜尋鈕 ${m.w}x${m.h}`).toBeGreaterThanOrEqual(44);
 });
+
+// ── #1587 彈出層修正的版面守門 ────────────────────────────────────────────
+
+/** 跑場景自己的 act（例如送出表單、觸發離線事件）。 */
+async function actOf(page, name) {
+  const scene = SCENES.find((s) => s.name === name);
+  await scene.act(page);
+}
+
+// 13：離線橫幅納入 app-shell 版面，不在 100dvh 之外多佔高度、整頁不出現捲軸
+for (const [vpName, vp] of [['手機', MOBILE], ['桌機', DESKTOP]]) {
+  test(`離線橫幅不增加整頁高度、shell 不被擠出視窗：${vpName}`, async ({ page }) => {
+    await open(page, 'popup-server-status-banner', vp);
+    const measure = () => page.evaluate(() => {
+      const shell = document.querySelector('.app-shell');
+      const r = shell.getBoundingClientRect();
+      return { scrollHeight: document.documentElement.scrollHeight, inner: innerHeight, top: r.top, bottom: r.bottom };
+    });
+    const before = await measure();
+    await actOf(page, 'popup-server-status-banner');
+    await expect(page.getByTestId('server-status-banner')).toBeVisible({ timeout: 6000 });
+    await page.waitForTimeout(200);
+    const after = await measure();
+    expect(after.scrollHeight, '離線前後整頁高度').toBe(before.scrollHeight);
+    expect(after.scrollHeight, '整頁高度不超過視窗').toBeLessThanOrEqual(after.inner);
+    expect(after.bottom, 'shell 下緣不超出視窗').toBeLessThanOrEqual(after.inner + 1);
+  });
+}
+
+// 15：Toast 位置照 DESIGN.md「Error & Status Messaging」
+test('Toast 位置：手機在底部且高於 bottom nav', async ({ page }) => {
+  await open(page, 'popup-toast-error', MOBILE);
+  await actOf(page, 'popup-toast-error');
+  const toast = page.locator('.tp-toast').first();
+  await expect(toast).toBeVisible();
+  const r = await toast.boundingBox();
+  const nav = await page.evaluate(() => document.querySelector('.app-shell-bottom-nav, [data-testid="global-bottom-nav"]')?.getBoundingClientRect().top ?? null);
+  expect(r.y, 'Toast 在視窗下半').toBeGreaterThan(MOBILE.height / 2);
+  if (nav !== null) expect(r.y + r.height, 'Toast 下緣高於 bottom nav 上緣').toBeLessThanOrEqual(nav);
+});
+
+test('Toast 位置：桌機在右上、titlebar 下方', async ({ page }) => {
+  await open(page, 'popup-toast-error', DESKTOP);
+  await actOf(page, 'popup-toast-error');
+  const toast = page.locator('.tp-toast').first();
+  await expect(toast).toBeVisible();
+  const r = await toast.boundingBox();
+  const titlebarH = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--titlebar-h')));
+  expect(r.y, 'Toast 上緣在 titlebar 下方').toBeGreaterThanOrEqual(titlebarH);
+  expect(DESKTOP.width - (r.x + r.width), 'Toast 靠右').toBeLessThanOrEqual(32);
+});
+
+// 19：手機寬有效期限分段控制不折行
+test('分享對話框有效期限五個選項同一列：手機', async ({ page }) => {
+  await open(page, 'popup-share-link-modal', MOBILE);
+  await SCENES.find((s) => s.name === 'popup-share-link-modal').act(page);
+  const tops = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="share-expiry-"]')].map((b) => Math.round(b.getBoundingClientRect().top)));
+  expect(tops).toHaveLength(5);
+  expect(new Set(tops).size, `各選項上緣 ${tops}`).toBe(1);
+});

@@ -20,7 +20,8 @@ export const APP_SHELL_STYLES = `
   /* Lock to viewport so sidebar / main / sheet are real scroll containers
    * — grid rows can't grow with content, so each cell becomes its own
    * scroller, and one column scrolling doesn't drag the others. */
-  height: 100dvh;
+  /* 離線橫幅（ServerStatusBanner）在 shell 之外佔高，扣掉它總高才仍是 100dvh。 */
+  height: calc(100dvh - var(--server-banner-h, 0px));
   background: var(--color-background);
   color: var(--color-foreground);
   grid-template-columns: 1fr;

@@ -9,25 +9,48 @@
  * navigator.onLine + SW message 三個 signal source，再加 health ping 是
  * 重複 + 加 quota burn。Health endpoint 給外部 uptime monitor 用。
  */
+import { useLayoutEffect, useRef } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { setOfflineBannerVisible } from '../lib/toastBus';
 
 export function ServerStatusBanner(): React.JSX.Element | null {
   const isOnline = useOnlineStatus();
+  const ref = useRef<HTMLDivElement>(null);
+
+  // 橫幅在 100dvh 的 .app-shell 之外；把自己的高度發布成 --server-banner-h，
+  // .app-shell 以 calc(100dvh - var(--server-banner-h)) 讓出空間，總高不變、整頁不出現捲軸。
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (isOnline || !el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--server-banner-h', `${Math.ceil(el.getBoundingClientRect().height)}px`);
+    publish();
+    setOfflineBannerVisible(true);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty('--server-banner-h');
+      setOfflineBannerVisible(false);
+    };
+  }, [isOnline]);
+
   if (isOnline) return null;
   return (
     <div
+      ref={ref}
       role="alert"
       data-testid="server-status-banner"
       style={{
         position: 'sticky',
         top: 0,
         zIndex: 9999,
-        background: 'var(--color-priority-high-bg, #fde2e2)',
-        color: 'var(--color-priority-high-text, #8b2828)',
+        background: 'var(--color-destructive-bg)',
+        color: 'var(--color-destructive)',
         padding: '8px 16px',
         fontSize: 14,
         textAlign: 'center',
-        borderBottom: '1px solid var(--color-priority-high-dot, #c44545)',
+        borderBottom: '1px solid var(--color-destructive)',
       }}
     >
       連線中斷，等待恢復網路中。已輸入的資料會在連線後自動上傳。

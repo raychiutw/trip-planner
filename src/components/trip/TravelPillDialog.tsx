@@ -398,7 +398,7 @@ export default function TravelPillDialog({
         data-testid="travel-pill-dialog"
       >
         <div className="tp-travel-dialog" ref={panelRef} tabIndex={-1} onKeyDown={handlePanelKeyDown}>
-          <h3 id={titleId} className="tp-travel-dialog-title">交通方式</h3>
+          <h2 id={titleId} className="tp-travel-dialog-title">交通方式</h2>
           {(fromName || toName || hasDist) && (
             <p className="tp-travel-dialog-meta">
               {fromName && toName ? `${fromName} → ${toName}` : ''}

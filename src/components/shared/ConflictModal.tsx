@@ -123,6 +123,10 @@ export interface ConflictModalProps {
   onReplace?: () => void;
   /** v2.22.0 4-field schema 不支援 push-after；caller 不傳 → 隱藏 button */
   onPushAfter?: () => void;
+  /** 覆寫說明文案；沒有可選動作的呼叫端不該問「要怎麼處理？」。預設維持原文。 */
+  message?: string;
+  /** 覆寫唯一／取消鈕文字；預設「取消」。 */
+  cancelLabel?: string;
 }
 
 export default function ConflictModal({
@@ -132,6 +136,8 @@ export default function ConflictModal({
   onCancel,
   onReplace,
   onPushAfter,
+  message = '這個時段已經安排了景點。要怎麼處理？',
+  cancelLabel = '取消',
 }: ConflictModalProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   // 統一 sheet 引擎（B1）：focus 取消鈕 + Escape（IME/巢狀 guard）+ focus-trap + scroll-lock。
@@ -168,7 +174,7 @@ export default function ConflictModal({
         >
           <h2 className="tp-conflict-title" id="tp-conflict-title">該時段已有景點</h2>
           <p className="tp-conflict-message" id="tp-conflict-message">
-            這個時段已經安排了景點。要怎麼處理？
+            {message}
           </p>
           <div className="tp-conflict-summary" data-testid="conflict-modal-summary">
             <strong>{dayLabel}{timeLabel}</strong>
@@ -206,7 +212,7 @@ export default function ConflictModal({
               disabled={busy}
               data-testid="conflict-modal-cancel"
             >
-              取消
+              {cancelLabel}
             </button>
           </div>
         </div>
