@@ -55,7 +55,7 @@ export interface RecordedRequest {
 interface Grant { family: string; jkt: string | null; email: string; scope: string }
 
 export function createFakeOAuthApi() {
-  const codes = new Map<string, { challenge: string; jkt: string | null; email: string; scope: string; used: boolean }>();
+  const codes = new Map<string, { challenge: string; jkt: string | null; email: string; scope: string; redirectUri: string | null; used: boolean }>();
   const refreshTokens = new Map<string, Grant & { used: boolean }>();
   const accessTokens = new Map<string, Grant & { expired: boolean }>();
   const revokedFamilies = new Set<string>();
@@ -143,7 +143,7 @@ export function createFakeOAuthApi() {
         return json(401, { error: { code: 'LOGIN_INVALID', message: 'invalid' } });
       }
       const code = randomToken();
-      codes.set(code, { challenge: b.code_challenge, jkt: (b.dpop_jkt as string | undefined) ?? null, email: b.email, scope, used: false });
+      codes.set(code, { challenge: b.code_challenge, jkt: (b.dpop_jkt as string | undefined) ?? null, email: b.email, scope, redirectUri: null, used: false });
       return json(200, { code, expires_in: 60 });
     }
 
@@ -159,9 +159,11 @@ export function createFakeOAuthApi() {
         jkt = v.jkt;
       }
       if (params.grant_type === 'authorization_code') {
-        if ('redirect_uri' in params) return oauthErr('invalid_grant', 'redirect_uri mismatch');
         const c = codes.get(params.code ?? '');
         if (!c || c.used) return oauthErr('invalid_grant', 'Authorization code expired or invalid');
+        // 忠實複製真實比對：api src/lib/token-lifecycle.ts:98 `(codeRow.redirect_uri || null) !== (body.redirect_uri || null)`。
+        // 第一方 code（密碼登入與 Google 回跳）寫入的 redirect_uri 是 null，所以 web 換 token 時若帶了 redirect_uri 就會被拒。
+        if ((c.redirectUri || null) !== (params.redirect_uri || null)) return oauthErr('invalid_grant', 'redirect_uri mismatch');
         c.used = true;
         if (c.jkt && c.jkt !== jkt) return oauthErr('invalid_grant', 'DPoP key does not match the authorization request');
         if (!params.code_verifier) return oauthErr('invalid_grant', 'code_verifier required (PKCE)');
@@ -252,7 +254,7 @@ export function createFakeOAuthApi() {
       if (opts.deny) back.searchParams.set('error', 'access_denied');
       else {
         const code = randomToken();
-        codes.set(code, { challenge, jkt, email: opts.email ?? FAKE_EMAIL, scope, used: false });
+        codes.set(code, { challenge, jkt, email: opts.email ?? FAKE_EMAIL, scope, redirectUri: null, used: false });
         back.searchParams.set('code', code);
       }
       if (q.get('state')) back.searchParams.set('state', q.get('state')!);

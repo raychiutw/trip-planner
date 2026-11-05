@@ -93,6 +93,9 @@ export const ErrorCode = {
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
 
+/** 變更密碼的新密碼最短長度（對應後端 CHANGE_PASSWORD_TOO_SHORT）；文案與前端檢查共用這一個來源。 */
+export const CHANGE_PASSWORD_MIN_LENGTH = 8;
+
 export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   NET_TIMEOUT: '連線逾時，請檢查網路',
   NET_OFFLINE: '目前離線，顯示快取資料',
@@ -141,7 +144,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   ACCOUNT_DELETE_CONFIRM_REQUIRED: '刪除帳號需要二次確認',
   ACCOUNT_DELETE_PASSWORD_INVALID: '密碼不正確，帳號未刪除',
   CHANGE_PASSWORD_CURRENT_INVALID: '目前密碼不正確',
-  CHANGE_PASSWORD_TOO_SHORT: '新密碼至少 8 字元',
+  CHANGE_PASSWORD_TOO_SHORT: `新密碼至少 ${CHANGE_PASSWORD_MIN_LENGTH} 字元`,
   CHANGE_PASSWORD_SAME: '新密碼不能和目前密碼相同',
   CHANGE_PASSWORD_NO_PASSWORD: '此帳號以 Google 登入，沒有設定密碼',
   CHANGE_PASSWORD_RATE_LIMITED: '嘗試次數過多，請稍後再試',
