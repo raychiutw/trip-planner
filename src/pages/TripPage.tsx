@@ -36,13 +36,11 @@ const TripSheet = lazyWithRetry(() => import('../components/trip/TripSheet'));
 // Migration 0045 (2026-05-02): trips.footer dropped. Footer.tsx component
 // deleted in same commit. FooterArt (decorative SVG, ThemeArt module, unrelated)
 // stays.
-import CollabSheet from '../components/trip/CollabSheet';
 import AlertPanel from '../components/shared/AlertPanel';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
@@ -219,7 +217,6 @@ export interface TripPageProps {
 /* PR-SS/UU 2026-04-27：embedded mode 用 ref 從外部 trigger 各 actions。
  * TripsListPage 的 embedded topbar ⋯ 漢堡選單透過此 handle 呼叫。 */
 export interface TripPageHandle {
-  openSheet: (key: string) => void;
   triggerDownload: (format: 'pdf' | 'json') => void;
   togglePrint: () => void;
   /** Section 3 (terracotta-add-stop-modal) E2E follow-up：embedded mode 也能
@@ -243,7 +240,6 @@ function TripPageInner(
     ? { status: 'resolved', tripId: activeTripId }
     : tripsStatus === 'ready' ? { status: 'unpublished' } : { status: 'loading' },
   [activeTripId, tripsStatus]);
-  const [activeSheet, setActiveSheet] = useState<string | null>(null);
   // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
   // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
   // refetch（既有 listener 處理）。
@@ -719,12 +715,10 @@ function TripPageInner(
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
 
-  /* PR-SS/UU 2026-04-27:embedded mode 把 sheet/download/print handlers 開放
+  /* PR-SS/UU 2026-04-27:embedded mode 把 download/print/add-stop handlers 開放
    * 給父層。TripsListPage 的 ⋯ 漢堡選單(共編 / 列印 / 下載)透過 ref 呼叫。
-   * v2.17.17:其餘 sheet keys(suggestions/today-route/flights/checklist/
-   * backup/emergency/appearance/trip-select)已整批移除 — 只剩 collab 走 sheet。 */
+   * v2.17.17 起 sheet 已整批移除,共編走獨立頁 CollabPage;InfoSheet/openSheet 隨之刪除。 */
   useImperativeHandle(ref, () => ({
-    openSheet: (key: string) => setActiveSheet(key),
     triggerDownload: (format: 'pdf' | 'json') => { void handleDownloadFormat(format); },
     togglePrint,
     openAddStop: () => {
@@ -733,7 +727,6 @@ function TripPageInner(
       navigate(`/trip/${encodeURIComponent(tid)}/add-stop?day=${currentDayNum}`);
     },
   }), [handleDownloadFormat, togglePrint, trip, effectiveUrlTripId, navigate, currentDayNum]);
-  const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
   // v2.31.54 simplify follow-up：useMemo 避免每次 TripPage render 重建
   // sheetContent JSX tree → portal subtree React reconcile 浪費。Deps =
@@ -858,17 +851,6 @@ function TripPageInner(
           </div>
         )}
       </main>
-
-      {/* v2.17.17:活著的 sheet 只剩 collab(共編設定)— 由 EmbeddedActionMenu
-       * onCollab callback OR `?sheet=collab` URL deeplink 觸發 setActiveSheet('collab')。
-       * 其餘 8 個 sheet keys 在 v2.17.17 整批移除(無 UI 入口)。 */}
-      <InfoSheet
-        open={activeSheet === 'collab'}
-        title="共編設定"
-        onClose={handleSheetClose}
-      >
-        {trip ? <CollabSheet tripId={trip.id} /> : null}
-      </InfoSheet>
 
       {/* 2026-05-03 modal-to-fullpage migration: AddStopModal 由 /trip/:id/add-stop?day=N
         * page 取代。openAddStop handle 直接 navigate，不再 mount modal。

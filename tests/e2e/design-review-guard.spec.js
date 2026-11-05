@@ -257,7 +257,7 @@ async function overlaysOutsideViewport(page) {
       if (r.width === 0 || r.height === 0) continue;
       const cs = getComputedStyle(el);
       if (cs.visibility === 'hidden' || cs.display === 'none') continue;
-      // 常駐 DOM 但「未開啟」的浮層（例如收合的 InfoSheet：整層 opacity 0 / pointer-events none，
+      // 常駐 DOM 但「未開啟」的浮層（例如收合的 bottom sheet：整層 opacity 0 / pointer-events none，
       // 面板 translateY 到視窗外）不算浮層；有任一祖先看不見或不接事件就略過。
       let closed = false;
       for (let n = /** @type {Element | null} */ (el); n; n = n.parentElement) {

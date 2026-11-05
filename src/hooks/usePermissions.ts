@@ -25,7 +25,7 @@ interface UsePermissionsResult {
  * Uses currentTripIdRef to avoid stale-closure errors when aborting requests.
  *
  * V2 共編：同時 fetch /api/permissions (members) 與 /api/invitations?tripId (pending)
- * — 兩者一起 render 在 CollabSheet。Pending invitation 失敗不擋 members render。
+ * — 兩者一起 render 在 CollabPanel。Pending invitation 失敗不擋 members render。
  */
 export function usePermissions(currentTripIdRef: React.RefObject<string>): UsePermissionsResult {
   const [permissions, setPermissions] = useState<Permission[]>([]);

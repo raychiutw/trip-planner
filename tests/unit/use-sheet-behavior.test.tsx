@@ -74,7 +74,7 @@ describe('useSheetBehavior — B0 引擎新增行為', () => {
     cleanup();
   });
 
-  it('modal 預設 true：鎖 body scroll（既有 InfoSheet 行為）', () => {
+  it('modal 預設 true：鎖 body scroll（預設行為）', () => {
     render(<Sheet open onClose={() => {}} />);
     expect(document.body.style.position).toBe('fixed');
     cleanup();

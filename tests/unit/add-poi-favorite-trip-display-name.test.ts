@@ -10,7 +10,7 @@
  * user 困惑「這是同一個 trip 嗎」。
  *
  * Root cause：tripDisplayName 寫成 `t.name || t.title || tripId`，
- * 但 trips list (TripsListPage:1088) / TripPickerPopover / ChatPage /
+ * 但 trips list (TripsListPage:1088) / ChatPage /
  * MapPage / GlobalMapPage 5 處都用 `t.title || t.name || tripId`。
  *
  * Fix：對齊 canonical pattern，title 優先 name 其次。

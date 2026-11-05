@@ -62,7 +62,7 @@ import '../../css/tokens.css';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
 
 // AdminPage removed 2026-04-26 (PR-O) — admin 共編管理拆進每個 trip 的
-// OverflowMenu →「共編設定」 sheet (CollabSheet)，一般 user 也可管自己 owner
+// OverflowMenu →「共編設定」(現為 CollabPage 獨立頁)，一般 user 也可管自己 owner
 // 行程。/admin 維持 backward-compat redirect 到 /trips。
 // ManagePage removed 2026-04-26 — superseded by /chat. tp-request skill on
 // Mac Mini auto-classifies improve-trip vs question intent; the legacy

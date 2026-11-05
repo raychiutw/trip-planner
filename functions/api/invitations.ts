@@ -5,7 +5,7 @@
  *    用。三種失敗 case 共用 410 GONE：INVITATION_INVALID / EXPIRED / ACCEPTED。
  *
  * 2. ?tripId=xxx → 需 auth，trip owner 列出該 trip 所有 pending invitations
- *    給 CollabSheet pending UI 用。回傳 [{ id, invitedEmail, expiresAt, daysRemaining }]，
+ *    給 CollabPanel pending UI 用。回傳 [{ id, invitedEmail, expiresAt, daysRemaining }]，
  *    刻意不包含 token_hash（敏感資料）。
  *
  * 為何 410 不是 404：被邀請者點 link 時收到「已過期」是正常 lifecycle 結尾，semantic 是

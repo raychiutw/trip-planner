@@ -512,8 +512,7 @@ const SCOPED_STYLES = `
 
 /* 2026-05-03 modal-to-fullpage migration audit: tp-trip-picker-* (backdrop +
  * modal shell + actions + cancel button) CSS 已退場。chooser 改 anchored
- * popover，rules 全搬到 src/components/explore/TripPickerPopover.tsx
- * SCOPED_STYLES。row hover / empty state 規則一併隨 component 走。 */
+ * popover（該 popover 元件後來也已移除，改走 /favorites/:id/add-to-trip 全頁）。 */
 `;
 
 export default function ExplorePage() {

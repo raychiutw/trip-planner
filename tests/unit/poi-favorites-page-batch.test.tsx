@@ -102,15 +102,6 @@ describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
     expect(screen.getByTestId('favorites-add-to-trip-2').getAttribute('href')).toBe('/favorites/2/add-to-trip');
   });
 
-  it('SHALL NOT mount TripPickerPopover (移除舊 batch trip picker UI)', async () => {
-    apiFetchMock.mockResolvedValue([makeRow(1)]);
-    renderPage();
-    await waitFor(() => expect(screen.getByTestId('favorites-card-1')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('favorites-check-1'));
-    // popover 不該存在 — 整個 element 都不該掛
-    expect(document.querySelector('[data-testid*="trip-picker"]')).toBeNull();
-  });
-
   it('跨篩選選取後，全選只加入目前結果，確認框列出完整操作集合', async () => {
     apiFetchMock.mockResolvedValue([
       { ...makeRow(1), poiName: '沖繩餐廳', poiType: 'restaurant' },

@@ -2,7 +2,7 @@
  * use-permissions.test.tsx — v2.33.40 round 4.5 test gap fill
  *
  * usePermissions race guard via currentTripIdRef — 快速切 trip 時舊 fetch
- * 回來不應寫到新 trip 的 state。此 hook 推 CollabSheet，race bug 已在
+ * 回來不應寫到新 trip 的 state。此 hook 推 CollabPanel，race bug 已在
  * v2.31.16 timeline 上過一次。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
