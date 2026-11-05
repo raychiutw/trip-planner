@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
-import { AuthError, createAuthClient, LOGIN_SCOPE } from '../../src/lib/auth/client';
+import { AuthError, createAuthClient, LOGIN_SCOPE, PENDING_LOGIN_TTL_MS } from '../../src/lib/auth/client';
 import { exportPublicJwk } from '../../src/lib/auth/dpop';
 import { createIdbAuthStorage, createMemoryAuthStorage } from '../../src/lib/auth/storage';
 import { createFakeOAuthApi, FAKE_API_BASE, FAKE_WEB_REDIRECT_URI } from './__helpers__/fake-oauth-api';
@@ -28,7 +28,7 @@ function setup() {
 }
 const callbackParams = (location: string) => new URL(location).searchParams;
 
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('startGoogleLogin（發起）', () => {
   it('回傳新 api 的 Google 入口，帶齊參數：client_id、redirect_uri、S256 challenge、state、scope、dpop_jkt，且沒有多餘參數', async () => {
@@ -79,6 +79,7 @@ describe('startGoogleLogin（發起）', () => {
     const recorder = { setItem: (k: string, v: string) => { writes.push(`${k}=${v}`); } };
     vi.stubGlobal('localStorage', recorder);
     vi.stubGlobal('sessionStorage', recorder);
+    vi.stubGlobal('document', { get cookie() { return ''; }, set cookie(v: string) { writes.push(`cookie:${v}`); } });
     try {
       await client.startGoogleLogin({ redirectUri: FAKE_WEB_REDIRECT_URI });
     } finally {
@@ -182,6 +183,27 @@ describe('finishGoogleLogin（回跳換 token）', () => {
     expect(api.tokenRequests()).toHaveLength(1);
   });
 
+  it('暫存超過有效期限：當作不存在（拒絕、不打 token 端點）並清掉殘留的金鑰', async () => {
+    const { api, storage, client, href } = await begin();
+    const back = api.googleLogin(href)!;
+    const t0 = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(t0 + PENDING_LOGIN_TTL_MS + 1);
+    await expect(client.finishGoogleLogin(callbackParams(back))).rejects.toMatchObject({ code: 'OAUTH_STATE_MISMATCH' });
+    expect(api.tokenRequests()).toHaveLength(0);
+    expect(client.isAuthenticated()).toBe(false);
+    expect(await storage.takePendingLogin()).toBeNull();
+  });
+
+  it('暫存在有效期限內：照常換 token；用過即刪', async () => {
+    const { api, storage, client, href } = await begin();
+    const back = api.googleLogin(href)!;
+    const t0 = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(t0 + PENDING_LOGIN_TTL_MS - 1);
+    await client.finishGoogleLogin(callbackParams(back));
+    expect(client.isAuthenticated()).toBe(true);
+    expect(await storage.takePendingLogin()).toBeNull();
+  });
+
   it('使用者在 Google 取消（error=access_denied 且 state 正確）：丟出該錯誤碼、不打 token 端點、暫存清掉', async () => {
     const { api, storage, client, href } = await begin();
     const back = api.googleLogin(href, { deny: true })!;
@@ -218,9 +240,12 @@ describe('finishGoogleLogin（回跳換 token）', () => {
   });
 
   it('暫存的 redirect_after_login 在換 token 成功後原樣回傳；沒設定時為 null', async () => {
-    const { api, client, href } = await begin();
-    const r = await client.finishGoogleLogin(callbackParams(api.googleLogin(href)!));
-    expect(r.redirectAfterLogin).toBeNull();
+    const set = await begin('/trips?selected=t1');
+    const r1 = await set.client.finishGoogleLogin(callbackParams(set.api.googleLogin(set.href)!));
+    expect(r1.redirectAfterLogin).toBe('/trips?selected=t1');
+    const unset = await begin();
+    const r2 = await unset.client.finishGoogleLogin(callbackParams(unset.api.googleLogin(unset.href)!));
+    expect(r2.redirectAfterLogin).toBeNull();
   });
 });
 

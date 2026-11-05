@@ -30,7 +30,8 @@ export default function AuthCallbackPage() {
   }, [navigate, params]);
 
   return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }} data-testid="auth-callback-page">
+    <main className="grid min-h-dvh place-items-center" data-testid="auth-callback-page">
+      <h1 className="sr-only">Google 登入</h1>
       <p role="status">登入中…</p>
     </main>
   );

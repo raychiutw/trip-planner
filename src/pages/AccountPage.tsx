@@ -484,7 +484,7 @@ export default function AccountPage() {
         patchPreview((current) => ({ ...current, reauthenticated: false }));
       }
     }
-  }, [deletePreview, canConfirmDelete, deleteInput, deleting]);
+  }, [deletePreview, canConfirmDelete, deleteInput, deleting, patchPreview]);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);

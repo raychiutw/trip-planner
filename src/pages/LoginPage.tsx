@@ -356,6 +356,9 @@ export default function LoginPage() {
     return { ok: false, code: errJson?.error?.code ?? 'UNKNOWN', retryAfter: res.headers.get('Retry-After') };
   }
 
+  /** 新舊兩種 Google 登入入口（新 api 用 button、舊入口用 a）共用的內容。 */
+  const googleButtonContent = (<><GoogleLogo /><span>使用 Google 登入</span></>);
+
   /** 新 api 的 Google 登入：發起（暫存 PKCE／state／金鑰）後整頁導向新 api 入口。 */
   async function startNewApiGoogleLogin(auth: AuthClient) {
     setBannerError(null);
@@ -611,8 +614,7 @@ export default function LoginPage() {
                 onClick={() => { void startNewApiGoogleLogin(newApiAuth); }}
                 data-testid="login-google"
               >
-                <GoogleLogo />
-                <span>使用 Google 登入</span>
+                {googleButtonContent}
               </button>
             ) : (
               <a
@@ -620,8 +622,7 @@ export default function LoginPage() {
                 href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
                 data-testid="login-google"
               >
-                <GoogleLogo />
-                <span>使用 Google 登入</span>
+                {googleButtonContent}
               </a>
             )}
           </>

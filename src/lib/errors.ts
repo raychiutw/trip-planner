@@ -15,9 +15,9 @@ export class ApiError extends Error {
   /** v2.21.0: full response body for structured error payloads (e.g. 409 conflictWith). */
   readonly payload?: unknown;
   /** 429 等回應的 `Retry-After`（秒）；沒有或不是正整數秒就是 undefined。跨網域要後端 CORS 暴露此標頭。 */
-  retryAfter?: number;
+  readonly retryAfter?: number;
 
-  constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown) {
+  constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown, retryAfter?: number) {
     super(ERROR_MESSAGES[code] || code);
     // v2.33.38 round 3: cap code length too — malicious server could return
     // `{ error: { code: 'AUTH'.repeat(1e5) } }` and propagate giant string.
@@ -32,6 +32,7 @@ export class ApiError extends Error {
       ? detail.replace(/[\r\n]+/g, ' ').slice(0, 200)
       : detail;
     this.payload = payload;
+    this.retryAfter = retryAfter;
     this.severity = classifySeverity(this.code);
   }
 
@@ -39,8 +40,8 @@ export class ApiError extends Error {
   static async fromResponse(res: Response): Promise<ApiError> {
     const err = await ApiError.parseResponse(res);
     const seconds = Number(res.headers.get('Retry-After'));
-    if (Number.isInteger(seconds) && seconds > 0) err.retryAfter = seconds;
-    return err;
+    if (!(Number.isInteger(seconds) && seconds > 0)) return err;
+    return new ApiError(err.code, err.status, err.detail, err.payload, seconds);
   }
 
   private static async parseResponse(res: Response): Promise<ApiError> {

@@ -21,6 +21,13 @@ export const CLIENT_ID = 'tripline-web';
  */
 export const LOGIN_SCOPE = 'openid profile email trips:read trips:write';
 
+/**
+ * Google 登入「發起 → 回跳」暫存的有效期限。暫存裡有不可匯出的私鑰與 PKCE verifier，只該活到使用者
+ * 在 Google 完成授權（通常幾十秒；留給慢速網路與帳號選擇／兩步驟驗證）；放太久只是讓被放棄的登入殘留私鑰，
+ * 所以逾時就當不存在。後端 authorization code 本身只有 60 秒，10 分鐘已足夠寬。
+ */
+export const PENDING_LOGIN_TTL_MS = 10 * 60 * 1000;
+
 export class AuthError extends Error {
   readonly code: string;
   readonly status?: number;
@@ -192,7 +199,10 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     const jkt = await jwkThumbprint(await exportPublicJwk(keyPair));
     const { verifier, challenge } = await createPkcePair();
     const state = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-    await storage.savePendingLogin({ state, verifier, keyPair, redirectAfterLogin: sanitizeRedirectAfter(o.redirectAfterLogin ?? null) });
+    // 發起時就 sanitize（縱深防禦）：暫存裡永遠只有站內路徑，不依賴回跳頁那次再擋；回跳頁仍會再驗一次，因為暫存讀出時不能信任。
+    await storage.savePendingLogin({
+      state, verifier, keyPair, createdAt: Date.now(), redirectAfterLogin: sanitizeRedirectAfter(o.redirectAfterLogin ?? null),
+    });
     const target = new URL(url('/api/oauth/login/google'));
     target.search = new URLSearchParams({
       client_id: CLIENT_ID,
@@ -210,7 +220,9 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     // 先領出暫存（同時刪掉）再驗：任何結果都不會留下可重用的 verifier／金鑰
     const pending = await storage.takePendingLogin();
     const state = params.get('state');
-    if (!pending || !state || state !== pending.state) {
+    // 逾時的暫存（上面 take 已刪掉）當作不存在
+    const expired = !!pending && Date.now() - pending.createdAt > PENDING_LOGIN_TTL_MS;
+    if (!pending || expired || !state || state !== pending.state) {
       throw new AuthError('OAUTH_STATE_MISMATCH', 'state 不符或登入不是從這個瀏覽器發起');
     }
     const providerError = params.get('error');
