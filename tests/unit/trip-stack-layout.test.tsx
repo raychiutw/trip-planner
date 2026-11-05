@@ -41,7 +41,6 @@ const mockTogglePrint = vi.fn();
 const mockTriggerDownload = vi.fn();
 const mockTripPageHandleRef = {
   current: {
-    openSheet: vi.fn(),
     triggerDownload: mockTriggerDownload,
     togglePrint: mockTogglePrint,
     openAddStop: vi.fn(),

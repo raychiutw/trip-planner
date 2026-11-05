@@ -4,7 +4,7 @@ import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../lib/constants';
 
 interface UseSheetBehaviorOptions {
   /**
-   * 明確要求「還原到開啟前聚焦的元素」（InfoSheet pattern）。
+   * 明確要求「還原到開啟前聚焦的元素」（bottom-sheet pattern）。
    *
    * ⚠ #1160 起這個 flag **不再是還原行為的開關**，只是「明確指定用這條路」。
    * 沒傳 flag 也沒傳 `triggerRef` 時，引擎預設就會還原到開啟當下的
@@ -20,8 +20,8 @@ interface UseSheetBehaviorOptions {
   onEscape?: () => void;
   /**
    * When true, prevents ALL scroll on the backdrop (wheel + touchmove), not just
-   * self-targeted events. QuickPanel needs this; InfoSheet only blocks self-targeted.
-   * Default: false (InfoSheet behavior).
+   * self-targeted events. QuickPanel needs this; other sheets only block self-targeted.
+   * Default: false (self-targeted only).
    */
   preventAllBackdropScroll?: boolean;
   /**
@@ -75,9 +75,9 @@ function connectedTrigger(ref?: React.RefObject<HTMLElement | null>): HTMLElemen
 }
 
 /**
- * 是否有任何 engine sheet/modal 開啟中（ConfirmModal / InfoSheet / AiConsent 等只在開啟時
+ * 是否有任何 engine sheet/modal 開啟中（ConfirmModal / AiConsent 等只在開啟時
  * 註冊）。給 OperationShell 桌機 Escape 判斷「內層有 modal 開著就別關整個 panel」——比掃 DOM
- * 找 role=dialog 可靠：InfoSheet 等元件即使關閉也常駐 DOM，registry 只記真正開啟的。
+ * 找 role=dialog 可靠：sheet 類元件即使關閉也可能常駐 DOM，registry 只記真正開啟的。
  */
 export function isAnySheetOpen(): boolean {
   return openSheets.length > 0;

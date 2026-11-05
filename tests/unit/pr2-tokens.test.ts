@@ -43,20 +43,6 @@ describe('CSS glass blur 統一性', () => {
   });
 });
 
-// ——— Item 4: InfoSheet saturate 移除 ———
-const infoSheetPath = resolve(ROOT, 'src/components/trip/InfoSheet.tsx');
-const infoSheet = readFileSync(infoSheetPath, 'utf-8');
-
-describe('InfoSheet — glass 清理', () => {
-  it('InfoSheet 不存在 saturate(180%)', () => {
-    expect(infoSheet).not.toContain('saturate(180%)');
-  });
-
-  it('InfoSheet 不存在 blur(28px)', () => {
-    expect(infoSheet).not.toContain('blur(28px)');
-  });
-});
-
 // ——— Item 5: hardcode 10/11px 改 token ———
 describe('hardcode px → token 替換', () => {
   function collectFiles(dir: string, exts: Set<string>): string[] {
@@ -130,16 +116,5 @@ describe('tp-bottom-nav-btn — tap target 防呆', () => {
 describe('760px breakpoint — 文件註解', () => {
   it('tokens.css 包含 breakpoint 說明（760px intentionally set）', () => {
     expect(tokens).toContain('Breakpoint intentionally set');
-  });
-});
-
-// ——— Review follow-up Item 7: InfoSheet sheet opacity bump ———
-const infoSheetContent = readFileSync(resolve(ROOT, 'src/components/trip/InfoSheet.tsx'), 'utf-8');
-
-describe('InfoSheet — sheet 邊緣清晰度', () => {
-  it('InfoSheet sheet background 使用 94% 而非 88%（opacity bump）', () => {
-    // 毛玻璃面 module 化後底色參數化：底色取 secondary、不透明度 94%（recipe 在 tokens.css 的 .tp-glass）。
-    expect(infoSheetContent).toMatch(/'--glass-base':\s*'var\(--color-secondary\)'/);
-    expect(infoSheetContent).toMatch(/'--glass-alpha':\s*'94%'/);
   });
 });

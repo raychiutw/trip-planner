@@ -115,7 +115,7 @@ export default function OperationShell({
       const el = document.activeElement as HTMLElement | null;
       if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
       // 內層有 engine modal 開著（含從本 panel 開的 discard ConfirmModal）→ 讓它先吃 Escape。
-      // 用 registry 而非掃 DOM：InfoSheet 等元件關閉仍常駐 DOM（role=dialog），registry 只記真開啟的。
+      // 用 registry 而非掃 DOM：sheet 類元件關閉後可能仍常駐 DOM（role=dialog），registry 只記真開啟的。
       if (isAnySheetOpen()) return;
       // native ⋯ 選單 / picker popover 開著（Popover API）→ 讓它先關（:popover-open 只命中開啟的）。
       try {

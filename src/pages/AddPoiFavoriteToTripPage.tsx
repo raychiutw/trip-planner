@@ -51,7 +51,7 @@ interface DayBrief {
  *  v2.31.55 fix：原本 name 優先 → user 在 trips list 看到 user-set
  *  「2026 沖繩七日遊」但加入收藏 dropdown 顯示 backend auto-generated
  *  「Hui Yun 的沖繩之旅」(name)，跨頁面 label 不一致。對齊 TripsListPage
- *  line 1088 / TripPickerPopover / ChatPage / MapPage / GlobalMapPage
+ *  line 1088 / ChatPage / MapPage / GlobalMapPage
  *  4 處同樣 `title || name || tripId` pattern。 */
 // 後端 TIME_RE 同 functions/api/_time.ts；前端 defense-in-depth，防 legacy browser 把
 // type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。module-level 常數

@@ -15,7 +15,6 @@ import { versionDefine } from './scripts/app-version.mjs';
 // .test.ts 真實依賴 jsdom (localStorage / window / document / TypeError 等
 // browser-only globals)。Empirical list — fail-then-add 後得出。
 const TS_DOM_FILES = [
-  'tests/unit/trip-page-sheet-default.test.ts',
   'tests/unit/use-places-autocomplete.test.ts',
   'tests/unit/use-route.test.ts',
   'tests/unit/use-map-data.test.ts',

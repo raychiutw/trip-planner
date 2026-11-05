@@ -141,9 +141,9 @@ margin / padding / gap 的 px 值必須為 **4 的倍數**。
 
 ## Z-index
 
-`--z-sticky-nav`(200) · `--z-info-sheet-backdrop`(400) · `--z-info-sheet`(401) · `--z-modal`(9000)
+`--z-sticky-nav`(200) · `--z-modal`(9000)
 
-**只有這四個。** `--z-day-header`、`--z-fab`、`--z-quick-panel`、`--z-print-exit` 都不存在。新增浮動元件時，z 值必須 ≥ `--z-sticky-nav` 才不會被導覽蓋住。
+**只有這兩個。** `--z-day-header`、`--z-fab`、`--z-quick-panel`、`--z-print-exit`、`--z-info-sheet*` 都不存在。新增浮動元件時，z 值必須 ≥ `--z-sticky-nav` 才不會被導覽蓋住。
 
 ## 其他
 

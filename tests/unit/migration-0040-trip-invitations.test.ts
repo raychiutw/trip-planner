@@ -61,7 +61,7 @@ describe('Migration 0040 — trip_invitations (V2 共編邀請)', () => {
     expect(MIGRATION).toMatch(/CREATE INDEX idx_invitations_email/);
   });
 
-  it('index idx_invitations_trip（CollabSheet 列 pending by trip）', () => {
+  it('index idx_invitations_trip（CollabPanel 列 pending by trip）', () => {
     expect(MIGRATION).toMatch(/CREATE INDEX idx_invitations_trip/);
   });
 
