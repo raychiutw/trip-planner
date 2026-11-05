@@ -100,3 +100,22 @@ test('日期欄有值與無值的欄高一致：trips-new · 桌機', async ({ p
   expect(await h('#new-trip-start'), '有值欄高').toBe(before);
   expect(await h('#new-trip-end'), '無值欄高').toBe(before);
 });
+
+// 發現：探索頁「搜尋」鈕在非 Apple 字型（Linux／Android）下，輸入框預設寬度把它擠窄，
+// 文字直排成「搜／尋」兩行（47x60），而 macOS 上是 62x38（高度不到 44）。
+// 兩種環境都該是單行、≥ 44x44。
+test('探索頁搜尋鈕單行且至少 44x44', async ({ page }) => {
+  await open(page, 'explore', MOBILE);
+  const m = await page.evaluate(() => {
+    const btn = document.querySelector('[data-testid="explore-search-submit"]');
+    if (!btn) return null;
+    const r = btn.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(btn);
+    const lines = new Set([...range.getClientRects()].map((x) => Math.round(x.top))).size;
+    return { w: r.width, h: r.height, lines };
+  });
+  expect(m, '找不到搜尋鈕').not.toBeNull();
+  expect(m.lines, '搜尋鈕文字換行').toBe(1);
+  expect(Math.min(m.w, m.h), `搜尋鈕 ${m.w}x${m.h}`).toBeGreaterThanOrEqual(44);
+});

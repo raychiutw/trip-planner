@@ -116,7 +116,7 @@ const SCOPED_STYLES = `
 .explore-search:focus-within { border-color: var(--color-accent); }
 .explore-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .explore-search input {
-  flex: 1; border: none; background: transparent;
+  flex: 1; min-width: 0; border: none; background: transparent;
   font: inherit; font-size: var(--font-size-subheadline); color: var(--color-foreground);
   outline: none;
 }
@@ -130,7 +130,9 @@ const SCOPED_STYLES = `
   background: var(--color-accent-fill); color: var(--color-accent-foreground);
   border: none; cursor: pointer;
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  min-height: 36px;
+  min-height: var(--spacing-tap-min);
+  /* 非 Apple 字型下輸入框預設寬度會把按鈕擠到文字直排換行；按鈕不縮、輸入框可縮 */
+  white-space: nowrap; flex-shrink: 0;
 }
 .explore-search button:disabled { opacity: 0.5; cursor: not-allowed; }
 .explore-search button:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
