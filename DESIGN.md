@@ -179,7 +179,7 @@
 > ⚠️ **`destructive` 當文字色是刻意保留的偏離，不是漏掉的違規。** 紅字錯誤訊息是很強的慣例，而它的底本來就不透明、實測淺色 4.85／深色 4.78 都過 4.5。但偏離的正當性完全建立在「還過 4.5」上 —— 一旦破線就要改中性字，不是再調深。已鎖在 `tests/unit/semantic-color-contrast.test.ts`。
 >
 > **執法者**：`tests/unit/semantic-color-contrast.test.ts` 守 token 層（含深色與 `prefers-contrast` 加強階，那兩者 axe 都掃不到）＋ call-site 層（掃全 `src/`，把「同族語意色當文字」判違規，含 `-deep` —— 那正是 #1176 第一版走錯的路）。15 條斷言、9 個 mutation 逐一驗過會轉紅。
-> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（`InfoSheet.tsx` 現有數處）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
+> ⚠ **兩個本規則管不到的地方**：(a) Tailwind utility —— `@theme` 會把 `--color-accent` 生成 `text-accent`，`hover:text-accent` 這種寫法不在任何 CSS 字串裡，掃 template literal 的守衛永遠看不到（元件裡寫 `hover:text-accent` 這類 utility 的地方）。(b) `body.theme-print` 只覆寫了 `--color-accent` / `-subtle` / `-bg`，**沒有覆寫 `-text` / `-text-on-tonal` / `-deep`**，所以遷移到 `-text` 的文字在灰階列印版面裡會是暖褐色。目前 print mode 只掛在行程明細頁（`usePrintMode`），影響有限，但全庫推廣前要先補 print 的 token 覆寫。
 >
 > 實際色值一律以 `css/tokens.css` 為準（本文件的色票表是衍生）。對比數值由 `tests/unit/tokens-css.test.ts` 守 token 層；call-site 層由 `tests/e2e/a11y-axe.spec.js` 的「全頁面」掃描執法（淺/深色 × 手機/桌機，每頁擷圖；#1423），並由 `tests/unit/trips-list-accent-text.test.ts`（單字元徽章，axe 盲區）與 `tests/unit/trip-print-styles-contrast.test.ts`（分享／列印頁寫死色）補強。例外只准寫在該 spec 的 `EXCEPTIONS`，要有理由。
 
@@ -840,7 +840,7 @@ Alert（不可逆）MUST 具備三件事：
   - 因此 **`useSheetBehavior` 的 `modal` option 屬「保留能力、目前零消費者」**（全 src 無 `modal: false` 呼叫；2026-07-18 收斂計畫裡本來要承載它的 `FormPanel` wrapper 從未被建）。留著不是遺留待辦，是刻意保留的擴充點 —— 不要因為「沒人用」就把它清掉。現行行為由 `tests/unit/operation-shell.test.tsx` 的三條守衛鎖住。
 - **Escape**：`isComposing` 略過（IME）、`isTopSheet` gate（巢狀只關最上層）、`canDismiss:false` 鎖（busy 送出中，如 AiConsent）。listener 在 `document`。
 - **focus**：`initialFocusRef` 指定開啟焦點（**破壞性 ConfirmModal 預設焦點在安全／取消鈕、非確認鈕** —— W12 刪除政策／HIG「破壞性動作預設聚焦安全選項」）、focus-trap（Tab）、focus-restore。
-- 已收斂：ConfirmModal（16 consumer 零改）/ InputModal / ConflictModal / AiConsentSheet / InfoSheet / EditTrip 平移日期 modal / **AccountSheet**（v2.57.70）/ **DeveloperApp secret reveal**（v2.57.70，帶 `canDismiss:false`）。**例外**：anchored menu/popover（不同 pattern，見下條）。
+- 已收斂：ConfirmModal（16 consumer 零改）/ InputModal / ConflictModal / AiConsentSheet / EditTrip 平移日期 modal / **AccountSheet**（v2.57.70）/ **DeveloperApp secret reveal**（v2.57.70，帶 `canDismiss:false`）。**例外**：anchored menu/popover（不同 pattern，見下條）。
 
 **規則：`aria-modal="true"` ⇔ 必須接引擎（#1150 story 6，v2.57.70 立）**
 
@@ -857,7 +857,7 @@ v2.57.70 依此修了三處：`AccountSheet`（宣告了但只有一個 window E
 
 守衛：`tests/unit/aria-modal-focus-trap.test.ts`（結構性條件，5 個 mutation 驗過）＋ `tests/e2e/a11y-axe.spec.js` 的「帳號 sheet 的焦點真的關在裡面」（真瀏覽器逐次 Tab，jsdom 做不到 —— 它不做 sequential focus navigation，寫在 unit 會恆綠）。
 
-**固定高度 sheet 不放 resize grabber**（AiConsent 已移除裝飾 grip）；可 resize 才放（InfoSheet 兩段 detent）。
+**固定高度 sheet 不放 resize grabber**（AiConsent 已移除裝飾 grip）；可 resize 才放（兩段 detent 的 sheet；原 InfoSheet 已於 #1584 移除）。
 巢狀 modal 疊放靠 portal DOM 順序，不用 z-index layer。
 
 ### Modal vs Full Page Decision
@@ -900,7 +900,6 @@ v2.57.70 依此修了三處：`AccountSheet`（宣告了但只有一個 window E
 | `<InputModal>` | 單行 input |
 | `<ConflictModal>` | Sync 衝突決策 |
 | `<TripCardMenu>` | Kebab popover menu |
-| `<TripPickerPopover>` | Chooser popover (anchored, 不全頁) |
 
 > **v2.55.78 移除 `<StopLightbox>`（⛶ 放大檢視）**：它是唯讀明細，不屬上方「Modal 限定情境」
 > 四款任何一款 —— 當初能存在是因為它是**圖片燈箱**（Modal 的慣例情境）。但 POI 從來沒有照片
@@ -1081,7 +1080,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 | **C** 表單輸入 `+ border-color` + `accent-subtle` 光暈 | 8 | ✅ **不是債** —— 全部落在真的 `input` / `textarea` / `select` 上，正是上方規則表列的表單輸入例外 |
 | **C′** 表單輸入，只有 `border-color` | 2 | ✅ 同上（`.tp-titlebar-trip-search` 是 `<input>`、`.tp-travel-detail input`） |
 | **highlight**（背景色標示） | 3 | ✅ **不是債，是 HIG 正解** —— 兩個 typeahead item + `.tp-rail-menu-item`，就是「清單／集合用 highlight」 |
-| 刻意抑制 | 3 | ✅ 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、`InfoSheet` panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
+| 刻意抑制 | 3 | ✅ 程式化聚焦的容器（`AppShell` 的 `[tabindex="-1"]`、彈出層 panel）與滑鼠焦點（`:focus:not(:focus-visible)`） |
 | 表單例外 | 1 | ✅ `.tp-rail-note-input` —— 只在編輯態掛載、恆有 accent 框 + 光暈 |
 
 **真正遷移的是 A 的 20 條**；C／C′ 一開始被誤記成債，實際上它們符合規則表的表單例外。慣例 B 的 38 條同步收斂成單一顏色 `--color-focus-ring`，6 條負 `outline-offset` 全部取正。

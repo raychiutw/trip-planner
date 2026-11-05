@@ -570,20 +570,6 @@ export default function TripsListPage() {
   );
   const error = tripsStatus === 'error' && !sharedTrips ? '無法載入你的行程清單。' : null;
 
-  // v2.31.89：embedded TitleBar「切換行程」改 dropdown picker（對齊 ChatPage UX）。
-  const [tripPickerOpen, setTripPickerOpen] = useState(false);
-  const tripPickerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!tripPickerOpen) return;
-    const onClick = (e: MouseEvent) => {
-      if (tripPickerRef.current && !tripPickerRef.current.contains(e.target as Node)) {
-        setTripPickerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, [tripPickerOpen]);
-
   // Section 4.7：filter subtab + sort + search expanding bar — pure client-side
   // 操作 myTrips 已知子集合，避免重新打 /api。
   // mockup-parity-qa-fixes: 加「已歸檔」第 4 顆 filter tab
