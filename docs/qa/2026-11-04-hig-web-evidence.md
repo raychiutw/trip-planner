@@ -68,3 +68,7 @@
 - 只有觸控目標有自動量測；字級、對比、標籤、文字縮放（Dynamic Type 對應的瀏覽器縮放）未量。
 - 未覆蓋：`/s/:token`、`/oauth/*`、`/add-to-trip`、`/trip/:id/stop/*` 的地圖與 copy／move／change-poi／edit、`add-custom-stop`、`/favorites/:id/add-to-trip` 本身（只當彈出層背景）；彈出層缺 3 個（見上）。登入／重設密碼各狀態、`/invite`、空資料與錯誤與限流狀態，以及 14 個彈出層已由第三、第四輪補上。
 - 只跑 chromium，沒有 Safari（webkit）。
+
+## 第五輪（#1567）補充
+
+新增 6 個場景（`trip-share`、`trip-stop-copy`、`trip-stop-move`、`trip-stop-change-poi`、`trip-stop-edit`、`trip-add-custom-stop`）。觸控目標違規（Linux 量測）：`trip-share` 3 筆（高 38）、`trip-stop-change-poi` 1 筆、`trip-stop-edit` 2 筆、`trip-add-custom-stop` 2 筆，copy／move 為 0。`stop/:entryId/map` 因 Google Maps 被擋造不出真實畫面，列缺口（見 inventory）。`/s/:token` 的 mock 是 `GET /api/share/:token` 回 `{ meta, days, notes }`，資料取自既有行程 mock。
