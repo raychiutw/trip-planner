@@ -100,7 +100,5 @@
 - `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。
 - #1566 補：錨定選單與下拉面板六個元件已造場景（見彈出層表）；`popup-trip-select` 與時間、日期面板各只取一個呼叫端，其他呼叫端（筆記區塊的日期時間、編輯行程的語言下拉等）同一元件，未逐一取證。`TripCardMenu`／`TripActionsMenu` 的「封存」「還原」項（owner-only）沒有場景：mock 登入帳號與行程 `ownerUserId` 對不上，屬缺口。地圖類場景（`map`、`trip-map` 與 `popup-trip-sheet` 的地圖分頁）受 Google Maps 被擋限制，畫面是「地圖暫停服務」，不是真實地圖。
 - 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
-- 路由未取證 11 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
-- #1566 後：`/add-to-trip` 與 `/favorites/:id/add-to-trip` 已有獨立場景，上列「路由未取證」中這兩條視為已處理。
-- 路由未取證（見上表「未取證」列）：`/add-to-trip`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`（#1567 已補 `/s/:token`、`stop/:entryId/{copy,move,change-poi,edit}`、`add-custom-stop`；`stop/:entryId/map` 列為缺口）；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
+- 路由未取證 5 條（見上表「未取證」「待取證」「缺口」列）：`/account/password`（待 #1565 併入後補場景）、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/map`（Google Maps 被擋，只拍得到錯誤態）。已處理：#1566 補 `/add-to-trip`（`/favorites/:id/add-to-trip` 另有獨立場景）；#1567 補 `/s/:token`、`stop/:entryId/{copy,move,change-poi,edit}`、`add-custom-stop`。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。

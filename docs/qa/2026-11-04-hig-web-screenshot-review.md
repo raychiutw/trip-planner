@@ -1,6 +1,6 @@
 # web 截圖逐張檢查報告（flutter#531／trip-planner#1568 素材）
 
-檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 50 個場景（原 27 個、第三輪補的 9 個認證流程／邀請／清單空與錯誤態，加第四輪補的 14 個彈出層場景），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 198 張（`popup-trip-sheet` 只有桌機寬，其餘各 4 張）。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
+檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 65 個場景（原 27 個、第三輪補的 9 個認證流程／邀請／清單空與錯誤態、第四輪補的 14 個彈出層場景，加第五輪（#1567）6 個頁面場景，與 #1566 的 3 個頁面場景及 6 個彈出層場景），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 256 張（`popup-trip-sheet` 只有桌機寬、`trip-add-custom-stop` 只有手機寬，各 2 張，其餘各 4 張）。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
 
 ## 怎麼檢查的
 
