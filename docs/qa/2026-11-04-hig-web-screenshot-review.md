@@ -1,6 +1,6 @@
 # web 截圖逐張檢查報告（flutter#531／trip-planner#1568 素材）
 
-檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 65 個場景（原 27 個、第三輪補的 9 個認證流程／邀請／清單空與錯誤態、第四輪補的 14 個彈出層場景，加第五輪（#1567）6 個頁面場景，與 #1566 的 3 個頁面場景及 6 個彈出層場景），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 256 張（`popup-trip-sheet` 只有桌機寬、`trip-add-custom-stop` 只有手機寬，各 2 張，其餘各 4 張）。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
+檢查日期：2026-11-04。對象：[`2026-11-04-hig-web-screenshots/`](2026-11-04-hig-web-screenshots/) 的 80 個場景（原 27 個、第三輪補的 9 個認證流程／邀請／清單空與錯誤態、第四輪補的 14 個彈出層場景，加第五輪（#1567）6 個頁面場景，與 #1566 的 3 個頁面場景及 6 個彈出層場景，與 #1565 的 15 個認證與帳號場景），手機寬（390×844）與桌機寬（1280×800）、淺色與深色，共 316 張（`popup-trip-sheet` 只有桌機寬、`trip-add-custom-stop` 只有手機寬，各 2 張，其餘各 4 張）。依據：flutter repo 的 `docs/research/2026-11-04-hig-screen-checklist.md`。web 條目的依據是 WCAG 2.2 與 WAI-ARIA APG；HIG 只談 Apple 平台，套到 web 的數值（如 44）是專案自訂標準。
 
 ## 怎麼檢查的
 
@@ -43,7 +43,7 @@
 | 22 | `popup-ai-consent-sheet` 等 | 標題層級 | 彈出層標題層級不一致：AI 授權 sheet 用 `h4`、AI 資料同意與確認類用 `h2`、交通方式用 `h3`（觀察，不影響功能） | 程式碼 |
 | 23 | `popup-travel-pill-dialog` | E4 | 交通方式八個模式中，單軌、地鐵、火車、高鐵的圖示看起來相同，只能靠文字分辨（圖示小，判讀有限） | 看圖 |
 | 24 | `popup-error-banner` | G6、DESIGN.md 文案規則 | 「登出此裝置失敗，請稍後再試。」說了發生什麼，但沒有重試動作，也沒說明該裝置是否仍登入（文案規則三問缺一）；橫幅與上方清單卡的間距只有幾 px，下方卻是 16px | 看圖 |
-| 26 | `change-password-success` | G6 | 變更成功後 `showToast('密碼已更新，其他裝置已登出')` 再導回 `/account`，但 `ChangePasswordPage` 與 `AccountPage` 都沒有掛 `ToastContainer`（全 `src/` 只有 11 個頁面掛），使用者看不到任何成功回饋；場景已用斷言釘住「看不到」，修好後會紅，請改成取證 Toast 本身 | 看圖加程式碼（grep）加場景斷言 |
+| 26 | `change-password-success` | G6 | 變更成功後 `showToast('密碼已更新，其他裝置已登出')` 再導回 `/account`，但 `ChangePasswordPage` 與 `AccountPage` 都沒有掛 `ToastContainer`（全 `src/` 只有 11 個頁面掛），使用者看不到任何成功回饋；場景已用斷言釘住「看不到」，修好後會紅，請改成取證 Toast 本身。已開票 #1589 | 看圖加程式碼（grep）加場景斷言 |
 | 27 | `change-password-current-invalid` | G6、F | 目前密碼錯誤時，紅字訊息出現在兩列群組下方，欄位本身沒有錯誤外觀（只有 `aria-invalid`，無紅框或圖示）；新密碼欄同時有值，使用者要靠訊息文字才知道錯在哪一欄 | 看圖加程式碼 |
 | 28 | `oauth-authorize-login` | A1 | 「忘記密碼？」是 `display:inline` 的 `<a>`，樣式裡的 `min-height: 44px` 對行內元素無效，實際點擊高度約一行字；觸控量測因規則「不量行內連結」而量不到（量測盲點，不是沒有問題） | 看圖加程式碼 |
 | 29 | `oauth-consent-unknown-scope` | H、F | 未知範圍（如 `admin:all`）和已知範圍一樣打綠勾圖示，只在文字尾端多一個「⚠ 未知範圍 — 請勿授權」；程式碼加了 `.unknown`／`.tp-consent-scope-warning` 類別，但全 repo 沒有對應樣式，所以警告沒有任何視覺強調，勾號反而暗示可以放行 | 看圖加程式碼（grep） |
