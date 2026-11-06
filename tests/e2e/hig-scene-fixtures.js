@@ -118,6 +118,28 @@ const searchFails = async (page) => {
   await page.getByTestId('explore-search-submit').click();
 };
 
+// ── #1566：加入行程表單與錨定選單／下拉面板 ──
+const stubFavoriteList = (page) => page.route(/\/api\/poi-favorites$/, (r) => r.fulfill(json([FAVORITE])));
+const DIRECT_ADD_PATH = '/add-to-trip?place_id=ChIJ_demo_shuri&name=%E9%A6%96%E9%87%8C%E5%9F%8E&lat=26.217&lng=127.719&address=%E6%B2%96%E7%B9%A9%E7%B8%A3%E9%82%A3%E9%9C%B8%E5%B8%82%E9%A6%96%E9%87%8C%E9%87%91%E5%9F%8E%E7%94%BA%201-2&category=attraction';
+// 兩個行程不會自動帶入，使用者要自己選；選完才會載入天數。
+const pickTripOnly = async (page) => {
+  await page.getByTestId('favorites-add-to-trip-trip').locator('button').first().click();
+  await page.getByRole('option').first().click();
+  await expect(page.getByTestId('favorites-add-to-trip-day')).toBeVisible();
+  await page.waitForTimeout(400); // 等下拉收合動畫跑完，不然拍到轉到一半的箭頭
+};
+const openTripCardMenu = (page) => page.getByTestId(`trip-card-menu-trigger-${TRIP}`).click();
+const openTripActionsMenu = (page) => page.getByTestId('trips-embedded-menu-trigger').click();
+const openRailRowMenu = (page) => page.locator('[data-testid^="timeline-rail-menu-"]').first().click();
+const openSortSelect = (page) => page.getByTestId('trips-list-sort').locator('button').first().click();
+// 日期面板的格子標籤帶著星期與月份，固定「今天」才能讓違規清單穩定（否則每天都變）。
+const freezeToday = (page) => page.clock.setFixedTime(new Date('2026-11-06T12:00:00Z'));
+const openDatePicker = (page) => page.locator('.tp-date-trigger').first().click();
+const openTimePicker = async (page) => {
+  await pickTripOnly(page);
+  await page.getByTestId('favorites-add-to-trip-start').locator('button').first().click();
+};
+
 /**
  * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[] }} Scene
  * proof：頁面渲染完成時一定存在的 data-testid；proofText 是畫面上一定要出現的文字（錯誤態、空狀態用，
@@ -183,6 +205,15 @@ const SCENES = [
   { name: 'popup-server-status-banner', path: '/favorites', act: goOffline, scope: '[data-testid="server-status-banner"]', proofText: '連線中斷', noTargets: true },
   { name: 'popup-toast-error', path: '/explore', stub: stubSearchFails, act: searchFails, scope: '.tp-toast', proofText: '搜尋失敗', noTargets: true },
   { name: 'popup-toast-online', path: `/trips?selected=${TRIP}`, act: goOfflineThenOnline, scope: '.tp-toast', proofText: '已恢復連線', noTargets: true },
+  // ── #1566：加入行程表單（direct／favorite 兩種模式的獨立畫面）與錨定選單、下拉面板 ──
+  { name: 'add-to-trip', path: DIRECT_ADD_PATH, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  { name: 'favorite-add-to-trip', path: '/favorites/8001/add-to-trip', stub: stubFavoriteList, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  { name: 'popup-trip-card-menu', path: '/trips', act: openTripCardMenu, scope: `[data-testid="trip-card-menu-${TRIP}"]`, proof: `trip-card-menu-edit-${TRIP}` },
+  { name: 'popup-trip-actions-menu', path: `/trips?selected=${TRIP}`, viewports: ['desktop'], act: openTripActionsMenu, scope: `[data-testid="trip-embedded-menu-${TRIP}"]`, proof: `trip-embedded-menu-edit-${TRIP}` },
+  { name: 'popup-rail-row-menu', path: `/trip/${TRIP}`, act: openRailRowMenu, scope: '[role="menu"].tp-rail-menu:popover-open', proofText: '重新排序' },
+  { name: 'popup-trip-select', path: '/trips', act: openSortSelect, scope: '.tp-select-list', proofText: '名稱 A→Z' },
+  { name: 'popup-trip-date-picker', path: '/trips/new', stub: freezeToday, act: openDatePicker, scope: '.tp-date-picker [role="dialog"]', proofText: /\d{4}/ },
+  { name: 'popup-trip-time-picker', path: DIRECT_ADD_PATH, act: openTimePicker, scope: '.tp-time-popover', proofText: '23' },
 ];
 
 /**
