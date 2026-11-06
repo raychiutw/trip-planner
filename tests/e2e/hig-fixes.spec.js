@@ -119,3 +119,137 @@ test('探索頁搜尋鈕單行且至少 44x44', async ({ page }) => {
   expect(m.lines, '搜尋鈕文字換行').toBe(1);
   expect(Math.min(m.w, m.h), `搜尋鈕 ${m.w}x${m.h}`).toBeGreaterThanOrEqual(44);
 });
+
+// ── #1587 彈出層修正的版面守門 ────────────────────────────────────────────
+
+/** 跑場景自己的 act（例如送出表單、觸發離線事件）。 */
+async function actOf(page, name) {
+  const scene = SCENES.find((s) => s.name === name);
+  await scene.act(page);
+}
+
+// 13：離線橫幅納入 app-shell 版面，不在 100dvh 之外多佔高度、整頁不出現捲軸
+for (const [vpName, vp] of [['手機', MOBILE], ['桌機', DESKTOP]]) {
+  test(`離線橫幅不增加整頁高度、shell 不被擠出視窗：${vpName}`, async ({ page }) => {
+    await open(page, 'popup-server-status-banner', vp);
+    const measure = () => page.evaluate(() => {
+      const shell = document.querySelector('.app-shell');
+      const r = shell.getBoundingClientRect();
+      return { scrollHeight: document.documentElement.scrollHeight, inner: innerHeight, top: r.top, bottom: r.bottom };
+    });
+    const before = await measure();
+    await actOf(page, 'popup-server-status-banner');
+    await expect(page.getByTestId('server-status-banner')).toBeVisible({ timeout: 6000 });
+    await page.waitForTimeout(200);
+    const after = await measure();
+    expect(after.scrollHeight, '離線前後整頁高度').toBe(before.scrollHeight);
+    expect(after.scrollHeight, '整頁高度不超過視窗').toBeLessThanOrEqual(after.inner);
+    expect(after.bottom, 'shell 下緣不超出視窗').toBeLessThanOrEqual(after.inner + 1);
+  });
+}
+
+// 15：Toast 位置照 DESIGN.md「Error & Status Messaging」
+test('Toast 位置：手機在底部且高於 bottom nav', async ({ page }) => {
+  await open(page, 'popup-toast-error', MOBILE);
+  await actOf(page, 'popup-toast-error');
+  const toast = page.locator('.tp-toast').first();
+  await expect(toast).toBeVisible();
+  const r = await toast.boundingBox();
+  const nav = await page.evaluate(() => document.querySelector('.app-shell-bottom-nav, [data-testid="global-bottom-nav"]')?.getBoundingClientRect().top ?? null);
+  expect(r.y, 'Toast 在視窗下半').toBeGreaterThan(MOBILE.height / 2);
+  if (nav !== null) expect(r.y + r.height, 'Toast 下緣高於 bottom nav 上緣').toBeLessThanOrEqual(nav);
+});
+
+test('Toast 位置：桌機在右上、titlebar 下方', async ({ page }) => {
+  await open(page, 'popup-toast-error', DESKTOP);
+  await actOf(page, 'popup-toast-error');
+  const toast = page.locator('.tp-toast').first();
+  await expect(toast).toBeVisible();
+  const r = await toast.boundingBox();
+  const titlebarH = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--titlebar-h')));
+  expect(r.y, 'Toast 上緣在 titlebar 下方').toBeGreaterThanOrEqual(titlebarH);
+  expect(DESKTOP.width - (r.x + r.width), 'Toast 靠右').toBeLessThanOrEqual(32);
+});
+
+// 19：手機寬有效期限分段控制不折行
+test('分享對話框有效期限五個選項同一列：手機', async ({ page }) => {
+  await open(page, 'popup-share-link-modal', MOBILE);
+  await SCENES.find((s) => s.name === 'popup-share-link-modal').act(page);
+  const tops = await page.evaluate(() => [...document.querySelectorAll('[data-testid^="share-expiry-"]')].map((b) => Math.round(b.getBoundingClientRect().top)));
+  expect(tops).toHaveLength(5);
+  expect(new Set(tops).size, `各選項上緣 ${tops}`).toBe(1);
+});
+
+// ── #1588 審查補強 ────────────────────────────────────────────────────────
+
+// 筆記區塊 chevron：展開、收合兩種狀態點正中央都要切換（展開時 chevron 帶 rotate 建立 stacking context，
+// 曾疊在標題按鈕的 ::after 覆蓋層之上，點到 SVG 本身而不是按鈕）。jsdom 做不了 hit-testing，所以放在 e2e。
+test('筆記區塊 chevron 點正中央可收合也可展開：trip-notes · 桌機', async ({ page }) => {
+  await open(page, 'trip-notes', DESKTOP);
+  const head = page.getByTestId('trip-notes-section-head-flights');
+  const chevron = page.locator('[data-testid="trip-notes-section-flights"] .tp-notes-section-chevron');
+  await expect(head).toHaveAttribute('aria-expanded', 'true');
+  // 用座標點（真實的 hit-testing）：chevron 是 pointer-events:none，locator.click() 會等它「可接收點擊」而逾時。
+  const clickCenter = async () => {
+    const box = await chevron.boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  };
+  await clickCenter();
+  await expect(head, '展開狀態點 chevron 應收合').toHaveAttribute('aria-expanded', 'false');
+  await clickCenter();
+  await expect(head, '收合狀態點 chevron 應展開').toHaveAttribute('aria-expanded', 'true');
+});
+
+// Toast 手機底部位置：在有 ToastContainer 的頁面上，不蓋住常駐的可點擊元素（固定／黏性的操作列、輸入列、FAB 等）。
+// 捲動中的內容（例如時間軸的 chip）本來就會被浮在上面的 Toast 暫時蓋住，不算。
+// 以注入同一個 .tp-toast-region 版型量測（Toast 只停留 2～3 秒，量測期間不能等它自己出現）。
+for (const name of ['explore', 'trips-list', 'favorites', 'trip-detail', 'trips-new', 'trip-add-stop', 'trip-edit']) {
+  test(`Toast 不蓋住可點擊元素：${name} · 手機`, async ({ page }) => {
+    await open(page, name, MOBILE);
+    const hits = await page.evaluate(() => {
+      const region = document.createElement('div');
+      region.className = 'tp-toast-region';
+      region.innerHTML = '<div class="tp-toast tp-toast--error"><span>測試用 Toast 訊息</span></div>';
+      document.body.appendChild(region);
+      const t = region.querySelector('.tp-toast').getBoundingClientRect();
+      const out = [];
+      for (const el of document.querySelectorAll('button, a[href], input, textarea, select, [role=button], [role=tab]')) {
+        if (region.contains(el)) continue;
+        let persistent = false;
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+          const pos = getComputedStyle(n).position;
+          if (pos === 'fixed' || pos === 'sticky') { persistent = true; break; }
+        }
+        if (!persistent) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || cs.pointerEvents === 'none') continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        const w = Math.min(r.right, t.right) - Math.max(r.left, t.left);
+        const h = Math.min(r.bottom, t.bottom) - Math.max(r.top, t.top);
+        if (w > 1 && h > 1) out.push(`${el.getAttribute('data-testid') || el.getAttribute('aria-label') || el.textContent.trim().slice(0, 12)} ${Math.round(w)}x${Math.round(h)}`);
+      }
+      return out;
+    });
+    expect(hits, 'Toast 與這些可點擊元素重疊').toEqual([]);
+  });
+}
+
+// 離線橫幅在行程頁（TripMapRail／TripSheet 有自己的 100dvh 計算）與聊天頁也不增加整頁高度
+for (const [name, vp, vpName] of [['trip-detail', MOBILE, '手機'], ['trip-detail', DESKTOP, '桌機'], ['chat', MOBILE, '手機'], ['chat', DESKTOP, '桌機']]) {
+  test(`離線橫幅不增加整頁高度、內容不超出視窗：${name} · ${vpName}`, async ({ page }) => {
+    await open(page, name, vp);
+    const measure = () => page.evaluate(() => {
+      const bottoms = [...document.querySelectorAll('.app-shell-main, .app-shell-sheet, .tp-map-rail, [data-testid="trip-map-rail"]')]
+        .map((el) => Math.round(el.getBoundingClientRect().bottom));
+      return { scrollHeight: document.documentElement.scrollHeight, inner: innerHeight, maxBottom: Math.max(0, ...bottoms) };
+    });
+    const before = await measure();
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await expect(page.getByTestId('server-status-banner')).toBeVisible({ timeout: 6000 });
+    await page.waitForTimeout(200);
+    const after = await measure();
+    expect(after.scrollHeight, '離線前後整頁高度').toBe(before.scrollHeight);
+    expect(after.maxBottom, `欄位下緣不超出視窗（離線前 ${before.maxBottom}）`).toBeLessThanOrEqual(after.inner + 1);
+  });
+}

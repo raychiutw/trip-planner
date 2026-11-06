@@ -22,7 +22,8 @@ describe('ToastContainer + showToast', () => {
       showToast('訊息 1', 'info');
       showToast('訊息 2', 'error');
     });
-    expect(getAllByRole('alert')).toHaveLength(2);
+    expect(getAllByRole('alert')).toHaveLength(1); // error → alert
+    expect(getAllByRole('status')).toHaveLength(1); // info → status
   });
 
   it('error toast 有 tp-toast--error 樣式 class', () => {
@@ -35,15 +36,15 @@ describe('ToastContainer + showToast', () => {
   it('success toast 有 tp-toast--success 樣式 class', () => {
     const { getByRole } = render(<ToastContainer />);
     act(() => { showToast('成功', 'success'); });
-    const el = getByRole('alert');
+    const el = getByRole('status');
     expect(el.className).toContain('tp-toast--success');
   });
 
-  it('有 role="alert" 和 aria-live', () => {
+  it('role 與 aria-live 不矛盾：info 用 role=status（隱含 polite），不另設 aria-live', () => {
     const { getByRole } = render(<ToastContainer />);
     act(() => { showToast('test', 'info'); });
-    const el = getByRole('alert');
-    expect(el.getAttribute('aria-live')).toBe('polite');
+    const el = getByRole('status');
+    expect(el.hasAttribute('aria-live')).toBe(false);
     expect(el.getAttribute('aria-atomic')).toBe('true');
   });
 
@@ -71,20 +72,15 @@ describe('v2.31.38 Toast V1 redesign — dot indicator, no SVG icon', () => {
   it('bubble 套用 tp-toast prefix class（識別 V1 重設計）', () => {
     const { getByRole } = render(<ToastContainer />);
     act(() => { showToast('test', 'info'); });
-    expect(getByRole('alert').className).toContain('tp-toast');
+    expect(getByRole('status').className).toContain('tp-toast');
   });
 
-  it('offline 不再含 SVG line（type icon 全拔）', () => {
-    const { container } = render(<ToastContainer />);
-    act(() => { showToast('離線', 'offline'); });
-    expect(container.querySelector('line')).toBeNull();
-  });
 
   it('online 不再含 SVG checkmark', () => {
     const { container } = render(<ToastContainer />);
     act(() => { showToast('上線', 'online'); });
     // bubble 本身應該不含 svg，但 ToastContainer wrapper 可能在無 svg 狀態
-    const bubble = container.querySelector('[role="alert"]');
+    const bubble = container.querySelector('.tp-toast');
     expect(bubble?.querySelector('svg')).toBeNull();
   });
 });
@@ -131,6 +127,6 @@ describe('showErrorToast', () => {
   it('background severity 顯示 info toast', () => {
     const { getByRole } = render(<ToastContainer />);
     act(() => { showErrorToast('背景通知', 'background'); });
-    expect(getByRole('alert').className).toContain('tp-toast');
+    expect(getByRole('status').className).toContain('tp-toast');
   });
 });

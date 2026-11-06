@@ -124,7 +124,7 @@ for (const scene of SCENES) {
         const BENIGN = ['/account/ai-data-consent', '/account/ai-authorization', '/public-config'];
         // 這些場景刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
         // 連狀態碼一起比對（`狀態碼 路徑`），其他狀態碼或其他端點的失敗仍然算「沒有 mock」。
-        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips', 'popup-conflict-modal': '409 /api/poi-favorites', 'popup-error-banner': '500 /api/account/sessions' };
+        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips', 'popup-conflict-modal': '409 /api/poi-favorites', 'popup-error-banner': '500 /api/account/sessions', 'popup-toast-error': '500 /api/poi-search' };
         const unexpected = apiFailures.filter(
           (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])),
         );

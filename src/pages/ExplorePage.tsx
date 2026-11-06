@@ -19,6 +19,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import InlineError from '../components/shared/InlineError';
 import InputModal from '../components/shared/InputModal';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -113,6 +114,7 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border); border-radius: var(--radius-full);
   padding: 8px 16px; min-height: 48px;
 }
+.explore-field-error { padding: 0 16px; } /* 與膠囊搜尋欄的內縮對齊 */
 .explore-search:focus-within { border-color: var(--color-accent); }
 .explore-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .explore-search input {
@@ -524,6 +526,7 @@ export default function ExplorePage() {
   const [restored] = useState(readExploreContext);
   const [query, setQuery] = useState(restored?.query ?? '');
   const [searching, setSearching] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState(false);
   const [results, setResults] = useState<PoiSearchResult[]>(restored?.results ?? []);
   const [savedKeyRows, setSavedKeyRows] = useState<SavedKeyRow[]>([]);
@@ -637,9 +640,11 @@ export default function ExplorePage() {
 
   async function runSearch(q: string) {
     if (q.length < 2) {
-      showToast('至少輸入 2 個字', 'error', 2000);
+      // 欄位格式錯 → 欄位自己的 FieldError（DESIGN.md Error & Status Messaging），修正前不會消失
+      setQueryError('至少輸入 2 個字');
       return;
     }
+    setQueryError(null);
     searchAbortRef.current?.abort();
     loadMoreAbortRef.current?.abort();
     loadMorePendingRef.current = false;
@@ -898,14 +903,19 @@ export default function ExplorePage() {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setQueryError(null); }}
                 placeholder="搜尋景點、餐廳、住宿…"
+                aria-invalid={queryError ? true : undefined}
+                aria-describedby={queryError ? 'explore-search-error' : undefined}
                 data-testid="explore-search-input"
               />
               <button type="submit" disabled={searching} data-testid="explore-search-submit">
                 {searching ? '搜尋中...' : '搜尋'}
               </button>
             </form>
+            {queryError && (
+              <InlineError message={queryError} testId="explore-search-error" className="explore-field-error" />
+            )}
 
             <div className="explore-subtabs" role="group" aria-label="景點類別">
               {/* v2.55.73: 動態細類 chip — 「為你推薦」永遠第一，其餘由結果 primaryType

@@ -562,6 +562,8 @@ export default function AddPoiFavoriteToTripPage() {
         open={!!conflictPayload}
         conflictWith={conflictPayload}
         busy={false}
+        message="這個時段已經安排了景點，這次沒有加入。請回到表單改選其他時間。"
+        cancelLabel="知道了"
         onCancel={handleConflictCancel}
       />
     </div>

@@ -12,7 +12,7 @@
 
 import type { ErrorSeverity } from './errors';
 
-export type ToastType = 'error' | 'success' | 'info' | 'offline' | 'online';
+export type ToastType = 'error' | 'success' | 'info' | 'online';
 
 export interface ToastItem {
   id: number;

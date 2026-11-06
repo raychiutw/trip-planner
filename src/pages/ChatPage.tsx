@@ -208,6 +208,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px;
 }
 .tp-chat-suggestion {
+  min-height: var(--spacing-tap-min);
   padding: 8px 14px; border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background: var(--color-background);
@@ -451,13 +452,12 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);
   border-radius: 50%;
-  width: 40px; height: 40px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   padding: 0;
   display: grid; place-items: center;
   flex-shrink: 0;
   transition: background 150ms;
 }
-.tp-chat-send::before { content: ''; position: absolute; inset: -2px; } /* #1445 F4：視覺 40px，點擊區 44px */
 .tp-chat-send:hover:not(:disabled) {
   background: var(--color-accent-deep);
 }

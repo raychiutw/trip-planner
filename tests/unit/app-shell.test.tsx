@@ -87,7 +87,7 @@ describe('AppShell — CSS rules（驗 SCOPED_STYLES，jsdom 不套 media query�
     // others (or the document) along. Required on BOTH mobile and desktop
     // (was previously mobile-only — caused desktop sheet/main coupling).
     expect(APP_SHELL_STYLES).toMatch(
-      /\.app-shell\s*\{[^}]*?height:\s*100dvh/,
+      /\.app-shell\s*\{[^}]*?height:\s*calc\(100dvh - var\(--server-banner-h,\s*0px\)\)/,
     );
   });
 

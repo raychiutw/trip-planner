@@ -18,6 +18,8 @@ export interface ErrorBannerProps {
   testId?: string;
   /** Optional className extension（例：自訂 margin / max-width） */
   className?: string;
+  /** 重試等修復動作（DESIGN.md Copy Rules：使用者現在可以怎麼做） */
+  action?: { label: string; onClick: () => void; disabled?: boolean };
 }
 
 const SCOPED_STYLES = `
@@ -37,9 +39,16 @@ const SCOPED_STYLES = `
   margin-top: 1px;
 }
 .tp-error-banner-shared .msg { flex: 1; min-width: 0; }
+.tp-error-banner-shared .action {
+  flex-shrink: 0; min-height: var(--spacing-tap-min); padding: 0 14px;
+  border: 1px solid currentColor; border-radius: var(--radius-md);
+  background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer;
+  align-self: center;
+}
+.tp-error-banner-shared .action:disabled { opacity: 0.55; cursor: default; }
 `;
 
-export default function ErrorBanner({ message, testId, className = '' }: ErrorBannerProps) {
+export default function ErrorBanner({ message, testId, className = '', action }: ErrorBannerProps) {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
@@ -50,6 +59,9 @@ export default function ErrorBanner({ message, testId, className = '' }: ErrorBa
       >
         <Icon name="warning" />
         <span className="msg">{message}</span>
+        {action && (
+          <button type="button" className="action" onClick={action.onClick} disabled={action.disabled}>{action.label}</button>
+        )}
       </div>
     </>
   );

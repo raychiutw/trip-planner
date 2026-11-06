@@ -88,7 +88,7 @@
 | TripSheet / TripSheetTabs | 行程 sheet | 已取證（僅桌機寬） | `popup-trip-sheet`（聊天分頁；手機寬該欄 display:none，所以只取桌機寬。地圖分頁受 Google Maps 被擋的限制，見 review 發現 4） |
 | ErrorBanner | 錯誤橫幅 | 已取證 | `popup-error-banner`（另有 `login-error`、`trips-list-error` 也渲染同一元件） |
 | ServerStatusBanner | 伺服器狀態橫幅 | 已取證 | `popup-server-status-banner` |
-| Toast | 提示訊息 | 已取證 | `popup-toast-error`、`popup-toast-offline`（只有 error 與 offline 兩種；success、info、online 未造） |
+| Toast | 提示訊息 | 已取證 | `popup-toast-error`、`popup-toast-online`（error 與 online 兩種；離線 Toast 在全域橫幅在場時不再出現，#1587 14；success、info 未造） |
 
 ## 已知缺口
 - `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。

@@ -191,20 +191,26 @@ const SCOPED_STYLES = `
 .tp-notes-section.is-suggested { border-color: var(--color-accent-bg); }
 
 .tp-notes-section-head {
+  position: relative;
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
   min-height: 44px;
-  cursor: pointer;
   user-select: none;
   width: 100%;
+  box-sizing: border-box;
   background: transparent;
-  border: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
 }
 .tp-notes-section-head:hover { background: var(--color-tertiary); }
-.tp-notes-section-head:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+/* 標題按鈕本體無外框；焦點環畫在整列（按鈕的 ::after 鋪滿整列） */
+.tp-notes-section-toggle {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1; min-width: 0; min-height: var(--spacing-tap-min);
+  padding: 0; border: none; background: transparent;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+}
+.tp-notes-section-toggle::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.tp-notes-section-toggle:focus-visible { outline: none; }
+.tp-notes-section-head:has(.tp-notes-section-toggle:focus-visible) { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
 .tp-notes-section-icon {
   width: 36px; height: 36px;
@@ -222,9 +228,9 @@ const SCOPED_STYLES = `
 }
 .tp-notes-section-icon .svg-icon { width: 18px; height: 18px; }
 
-.tp-notes-section-titles { flex: 1; min-width: 0; }
-.tp-notes-section-title { font-size: var(--font-size-headline); font-weight: 700; line-height: 1.2; }
-.tp-notes-section-meta { margin-top: 2px; font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-notes-section-titles { flex: 1; min-width: 0; display: block; }
+.tp-notes-section-title { display: block; font-size: var(--font-size-headline); font-weight: 700; line-height: 1.2; }
+.tp-notes-section-meta { display: block; margin-top: 2px; font-size: var(--font-size-caption); color: var(--color-muted); }
 .tp-notes-section-meta.is-warn { color: var(--color-accent-deep); font-weight: 600; }
 /* #1445：hover 底色是 --color-tertiary，深色下 muted 疊它只有 4.41:1；hover 時 meta 改用前景色。 */
 .tp-notes-section-head:hover .tp-notes-section-meta:not(.is-warn) { color: var(--color-foreground); }
@@ -232,6 +238,7 @@ const SCOPED_STYLES = `
 .tp-notes-section-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .tp-notes-ai-btn {
+  position: relative; z-index: 1; /* 疊在標題按鈕的 ::after 之上，仍可單獨點擊 */
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px;
   border-radius: var(--radius-md);
@@ -288,6 +295,7 @@ const SCOPED_STYLES = `
 }
 
 .tp-notes-section-chevron {
+  pointer-events: none; /* 點擊穿透到標題按鈕：展開時 rotate 建立 stacking context，會疊在按鈕的 ::after 之上吃掉點擊 */
   width: 28px; height: 28px;
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--color-muted);
@@ -474,32 +482,27 @@ export default function TripNotesPage() {
               className={`tp-notes-section${isOpen ? ' is-open' : ''}${isSuggested ? ' is-suggested' : ''}`}
               data-testid={`trip-notes-section-${sec.key}`}
             >
-              <div
-                role="button"
-                tabIndex={0}
-                className="tp-notes-section-head"
-                onClick={() => toggleSection(sec.key)}
-                onKeyDown={(e) => {
-                  // Native-button parity: Enter/Space activate; preventDefault on
-                  // Space stops page scroll. The header can't be a <button> because
-                  // it contains interactive AI <button>s (invalid nested buttons).
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleSection(sec.key);
-                  }
-                }}
-                aria-expanded={isOpen}
-                aria-controls={`trip-notes-body-${sec.key}`}
-                data-testid={`trip-notes-section-head-${sec.key}`}
-              >
-                <div className={`tp-notes-section-icon${sec.iconAccent ? ' is-accent' : ''}`}>
-                  <Icon name={sec.icon} />
-                </div>
-                <div className="tp-notes-section-titles">
-                  <div className="tp-notes-section-title">{sec.title}</div>
-                  <div className={`tp-notes-section-meta${isSuggested ? ' is-warn' : ''}`}>{metaText}</div>
-                </div>
-                <div className="tp-notes-section-actions" onClick={(e) => e.stopPropagation()}>
+              {/* 標題列拆成兄弟元素：標題按鈕（原生 <button>，Enter／Space 由瀏覽器處理）與 AI 按鈕並列，
+                  不再是 div[role=button] 內含 <button>（axe nested-interactive）。
+                  標題按鈕的 ::after 鋪滿整列，點列上任何空白處（含 chevron）都能展開／收合。 */}
+              <div className="tp-notes-section-head">
+                <button
+                  type="button"
+                  className="tp-notes-section-toggle"
+                  onClick={() => toggleSection(sec.key)}
+                  aria-expanded={isOpen}
+                  aria-controls={`trip-notes-body-${sec.key}`}
+                  data-testid={`trip-notes-section-head-${sec.key}`}
+                >
+                  <span className={`tp-notes-section-icon${sec.iconAccent ? ' is-accent' : ''}`}>
+                    <Icon name={sec.icon} />
+                  </span>
+                  <span className="tp-notes-section-titles">
+                    <span className="tp-notes-section-title">{sec.title}</span>
+                    <span className={`tp-notes-section-meta${isSuggested ? ' is-warn' : ''}`}>{metaText}</span>
+                  </span>
+                </button>
+                <div className="tp-notes-section-actions">
                   {/* v2.34.43 prod audit: AI button 只在 section 展開後才 render，
                      避免 user 想點 chevron 展開 section 時誤觸發 AI 生成 long-running job。 */}
                   {isOpen && sec.hasAI && sec.key === 'pretrip' && (
@@ -509,7 +512,7 @@ export default function TripNotesPage() {
                         className="tp-notes-ai-btn"
                         aria-label={isActiveAiJob(aiJobs.tips) ? 'AI 生成中…' : 'AI 生成一般行前須知'}
                         data-testid="trip-notes-ai-btn-pretrip"
-                        onClick={(e) => { e.stopPropagation(); void handleAiTrigger('tips'); }}
+                        onClick={() => { void handleAiTrigger('tips'); }}
                         disabled={aiUnavailable || posting.includes('tips') || isActiveAiJob(aiJobs.tips)}
                         title={isActiveAiJob(aiJobs.tips) ? '一般行前須知正在生成' : 'AI 生成一般行前須知（貨幣 / 通訊 / 簽證等）'}
                       >
@@ -521,8 +524,7 @@ export default function TripNotesPage() {
                         className="tp-notes-ai-btn"
                         aria-label={isActiveAiJob(aiJobs['lodging-tips']) ? 'AI 生成中…' : 'AI 生成住宿在地建議'}
                         data-testid="trip-notes-ai-btn-pretrip-lodging"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           // PR24 guard: lodging-tips 依賴 trip 飯店資料，0 lodging 時不應觸發
                           if (counts.lodgings === 0) {
                             showToast('請先在住宿 section 填寫至少 1 間飯店才能 AI 生成在地建議', 'info', 4000);
@@ -548,7 +550,7 @@ export default function TripNotesPage() {
                       className="tp-notes-ai-btn"
                       aria-label={isActiveAiJob(aiJobs.emergency) ? 'AI 生成中…' : 'AI 生成緊急聯絡'}
                       data-testid="trip-notes-ai-btn-emergency"
-                      onClick={(e) => { e.stopPropagation(); void handleAiTrigger('emergency'); }}
+                      onClick={() => { void handleAiTrigger('emergency'); }}
                       disabled={aiUnavailable || posting.includes('emergency') || isActiveAiJob(aiJobs.emergency)}
                       title={isActiveAiJob(aiJobs.emergency) ? '緊急聯絡正在生成' : 'AI 生成緊急聯絡（駐外館處 / 警察 / 救護）'}
                     >

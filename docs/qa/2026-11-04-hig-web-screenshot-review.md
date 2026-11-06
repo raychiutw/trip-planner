@@ -54,7 +54,27 @@
 - 發現 3 的修正讓膠囊文字不再被截出視窗，axe 因而量得到膠囊的 `aria-label` 沒有包含可見文字（先前落在「需人工」），一併修正（名稱改以可見文字開頭）。
 - 觸控目標棘輪：起訖 chip 與移動方式膠囊的 accessible name 改變，`hig-known-violations.js` 內兩筆同一元素的標籤跟著更名（尺寸問題本身未改，不算修好）。
 
-**未處理**（不在 #1571 範圍）：發現 4（場景限制）、10（清單載入失敗無重試）、11（200% 文字溢位，原因未定位），以及下列觀察。第四輪（彈出層）新增的發現 12～25 **一律只記錄、未修**，修正另開票。
+**未處理**（不在 #1571 範圍）：發現 4（場景限制）、10（清單載入失敗無重試）、11（200% 文字溢位，原因未定位），以及下列觀察。第四輪（彈出層）新增的發現 12～25 當時只記錄、未修；12～22、24 與 14、17 已在上方 #1587 一節修正，23 待決定，25 由 #1584 移除死碼。
+
+### 修正狀態（trip-planner#1587）
+
+發現 **12～22、24** 與 owner 回覆「照建議」的 **14、17** 已修並以測試守住（單元：`tests/unit/hig-popups-fixes.test.tsx`；版面幾何：`tests/e2e/hig-fixes.spec.js`）。逐項核實後全部成立，沒有不成立的項目。**23 未處理（待決定，見下）。**
+
+- **12 已處理**：橫幅改用存在的 `--color-destructive`（文字）與不透明的 `--color-destructive-bg`（底），不再落到寫死的 `#8b2828`；淺色 4.85:1、深色 4.78:1。
+- **13 已處理**：橫幅離線時把自己的高度發布成 `--server-banner-h`，`.app-shell` 的高度改為 `calc(100dvh - var(--server-banner-h, 0px))`，總高不變；e2e 量離線前後 `scrollHeight` 相同、shell 下緣不超出視窗。
+- **14 已處理（owner 決定）**：全域橫幅是唯一的離線提示，**離線 Toast 類型整個移除**（`ToastType` 不再有 `'offline'`，`useOfflineToast` 只在恢復連線時跳「已恢復連線」，不留永遠不會跑的路徑與模組層級旗標）。行程頁「目前是離線模式」卡片帶頁面專屬資訊，保留。場景 `popup-toast-offline` 因此改名為 `popup-toast-online`。
+- **15 已處理**：Toast 容器改為 `.tp-toast-region`：compact 在底部且高於 bottom nav（`--nav-height-mobile`）；≥1024px 在右上、titlebar 下方（`--titlebar-h`，離線橫幅在場時再讓出橫幅高度）。移除不再使用的 `--spacing-toast-top`。
+- **16 已處理**：Toast 只有 `error` 用 `role="alert"`（隱含 assertive），其餘用 `role="status"`（隱含 polite），不再另設 `aria-live`。探索頁少於 2 字改為搜尋欄下方的欄位錯誤文字（`role="alert"`、`aria-invalid`、`aria-describedby`），繼續輸入才清除，不再發 Toast（場景 `popup-toast-error` 因此改取證「搜尋失敗」error Toast，只讓 `q=ab` 失敗）。
+- **17 已處理（owner 決定）**：ConflictModal 先不接「改插入到後面」「取代既有」（那需要另外定義兩個動作對行程資料的語意，之後另開票）。呼叫端 `AddPoiFavoriteToTripPage` 改傳 `message`（只陳述「這個時段已經安排了景點，這次沒有加入」）與 `cancelLabel="知道了"`；元件預設文案與選項不動，其他呼叫端（目前沒有）不受影響。
+- **18 已處理**：標題列 ✕ 的名稱改「關閉對話框」；連結卡的按鈕可見文字與名稱都改「關閉連結」（名稱含可見文字，符合 2.5.3）。
+- **19 已處理**：有效期限分段控制改單列、選項等寬分配（`flex: 1 0 auto`），放不下時橫向捲動，不再折出只有「自訂」的孤列。
+- **20 已處理（勾選框除外）**：分享對話框的 ✕、輸入框、區塊 pill、期限分段、建立、編輯／重新產生／關閉連結／刪除，帳號 sheet 與帳號頁的「編輯名稱」，聊天建議 chip 與送出鈕，都補到 `--spacing-tap-min`（44）。原先用不可見偽元素「擴大點擊區」的寫法量測不到，改成元素本身 44。**匿名勾選框本身仍是 17×17**（label 整列已是 44 高），留在 `hig-known-violations.js`；清單以 CI 實測為準。
+- **21 已處理**：筆記區塊標題列改為 `div.tp-notes-section-head` 內並列「標題 `<button>`」與 AI `<button>`（兄弟，不再巢狀）；標題按鈕的 `::after` 鋪滿整列，點列上任何位置仍可展開，鍵盤 Enter／Space 由原生 button 處理，焦點環畫在整列。單元以 axe 的 `nested-interactive` 守門。
+- **22 已處理**：彈出層標題一律 `h2`（DESIGN.md「Modal 標題 `<h2>`」、頁面只有一個 `h1`）：AI 授權 sheet（`h4`）與交通方式（`h3`）改 `h2`，並設 `margin: 0` 保持版面。設定頁內嵌的「AI 與資料」`h3` 不是彈出層，不動。
+- **23 待決定**：圖示庫（`src/components/shared/Icon.tsx`）只有 `train`、`bus`、`ship`、`plane`、`car`、`walking`、`route`，**沒有**單軌、地鐵、高鐵專用圖示，挑不出四個彼此可分辨的；專案規定不引入外部圖示套件、也不自行畫 SVG。缺的是：單軌、地鐵、高鐵（火車可沿用 `train`）。替代方案：圖示維持，三者在 chip 圖示旁加縮寫字角標；或請設計提供三個圖示後新增到 Icon 元件。請 owner 擇一。
+- **24 已處理**：`ErrorBanner` 新增 `action`；登出裝置失敗訊息改為「登出此裝置失敗，該裝置可能仍保持登入。」並帶「重試」（重跑同一個動作），「登出其他裝置」同理；「登出此帳號」失敗也補齊：確定仍登入時說「登出失敗，你目前仍保持登入。」，結果無法確認時說「不確定是否仍登入」，兩者都帶「重試」（進行中登出鈕停用，不重複送出）。橫幅上緣補 16px，與清單卡、下方說明卡間距一致。（「可能」是因為網路中斷時伺服器端是否已處理未知。）
+
+**重拍與檢視（#1587）**：受影響場景（`popup-server-status-banner`、`popup-toast-error`、`popup-toast-online`、`popup-conflict-modal`、`popup-travel-pill-dialog`、`popup-share-link-modal`、`popup-error-banner`、`popup-account-sheet`、`popup-trip-sheet`、`popup-ai-consent-sheet`、`trip-notes`、`chat`、`account`）已在 Linux 容器（Playwright v1.64.1 noble）重拍；逐張目視的是：手機寬——橫幅淺深、Toast 錯誤與恢復連線、衝突對話框淺深、交通方式、分享對話框、登出失敗橫幅（深色）；桌機寬——橫幅（深色）、Toast 錯誤（淺色）、恢復連線（深色）、筆記頁。其餘重拍圖（含 `popup-account-sheet`、`popup-trip-sheet`、`popup-ai-consent-sheet`、`chat`、`account` 與未列出的淺深組合）只有場景 proof、axe 與觸控棘輪，**沒有逐張看**。
 
 另有三項觀察、需要設計確認：`trip-print` 淺色與深色圖完全相同（列印預覽固定淺色）；`login`、`signup`、`forgot-password` 的桌機右側宣傳面板與外觀反相；`login` 手機寬卡片內外各一個 Tripline 標誌。
 
@@ -110,8 +130,8 @@
 | `popup-trip-sheet` | 淺深已看 | 無（該欄 `display:none`） | 觀察 | A1、發現 20 | 桌機右欄，分頁「地圖／聊天」；只取證聊天分頁（地圖分頁受 Google Maps 被擋的限制，見發現 4） |
 | `popup-error-banner` | 淺色已看 | 淺深已看 | 觀察 | G6、發現 24 | 圖示加文字的就地橫幅，role=alert；axe 無違規 |
 | `popup-server-status-banner` | 淺色已看 | 淺深已看 | 疑慮 | C、版面、發現 12、13 | 淺色可讀；深色幾乎讀不到（axe 1.37:1），並把整個版面往下推 59px |
-| `popup-toast-error` | 淺色已看 | 淺深已看 | 疑慮 | G6、發現 15、16 | 見發現 15、16；axe 無違規 |
-| `popup-toast-offline` | 淺色已看 | 淺深已看 | 疑慮 | G7、發現 14 | 見發現 14 |
+| `popup-toast-error` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G6、發現 15、16 | 見修正狀態 15、16；場景改取證「搜尋失敗」Toast；axe 無違規 |
+| `popup-toast-online` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G7、發現 14 | 原 `popup-toast-offline` 場景在 #1587 14 之後不再成立（橫幅在場時離線 Toast 不出現），改取證「已恢復連線」Toast；見修正狀態 14 |
 
 ## 彈出層缺口（造不出場景）
 

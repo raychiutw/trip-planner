@@ -233,9 +233,6 @@ body:not(.dark) { color-scheme: light; }
     --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
 
     /* Layout composite */
-    /* Toast 距頂使用 safe-area inset (對齊 iOS HIG transient notification)。
-     * 不能用固定 60px — page 沒 sticky topbar 時 toast 會直接蓋住 page heading。 */
-    --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
 }
 
 /* ===== Day palette「文字用」深階（#1168；淺色值。深色值在 body.dark） =====
@@ -1190,6 +1187,25 @@ body.dark {
  * 白底 + 8px coloured dot + coloured border。Container 用 flex items-center 置中（Toast.tsx），
  * keyframes 不再自帶 translateX 避免雙重置中疊加。pointer-events:auto 讓 toast 可 hover (parent
  * container 是 pointer-events:none 預防擋住下方互動)。 */
+/* Toast 區域位置（DESIGN.md Error & Status Messaging）：compact 在底部且高於 bottom nav；
+ * 桌機（≥1024px）在右上、titlebar 下方（離線橫幅在場時再往下讓出橫幅高度）。 */
+.tp-toast-region {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: calc(var(--nav-height-mobile, 80px) + env(safe-area-inset-bottom, 0px) + 12px);
+    z-index: 250;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 0 16px;
+    pointer-events: none;
+}
+@media (min-width: 1024px) {
+    .tp-toast-region {
+        left: auto; right: 16px; bottom: auto;
+        top: calc(var(--titlebar-h) + var(--server-banner-h, 0px) + 12px);
+        align-items: flex-end;
+        padding: 0;
+    }
+}
 .tp-toast {
     display: inline-flex;
     align-items: center;
