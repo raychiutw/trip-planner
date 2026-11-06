@@ -4,6 +4,14 @@
 // 所以 aria-label 後半段改動不必同步改清單。
 const LABEL_MAX = 24;
 
+// 穩定性說明（review e）：條目寫成 `標籤 寬x高` 只是為了和量測輸出（HIGWEB 行）對照；
+// 比對（diffViolations）只看「標籤前綴＋最短邊」，寬度不參與，所以字型造成的寬度差幾 px 不會讓棘輪誤紅，
+// 條目裡的寬度只是參考值。會讓棘輪失準的是「標籤」與「最短邊」：
+//   - 標籤取自 aria-label／title／textContent，被 LABEL_MAX 截斷（日期格標籤含星期與月份，截斷後仍依賴固定的「今天」）；
+//   - 最短邊是字型度量（Linux 與 macOS 不同）。
+// 這份清單的數值是 Docker（Playwright v1.64.1 noble）暫定值，最終以 CI 的 HIGWEB 輸出為準；
+// 不要用 macOS 本機或單次 Docker 的數字硬登記，與 CI 不同時改成 CI 的。
+
 // 違規只看最短邊（< 44），輸入框寬度會隨建置與捲軸差幾 px，所以比對「標籤前綴＋最短邊」。
 function parse(v) {
   const m = /^(.*) (\d+)x(\d+)$/.exec(v);
@@ -45,6 +53,7 @@ module.exports = {
     "trip-edit": ["上線 72x38", "加入目的地 125x40", "移除 Day 1（會刪除 4 個景點） 36x36", "移除 Day 2（會刪除 1 個景點） 36x36", "移除 Day 3（會刪除 1 個景點） 36x36", "草稿 72x38"],
     "trip-add-stop": ["全部地區 92x27"],
     // ── #1567 行程詳情與編輯流程新增場景（Linux 容器量測）──
+    // 寬度（44、248）只是參考；比對只看標籤前綴與最短邊 38（見檔頭說明）。
     "trip-share": ["列印 44x38", "存成 PDF 44x38", "複製到我的行程 248x38"],
     "trip-stop-copy": [],
     "trip-stop-move": [],
@@ -64,9 +73,11 @@ module.exports = {
     "popup-trip-card-menu": [],
     "popup-trip-actions-menu": [],
     // 選單項目高 42，差 2px 到 44（發現 47）。
+    // 九筆最短邊都是 42（選單項目高度固定，寬 194 隨選單寬度，比對不看寬度）。
     "popup-rail-row-menu": ["下移一格 194x42", "刪除景點 194x42", "在地圖開啟 194x42", "換景點 194x42", "移到其他天 194x42", "編輯備註 194x42", "編輯景點 194x42", "複製到其他天 194x42", "重新排序 194x42"],
     "popup-trip-select": [],
     // 日期格 40x40、月份切換 36x36；格子標籤是英文全名，所以 spec 把「今天」固定在 2026-11-06（發現 48、49、50）。
+    // 36 筆全靠 spec 固定「今天」＝2026-11-06（freezeToday）與 LABEL_MAX=24 截斷才穩定；改任一者整批都要重登記。
     "popup-trip-date-picker": ["Friday, December 4th, 20 40x40", "Friday, November 13th, 2 40x40", "Friday, November 20th, 2 40x40", "Friday, November 27th, 2 40x40", "Monday, November 16th, 2 40x40", "Monday, November 23rd, 2 40x40", "Monday, November 2nd, 20 40x40", "Monday, November 30th, 2 40x40", "Monday, November 9th, 20 40x40", "Saturday, December 5th,  40x40", "Saturday, November 14th, 40x40", "Saturday, November 21st, 40x40", "Saturday, November 28th, 40x40", "Saturday, November 7th,  40x40", "Sunday, November 15th, 2 40x40", "Sunday, November 1st, 20 40x40", "Sunday, November 22nd, 2 40x40", "Sunday, November 29th, 2 40x40", "Sunday, November 8th, 20 40x40", "Thursday, December 3rd,  40x40", "Thursday, November 12th, 40x40", "Thursday, November 19th, 40x40", "Thursday, November 26th, 40x40", "Thursday, November 5th,  40x40", "Today, Friday, November  40x40", "Tuesday, December 1st, 2 40x40", "Tuesday, November 10th,  40x40", "Tuesday, November 17th,  40x40", "Tuesday, November 24th,  40x40", "Tuesday, November 3rd, 2 40x40", "Wednesday, December 2nd, 40x40", "Wednesday, November 11th 40x40", "Wednesday, November 18th 40x40", "Wednesday, November 25th 40x40", "Wednesday, November 4th, 40x40", "上個月 36x36", "下個月 36x36"],
     "popup-trip-time-picker": [],
     // 手機寬：類型 chip 36 高、「加入行程 →」34 高、勾選框 13、搜尋輸入框內層 28（發現 51）。
