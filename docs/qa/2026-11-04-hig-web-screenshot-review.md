@@ -43,6 +43,15 @@
 | 22 | `popup-ai-consent-sheet` 等 | 標題層級 | 彈出層標題層級不一致：AI 授權 sheet 用 `h4`、AI 資料同意與確認類用 `h2`、交通方式用 `h3`（觀察，不影響功能） | 程式碼 |
 | 23 | `popup-travel-pill-dialog` | E4 | 交通方式八個模式中，單軌、地鐵、火車、高鐵的圖示看起來相同，只能靠文字分辨（圖示小，判讀有限） | 看圖 |
 | 24 | `popup-error-banner` | G6、DESIGN.md 文案規則 | 「登出此裝置失敗，請稍後再試。」說了發生什麼，但沒有重試動作，也沒說明該裝置是否仍登入（文案規則三問缺一）；橫幅與上方清單卡的間距只有幾 px，下方卻是 16px | 看圖 |
+| 26 | `change-password-success` | G6 | 變更成功後 `showToast('密碼已更新，其他裝置已登出')` 再導回 `/account`，但 `ChangePasswordPage` 與 `AccountPage` 都沒有掛 `ToastContainer`（全 `src/` 只有 11 個頁面掛），使用者看不到任何成功回饋；場景已用斷言釘住「看不到」，修好後會紅，請改成取證 Toast 本身 | 看圖加程式碼（grep）加場景斷言 |
+| 27 | `change-password-current-invalid` | G6、F | 目前密碼錯誤時，紅字訊息出現在兩列群組下方，欄位本身沒有錯誤外觀（只有 `aria-invalid`，無紅框或圖示）；新密碼欄同時有值，使用者要靠訊息文字才知道錯在哪一欄 | 看圖加程式碼 |
+| 28 | `oauth-authorize-login` | A1 | 「忘記密碼？」是 `display:inline` 的 `<a>`，樣式裡的 `min-height: 44px` 對行內元素無效，實際點擊高度約一行字；觸控量測因規則「不量行內連結」而量不到（量測盲點，不是沒有問題） | 看圖加程式碼 |
+| 29 | `oauth-consent-unknown-scope` | H、F | 未知範圍（如 `admin:all`）和已知範圍一樣打綠勾圖示，只在文字尾端多一個「⚠ 未知範圍 — 請勿授權」；程式碼加了 `.unknown`／`.tp-consent-scope-warning` 類別，但全 repo 沒有對應樣式，所以警告沒有任何視覺強調，勾號反而暗示可以放行 | 看圖加程式碼（grep） |
+| 30 | `oauth-consent-error`、`oauth-authorize-error` | G6 | 錯誤態沒有任何按鈕或連結（Tab 鍵可聚焦元素數為 0），是死路，只靠文字叫使用者回 App 或重新進入；`oauth-consent-error` 還沒有品牌字樣 | 看圖加 a11y 收集（tabbed 0） |
+| 31 | `auth-callback` | — | 只有一行純文字「登入中…」，沒有轉圈、品牌或進度；token 兌換沒有逾時，請求卡住時頁面永遠停在這一行且沒有離開路徑（程式碼只有成功與失敗兩條導向） | 看圖加程式碼 |
+| 32 | `oauth-authorize`、`oauth-consent` | 版面 | 同一條授權流程的兩頁桌機寬版面不一致：authorize 靠頂端、有 TRIPLINE 字樣；consent 垂直置中、只有「授權請求」 | 看圖 |
+| 33 | `verify-email`（桌機寬） | 版面 | 小卡置中，比其他認證頁窄且沒有 Tripline 標誌與宣傳面板，視覺上像另一套頁面 | 看圖 |
+| 34 | `login-rate-limited`（桌機寬） | 版面 | 與 `login` 不同，沒有右側宣傳面板；卡片被拉高、下半是空白 | 看圖 |
 | 25 | `TripPickerPopover`、`CollabSheet`、`InfoSheet` | — | 三個元件沒有任何使用者走得到的入口（死碼，見下「彈出層缺口」），所以無法取證；已另開 PR #1584 移除 | 程式碼（grep 全 `src/`） |
 
 ### 修正狀態（trip-planner#1571）
@@ -109,15 +118,15 @@
 | `trip-print` | 淺深已看 | 淺深已看 | 觀察 | H2 | 淺色與深色圖完全相同（列印預覽固定淺色）；列印情境可接受，但深色模式下不跟隨 |
 | `trips-list` | 淺深已看 | 淺深已看 | 未見明顯問題 | — | 桌機、手機寬目視未發現與檢查表衝突之處；僅看圖，未量字級與對比 |
 | `trips-new` | 淺深已看 | 淺深已看 | 疑慮 | B | 手機寬日期欄位的「選擇日期」字級明顯大於同頁其他欄位的 placeholder；底部固定操作列蓋住「讓 AI 幫你把行程填滿」卡片的下半（可捲動） |
-| `invite` | 手機已看、桌機未看 | 未見明顯問題 | — | 「註冊並加入」為主要、「登入並加入」為次要，說明與有效期齊全；axe 無違規。**200% 文字有橫向捲動（發現 11）** |
-| `invite-invalid` | 手機已看、桌機未看 | 未見明顯問題 | G6 | 410＋`INVITATION_INVALID`（真實契約）：錯誤橫幅加「請聯絡邀請者重寄一份新的邀請連結」，沒有無意義的重試。觀察：橫幅文字折行剩孤字「寄」，且同一句話在橫幅與下方各出現一次。**注意**：這個場景一開始用了不存在的錯誤碼，拍到不真實的畫面，曾因此誤報一項發現，已撤回並重拍 |
-| `login-error` | 手機已看、桌機未看 | 符合 | G6 | 就地橫幅（圖示加文字）「電子郵件或密碼錯誤」，輸入保留；axe 無違規；「忘記密碼？」64×19 為既有違規 |
-| `login-rate-limited` | 手機已看、桌機未看 | 符合 | G6 | 鎖頭圖示、說明、15:00 倒數與「重設密碼」出口；axe 無違規 |
-| `reset-password` | 手機已看、桌機未看 | 符合 | F | 兩個密碼欄、強度條與規則清單（長度、字母與數字）；axe 無違規 |
-| `signup-check-email` | 手機已看、桌機未看 | 疑慮 | B7 | 內容齊全（信箱、有效期、打開信箱、重寄倒數停用、改用其他信箱）；**200% 文字有橫向捲動（發現 11）** |
-| `trips-list-empty` | 手機已看、桌機未看 | 符合 | G10 | 圖示、標題、說明與「新增行程」主要動作 |
-| `trips-list-error` | 手機已看、桌機未看 | 疑慮 | G6、G7 | 見發現 10 |
-| `verify-email` | 手機已看、桌機未看 | 未見明顯問題 | — | 說明與單一主要按鈕；axe 無違規；200% 文字檢查沒有生效（該頁字級不隨 root 變） |
+| `invite` | 手機已看；桌機寬淺深 #1565 補看 | 未見明顯問題 | — | 「註冊並加入」為主要、「登入並加入」為次要，說明與有效期齊全；axe 無違規。**200% 文字有橫向捲動（發現 11）** |
+| `invite-invalid` | 手機已看；桌機寬淺深 #1565 補看 | 未見明顯問題 | G6 | 410＋`INVITATION_INVALID`（真實契約）：錯誤橫幅加「請聯絡邀請者重寄一份新的邀請連結」，沒有無意義的重試。觀察：橫幅文字折行剩孤字「寄」，且同一句話在橫幅與下方各出現一次。**注意**：這個場景一開始用了不存在的錯誤碼，拍到不真實的畫面，曾因此誤報一項發現，已撤回並重拍 |
+| `login-error` | 手機已看；桌機寬淺深 #1565 補看 | 符合 | G6 | 就地橫幅（圖示加文字）「電子郵件或密碼錯誤」，輸入保留；axe 無違規；「忘記密碼？」64×19 為既有違規 |
+| `login-rate-limited` | 手機已看；桌機寬淺深 #1565 補看 | 符合 | G6 | 鎖頭圖示、說明、15:00 倒數與「重設密碼」出口；axe 無違規 |
+| `reset-password` | 手機已看；桌機寬淺深 #1565 補看 | 符合 | F | 兩個密碼欄、強度條與規則清單（長度、字母與數字）；axe 無違規 |
+| `signup-check-email` | 手機已看；桌機寬淺深 #1565 補看 | 疑慮 | B7 | 內容齊全（信箱、有效期、打開信箱、重寄倒數停用、改用其他信箱）；**200% 文字有橫向捲動（發現 11）** |
+| `trips-list-empty` | 手機已看；桌機寬淺深 #1565 補看 | 符合 | G10 | 圖示、標題、說明與「新增行程」主要動作 |
+| `trips-list-error` | 手機已看；桌機寬淺深 #1565 補看 | 疑慮 | G6、G7 | 見發現 10 |
+| `verify-email` | 手機已看；桌機寬淺深 #1565 補看 | 未見明顯問題 | — | 說明與單一主要按鈕；axe 無違規；200% 文字檢查沒有生效（該頁字級不隨 root 變） |
 | `popup-account-sheet` | 淺色已看 | 淺深已看 | 疑慮（已知） | A1、D12 | 桌機右側面板、手機全屏，有 ✕ 關閉，名稱「帳號」；「編輯名稱」32×32（與 `account` 頁同一元件）；axe 無違規 |
 | `popup-ai-consent-sheet` | 淺色已看 | 淺深已看 | 觀察 | D8、D12、發現 22 | 底部 sheet，主要動作「授權並送出」滿版、次要「取消」為文字鈕，引用將送出的訊息；沒有右上關閉與 grabber（固定高度 sheet 刻意不放，見 DESIGN.md）；觸控目標全 ≥ 44；axe 無違規 |
 | `popup-ai-data-consent-sheet` | 淺色已看 | 淺深已看 | 未見明顯問題 | D12 | 標題、可展開章節（第一個預設展開）、「暫不使用」「同意並繼續」並排、輸入已保留提示與版本；觸控 ≥ 44；axe 無違規。只取證 consent 模式（owner-missing 模式未造） |
@@ -132,6 +141,35 @@
 | `popup-server-status-banner` | 淺色已看 | 淺深已看 | 疑慮 | C、版面、發現 12、13 | 淺色可讀；深色幾乎讀不到（axe 1.37:1），並把整個版面往下推 59px |
 | `popup-toast-error` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G6、發現 15、16 | 見修正狀態 15、16；場景改取證「搜尋失敗」Toast；axe 無違規 |
 | `popup-toast-online` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G7、發現 14 | 原 `popup-toast-offline` 場景在 #1587 14 之後不再成立（橫幅在場時離線 Toast 不出現），改取證「已恢復連線」Toast；見修正狀態 14 |
+
+## 第五輪（#1565）：認證與帳號類頁面
+
+新增 15 個場景（`change-password` 系列 6、`oauth-authorize` 系列 5、`oauth-consent` 系列 3、`auth-callback`），在 Linux 容器（Playwright v1.64.1 noble）截圖，手機寬與桌機寬各淺深，共 60 張；觸控目標量測全部 0 違規；axe 對這 15 個場景淺深各一次，**沒有違規**（`change-password-success` 有 1 筆 `color-contrast` 需人工：版本號分隔點，內容太短無法判定）；320px 重排與 200% 文字無橫向捲動（`oauth-consent-error` 沒有可量字級，比值為空）。
+**看圖範圍**：新場景手機寬淺深並排圖我全看過（15 張）；桌機寬看過 `change-password` 全部 6 個、`oauth-authorize`、`oauth-authorize-scopes`、`oauth-authorize-login-error`、`oauth-consent-unknown-scope`、`auth-callback`；**桌機寬沒有看**：`oauth-authorize-login`、`oauth-authorize-error`、`oauth-consent`、`oauth-consent-error`（只有 proof、量測與 axe）。既有認證與帳號場景的桌機寬淺深並排圖補看了 15 個（`login`、`login-error`、`login-rate-limited`、`signup`、`signup-check-email`、`forgot-password`、`reset-password`、`verify-email`、`account`、`account-appearance`、`account-notifications`、`account-sessions`、`account-connected-apps`、`developer-apps`、`developer-apps-new`），沒有逐張個別開啟，是淺色與深色拼成一張看；這些圖不是本輪重拍的，環境見上方說明。上方三處原寫「桌機未看」的場景（第三輪 9 個）已在此補看，結果見發現 33、34 與下表。
+
+**場景怎麼做出來的**：變更密碼、`/oauth/authorize`、`/auth/callback` 要「新 api 認證」旗標（建置期常數），所以 `playwright.config.js` 多一份旗標開啟的建置（埠 3001，API 網址指向自己，由 `page.route` 攔截）；登入憑證用 `seedNewApiAuth` 直接種進 IndexedDB（結構照 `src/lib/auth/storage.ts`），`/api/oauth/token` 回 DPoP 形狀的假 token，proof 由頁面真的簽。`/auth/callback` 的 token 端點刻意不回應，畫面才會停在「登入中…」（場景設 `noIdle`）。
+
+| 場景 | 結論 | 說明 |
+|---|---|---|
+| `change-password` | 未見明顯問題 | 設定列式表單、標題列主要動作（桌機「✓ 變更」、手機只有 ✓，是 W3 的有意設計，TitleBarPrimaryAction 註解有寫）、常駐說明；未填時主要動作停用外觀偏淡（停用狀態，不要求對比）；觸控 0 違規；axe 無違規 |
+| `change-password-current-invalid` | 疑慮 | 見發現 27 |
+| `change-password-too-short` | 符合 | 離開新密碼欄才顯示「新密碼至少 8 字元」，打字中不跳錯；焦點整列畫外框（目前密碼欄），淺深都清楚 |
+| `change-password-same` | 符合 | 同上，「新密碼不能和目前密碼相同」 |
+| `change-password-rate-limited` | 符合 | 「嘗試次數過多，請在 15 分鐘後再試」，429 的 Retry-After 900 秒換算正確；輸入保留 |
+| `change-password-success` | 疑慮 | 成功回到帳號頁，但沒有任何成功回饋，見發現 26 |
+| `oauth-authorize` | 未見明顯問題 | 以帳號晶片、單一「繼續」、可展開權限（預設收合）；沒有「拒絕」是設計決定（程式碼註解），改以「不是您本人要求的？直接關閉此頁」說明 |
+| `oauth-authorize-scopes` | 未見明顯問題 | 展開後六項權限含說明，文字折行正常 |
+| `oauth-authorize-login` | 疑慮 | 見發現 28；密碼欄沒有「顯示密碼」切換（與變更密碼頁不同，未對照 HIG） |
+| `oauth-authorize-login-error` | 符合 | 圖示加文字的就地橫幅，輸入保留 |
+| `oauth-authorize-error` | 疑慮 | 見發現 30 |
+| `oauth-consent` | 未見明顯問題 | 「拒絕授權」（次要）與「同意授權」（主要）等寬並排，說明如何撤銷；手機寬看過，桌機寬未看 |
+| `oauth-consent-unknown-scope` | 疑慮 | 見發現 29 |
+| `oauth-consent-error` | 疑慮 | 見發現 30 |
+| `auth-callback` | 疑慮 | 見發現 31 |
+
+工具限制：焦點收集（`hig-a11y-collect`）對 `change-password*` 回報「輸入框沒有焦點樣式」，那是誤報：輸入框自己 `outline:none`，焦點畫在整列（`:focus-within`），上方 `too-short`／`same` 的圖可見外框；收集器只看被聚焦元素本身。
+
+HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案自訂標準，G6 等條目依 flutter repo 的檢查表（內有的一手來源標註以該表為準），其餘為看圖與程式碼判讀。
 
 ## 彈出層缺口（造不出場景）
 

@@ -51,6 +51,14 @@
 - 「展開景點 7×17」等細小元素是否另有較大的點擊區（父層）沒有逐一確認。
 - 行內文字連結（段落中）不量。
 
+## #1565 補充：認證與帳號類（新增 15 個場景）
+
+- 場景增為 65 個（51 個頁面與狀態、14 個彈出層），新增圖 60 張（15 場景 × 4），Linux 容器截。
+- 變更密碼、`/oauth/authorize`、`/auth/callback` 需要「新 api 認證」旗標（建置期常數），所以 `playwright.config.js` 另建一份旗標開啟的建置（`dist-newapi/`，埠 3001，`VITE_API_BASE_URL` 指向自己）；場景標 `newApi: true`，憑證由 `seedNewApiAuth` 種進 IndexedDB。`noIdle` 讓 `/auth/callback` 停在永遠不回應的 token 請求上。場景可用 `intended` 宣告刻意回 4xx 的端點。
+- 量測：15 個新場景觸控目標 **0 違規**；`oauth-authorize-login` 的「忘記密碼？」是行內連結，量測規則不量（盲點，review 發現 28）。
+- 新發現 26～34，最嚴重：**26 變更密碼成功後沒有任何成功回饋（沒有 ToastContainer）**；29 OAuth 同意頁的未知範圍警告沒有樣式。
+- 缺口：無（要求的場景都做出來；`/auth/callback` 只取證「登入中…」，成功與失敗是轉址）。桌機寬有 4 張新場景未逐張看，見 review 第五輪。
+
 ## 彈出層取證的缺口與限制
 
 - **造不出場景的 3 個元件**：`TripPickerPopover`（沒有掛載點）、`CollabSheet`、`InfoSheet`（唯一入口 `openSheet('collab')` 沒有呼叫端）。都是使用者走不到的元件，不造假場景；原因與證據見 `2026-11-04-hig-page-inventory.md` 與 review。

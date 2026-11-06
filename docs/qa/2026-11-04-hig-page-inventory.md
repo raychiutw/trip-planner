@@ -18,7 +18,7 @@
 | `/account/appearance` | AppearanceSettingsPage | 已取證 | 3 | account-appearance |
 | `/account/notifications` | NotificationsSettingsPage | 已取證 | 3 | account-notifications |
 | `/account/sessions` | SessionsPage | 已取證 | 5 | account-sessions |
-| `/account/password` | ChangePasswordPage | 待取證 | 0 | 尚未造：需 mock 目前登入帳號與 `POST /account/password` 的各種回應（成功、目前密碼錯、被限流）；合併後再補場景 |
+| `/account/password` | ChangePasswordPage | 已取證 | 0 | change-password、change-password-current-invalid、change-password-too-short、change-password-same、change-password-rate-limited、change-password-success（要旗標，走埠 3001 的建置） |
 | `/account/connected-apps` | ConnectedAppsPage | 已取證 | 3 | account-connected-apps |
 | `/settings/appearance` | AppearanceSettingsPage | 已取證（路由別名，同元件） | 0 | account-appearance（同一元件，未另開場景） |
 | `/settings/notifications` | NotificationsSettingsPage | 已取證（路由別名，同元件） | 0 | account-notifications（同一元件，未另開場景） |
@@ -45,9 +45,9 @@
 | `/s/:token` | TripSharePage | 未取證 | 14 | 無場景：公開分享頁，需另造 share 讀取 API 的 mock |
 | `/developer/apps` | DeveloperAppsPage | 已取證 | 5 | developer-apps |
 | `/developer/apps/new` | DeveloperAppNewPage | 已取證 | 3 | developer-apps-new |
-| `/oauth/consent` | ConsentPage | 未取證 | 1 | 無場景：需 OAuth 授權請求參數與 consent API 的 mock |
-| `/oauth/authorize` | OauthAuthorizePage | 未取證 | 0 | 無場景：需 OAuth 授權請求參數與 authorize API 的 mock |
-| `/auth/callback` | AuthCallbackPage | 未取證 | 0 | 無場景：Google 登入回跳的純轉址頁（只顯示「登入中…」），需 OAuth 回跳參數與 token 端點的 mock |
+| `/oauth/consent` | ConsentPage | 已取證 | 1 | oauth-consent、oauth-consent-unknown-scope、oauth-consent-error |
+| `/oauth/authorize` | OauthAuthorizePage | 已取證 | 0 | oauth-authorize、oauth-authorize-scopes、oauth-authorize-login、oauth-authorize-login-error、oauth-authorize-error（走埠 3001 的建置，憑證種進 IndexedDB） |
+| `/auth/callback` | AuthCallbackPage | 已取證 | 0 | auth-callback（種入 Google 登入暫存、token 端點不回應，畫面停在「登入中…」；成功與失敗是轉址，不是畫面） |
 | `/invite` | InvitePage | 已取證 | 1 | invite、invite-invalid |
 | `/trips` | TripsListPage | 已取證 | 21 | trips-list、trips-list-empty、trips-list-error |
 | `/trips/new` | NewTripPage | 已取證 | 2 | trips-new |
@@ -91,7 +91,7 @@
 | Toast | 提示訊息 | 已取證 | `popup-toast-error`、`popup-toast-online`（error 與 online 兩種；離線 Toast 在全域橫幅在場時不再出現，#1587 14；success、info 未造） |
 
 ## 已知缺口
-- `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。
+- `/account/password`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback` 已由 #1565 補場景（見路由表）。
 - 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
-- 路由未取證 11 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
+- 路由未取證 7 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。

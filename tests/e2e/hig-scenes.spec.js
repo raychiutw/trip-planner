@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras, proveScene } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, proveScene, sceneUrl } = require('./hig-scene-fixtures');
 const { KNOWN_TAP_VIOLATIONS, LABEL_MAX, diffViolations } = require('./hig-known-violations');
 
 // 量測的尺寸與字型度量依瀏覽器引擎而異；已知違規清單只以 chromium 為準，其他 project 不跑，避免棘輪在 webkit 誤紅。
@@ -103,8 +103,8 @@ for (const scene of SCENES) {
         const consoleErrors = [];
         page.on('pageerror', (e) => consoleErrors.push(String(e)));
         if (scene.stub) await scene.stub(page);
-        await page.goto(scene.path);
-        await page.waitForLoadState('networkidle');
+        await page.goto(sceneUrl(scene));
+        if (!scene.noIdle) await page.waitForLoadState('networkidle');
         await page.waitForTimeout(400);
         if (scene.act) await scene.act(page);
         // 彈出層有 150～260ms 的進場動畫（淡入、上滑）；不等它跑完會拍到半透明的過場畫面。
@@ -126,7 +126,7 @@ for (const scene of SCENES) {
         // 連狀態碼一起比對（`狀態碼 路徑`），其他狀態碼或其他端點的失敗仍然算「沒有 mock」。
         const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips', 'popup-conflict-modal': '409 /api/poi-favorites', 'popup-error-banner': '500 /api/account/sessions', 'popup-toast-error': '500 /api/poi-search' };
         const unexpected = apiFailures.filter(
-          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])),
+          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])) && !(scene.intended && f.includes(scene.intended)),
         );
         expect(unexpected, `${scene.name}：場景用的 API 沒有 mock，畫面可能是錯誤態`).toEqual([]);
         if (unexpected.length) console.log(`HIGNET\t${scene.name}\t${JSON.stringify([...new Set(unexpected)])}`);

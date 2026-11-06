@@ -16,7 +16,7 @@
  */
 import { test } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras, proveScene } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, proveScene, sceneUrl } = require('./hig-scene-fixtures');
 const axePath = require.resolve('axe-core');
 
 test.beforeEach(async ({}, testInfo) => {
@@ -36,8 +36,8 @@ async function open(page, scene, { width, height, scheme }) {
       r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' }));
   }
   if (scene.stub) await scene.stub(page);
-  await page.goto(scene.path);
-  await page.waitForLoadState('networkidle');
+  await page.goto(sceneUrl(scene));
+  if (!scene.noIdle) await page.waitForLoadState('networkidle');
   await page.waitForTimeout(400);
   if (scene.act) await scene.act(page);
   if (scene.scope) await page.waitForTimeout(600); // 等彈出層進場動畫結束，axe 才不會量到半透明的過場
