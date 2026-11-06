@@ -42,7 +42,7 @@
 | `/login/forgot` | ForgotPasswordPage | 已取證 | 1 | forgot-password |
 | `/auth/password/reset` | ResetPasswordPage | 已取證 | 1 | reset-password |
 | `/auth/verify-email` | VerifyEmailPage | 已取證 | 1 | verify-email |
-| `/s/:token` | TripSharePage | 未取證 | 14 | 無場景：公開分享頁，需另造 share 讀取 API 的 mock |
+| `/s/:token` | TripSharePage | 已取證 | 14 | trip-share（mock `GET /api/share/:token`；資料取自既有行程 mock，所以起訖時間顯示「—」、副標的國別是 mock 原值） |
 | `/developer/apps` | DeveloperAppsPage | 已取證 | 5 | developer-apps |
 | `/developer/apps/new` | DeveloperAppNewPage | 已取證 | 3 | developer-apps-new |
 | `/oauth/consent` | ConsentPage | 未取證 | 1 | 無場景：需 OAuth 授權請求參數與 consent API 的 mock |
@@ -54,19 +54,19 @@
 | `/trip/:tripId` | TripLayout | 已取證 | 26 | trip-detail |
 | `map` | MapPage | 已取證（場景限制：地圖被擋，畫面是「地圖暫停服務」，不是真實地圖） | 19 | trip-map |
 | `stop/:entryId` | StopDetailRedirect | 已排除（轉址到 `/trips?selected=…&focus=…`，不是畫面） | 9 | — |
-| `stop/:entryId/map` | MapPage | 未取證 | 0 | 無場景：單點地圖頁，且地圖畫面本身受 Google Maps 被擋的限制（見 review 發現 4） |
+| `stop/:entryId/map` | MapPage | 缺口 | 0 | 無場景：與 `map` 同一元件，Google Maps 的 browser key 限制允許網址，localhost 一律 RefererNotAllowedMapError，場景只能拍到「地圖暫停服務」錯誤態，不是單點地圖的真實畫面；只能以真機或允許的網址取證 |
 | `print` | TripPrintPage | 已取證 | 1 | trip-print |
 | `edit` | EditTripPage | 已取證 | 9 | trip-edit |
-| `stop/:entryId/copy` | EntryActionPage | 未取證 | 0 | 無場景：需 entry 讀取 mock 與複製目標選擇流程 |
-| `stop/:entryId/move` | EntryActionPage | 未取證 | 0 | 無場景：需 entry 讀取 mock 與搬移目標選擇流程 |
-| `stop/:entryId/change-poi` | ChangePoiPage | 未取證 | 0 | 無場景：需 POI 搜尋與 entry 讀取 mock |
-| `stop/:entryId/edit` | EditEntryPage | 未取證 | 0 | 無場景：需 entry 讀取 mock |
+| `stop/:entryId/copy` | EntryActionPage | 已取證 | 0 | trip-stop-copy |
+| `stop/:entryId/move` | EntryActionPage | 已取證 | 0 | trip-stop-move |
+| `stop/:entryId/change-poi` | ChangePoiPage | 已取證（只有初始空搜尋態） | 0 | trip-stop-change-poi |
+| `stop/:entryId/edit` | EditEntryPage | 已取證 | 0 | trip-stop-edit |
 | `add-stop` | AddStopPage | 已取證 | 5 | trip-add-stop |
 | `add-entry` | AddEntryPage | 已取證 | 2 | trip-add-entry |
 | `collab` | CollabPage | 已取證 | 9 | trip-collab |
 | `health` | TripHealthCheckPage | 已取證 | 3 | trip-health |
 | `notes` | TripNotesPage | 已取證 | 4 | trip-notes |
-| `add-custom-stop` | (巢狀 element) | 未取證 | 3 | 無場景：巢狀 element，需補場景 |
+| `add-custom-stop` | (巢狀 element) | 已取證（只有手機寬；地圖位置區是錯誤態） | 3 | trip-add-custom-stop（手機專用路由，桌機寬會轉址到 `add-stop`，不取桌機圖） |
 | `*` | LegacyRedirect | 已排除（純轉址，不是畫面） | 0 | — |
 
 ## 彈出層（Sheet／Modal／Dialog／Popover／Toast／Banner）
@@ -93,5 +93,5 @@
 ## 已知缺口
 - `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。
 - 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
-- 路由未取證 11 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
+- 路由未取證（見上表「未取證」列）：`/add-to-trip`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`（#1567 已補 `/s/:token`、`stop/:entryId/{copy,move,change-poi,edit}`、`add-custom-stop`；`stop/:entryId/map` 列為缺口）；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。
