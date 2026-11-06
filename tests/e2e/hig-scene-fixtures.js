@@ -208,8 +208,10 @@ const SCENES = [
   // ── #1566：加入行程表單（direct／favorite 兩種模式的獨立畫面）與錨定選單、下拉面板 ──
   { name: 'add-to-trip', path: DIRECT_ADD_PATH, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
   { name: 'favorite-add-to-trip', path: '/favorites/8001/add-to-trip', stub: stubFavoriteList, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  // 收藏頁有資料的樣子（既有 favorites 場景只拍到空狀態）。
+  { name: 'favorites-list', path: '/favorites', stub: stubFavoriteList, proof: 'favorites-add-to-trip-8001', proofText: '首里城' },
   { name: 'popup-trip-card-menu', path: '/trips', act: openTripCardMenu, scope: `[data-testid="trip-card-menu-${TRIP}"]`, proof: `trip-card-menu-edit-${TRIP}` },
-  { name: 'popup-trip-actions-menu', path: `/trips?selected=${TRIP}`, viewports: ['desktop'], act: openTripActionsMenu, scope: `[data-testid="trip-embedded-menu-${TRIP}"]`, proof: `trip-embedded-menu-edit-${TRIP}` },
+  { name: 'popup-trip-actions-menu', path: `/trip/${TRIP}`, act: openTripActionsMenu, scope: `[data-testid="trip-embedded-menu-${TRIP}"]`, proof: `trip-embedded-menu-edit-${TRIP}` },
   { name: 'popup-rail-row-menu', path: `/trip/${TRIP}`, act: openRailRowMenu, scope: '[role="menu"].tp-rail-menu:popover-open', proofText: '重新排序' },
   { name: 'popup-trip-select', path: '/trips', act: openSortSelect, scope: '.tp-select-list', proofText: '名稱 A→Z' },
   { name: 'popup-trip-date-picker', path: '/trips/new', stub: freezeToday, act: openDatePicker, scope: '.tp-date-picker [role="dialog"]', proofText: /\d{4}/ },

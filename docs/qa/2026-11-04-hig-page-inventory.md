@@ -32,9 +32,9 @@
 | `/chat` | ChatPage | 已取證 | 6 | chat |
 | `/map` | GlobalMapPage | 已取證（場景限制：地圖被擋，畫面是「地圖暫停服務」，不是真實地圖） | 9 | map |
 | `/explore` | ExplorePage | 已取證 | 4 | explore |
-| `/favorites` | PoiFavoritesPage | 已取證 | 8 | favorites |
-| `/favorites/:id/add-to-trip` | AddPoiFavoriteToTripPage | 部分（只當彈出層背景） | 0 | 無獨立場景；`popup-conflict-modal` 以此頁為背景，表單畫面被對話框蓋住，不算此頁的取證 |
-| `/add-to-trip` | AddPoiFavoriteToTripPage | 未取證 | 4 | 無場景：direct mode 需 place_id／name／lat／lng 等 query 與選行程流程，尚未造 |
+| `/favorites` | PoiFavoritesPage | 已取證 | 8 | favorites（空狀態）、favorites-list（有一筆收藏） |
+| `/favorites/:id/add-to-trip` | AddPoiFavoriteToTripPage | 已取證 | 0 | favorite-add-to-trip（選好行程、載入天數後的表單；`popup-conflict-modal` 另以此頁為背景） |
+| `/add-to-trip` | AddPoiFavoriteToTripPage | 已取證 | 4 | add-to-trip（direct mode：帶 place_id／name／lat／lng／address／category 的 query，選行程後載入天數；缺 query 會是「景點資料缺漏」錯誤態，未另取證） |
 | `/privacy` | PrivacyPage | 已取證 | 3 | privacy |
 | `/login` | LoginPage | 已取證 | 6 | login、login-error、login-rate-limited |
 | `/signup` | SignupPage | 已取證 | 3 | signup |
@@ -86,12 +86,20 @@
 | InfoSheet | 資訊 | 缺口 | 無：同上，唯一掛載點與 CollabSheet 相同，沒有入口；造不出真實狀態 |
 | TravelPillDialog | 交通方式 | 已取證 | `popup-travel-pill-dialog` |
 | TripSheet / TripSheetTabs | 行程 sheet | 已取證（僅桌機寬） | `popup-trip-sheet`（聊天分頁；手機寬該欄 display:none，所以只取桌機寬。地圖分頁受 Google Maps 被擋的限制，見 review 發現 4） |
+| TripCardMenu | 行程卡「⋯」錨定選單（`TripsListPage`） | 已取證 | `popup-trip-card-menu`（owner-only 的「封存」項在場景中不出現：選單用 `user.id` 比對 `ownerUserId`，mock 登入帳號對不上；見下「已知缺口」） |
+| TripActionsMenu | 行程頁標題列「⋯」錨定選單（`TripStackLayout`、`TripsListPage` 桌機嵌入） | 已取證 | `popup-trip-actions-menu`（同樣沒有「封存」項） |
+| RailRowMenu | 時間軸停留點列的「⋯」錨定選單（popover API） | 已取證 | `popup-rail-row-menu` |
+| TripSelect | 下拉面板（Headless UI Listbox） | 已取證 | `popup-trip-select`（行程清單排序） |
+| TripDatePicker | 日期面板 | 已取證 | `popup-trip-date-picker`（新增行程的出發日；spec 固定「今天」為 2026-11-06） |
+| TripTimePicker | 時間面板（時／分兩欄） | 已取證 | `popup-trip-time-picker`（加入行程表單的開始時間） |
 | ErrorBanner | 錯誤橫幅 | 已取證 | `popup-error-banner`（另有 `login-error`、`trips-list-error` 也渲染同一元件） |
 | ServerStatusBanner | 伺服器狀態橫幅 | 已取證 | `popup-server-status-banner` |
 | Toast | 提示訊息 | 已取證 | `popup-toast-error`、`popup-toast-online`（error 與 online 兩種；離線 Toast 在全域橫幅在場時不再出現，#1587 14；success、info 未造） |
 
 ## 已知缺口
 - `/account/password`（變更密碼，trip-planner#1557）已在路由表登記為「待取證」。
+- #1566 補：錨定選單與下拉面板六個元件已造場景（見彈出層表）；`popup-trip-select` 與時間、日期面板各只取一個呼叫端，其他呼叫端（筆記區塊的日期時間、編輯行程的語言下拉等）同一元件，未逐一取證。`TripCardMenu`／`TripActionsMenu` 的「封存」「還原」項（owner-only）沒有場景：mock 登入帳號與行程 `ownerUserId` 對不上，屬缺口。地圖類場景（`map`、`trip-map` 與 `popup-trip-sheet` 的地圖分頁）受 Google Maps 被擋限制，畫面是「地圖暫停服務」，不是真實地圖。
 - 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
 - 路由未取證 11 條（見上表「未取證」列）：`/add-to-trip`、`/s/:token`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback`、`stop/:entryId/{map,copy,move,change-poi,edit}`、`add-custom-stop`；`/favorites/:id/add-to-trip` 只當彈出層背景出現。
+- #1566 後：`/add-to-trip` 與 `/favorites/:id/add-to-trip` 已有獨立場景，上列「路由未取證」中這兩條視為已處理。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。
