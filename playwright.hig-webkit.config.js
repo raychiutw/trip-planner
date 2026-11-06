@@ -9,10 +9,14 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://localhost:3000', headless: true, serviceWorkers: 'block' },
   projects: [{ name: 'webkit', use: { browserName: 'webkit' } }],
-  webServer: {
-    command: 'npm run build && npx vite preview --port 3000',
-    port: 3000,
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+  webServer: [
+    { command: 'npm run build && npx vite preview --port 3000', port: 3000, reuseExistingServer: true, timeout: 120000 },
+    // 新 api 認證旗標開啟的建置（見 playwright.config.js）
+    {
+      command: 'VITE_NEW_API_AUTH=1 VITE_API_BASE_URL=http://localhost:3001 npx vite build --outDir dist-newapi && npx vite preview --outDir dist-newapi --port 3001',
+      port: 3001,
+      reuseExistingServer: true,
+      timeout: 120000,
+    },
+  ],
 });

@@ -19,10 +19,20 @@ export default defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 5'], browserName: 'chromium' } },
     { name: 'mobile-safari', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
   ],
-  webServer: {
-    command: 'npm run build && npx vite preview --port 3000',
-    port: 3000,
-    reuseExistingServer: true,
-    timeout: 60000,
-  },
+  webServer: [
+    {
+      command: 'npm run build && npx vite preview --port 3000',
+      port: 3000,
+      reuseExistingServer: true,
+      timeout: 60000,
+    },
+    // 新 api 認證旗標開啟的建置（只給 HIG 取證場景用：變更密碼、/oauth/authorize、/auth/callback 要旗標才會渲染）。
+    // 旗標是建置期常數，無法在同一份建置裡切換，所以另建一份、另開埠；API 網址指向自己，由場景的 page.route 攔截。
+    {
+      command: 'VITE_NEW_API_AUTH=1 VITE_API_BASE_URL=http://localhost:3001 npx vite build --outDir dist-newapi && npx vite preview --outDir dist-newapi --port 3001',
+      port: 3001,
+      reuseExistingServer: true,
+      timeout: 120000,
+    },
+  ],
 });

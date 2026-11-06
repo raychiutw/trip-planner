@@ -113,3 +113,4 @@ scripts/funnel-guard/.disabled
 
 # 對照組的消毒副本（本機產物）
 .control-group/
+dist-newapi/
