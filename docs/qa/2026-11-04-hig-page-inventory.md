@@ -1,9 +1,11 @@
 # web 頁面完整清單與 mock 場景對照（HIG 取證用）
 
+**目前數字**（#1568 彙整，以 `SCENES` 與路由表為準）：80 個場景、316 張截圖；路由表 54 條：已取證 47、已排除 6、缺口 1；彈出層 22 個：已取證 19、缺口 3。逐項對照與覆蓋率見 review 報告文末「覆蓋率」。
+
 來源：flutter#531、trip-planner#1564。日期：2026-11-04，依 `src/entries/main.tsx` 的路由表產生。
 
 ## 狀態說明
-- **已取證**：已有 `tests/e2e/hig-scene-fixtures.js` 的場景，手機寬與桌機寬、淺色與深色各一張截圖，並已逐張檢查（結果見 `2026-11-04-hig-web-screenshot-review.md`；哪些圖沒有逐張看也記在那裡）。
+- **已取證**：已有 `tests/e2e/hig-scene-fixtures.js` 的場景，手機寬與桌機寬、淺色與深色各一張截圖（`popup-trip-sheet` 只有桌機寬、`add-custom-stop` 只有手機寬）。**不代表每張圖都逐張看過**：看過與沒看的清單在 `2026-11-04-hig-web-screenshot-review.md` 開頭的「web 取證的缺口與現況」。
 - **部分**：該頁只在別的場景裡當背景出現，沒有自己的取證。
 - **未取證**／**缺口**：沒有場景；欄位內寫原因（路由是「尚未造」，彈出層是「使用者走不到，造不出真實狀態」）。
 - **已排除**：不是畫面（純轉址）或不在 HIG 比對範圍，附理由。
@@ -99,6 +101,6 @@
 ## 已知缺口
 - `/account/password`、`/oauth/consent`、`/oauth/authorize`、`/auth/callback` 已由 #1565 補場景（見路由表）。
 - #1566 補：錨定選單與下拉面板六個元件已造場景（見彈出層表）；`popup-trip-select` 與時間、日期面板各只取一個呼叫端，其他呼叫端（筆記區塊的日期時間、編輯行程的語言下拉等）同一元件，未逐一取證。`TripCardMenu`／`TripActionsMenu` 的「封存」「還原」項（owner-only）沒有場景：mock 登入帳號與行程 `ownerUserId` 對不上，屬缺口。地圖類場景（`map`、`trip-map` 與 `popup-trip-sheet` 的地圖分頁）受 Google Maps 被擋限制，畫面是「地圖暫停服務」，不是真實地圖。
-- 彈出層清單由元件檔名比對得出，沒有對應的比對測試；造場景時另確認沒有漏：除上表 16 列外，`src/` 內仍有 `TripCardMenu`、`TripActionsMenu`、`RailRowMenu` 的錨定選單與 `TripDatePicker`／`TripTimePicker`／`TripSelect` 的下拉面板，屬 popover／menu 而不是 Sheet／Modal，清單沒有收、也沒有場景。
+- 彈出層清單由元件檔名比對得出，沒有對應的比對測試；錨定選單（`TripCardMenu`、`TripActionsMenu`、`RailRowMenu`）與下拉面板（`TripDatePicker`、`TripTimePicker`、`TripSelect`）後來已補進上表，目前共 22 列。
 - 路由未取證 1 條（見上表「缺口」列）：`stop/:entryId/map`（Google Maps 被擋，只拍得到錯誤態）。已處理：#1566 補 `/add-to-trip`（`/favorites/:id/add-to-trip` 另有獨立場景）；#1567 補 `/s/:token`、`stop/:entryId/{copy,move,change-poi,edit}`、`add-custom-stop`。
 - 彈出層缺口 3 個：`TripPickerPopover`、`CollabSheet`、`InfoSheet`，都是沒有入口的元件（死碼，已另開 PR #1584 移除；本 PR 不動產品）。
