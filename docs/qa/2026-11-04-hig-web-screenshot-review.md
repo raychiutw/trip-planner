@@ -28,7 +28,7 @@
 
 ### 沒逐張看的圖（依各輪紀錄彙整；沒有紀錄的一律視為沒看，**不是每張都逐張看過**）
 
-- **桌機寬深色**：#1565 新場景 `oauth-authorize-login`、`oauth-authorize-error`、`oauth-consent`、`oauth-consent-error` 沒看（只有 proof、量測、axe）；#1567 記錄 `trip-map`、`invite`、`invite-invalid` 仍沒看（`invite`、`invite-invalid` 在第三輪表格另有「#1565 補看」的敘述，兩處矛盾，保守視為沒看；`trip-map` 在第一輪也寫「桌機淺深都看過」，同樣矛盾，保守視為沒看）；`popup-confirm-modal`、`popup-error-banner` 沒有任何一輪補看桌機深色。
+- **桌機寬深色**：#1565 新場景 `oauth-authorize-login`、`oauth-authorize-error`、`oauth-consent`、`oauth-consent-error` 沒看（只有 proof、量測、axe）；`trip-map`、`invite`、`invite-invalid` 的桌機寬深色，先前各輪敘述互相矛盾（有的寫看過、有的寫沒看），**review 修正輪已實際逐張看過這三張桌機寬深色圖，三者皆無新發現**（`trip-map` 仍是「地圖暫停服務」錯誤態，不是真實地圖）；`popup-confirm-modal`、`popup-error-banner` 沒有任何一輪補看桌機深色。
 - **#1566 新場景**：`add-to-trip`、`favorite-add-to-trip`、`favorites-list`、`popup-trip-card-menu`、`popup-rail-row-menu`、`popup-trip-select`、`popup-trip-date-picker`、`popup-trip-time-picker` 只看了桌機深色與手機淺色，**桌機淺色與手機深色沒看**；`popup-trip-actions-menu` 沒看手機淺色。
 - **#1567 範圍**：範圍內既有場景的**手機深色**沒再逐張看（先前輪次只看淺深並排圖）；新場景 `trip-stop-copy`、`trip-stop-move`、`trip-stop-change-poi`、`trip-stop-edit` 只看了手機淺色與桌機深色，手機深色與桌機淺色沒看；這 6 個新場景沒有跑 axe、重排、焦點補掃。
 - **#1565 補看的既有 15 個認證與帳號場景桌機寬**是淺深拼成一張看，沒有個別開啟；`trips-list-empty`、`trips-list-error` 只看了桌機深色。
@@ -58,9 +58,9 @@
 
 （以下是各輪次當時的敘述；目前的彙整見上方「web 取證的缺口與現況」。）
 
-- （第一、二輪當時）桌機寬：27 個場景的淺深並排圖都看過（trip-map 的桌機深色後來又被記為沒看，見上節）。
+- （第一、二輪當時）桌機寬：27 個場景的淺深並排圖當時記為都看過；其中 `trip-map` 的桌機深色後來又被記為沒看，矛盾已在 review 修正輪重看該圖後解消（見上節）。
 - （第一、二輪當時）手機寬：27 個場景的淺深並排圖都看過（第一輪 15 個，第二輪補看 12 個）。
-- **第三輪補的 9 個場景**（`login-error`、`login-rate-limited`、`signup-check-email`、`reset-password`、`verify-email`、`invite`、`invite-invalid`、`trips-list-empty`、`trips-list-error`）：**手機寬淺深都看過；桌機寬的 18 張新圖我沒有逐張看**，只有 proof（畫面上一定出現的文字或 testid）與 axe 掃描。
+- **第三輪補的 9 個場景**（`login-error`、`login-rate-limited`、`signup-check-email`、`reset-password`、`verify-email`、`invite`、`invite-invalid`、`trips-list-empty`、`trips-list-error`）：**手機寬淺深都看過；桌機寬的 18 張新圖當時沒有逐張看**（只有 proof（畫面上一定出現的文字或 testid）與 axe 掃描；其中 `invite`、`invite-invalid` 的桌機寬深色已在 review 修正輪補看）。
 - **第四輪補的 14 個彈出層場景**（`popup-*`）：手機寬淺深 13 個都個別看過（`popup-trip-sheet` 沒有手機寬）；桌機寬淺色看過 14 個、深色只看了 `popup-trip-sheet`，**其餘 13 個場景的桌機寬深色圖沒有逐張看**，只有 proof 與棘輪。圖是在 Linux 容器（Playwright v1.64.1 noble）截的，前 36 個場景不是本輪重截，截圖環境未重新確認，字型可能不同；Linux 的無頭 Chromium 會畫出傳統捲軸，圖右緣常有約 10px 的窄條，那是環境產物，不是產品問題。
 - 只跑 chromium；webkit、firefox 沒截。
 
@@ -81,7 +81,7 @@
 | 11 | `signup-check-email`、`invite` | B7 | 以「320px 寬、html 字級 200%」近似量測，scrollWidth 為 354、366（對 320）；逐元素掃描找不到右緣超出的元素，**原因未定位**。這只是近似（不是瀏覽器縮放），是否構成 WCAG 1.4.10 違規仍待驗證 | 量測（未定位） | 有：WCAG 1.4.4、1.4.10 | `signup-check-email` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/signup-check-email.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/signup-check-email.png)<br>`invite` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/invite.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/invite.png) |
 | 12 | `popup-server-status-banner` | C（WCAG 1.4.3） | **深色**：橫幅文字色寫成 `var(--color-priority-high-text, #8b2828)`，但 `css/` 全無這個 token，永遠落到寫死的 `#8b2828`（`ServerStatusBanner.tsx:26`）；深色底（`rgba(232,160,160,.18)` 疊深色頁底，約 `#413435`）上對比 **1.37:1**，幾乎讀不到 | axe（serious）加看圖加程式碼 | 有：WCAG 1.4.3（W3C） | `popup-server-status-banner` [手機深](2026-11-04-hig-web-screenshots/mobile/dark/popup-server-status-banner.png) [桌機深](2026-11-04-hig-web-screenshots/desktop/dark/popup-server-status-banner.png) |
 | 13 | `popup-server-status-banner` | 版面 | 橫幅是 `position: sticky; top: 0`，卻放在 100dvh 的 app-shell 之外，多佔 59px：手機寬離線前後量測 `scrollHeight` 844→903（視窗 844）、shell 上緣 0→59，整頁多出捲軸；桌機寬左側欄底部的使用者卡被擠出視窗下緣 | 量測（離線事件前後）加看圖 | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `popup-server-status-banner` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-server-status-banner.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-server-status-banner.png) |
-| 14 | `popup-toast-offline` | G7 | 離線時同時有三個提示：全域橫幅（z-index 9999）、離線 Toast（z-index 250，被橫幅蓋住一半，文字疊在一起）、行程頁自己的「目前是離線模式」卡片。橫幅在場時，Toast 等於看不到 | 看圖（手機寬、桌機寬） | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | 無畫面（元件不存在，無截圖） |
+| 14 | `popup-server-status-banner`（原 popup-toast-offline 場景，#1587 14 之後已移除） | G7 | 離線時同時有三個提示：全域橫幅（z-index 9999）、離線 Toast（z-index 250，被橫幅蓋住一半，文字疊在一起）、行程頁自己的「目前是離線模式」卡片。橫幅在場時，Toast 等於看不到 | 看圖（手機寬、桌機寬） | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | 無畫面（元件不存在，無截圖） |
 | 15 | `popup-toast-error` | 版面、規範 | Toast 固定在視窗頂端（`top: max(16px, safe-area)`，`tokens.css:238`），手機寬蓋住 TitleBar 的標題與返回鈕；DESIGN.md「Error & Status Messaging」寫的是桌機右上 titlebar 下方、compact 底部且高於 bottom nav，實作與規範不一致 | 看圖加 DESIGN.md | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `popup-toast-error` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-toast-error.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-toast-error.png) |
 | 16 | `popup-toast-error` | G6、WCAG 3.3.1 | 探索頁搜尋少於 2 字，只出現 2 秒的 error Toast「至少輸入 2 個字」；欄位本身沒有錯誤文字，Toast 消失後沒有任何殘留提示（DESIGN.md：欄位格式錯用 FieldError）。另外 Toast 同時設 `role="alert"` 與 `aria-live="polite"`（`Toast.tsx:100-101`），兩者語意互相矛盾（alert 隱含 assertive） | 看圖加程式碼 | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3；有：W3C WCAG 2.2 原文（本輪未重新逐條核對） | `popup-toast-error` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-toast-error.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-toast-error.png) |
 | 17 | `popup-conflict-modal` | G2、G7 | 對話框問「要怎麼處理？」，元件也支援「改插入到後面」「取代既有」，但呼叫端 `AddPoiFavoriteToTripPage.tsx:561` 只傳 `onCancel`，畫面上只有一顆「取消」：文案承諾的選項不存在，使用者無法在對話框內處理衝突，只能關掉後自己改時間 | 看圖加程式碼 | 有：HIG alerts（App 規範，web 屬類推）；有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | `popup-conflict-modal` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-conflict-modal.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-conflict-modal.png) |
@@ -188,8 +188,8 @@
 | `trip-print` | 淺深已看 | 淺深已看 | 觀察 | H2 | 淺色與深色圖完全相同（列印預覽固定淺色）；列印情境可接受，但深色模式下不跟隨 |
 | `trips-list` | 淺深已看 | 淺深已看 | 未見明顯問題 | — | 桌機、手機寬目視未發現與檢查表衝突之處；僅看圖，未量字級與對比 |
 | `trips-new` | 淺深已看 | 淺深已看 | 疑慮 | B | 手機寬日期欄位的「選擇日期」字級明顯大於同頁其他欄位的 placeholder；底部固定操作列蓋住「讓 AI 幫你把行程填滿」卡片的下半（可捲動） |
-| `invite` | **未看**（本檔兩處敘述矛盾，保守視為沒看） | 手機已看（淺深並排圖） | 未見明顯問題 | — | 「註冊並加入」為主要、「登入並加入」為次要，說明與有效期齊全；axe 無違規。**200% 文字有橫向捲動（發現 11）** |
-| `invite-invalid` | **未看**（同上） | 手機已看（淺深並排圖） | 未見明顯問題 | G6 | 410＋`INVITATION_INVALID`（真實契約）：錯誤橫幅加「請聯絡邀請者重寄一份新的邀請連結」，沒有無意義的重試。觀察：橫幅文字折行剩孤字「寄」，且同一句話在橫幅與下方各出現一次。**注意**：這個場景一開始用了不存在的錯誤碼，拍到不真實的畫面，曾因此誤報一項發現，已撤回並重拍 |
+| `invite` | 深色已看（review 修正輪補看；淺色未逐張看） | 手機已看（淺深並排圖） | 未見明顯問題 | — | 「註冊並加入」為主要、「登入並加入」為次要，說明與有效期齊全；axe 無違規。**200% 文字有橫向捲動（發現 11）** |
+| `invite-invalid` | 深色已看（review 修正輪補看；淺色未逐張看） | 手機已看（淺深並排圖） | 未見明顯問題 | G6 | 410＋`INVITATION_INVALID`（真實契約）：錯誤橫幅加「請聯絡邀請者重寄一份新的邀請連結」，沒有無意義的重試。觀察：橫幅文字折行剩孤字「寄」，且同一句話在橫幅與下方各出現一次。**注意**：這個場景一開始用了不存在的錯誤碼，拍到不真實的畫面，曾因此誤報一項發現，已撤回並重拍 |
 | `login-error` | 淺深已看（#1565，並排圖） | 手機已看（淺深並排圖） | 符合 | G6 | 就地橫幅（圖示加文字）「電子郵件或密碼錯誤」，輸入保留；axe 無違規；「忘記密碼？」64×19 為既有違規 |
 | `login-rate-limited` | 淺深已看（#1565，並排圖） | 手機已看（淺深並排圖） | 符合 | G6 | 鎖頭圖示、說明、15:00 倒數與「重設密碼」出口；axe 無違規 |
 | `reset-password` | 淺深已看（#1565，並排圖） | 手機已看（淺深並排圖） | 符合 | F | 兩個密碼欄、強度條與規則清單（長度、字母與數字）；axe 無違規 |
@@ -217,7 +217,7 @@
 新增 15 個場景（`change-password` 系列 6、`oauth-authorize` 系列 5、`oauth-consent` 系列 3、`auth-callback`），在 Linux 容器（Playwright v1.64.1 noble）截圖，手機寬與桌機寬各淺深，共 60 張；觸控目標量測全部 0 違規；axe 對這 15 個場景淺深各一次，**沒有違規**（`change-password-success` 有 1 筆 `color-contrast` 需人工：版本號分隔點，內容太短無法判定）；320px 重排與 200% 文字無橫向捲動（`oauth-consent-error` 沒有可量字級，比值為空）。
 **看圖範圍**：新場景手機寬淺深並排圖我全看過（15 張）；桌機寬看過 `change-password` 全部 6 個、`oauth-authorize`、`oauth-authorize-scopes`、`oauth-authorize-login-error`、`oauth-consent-unknown-scope`、`auth-callback`；**桌機寬沒有看**：`oauth-authorize-login`、`oauth-authorize-error`、`oauth-consent`、`oauth-consent-error`（只有 proof、量測與 axe）。既有認證與帳號場景的桌機寬淺深並排圖補看了 15 個（`login`、`login-error`、`login-rate-limited`、`signup`、`signup-check-email`、`forgot-password`、`reset-password`、`verify-email`、`account`、`account-appearance`、`account-notifications`、`account-sessions`、`account-connected-apps`、`developer-apps`、`developer-apps-new`），沒有逐張個別開啟，是淺色與深色拼成一張看；這些圖不是本輪重拍的，環境見上方說明。上方三處原寫「桌機未看」的場景（第三輪 9 個）已在此補看，結果見發現 33、34 與下表。
 
-**場景怎麼做出來的**：變更密碼、`/oauth/authorize`、`/auth/callback` 要「新 api 認證」旗標（建置期常數），所以 `playwright.config.js` 多一份旗標開啟的建置（埠 3001，API 網址指向自己，由 `page.route` 攔截）；登入憑證用 `seedNewApiAuth` 直接種進 IndexedDB（結構照 `src/lib/auth/storage.ts`），`/api/oauth/token` 回 DPoP 形狀的假 token，proof 由頁面真的簽。`/auth/callback` 的 token 端點刻意不回應，畫面才會停在「登入中…」（場景設 `noIdle`）。
+**場景怎麼做出來的**：變更密碼、`/oauth/authorize`、`/auth/callback` 要「新 api 認證」旗標（建置期常數），所以 `playwright.hig.config.js` 多一份旗標開啟的建置（見 `playwright.hig-servers.js`）（埠 3001，API 網址指向自己，由 `page.route` 攔截）；登入憑證用 `seedNewApiAuth` 直接種進 IndexedDB（結構照 `src/lib/auth/storage.ts`），`/api/oauth/token` 回 DPoP 形狀的假 token，proof 由頁面真的簽。`/auth/callback` 的 token 端點刻意不回應，畫面才會停在「登入中…」（場景設 `noIdle`）。
 
 | 場景 | 結論 | 說明 |
 |---|---|---|
@@ -342,7 +342,7 @@ HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案
 
 ## 第五輪（#1567）沒看的圖
 
-既有範圍內場景的桌機寬深色，本輪補看了：`trip-detail`、`trip-print`、`trip-collab`、`trip-notes`、`trip-edit`、`trip-add-stop`、`trip-add-entry`、`trip-health`、`trips-new`、`popup-share-link-modal`、`popup-travel-pill-dialog`、`popup-note-ai-exclusions-dialog`（見發現 78、79、80；其餘未見新問題）。這批圖是先前輪次的截圖，沒有重拍，環境以當時為準。**仍沒看**：`trip-map`、`invite`、`invite-invalid` 的桌機寬深色；範圍內所有場景的手機寬深色（先前輪次只看過淺深並排圖，本輪未再看）；本輪新增場景的 `trip-stop-*` 其餘主題組合。各場景的 axe、重排、焦點掃描（`hig-a11y-collect.spec.js`）本輪未對新場景執行。
+既有範圍內場景的桌機寬深色，本輪補看了：`trip-detail`、`trip-print`、`trip-collab`、`trip-notes`、`trip-edit`、`trip-add-stop`、`trip-add-entry`、`trip-health`、`trips-new`、`popup-share-link-modal`、`popup-travel-pill-dialog`、`popup-note-ai-exclusions-dialog`（見發現 78、79、80；其餘未見新問題）。這批圖是先前輪次的截圖，沒有重拍，環境以當時為準。**review 修正輪補看**：`trip-map`、`invite`、`invite-invalid` 的桌機寬深色（無新發現）；**仍沒看**：範圍內所有場景的手機寬深色（先前輪次只看過淺深並排圖，本輪未再看）；本輪新增場景的 `trip-stop-*` 其餘主題組合。各場景的 axe、重排、焦點掃描（`hig-a11y-collect.spec.js`）本輪未對新場景執行。
 
 ## 覆蓋率（清單項目 → 場景 → 狀態）
 

@@ -193,6 +193,8 @@ const stubChangePassword = (reply) => async (page) => {
     r.fulfill(json({ hasPassword: true, reauthProvider: null, reauthenticated: false, tripsOwned: 2, collaboratorsAffected: 1 })));
   if (reply) await page.route(/\/api\/account\/password$/, (r) => (r.request().method() === 'POST' ? r.fulfill(reply) : r.fallback()));
 };
+const CHANGE_PASSWORD = { path: '/account/password', newApi: true };
+const AUTHORIZE = { path: '/oauth/authorize?request_id=hig-demo-request', newApi: true };
 const CURRENT_PW = 'old-password-1';
 const fillPasswords = async (page, current, next) => {
   await page.getByTestId('change-password-current').fill(current);
@@ -206,17 +208,13 @@ const submitPasswordChange = async (page) => {
 const leaveNewPassword = (page) => page.getByTestId('change-password-current').focus();
 const pwError = (code, message, status, headers = {}) => ({ ...json(errBody(code, message), status), headers });
 const AUTHORIZE_REQUEST = { client: { app_name: 'Tripline iOS' }, scopes: ['openid', 'profile', 'email', 'offline_access', 'trips:read', 'trips:write'] };
-const stubAuthorizeRequest = async (page) => {
-  await stubNewApiSession(page);
-  await page.route(/\/api\/oauth\/authorize\/requests\/hig-demo-request$/, (r) => r.fulfill(json(AUTHORIZE_REQUEST)));
-};
-// 沒有任何本機憑證 → 還原不到登入 → 顯示登入表單；請求本身仍要讀得到（頁面先讀請求再看登入狀態是在還原之後）。
-const stubAuthorizeLogin = async (page) => {
-  await stubNewApiToken(page);
+// signedIn=false：沒有任何本機憑證 → 還原不到登入 → 顯示登入表單；請求本身仍要讀得到（頁面先讀請求再看登入狀態是在還原之後）。
+const stubAuthorizeRequest = (signedIn) => async (page) => {
+  await (signedIn ? stubNewApiSession(page) : stubNewApiToken(page));
   await page.route(/\/api\/oauth\/authorize\/requests\/hig-demo-request$/, (r) => r.fulfill(json(AUTHORIZE_REQUEST)));
 };
 const stubAuthorizeLoginFails = async (page) => {
-  await stubAuthorizeLogin(page);
+  await stubAuthorizeRequest(false)(page);
   await page.route(/\/api\/oauth\/login$/, (r) => r.fulfill(json(errBody('LOGIN_INVALID'), 401)));
 };
 const submitAuthorizeLogin = async (page) => {
@@ -235,7 +233,7 @@ const stubGoogleCallbackPending = async (page) => {
 };
 
 /**
- * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[], newApi?: boolean, noIdle?: boolean, intended?: string }} Scene
+ * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[], newApi?: boolean, noIdle?: boolean, intended?: string, proofAbsent?: { selector: string, why: string }, proofPath?: string }} Scene
  * proof：頁面渲染完成時一定存在的 data-testid；proofText 是畫面上一定要出現的文字（錯誤態、空狀態用，
  * 證明拍到的是想取證的那一種狀態，不是任意一種）；沒有時退而求其次檢查沒有錯誤頁。
  * stub：進頁前追加的 API 覆寫（後註冊的 route 優先）；act：進頁後的互動（例如送出表單）。
@@ -246,6 +244,9 @@ const stubGoogleCallbackPending = async (page) => {
  * viewports：只在這些寬度取證（桌機寬才有的表面，例如 TripSheet 右欄；預設兩種寬度都跑）。
  * newApi：走新 api 認證旗標開啟的那份建置（埠 3001）；憑證由 stub 種進 IndexedDB。
  * noIdle：不等 networkidle（畫面刻意停在一個永遠不回應的請求上，例如 /auth/callback 的「登入中…」）。
+ * proofPath：頁面最後所在的 pathname（不含 query）。兩個場景共用同一個 proof testid 時（複製／移動、direct／收藏加入行程是同一元件的不同模式，DOM 幾乎相同），
+ *   用它證明各自真的停在自己的路由，沒有被轉址到另一個。
+ * proofAbsent：證明「看不到」也是取證結果（已知缺口）：selector 在 proof 之後必須量到 0 個；用一次性的 count，不用會自動重試的 toHaveCount（Toast 會自己消失，重試會誤綠）。
  * intended：這個場景刻意讓某端點回 4xx／5xx（`狀態碼 路徑`），不算「沒有 mock」。
  */
 /** @type {Scene[]} */
@@ -269,18 +270,18 @@ const SCENES = [
   { name: 'developer-apps', path: '/developer/apps' },
   { name: 'developer-apps-new', path: '/developer/apps/new' },
   // ── 認證與帳號類補強（#1565）：變更密碼的各狀態、OAuth 授權與同意、Google 回跳 ──
-  { name: 'change-password', path: '/account/password', newApi: true, stub: stubChangePassword(), proof: 'change-password-page' },
-  { name: 'change-password-current-invalid', path: '/account/password', newApi: true, stub: stubChangePassword(pwError('CHANGE_PASSWORD_CURRENT_INVALID', '目前密碼不正確', 403)), act: submitPasswordChange, proofText: '目前密碼不正確', intended: '403 /api/account/password' },
-  { name: 'change-password-too-short', path: '/account/password', newApi: true, stub: stubChangePassword(), act: async (page) => { await fillPasswords(page, CURRENT_PW, 'abc12'); await leaveNewPassword(page); }, proofText: /^新密碼至少 8 字元$/ },
-  { name: 'change-password-same', path: '/account/password', newApi: true, stub: stubChangePassword(), act: async (page) => { await fillPasswords(page, CURRENT_PW, CURRENT_PW); await leaveNewPassword(page); }, proofText: '新密碼不能和目前密碼相同' },
-  { name: 'change-password-rate-limited', path: '/account/password', newApi: true, stub: stubChangePassword(pwError('CHANGE_PASSWORD_RATE_LIMITED', '嘗試次數過多，請稍後再試', 429, { 'Retry-After': '900' })), act: submitPasswordChange, proofText: '嘗試次數過多，請在 15 分鐘後再試', intended: '429 /api/account/password' },
+  { name: 'change-password', ...CHANGE_PASSWORD, stub: stubChangePassword(), proof: 'change-password-page' },
+  { name: 'change-password-current-invalid', ...CHANGE_PASSWORD, stub: stubChangePassword(pwError('CHANGE_PASSWORD_CURRENT_INVALID', '目前密碼不正確', 403)), act: submitPasswordChange, proofText: '目前密碼不正確', intended: '403 /api/account/password' },
+  { name: 'change-password-too-short', ...CHANGE_PASSWORD, stub: stubChangePassword(), act: async (page) => { await fillPasswords(page, CURRENT_PW, 'abc12'); await leaveNewPassword(page); }, proofText: /^新密碼至少 8 字元$/ },
+  { name: 'change-password-same', ...CHANGE_PASSWORD, stub: stubChangePassword(), act: async (page) => { await fillPasswords(page, CURRENT_PW, CURRENT_PW); await leaveNewPassword(page); }, proofText: '新密碼不能和目前密碼相同' },
+  { name: 'change-password-rate-limited', ...CHANGE_PASSWORD, stub: stubChangePassword(pwError('CHANGE_PASSWORD_RATE_LIMITED', '嘗試次數過多，請稍後再試', 429, { 'Retry-After': '900' })), act: submitPasswordChange, proofText: '嘗試次數過多，請在 15 分鐘後再試', intended: '429 /api/account/password' },
   // 成功後導回帳號頁；頁面程式碼有呼叫 showToast，但 ChangePasswordPage 與 AccountPage 都沒有掛 ToastContainer，
   // 所以使用者看不到任何成功回饋（review 發現 26）。這裡把「看不到」釘成斷言（用一次性的 count，不用會自動重試的 toHaveCount——Toast 3 秒後自己消失，重試會讓斷言誤綠）；修好後請改成取證 Toast 本身。
-  { name: 'change-password-success', path: '/account/password', newApi: true, stub: stubChangePassword(json({ ok: true })), act: async (page) => { await submitPasswordChange(page); await page.getByTestId('account-page').waitFor(); await page.waitForTimeout(500); expect(await page.locator('.tp-toast').count(), '已知缺口 #26：成功 Toast 沒有容器可顯示；若現在看得到，請把本場景改成取證 Toast').toBe(0); }, proof: 'account-page' },
-  { name: 'oauth-authorize', path: '/oauth/authorize?request_id=hig-demo-request', newApi: true, stub: stubAuthorizeRequest, proof: 'authz-continue' },
-  { name: 'oauth-authorize-scopes', path: '/oauth/authorize?request_id=hig-demo-request', newApi: true, stub: stubAuthorizeRequest, act: (page) => page.locator('.tp-authz-disc summary').click(), proof: 'authz-scopes' },
-  { name: 'oauth-authorize-login', path: '/oauth/authorize?request_id=hig-demo-request', newApi: true, stub: stubAuthorizeLogin, proof: 'authz-login-form' },
-  { name: 'oauth-authorize-login-error', path: '/oauth/authorize?request_id=hig-demo-request', newApi: true, stub: stubAuthorizeLoginFails, act: submitAuthorizeLogin, proof: 'authz-login-error', intended: '401 /api/oauth/login' },
+  { name: 'change-password-success', ...CHANGE_PASSWORD, stub: stubChangePassword(json({ ok: true })), act: async (page) => { await submitPasswordChange(page); await page.getByTestId('account-page').waitFor(); await page.waitForTimeout(500); }, proof: 'account-page', proofAbsent: { selector: '.tp-toast', why: '已知缺口 #26：成功 Toast 沒有容器可顯示；若現在看得到，請把本場景改成取證 Toast' } },
+  { name: 'oauth-authorize', ...AUTHORIZE, stub: stubAuthorizeRequest(true), proof: 'authz-continue' },
+  { name: 'oauth-authorize-scopes', ...AUTHORIZE, stub: stubAuthorizeRequest(true), act: (page) => page.locator('.tp-authz-disc summary').click(), proof: 'authz-scopes' },
+  { name: 'oauth-authorize-login', ...AUTHORIZE, stub: stubAuthorizeRequest(false), proof: 'authz-login-form' },
+  { name: 'oauth-authorize-login-error', ...AUTHORIZE, stub: stubAuthorizeLoginFails, act: submitAuthorizeLogin, proof: 'authz-login-error', intended: '401 /api/oauth/login' },
   { name: 'oauth-authorize-error', path: '/oauth/authorize?request_id=%21%21', newApi: true, proof: 'authz-error' },
   { name: 'oauth-consent', path: `/oauth/consent?${CONSENT_QUERY}&scope=openid%20profile%20email%20trips%3Aread`, stub: stubClientInfo, proof: 'consent-allow' },
   { name: 'oauth-consent-unknown-scope', path: `/oauth/consent?${CONSENT_QUERY}&scope=openid%20admin%3Aall`, stub: stubClientInfo, proof: 'consent-scope-admin:all' },
@@ -296,19 +297,19 @@ const SCENES = [
   { name: 'trip-add-stop', path: `/trip/${TRIP}/add-stop` },
   { name: 'trip-add-entry', path: `/trip/${TRIP}/add-entry` },
   // ── 認證流程的各狀態、邀請與清單的空／錯誤態（取證補強）──
-  { name: 'login-error', path: '/login', loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤' },
-  { name: 'login-rate-limited', path: '/login', loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked' },
+  { name: 'login-error', path: '/login', loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤', intended: '401 /api/oauth/login' },
+  { name: 'login-rate-limited', path: '/login', loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked', intended: '429 /api/oauth/login' },
   { name: 'signup-check-email', path: '/signup/check-email?email=ray%40example.com', loggedIn: false, proofText: /ray@example\.com/ },
   { name: 'reset-password', path: '/auth/password/reset?token=demo-token', loggedIn: false, proofText: '設定新密碼' },
   { name: 'verify-email', path: '/auth/verify-email?token=demo-token', loggedIn: false, proofText: '點此完成驗證' },
   { name: 'invite', path: '/invite?token=demo-invite', loggedIn: false, stub: stubInvite, proofText: '沖繩家族之旅' },
-  { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄' },
+  { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄', intended: '410 /api/invitations' },
   { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
-  { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單' },
+  { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單', intended: '500 /api/my-trips' },
   // ── #1567：行程詳情與編輯流程的新增場景（entry 讀取沿用 api-mocks 的 /entries/:id）──
   { name: 'trip-share', path: '/s/demo-share', loggedIn: false, stub: stubShareRead, proof: 'share-title' },
-  { name: 'trip-stop-copy', path: `/trip/${TRIP}/stop/101/copy`, proof: 'entry-action-confirm' },
-  { name: 'trip-stop-move', path: `/trip/${TRIP}/stop/101/move`, proof: 'entry-action-confirm' },
+  { name: 'trip-stop-copy', path: `/trip/${TRIP}/stop/101/copy`, proof: 'entry-action-confirm', proofText: '複製到哪一天', proofPath: `/trip/${TRIP}/stop/101/copy` },
+  { name: 'trip-stop-move', path: `/trip/${TRIP}/stop/101/move`, proof: 'entry-action-confirm', proofText: '移到哪一天', proofPath: `/trip/${TRIP}/stop/101/move` },
   { name: 'trip-stop-change-poi', path: `/trip/${TRIP}/stop/101/change-poi`, proof: 'change-poi-search-input' },
   { name: 'trip-stop-edit', path: `/trip/${TRIP}/stop/101/edit`, proof: 'edit-entry-poi-summary' },
   // add-custom-stop 是手機專用路由（MobileOnlyRoute），桌機寬會轉址到 add-stop，所以只取手機寬。
@@ -319,18 +320,18 @@ const SCENES = [
   { name: 'popup-ai-data-consent-sheet', path: '/chat', stub: stubAiDataConsentFlow, act: sendChat, scope: '[data-testid="ai-data-consent-sheet"]', proof: 'ai-data-consent-accept' },
   { name: 'popup-share-link-modal', path: `/trip/${TRIP}/print`, stub: stubShares, act: (page) => page.getByTestId('trip-print-share').click(), scope: '[data-testid="share-modal"]', proof: 'share-link-row' },
   { name: 'popup-confirm-modal', path: '/account/sessions', act: (page) => page.getByTestId('sessions-revoke-all').click(), scope: '[data-testid="confirm-modal"]', proof: 'confirm-modal-confirm' },
-  { name: 'popup-conflict-modal', path: '/favorites/8001/add-to-trip', stub: stubFavoriteConflict, act: submitFavoriteToTrip, scope: '[data-testid="conflict-modal"]', proof: 'conflict-modal-summary' },
+  { name: 'popup-conflict-modal', path: '/favorites/8001/add-to-trip', stub: stubFavoriteConflict, act: submitFavoriteToTrip, scope: '[data-testid="conflict-modal"]', proof: 'conflict-modal-summary', intended: '409 /api/poi-favorites' },
   { name: 'popup-input-modal', path: '/explore', act: openRegionInput, scope: '[data-testid="input-modal"]', proof: 'input-modal-field' },
   { name: 'popup-note-ai-exclusions-dialog', path: `/trip/${TRIP}/notes`, stub: stubExclusions, act: openEmergencyExclusions, scope: '[role="dialog"][aria-labelledby="tp-note-ai-exclusions-title"]', proofText: '日本警察（110）' },
   { name: 'popup-travel-pill-dialog', path: `/trip/${TRIP}`, act: (page) => page.getByTestId('travel-pill').first().click(), scope: '[data-testid="travel-pill-dialog"]', proof: 'travel-dialog-close' },
   { name: 'popup-trip-sheet', path: `/trips?selected=${TRIP}&sheet=chat`, viewports: ['desktop'], scope: '[data-testid="trip-sheet"]', proof: 'trip-sheet-tab-chat' },
-  { name: 'popup-error-banner', path: '/account/sessions', stub: stubSessionRevokeFails, act: (page) => page.getByTestId('sessions-revoke-iphone').click(), scope: '[data-testid="sessions-error"]', proofText: '登出此裝置失敗', noTargets: true },
+  { name: 'popup-error-banner', path: '/account/sessions', stub: stubSessionRevokeFails, act: (page) => page.getByTestId('sessions-revoke-iphone').click(), scope: '[data-testid="sessions-error"]', proofText: '登出此裝置失敗', noTargets: true, intended: '500 /api/account/sessions' },
   { name: 'popup-server-status-banner', path: '/favorites', act: goOffline, scope: '[data-testid="server-status-banner"]', proofText: '連線中斷', noTargets: true },
-  { name: 'popup-toast-error', path: '/explore', stub: stubSearchFails, act: searchFails, scope: '.tp-toast', proofText: '搜尋失敗', noTargets: true },
+  { name: 'popup-toast-error', path: '/explore', stub: stubSearchFails, act: searchFails, scope: '.tp-toast', proofText: '搜尋失敗', noTargets: true, intended: '500 /api/poi-search' },
   { name: 'popup-toast-online', path: `/trips?selected=${TRIP}`, act: goOfflineThenOnline, scope: '.tp-toast', proofText: '已恢復連線', noTargets: true },
   // ── #1566：加入行程表單（direct／favorite 兩種模式的獨立畫面）與錨定選單、下拉面板 ──
-  { name: 'add-to-trip', path: DIRECT_ADD_PATH, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
-  { name: 'favorite-add-to-trip', path: '/favorites/8001/add-to-trip', stub: stubFavoriteList, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  { name: 'add-to-trip', path: DIRECT_ADD_PATH, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城', proofPath: '/add-to-trip' },
+  { name: 'favorite-add-to-trip', path: '/favorites/8001/add-to-trip', stub: stubFavoriteList, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城', proofPath: '/favorites/8001/add-to-trip' },
   // 收藏頁有資料的樣子（既有 favorites 場景只拍到空狀態）。
   { name: 'favorites-list', path: '/favorites', stub: stubFavoriteList, proof: 'favorites-add-to-trip-8001', proofText: '首里城' },
   { name: 'popup-trip-card-menu', path: '/trips', act: openTripCardMenu, scope: `[data-testid="trip-card-menu-${TRIP}"]`, proof: `trip-card-menu-edit-${TRIP}` },
@@ -352,8 +353,25 @@ async function proveScene(page, scene) {
   if (scene.scope) await expect(root, `${scene.name} 彈出層沒有開啟`).toBeVisible();
   if (scene.proof) await expect(root.getByTestId(scene.proof)).toBeVisible();
   if (scene.proofText) await expect(root.getByText(scene.proofText).first(), `${scene.name} 沒有出現預期的文字`).toBeVisible();
+  if (scene.proofPath) expect(new URL(page.url()).pathname, `${scene.name} 不在預期的路由`).toBe(scene.proofPath);
+  if (scene.proofAbsent) expect(await page.locator(scene.proofAbsent.selector).count(), scene.proofAbsent.why).toBe(0);
 }
 
+/**
+ * 開啟場景到可以操作的狀態（兩支 spec 共用）：進頁、等閒置、跑 act；彈出層再等進場動畫。
+ * 呼叫前由各 spec 自己處理 viewport／色彩模式／api mock 與 scene.stub 之前的事件監聽。
+ * @param {import('@playwright/test').Page} page
+ * @param {Scene} scene
+ */
+async function openScene(page, scene) {
+  if (scene.stub) await scene.stub(page);
+  await page.goto(sceneUrl(scene));
+  if (!scene.noIdle) await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(400);
+  if (scene.act) await scene.act(page);
+  // 彈出層有 150～260ms 的進場動畫（淡入、上滑）；不等它跑完會拍到半透明的過場畫面（Toast 只停留 2～3 秒，所以只等一小段）。
+  if (scene.scope) await page.waitForTimeout(600);
+}
 
 /** 預設 api-mocks 沒涵蓋、但場景頁面會打的端點。沒有它們頁面會落到錯誤態，取證的就不是想看的那一頁。
  * 形狀照 design-review-guard.spec.js 與各 spec 的既有 fixture。 */
@@ -380,4 +398,4 @@ async function setupSceneExtras(page) {
   await page.route('**/api/route**', (r) => r.fulfill(json({ polyline: [], duration: null, distance: 0, approx: true })));
 }
 
-module.exports = { TRIP, SCENES, sceneUrl, setupSceneExtras, proveScene, json };
+module.exports = { TRIP, SCENES, setupSceneExtras, openScene, proveScene, json };

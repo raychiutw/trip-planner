@@ -38,10 +38,15 @@ describe('HIG web 彙整報告', () => {
     expect([...rows].sort()).toEqual(SCENES.map((s) => s.name).sort());
   });
 
-  it('發現表的編號無重複、每列欄位齊全', () => {
-    const lines = section('需要處理的發現').split('\n').filter((l) => /^\| \d+ \|/.test(l));
-    const ids = lines.map((l) => Number(l.match(/^\| (\d+) \|/)![1]));
-    expect(ids.length).toBeGreaterThan(50);
+  const findingLines = () => section('需要處理的發現').split('\n').filter((l) => /^\| \d+ \|/.test(l));
+  const findingIds = () => findingLines().map((l) => Number(l.match(/^\| (\d+) \|/)![1]));
+
+  it('發現表的編號無重複、每列欄位齊全，且總數等於報告宣告的條數', () => {
+    const lines = findingLines();
+    const ids = findingIds();
+    const m = report.match(/發現 \*\*(\d+) 條\*\*/);
+    expect(m, '報告缺少「發現 **N 條**」').not.toBeNull();
+    expect(ids.length).toBe(Number(m![1]));
     expect(new Set(ids).size, '發現編號重複').toBe(ids.length);
     for (const l of lines) {
       const cells = l.split(/(?<!\\)\|/).slice(1, -1).map((c) => c.trim());
@@ -50,9 +55,44 @@ describe('HIG web 彙整報告', () => {
     }
   });
 
+  it('發現編號的缺號都是報告宣告的「沒用到的編號」（預先配置給 #1565～#1567 的區段），沒有其他缺號', () => {
+    const ids = findingIds();
+    const declared = report.match(/沒用到的編號\*\*：([^。]+)。/);
+    expect(declared, '報告缺少「**沒用到的編號**：a～b、c～d。」').not.toBeNull();
+    const unused = new Set<number>();
+    let top = 0;
+    for (const part of declared![1].split('、')) {
+      const [a, b] = part.split('～').map(Number);
+      expect(Number.isInteger(a) && Number.isInteger(b) && a <= b, `無法解析的區段：${part}`).toBe(true);
+      for (let n = a; n <= b; n++) unused.add(n);
+      top = Math.max(top, b);
+    }
+    expect(Math.max(...ids), '發現編號超出預先配置的範圍').toBeLessThanOrEqual(top);
+    const actualGaps: number[] = [];
+    for (let n = 1; n <= top; n++) if (!ids.includes(n)) actualGaps.push(n);
+    expect(actualGaps).toEqual([...unused].sort((x, y) => x - y));
+  });
+
+  it('發現表「場景」欄引用的場景名稱都存在於 SCENES', () => {
+    const names = new Set(SCENES.map((s) => s.name));
+    const unknown: string[] = [];
+    for (const l of findingLines()) {
+      const cells = l.split(/(?<!\\)\|/);
+      // 「無畫面」的發現（如死碼元件）引用的是元件名，不是場景。
+      if ((cells[cells.length - 2] ?? '').trim().startsWith('無畫面')) continue;
+      const cell = cells[2] ?? '';
+      const refs = [...cell.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+      expect(refs.length, `場景欄沒有引用任何場景：${l.slice(0, 40)}`).toBeGreaterThan(0);
+      for (const r of refs) if (!names.has(r)) unknown.push(`${l.slice(0, 12)} → ${r}`);
+    }
+    expect(unknown).toEqual([]);
+  });
+
   it('報告引用的截圖檔都存在', () => {
     const refs = [...report.matchAll(/\]\((2026-11-04-hig-web-screenshots\/[^)\s]+\.png)\)/g)].map((m) => m[1]);
-    expect(refs.length).toBeGreaterThan(100);
+    // 每個場景至少有一張截圖被報告引用（檔名即場景名）；數量由 SCENES 導出，不寫死。
+    const shot = (name: string) => refs.some((r) => r.endsWith(`/${name}.png`));
+    expect(SCENES.map((s) => s.name).filter((n) => !shot(n)), '報告沒有引用任何截圖的場景').toEqual([]);
     const missing = [...new Set(refs)].filter((p) => !existsSync(DIR + decodeURI(p)));
     expect(missing).toEqual([]);
   });

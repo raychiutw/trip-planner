@@ -6,7 +6,7 @@
  * 手機寬（390×844）與桌機寬（1280×800）、淺色與深色各截一張圖，並量測可點擊元素尺寸。
  *
  * 執行：
- *   HIG_SHOT_DIR=/path npx playwright test tests/e2e/hig-scenes.spec.js --project=chromium
+ *   HIG_SHOT_DIR=/path npx playwright test -c playwright.hig.config.js hig-scenes --project=chromium
  *   HIG_COLLECT=1 …   只印出各場景的違規（HIGWEB 行），不下斷言，用來更新 KNOWN_TAP_VIOLATIONS
  *
  * 量測只做「手機寬下可點擊元素最短邊 ≥ 44px」（檢查表 A1）；桌機寬不量（指標裝置不適用 44pt）。
@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras, proveScene, sceneUrl } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, openScene, proveScene } = require('./hig-scene-fixtures');
 const { KNOWN_TAP_VIOLATIONS, LABEL_MAX, diffViolations } = require('./hig-known-violations');
 
 // 量測的尺寸與字型度量依瀏覽器引擎而異；已知違規清單只以 chromium 為準，其他 project 不跑，避免棘輪在 webkit 誤紅。
@@ -102,14 +102,7 @@ for (const scene of SCENES) {
         });
         const consoleErrors = [];
         page.on('pageerror', (e) => consoleErrors.push(String(e)));
-        if (scene.stub) await scene.stub(page);
-        await page.goto(sceneUrl(scene));
-        if (!scene.noIdle) await page.waitForLoadState('networkidle');
-        await page.waitForTimeout(400);
-        if (scene.act) await scene.act(page);
-        // 彈出層有 150～260ms 的進場動畫（淡入、上滑）；不等它跑完會拍到半透明的過場畫面。
-        // 上限：Toast 只停留 2～3 秒，所以只等一小段。
-        if (scene.scope) await page.waitForTimeout(600);
+        await openScene(page, scene);
 
         // 證明渲染的是該頁面：有 proof 就必須出現；否則至少要有內容、沒有未捕捉的頁面錯誤。
         await proveScene(page, scene);
@@ -122,11 +115,10 @@ for (const scene of SCENES) {
         // （未登入場景的 userinfo 401 是刻意的）。
         // 另外三個端點讀不到＝功能關閉（useAiDataConsent 與 LoginPage 都定義為「不強制」），不是錯誤態。
         const BENIGN = ['/account/ai-data-consent', '/account/ai-authorization', '/public-config'];
-        // 這些場景刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
+        // 這些場景（scene.intended）刻意讓某個端點回 4xx/5xx（登入失敗、限流、邀請無效、清單載入失敗），那正是要取證的狀態。
         // 連狀態碼一起比對（`狀態碼 路徑`），其他狀態碼或其他端點的失敗仍然算「沒有 mock」。
-        const INTENDED = { 'login-error': '401 /api/oauth/login', 'login-rate-limited': '429 /api/oauth/login', 'invite-invalid': '410 /api/invitations', 'trips-list-error': '500 /api/my-trips', 'popup-conflict-modal': '409 /api/poi-favorites', 'popup-error-banner': '500 /api/account/sessions', 'popup-toast-error': '500 /api/poi-search' };
         const unexpected = apiFailures.filter(
-          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(INTENDED[scene.name] && f.includes(INTENDED[scene.name])) && !(scene.intended && f.includes(scene.intended)),
+          (f) => !BENIGN.some((b) => f.includes(b)) && !(scene.loggedIn === false && f.includes('/oauth/userinfo')) && !(scene.intended && f.includes(scene.intended)),
         );
         expect(unexpected, `${scene.name}：場景用的 API 沒有 mock，畫面可能是錯誤態`).toEqual([]);
         if (unexpected.length) console.log(`HIGNET\t${scene.name}\t${JSON.stringify([...new Set(unexpected)])}`);

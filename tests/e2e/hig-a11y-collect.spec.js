@@ -9,14 +9,14 @@
  *  - focus：連按 Tab 最多 14 次，記錄取得焦點但看不出焦點樣式的元素（WCAG 2.4.7）。
  *
  * 沒帶 HIG_COLLECT=1 時整批 skip，避免變成永遠綠燈的假測試。
- * 執行：HIG_COLLECT=1 npx playwright test tests/e2e/hig-a11y-collect.spec.js --project=chromium
+ * 執行：HIG_COLLECT=1 npx playwright test -c playwright.hig.config.js hig-a11y-collect --project=chromium
  *
  * 限制：axe 在 mock 資料與外部地圖被擋的畫面上量；半透明背景、背景圖上的文字，axe 會標「needs review」
  * 而不是違規，這裡一併列出（incomplete），不算通過也不算失敗。
  */
 import { test } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
-const { SCENES, setupSceneExtras, proveScene, sceneUrl } = require('./hig-scene-fixtures');
+const { SCENES, setupSceneExtras, openScene, proveScene } = require('./hig-scene-fixtures');
 const axePath = require.resolve('axe-core');
 
 test.beforeEach(async ({}, testInfo) => {
@@ -35,12 +35,7 @@ async function open(page, scene, { width, height, scheme }) {
     await page.route(/\/api\/oauth\/userinfo$/, (r) =>
       r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"unauthorized"}' }));
   }
-  if (scene.stub) await scene.stub(page);
-  await page.goto(sceneUrl(scene));
-  if (!scene.noIdle) await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(400);
-  if (scene.act) await scene.act(page);
-  if (scene.scope) await page.waitForTimeout(600); // 等彈出層進場動畫結束，axe 才不會量到半透明的過場
+  await openScene(page, scene);
   // 量到錯的畫面比沒量更糟：有 proof 就先確認真的是想量的那一種狀態。
   await proveScene(page, scene);
 }
