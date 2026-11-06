@@ -54,6 +54,17 @@
 | 52 | `trips-list`、`popup-trip-card-menu` | 版面 | 桌機寬，選取中的行程卡左上角小圓點與國家小標「日本」重疊 | 看圖（桌機寬深色，兩張一致） |
 | 53 | `popup-toast-error` | G6 | 桌機寬：右上 Toast「搜尋失敗，請稍後再試」與頁內橫幅「搜尋失敗，仍顯示先前結果。」同時出現，同一件事通知兩次 | 看圖 |
 | 54 | `privacy` | 版面、文案 | 桌機寬：「防護時效 過後自動刪除」句中有疑似多餘的空格（未檢查原始文字是否為標記造成） | 看圖（疑似） |
+| 70 | `trip-add-custom-stop` | 版面、表單一致性 | 「地址或地標」輸入框（`#cs-address`）套的 `.tp-custom-stop-input` 在 CSS 裡已沒有規則（`AddCustomStopPage.tsx:147` 註解寫明 v2.33.22 移除），畫面上是原生樣式：253×26、沒有內距與圓角，和上方「標題」輸入框（高約 50）明顯不同。淺深色都看得到 | 看圖加程式碼（grep 無規則） |
+| 71 | `trip-add-custom-stop` | 版面 | 手機寬的全頁表單底部被浮動的主導覽列（聊天／行程／地圖／收藏）蓋住，「備註」欄標題被遮；表單捲到底之前這段是不可用的（捲到底後是否讓出空間沒有驗證） | 看圖（只看第一屏） |
+| 72 | `trip-add-custom-stop` | 場景限制 | 「位置」區是紅色錯誤文字「無法載入地圖，位置尚未選定」：Google Maps 被擋（見發現 4），拍不到真實的選位地圖，也就無法檢查地圖選位的觸控與手勢。列為缺口 | 看圖加 spec 原始碼 |
+| 73 | `trip-share` | A1 | 動作列「列印」「存成 PDF」44×38、「複製到我的行程」248×38，高度都 < 44（Linux 量測） | 量測 |
+| 74 | `trip-share` | 外觀（觀察） | 公開分享頁固定淺色，深色模式不翻轉（`tripPrintStyles.ts:19、107` 註解寫明刻意）：深色下整頁仍是米色底與白紙，只有視窗最上緣約 18px 露出 body 的深色底，看起來像漏出的色帶。手機寬文件內文左側縮排約 52px，吃掉約七分之一的閱讀寬度 | 看圖加程式碼 |
+| 75 | `trip-share`、`trip-print` | 資料呈現 | 副標顯示成 `2026-07-01 · ["JP"] · 1 天`：沒有 destinations 時 `mapRawToPrintData` 直接用 `meta.countries` 原字串（`tripPrintData.ts:225`），而它是 JSON 字串。**是否在真實資料出現沒有驗證**（mock 的 destinations 是空陣列）；另 mock 的停留點沒有起訖時間，所以時間欄全是「—」，那是 fixture 限制，不是產品問題 | 看圖加程式碼（真實資料未驗） |
+| 76 | `trip-stop-edit` | A1 | 景點與備選的「分類：景點／餐廳，點擊更改」chip 78×28，高度 < 44 | 量測 |
+| 77 | `trip-stop-change-poi` | A1 | 「全部地區」地區膠囊 92×27，高度 < 44（與 `trip-add-stop` 同一元件、同一數值） | 量測 |
+| 78 | `trip-stop-copy`、`trip-stop-move`、`trip-stop-change-poi`、`trip-stop-edit`、`trip-add-entry`、`trip-add-stop`、`trip-edit`、`trip-notes`、`trip-collab`、`trip-health`（桌機寬深色） | 外觀 | 桌機右側堆疊面板（`TripStackLayout`）在深色下底色約 #3a3a3a，比左側中欄（約 #222）還亮，面板內的卡片又比面板暗，層次與一般「越靠前越亮」的 elevation 相反；面板左右緣各有一條約 1px 的亮線（x≈743、1269）。淺色沒有這個問題。屬觀察，需設計判斷 | 看圖（10 個場景一致） |
+| 79 | `trip-print`（桌機寬深色） | 外觀（觀察） | 列印預覽整頁（米色工具列、底色、白紙）在深色下不翻轉；紙張固定白合理，但工具列與背景也不翻轉，在深色環境下刺眼 | 看圖 |
+| 80 | `trip-edit`（桌機寬） | 流程（疑慮，待確認） | 底部列只有草稿／上線切換與「返回」，沒有「儲存」或「完成」；是否即時儲存、離開時是否提示，截圖看不出，沒有驗證 | 看圖（行為未驗） |
 
 ### 修正狀態（trip-planner#1571）
 
@@ -190,6 +201,18 @@
 ### 這輪的量測改動
 
 - 觸控量測原本不含 `role=option`，所以下拉面板的選項量不到（`popup-trip-select` 觸發「量測沒有涵蓋彈出層內的任何可點擊元素」而紅燈）；已把 `[role=option]` 納入 `INTERACTIVE`。對既有場景沒有影響（沒有場景開著下拉面板）。
+### 第五輪（#1567）：行程詳情與編輯流程新增場景
+
+每個場景手機寬淺深與桌機寬淺深共 4 張（`trip-add-custom-stop` 只有手機寬 2 張），圖是剛在 Linux 容器（Playwright v1.64.1 noble）建置的畫面；**我逐張看了 `mobile/light` 與 `desktop/dark` 各一張、`trip-share` 與 `trip-add-custom-stop` 另看了其餘寬度與主題**，`trip-stop-*` 其餘的淺深組合只靠 proof、棘輪與同組比對，沒有逐張看。
+
+| 場景 | 判定 | 條目 | 發現 | 備註 |
+|---|---|---|---|---|
+| `trip-share` | 疑慮 | A1、版面 | 73、74、75 | 公開分享頁，無登入；顯示標題、分享者、列印／存成 PDF／複製按鈕與全展開文件，沒有任何編輯入口 |
+| `trip-stop-copy` | 未見明顯問題 | A1 | 78 | 日期卡片、時段下拉、「取消／複製」；觸控 ≥ 44；未選日期時「複製」是淡色停用，說明在上方標題「選擇目標日期」 |
+| `trip-stop-move` | 未見明顯問題 | A1 | 78 | 同上；目前所在的 Day 1 以淡色停用並標「目前」，停用項對比偏低（屬刻意的停用態） |
+| `trip-stop-change-poi` | 疑慮 | A1 | 77、78 | 只取證初始空搜尋態（搜尋、收藏、自訂三分頁；沒有搜尋結果、收藏、自訂分頁的狀態） |
+| `trip-stop-edit` | 疑慮 | A1 | 76、78 | 起訖時間欄顯示 `--:--`（mock 沒有時間）；備選項目的上下移、設為正選、移除鈕在手機寬可見 |
+| `trip-add-custom-stop` | 疑慮 | 版面 | 70、71、72 | 手機專用路由；桌機寬會轉址到 `add-stop`，不取桌機圖 |
 
 ## 彈出層缺口（造不出場景）
 
@@ -227,5 +250,9 @@
 ## 沒做的事
 
 - 對比、重排（B7）、鍵盤焦點（J5、J6）已用上面的補掃做過，有各自的限制；沒有 dialog 行為檢查（D16、G9），也沒有實際用螢幕閱讀器走過。
-- 場景沒涵蓋：`/s/:token`、oauth 兩頁、`/add-to-trip`、停留點的地圖／copy／move／change-poi／edit 頁、`add-custom-stop`（見 inventory）；彈出層缺 3 個（見上）與各彈出層的其他狀態（AI 資料同意 owner-missing 與 stale／withdrawn 橫幅、Toast 的 success／info／online、ConfirmModal 的 busy、錨定選單與下拉面板）。
+- 場景沒涵蓋：oauth 兩頁、`/add-to-trip`、停留點的單點地圖頁（`stop/:entryId/map`，Google Maps 被擋，列缺口）（見 inventory）；#1567 補了 `/s/:token`、copy／move／change-poi／edit、`add-custom-stop`；彈出層缺 3 個（見上）與各彈出層的其他狀態（AI 資料同意 owner-missing 與 stale／withdrawn 橫幅、Toast 的 success／info／online、ConfirmModal 的 busy、錨定選單與下拉面板）。
 - **webkit（Safari 引擎）**：已跑（當時的）36 個場景的截圖與 axe／重排／縮放／焦點掃描（`playwright.hig-webkit.config.js`，需先安裝 webkit）。**axe 違規集合與 chromium 完全相同**（`trips-new` 的 ARIA 與標籤、`trip-print` 對比、時間 chip 標籤）；320px 重排無溢位；200% 文字同樣兩頁溢位（`signup-check-email` 354、`invite` 366，與 chromium 的數字一致，說明是版面本身的問題）；焦點無樣式同樣只有 `explore` 搜尋欄。注意：本輪新增的 14 個彈出層場景只跑 chromium，**沒有跑 webkit**。webkit 下 6 個場景 Tab 一個都跳不到（`landing`、`login-error`、`login-rate-limited`、`signup-check-email`、`invite`、`invite-invalid`），那是 Safari 預設不 Tab 到連結與按鈕的行為，不是缺陷。**沒做**：chromium 與 webkit 的畫面差異沒有逐張比對，只比了掃描結果。
+
+## 第五輪（#1567）沒看的圖
+
+既有範圍內場景的桌機寬深色，本輪補看了：`trip-detail`、`trip-print`、`trip-collab`、`trip-notes`、`trip-edit`、`trip-add-stop`、`trip-add-entry`、`trip-health`、`trips-new`、`popup-share-link-modal`、`popup-travel-pill-dialog`、`popup-note-ai-exclusions-dialog`（見發現 78、79、80；其餘未見新問題）。這批圖是先前輪次的截圖，沒有重拍，環境以當時為準。**仍沒看**：`trip-map`、`invite`、`invite-invalid` 的桌機寬深色；範圍內所有場景的手機寬深色（先前輪次只看過淺深並排圖，本輪未再看）；本輪新增場景的 `trip-stop-*` 其餘主題組合。各場景的 axe、重排、焦點掃描（`hig-a11y-collect.spec.js`）本輪未對新場景執行。

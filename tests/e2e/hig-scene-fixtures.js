@@ -4,7 +4,7 @@
  * hig-a11y-collect.spec.js（axe、重排、鍵盤焦點的收集）共用，避免兩邊的場景清單各自過期。
  */
 const { expect } = require('@playwright/test');
-const { MOCK_TRIPS_LIST } = require('./api-mocks');
+const { MOCK_TRIPS_LIST, MOCK_TRIP_META_OKINAWA, MOCK_DAY1_OKINAWA } = require('./api-mocks');
 
 const TRIP = MOCK_TRIPS_LIST[0].tripId;
 
@@ -28,6 +28,11 @@ const stubInvite = (page) =>
 const stubInviteInvalid = (page) =>
   page.route(/\/api\/invitations(\?.*)?$/, (r) =>
     r.fulfill({ status: 410, contentType: 'application/json', body: JSON.stringify(errBody('INVITATION_INVALID', '邀請連結無效，請聯絡邀請者重寄')) }));
+// #1567：公開分享頁讀 GET /api/share/:token，回 { meta, days, notes }（loadSharePrintData）；資料取自既有行程 mock。
+const SHARE_NOTES = { flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [] };
+const stubShareRead = (page) =>
+  page.route(/\/api\/share\/demo-share$/, (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ meta: { ...MOCK_TRIP_META_OKINAWA, sharedBy: 'Ray' }, days: [MOCK_DAY1_OKINAWA], notes: SHARE_NOTES }) }));
 const stubTripsEmpty = (page) =>
   page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 const stubTripsError = (page) =>
@@ -190,6 +195,14 @@ const SCENES = [
   { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄' },
   { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
   { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單' },
+  // ── #1567：行程詳情與編輯流程的新增場景（entry 讀取沿用 api-mocks 的 /entries/:id）──
+  { name: 'trip-share', path: '/s/demo-share', loggedIn: false, stub: stubShareRead, proof: 'share-title' },
+  { name: 'trip-stop-copy', path: `/trip/${TRIP}/stop/101/copy`, proof: 'entry-action-confirm' },
+  { name: 'trip-stop-move', path: `/trip/${TRIP}/stop/101/move`, proof: 'entry-action-confirm' },
+  { name: 'trip-stop-change-poi', path: `/trip/${TRIP}/stop/101/change-poi`, proof: 'change-poi-search-input' },
+  { name: 'trip-stop-edit', path: `/trip/${TRIP}/stop/101/edit`, proof: 'edit-entry-poi-summary' },
+  // add-custom-stop 是手機專用路由（MobileOnlyRoute），桌機寬會轉址到 add-stop，所以只取手機寬。
+  { name: 'trip-add-custom-stop', path: `/trip/${TRIP}/add-custom-stop?day=1`, viewports: ['mobile'], proof: 'add-custom-stop-page' },
   // ── 彈出層（Sheet／Modal／Dialog／Banner／Toast）──
   { name: 'popup-account-sheet', path: '/trips', act: openAccountSheet, scope: '[role="dialog"][aria-label="帳號"]', proof: 'account-page' },
   { name: 'popup-ai-consent-sheet', path: '/chat', stub: stubAiConsentFlow, act: sendChat, scope: '[data-testid="ai-consent-sheet"]', proof: 'ai-consent-quoted' },
