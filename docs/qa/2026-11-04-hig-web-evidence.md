@@ -4,7 +4,7 @@
 
 `tests/e2e/hig-scenes.spec.js` 用既有 `api-mocks.js`（外加場景需要的端點 mock）把頁面開出來，**不碰 prod、不需真實登入**：
 
-- 50 個場景（36 個頁面與狀態、14 個彈出層）× 手機寬（390×844）與桌機寬（1280×800）× 淺色與深色 = 198 張截圖（`popup-trip-sheet` 是桌機寬才有的表面，只有 2 張，其餘 4 張），存在 `docs/qa/2026-11-04-hig-web-screenshots/`（桌機寬縮到 800px 寬以控制體積）。彈出層 14 個場景的圖在 Linux 容器（Playwright v1.64.1 noble）截；前 36 個場景的圖不是本輪重截的，截圖環境未重新確認，字型可能不同。
+- 65 個場景（45 個頁面與狀態、20 個彈出層）× 手機寬（390×844）與桌機寬（1280×800）× 淺色與深色 = 256 張截圖（`popup-trip-sheet` 是桌機寬才有的表面，只有 2 張；`trip-add-custom-stop` 只有手機寬 2 張；其餘 4 張），存在 `docs/qa/2026-11-04-hig-web-screenshots/`（桌機寬縮到 800px 寬以控制體積）。彈出層 14 個場景的圖在 Linux 容器（Playwright v1.64.1 noble）截；前 36 個場景的圖不是本輪重截的，截圖環境未重新確認，字型可能不同。
 - 渲染證明：有 `data-testid` 的頁面必須看得到它；所有頁面都要有內容、沒有未捕捉的頁面錯誤，且場景用的 API 不能回 4xx／5xx（否則畫面其實是錯誤態）。
 - 彈出層場景另有 `scope`：彈出層根元素必須可見，`proof`／`proofText` 只在它裡面找（背景頁有同樣的字不算），觸控目標也只量它裡面且至少量到一個元素（橫幅與 Toast 例外）；高於一屏的對話框不剔除視窗外的元素。各場景的打開方式與 mock 見 `tests/e2e/hig-scene-fixtures.js`。
 - 量測：手機寬淺色下，可見可點擊元素最短邊 ≥ 44px（檢查表 A1）。違規登錄在 `tests/e2e/hig-known-violations.js`，是棘輪（新增會紅，修好沒移除也會紅）。
@@ -74,5 +74,9 @@
 ## 沒做的
 
 - 只有觸控目標有自動量測；字級、對比、標籤、文字縮放（Dynamic Type 對應的瀏覽器縮放）未量。
-- 未覆蓋：`/s/:token`、`/oauth/*`、`/add-to-trip`、`/trip/:id/stop/*` 的地圖與 copy／move／change-poi／edit、`add-custom-stop`、`/favorites/:id/add-to-trip` 本身（只當彈出層背景）；彈出層缺 3 個（見上）。登入／重設密碼各狀態、`/invite`、空資料與錯誤與限流狀態，以及 14 個彈出層已由第三、第四輪補上。
+- 未覆蓋（#1566、#1567 後）：`/oauth/*`、`/auth/callback`、`/trip/:id/stop/:entryId/map`、`/account/password`（#1565 未併入）；彈出層缺 3 個（見上）。登入／重設密碼各狀態、`/invite`、空資料與錯誤與限流狀態，以及 14 個彈出層已由第三、第四輪補上。
 - 只跑 chromium，沒有 Safari（webkit）。
+
+## 第五輪（#1567）補充
+
+新增 6 個場景（`trip-share`、`trip-stop-copy`、`trip-stop-move`、`trip-stop-change-poi`、`trip-stop-edit`、`trip-add-custom-stop`）。觸控目標違規（Linux 量測）：`trip-share` 3 筆（高 38）、`trip-stop-change-poi` 1 筆、`trip-stop-edit` 2 筆、`trip-add-custom-stop` 2 筆，copy／move 為 0。`stop/:entryId/map` 因 Google Maps 被擋造不出真實畫面，列缺口（見 inventory）。`/s/:token` 的 mock 是 `GET /api/share/:token` 回 `{ meta, days, notes }`，資料取自既有行程 mock。

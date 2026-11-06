@@ -4,7 +4,7 @@
  * hig-a11y-collect.spec.js（axe、重排、鍵盤焦點的收集）共用，避免兩邊的場景清單各自過期。
  */
 const { expect } = require('@playwright/test');
-const { MOCK_TRIPS_LIST } = require('./api-mocks');
+const { MOCK_TRIPS_LIST, MOCK_TRIP_META_OKINAWA, MOCK_DAY1_OKINAWA } = require('./api-mocks');
 
 const TRIP = MOCK_TRIPS_LIST[0].tripId;
 
@@ -29,6 +29,11 @@ const stubInvite = (page) =>
 const stubInviteInvalid = (page) =>
   page.route(/\/api\/invitations(\?.*)?$/, (r) =>
     r.fulfill({ status: 410, contentType: 'application/json', body: JSON.stringify(errBody('INVITATION_INVALID', '邀請連結無效，請聯絡邀請者重寄')) }));
+// #1567：公開分享頁讀 GET /api/share/:token，回 { meta, days, notes }（loadSharePrintData）；資料取自既有行程 mock。
+const SHARE_NOTES = { flights: [], lodgings: [], reservations: [], pretripNotes: [], emergencyContacts: [] };
+const stubShareRead = (page) =>
+  page.route(/\/api\/share\/demo-share$/, (r) =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ meta: { ...MOCK_TRIP_META_OKINAWA, sharedBy: 'Ray' }, days: [MOCK_DAY1_OKINAWA], notes: SHARE_NOTES }) }));
 const stubTripsEmpty = (page) =>
   page.route(/\/api\/my-trips$/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
 const stubTripsError = (page) =>
@@ -123,6 +128,29 @@ const searchFails = async (page) => {
 const NEWAPI_ORIGIN = 'http://localhost:3001';
 /** 場景的完整網址：newApi 場景改走旗標開啟的那份建置。 */
 const sceneUrl = (scene) => (scene.newApi ? NEWAPI_ORIGIN : '') + scene.path;
+
+// ── #1566：加入行程表單與錨定選單／下拉面板 ──
+const stubFavoriteList = (page) => page.route(/\/api\/poi-favorites$/, (r) => r.fulfill(json([FAVORITE])));
+const DIRECT_ADD_PATH = '/add-to-trip?place_id=ChIJ_demo_shuri&name=%E9%A6%96%E9%87%8C%E5%9F%8E&lat=26.217&lng=127.719&address=%E6%B2%96%E7%B9%A9%E7%B8%A3%E9%82%A3%E9%9C%B8%E5%B8%82%E9%A6%96%E9%87%8C%E9%87%91%E5%9F%8E%E7%94%BA%201-2&category=attraction';
+// 兩個行程不會自動帶入，使用者要自己選；選完才會載入天數。
+const pickTripOnly = async (page) => {
+  await page.getByTestId('favorites-add-to-trip-trip').locator('button').first().click();
+  await page.getByRole('option').first().click();
+  await expect(page.getByTestId('favorites-add-to-trip-day')).toBeVisible();
+  await page.waitForTimeout(400); // 等下拉收合動畫跑完，不然拍到轉到一半的箭頭
+};
+const openTripCardMenu = (page) => page.getByTestId(`trip-card-menu-trigger-${TRIP}`).click();
+const openTripActionsMenu = (page) => page.getByTestId('trips-embedded-menu-trigger').click();
+const openRailRowMenu = (page) => page.locator('[data-testid^="timeline-rail-menu-"]').first().click();
+const openSortSelect = (page) => page.getByTestId('trips-list-sort').locator('button').first().click();
+// 日期面板的格子標籤帶著星期與月份，固定「今天」才能讓違規清單穩定（否則每天都變）。
+const freezeToday = (page) => page.clock.setFixedTime(new Date('2026-11-06T12:00:00Z'));
+const openDatePicker = (page) => page.locator('.tp-date-trigger').first().click();
+const openTimePicker = async (page) => {
+  await pickTripOnly(page);
+  await page.getByTestId('favorites-add-to-trip-start').locator('button').first().click();
+};
+
 /**
  * 把登入憑證種進 IndexedDB（結構照 src/lib/auth/storage.ts：db tripline-auth、store kv）。
  * 先開一頁空白文件（只為了取得同源的 IndexedDB，不載入 app，避免 app 搶先讀寫），種完再由場景自己 goto。
@@ -277,6 +305,14 @@ const SCENES = [
   { name: 'invite-invalid', path: '/invite?token=bad-token', loggedIn: false, stub: stubInviteInvalid, proof: 'invite-error', proofText: '請聯絡邀請者重寄' },
   { name: 'trips-list-empty', path: '/trips', stub: stubTripsEmpty, proof: 'trips-list-empty' },
   { name: 'trips-list-error', path: '/trips', stub: stubTripsError, proofText: '無法載入你的行程清單' },
+  // ── #1567：行程詳情與編輯流程的新增場景（entry 讀取沿用 api-mocks 的 /entries/:id）──
+  { name: 'trip-share', path: '/s/demo-share', loggedIn: false, stub: stubShareRead, proof: 'share-title' },
+  { name: 'trip-stop-copy', path: `/trip/${TRIP}/stop/101/copy`, proof: 'entry-action-confirm' },
+  { name: 'trip-stop-move', path: `/trip/${TRIP}/stop/101/move`, proof: 'entry-action-confirm' },
+  { name: 'trip-stop-change-poi', path: `/trip/${TRIP}/stop/101/change-poi`, proof: 'change-poi-search-input' },
+  { name: 'trip-stop-edit', path: `/trip/${TRIP}/stop/101/edit`, proof: 'edit-entry-poi-summary' },
+  // add-custom-stop 是手機專用路由（MobileOnlyRoute），桌機寬會轉址到 add-stop，所以只取手機寬。
+  { name: 'trip-add-custom-stop', path: `/trip/${TRIP}/add-custom-stop?day=1`, viewports: ['mobile'], proof: 'add-custom-stop-page' },
   // ── 彈出層（Sheet／Modal／Dialog／Banner／Toast）──
   { name: 'popup-account-sheet', path: '/trips', act: openAccountSheet, scope: '[role="dialog"][aria-label="帳號"]', proof: 'account-page' },
   { name: 'popup-ai-consent-sheet', path: '/chat', stub: stubAiConsentFlow, act: sendChat, scope: '[data-testid="ai-consent-sheet"]', proof: 'ai-consent-quoted' },
@@ -292,6 +328,17 @@ const SCENES = [
   { name: 'popup-server-status-banner', path: '/favorites', act: goOffline, scope: '[data-testid="server-status-banner"]', proofText: '連線中斷', noTargets: true },
   { name: 'popup-toast-error', path: '/explore', stub: stubSearchFails, act: searchFails, scope: '.tp-toast', proofText: '搜尋失敗', noTargets: true },
   { name: 'popup-toast-online', path: `/trips?selected=${TRIP}`, act: goOfflineThenOnline, scope: '.tp-toast', proofText: '已恢復連線', noTargets: true },
+  // ── #1566：加入行程表單（direct／favorite 兩種模式的獨立畫面）與錨定選單、下拉面板 ──
+  { name: 'add-to-trip', path: DIRECT_ADD_PATH, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  { name: 'favorite-add-to-trip', path: '/favorites/8001/add-to-trip', stub: stubFavoriteList, act: pickTripOnly, proof: 'favorites-add-to-trip-submit', proofText: '首里城' },
+  // 收藏頁有資料的樣子（既有 favorites 場景只拍到空狀態）。
+  { name: 'favorites-list', path: '/favorites', stub: stubFavoriteList, proof: 'favorites-add-to-trip-8001', proofText: '首里城' },
+  { name: 'popup-trip-card-menu', path: '/trips', act: openTripCardMenu, scope: `[data-testid="trip-card-menu-${TRIP}"]`, proof: `trip-card-menu-edit-${TRIP}` },
+  { name: 'popup-trip-actions-menu', path: `/trip/${TRIP}`, act: openTripActionsMenu, scope: `[data-testid="trip-embedded-menu-${TRIP}"]`, proof: `trip-embedded-menu-edit-${TRIP}` },
+  { name: 'popup-rail-row-menu', path: `/trip/${TRIP}`, act: openRailRowMenu, scope: '[role="menu"].tp-rail-menu:popover-open', proofText: '重新排序' },
+  { name: 'popup-trip-select', path: '/trips', act: openSortSelect, scope: '.tp-select-list', proofText: '名稱 A→Z' },
+  { name: 'popup-trip-date-picker', path: '/trips/new', stub: freezeToday, act: openDatePicker, scope: '.tp-date-picker [role="dialog"]', proofText: /\d{4}/ },
+  { name: 'popup-trip-time-picker', path: DIRECT_ADD_PATH, act: openTimePicker, scope: '.tp-time-popover', proofText: '23' },
 ];
 
 /**
