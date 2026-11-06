@@ -70,3 +70,28 @@ describe('ci.yml — Playwright matrix gate', () => {
     expect(CI_YML).toMatch(/else[\s\S]*npx playwright test/);
   });
 });
+
+describe('ci.yml — HIG 取證步驟與 Playwright config 分工', () => {
+  const root = path.resolve(__dirname, '../..');
+  const read = (f: string) => fs.readFileSync(path.join(root, f), 'utf8');
+
+  it('CI 有獨立步驟用 playwright.hig.config.js 跑 HIG（chromium）', () => {
+    expect(CI_YML).toMatch(/npx playwright test -c playwright\.hig\.config\.js --project=chromium/);
+  });
+
+  it('預設 config 排除 HIG specs 且只啟動一台 server（不為 HIG 多建一份新 api 旗標建置）', () => {
+    const cfg = read('playwright.config.js');
+    expect(cfg).toMatch(/testIgnore:\s*HIG_SPECS/);
+    expect(cfg).not.toMatch(/VITE_NEW_API_AUTH/);
+    expect(cfg).not.toMatch(/port:\s*3001/);
+  });
+
+  it('兩台 HIG server 的建置指令只定義在 playwright.hig-servers.js，兩個 HIG config 共用', () => {
+    expect(read('playwright.hig-servers.js')).toMatch(/VITE_NEW_API_AUTH=1/);
+    for (const f of ['playwright.hig.config.js', 'playwright.hig-webkit.config.js']) {
+      const cfg = read(f);
+      expect(cfg, f).toMatch(/HIG_WEB_SERVERS/);
+      expect(cfg, f).not.toMatch(/VITE_NEW_API_AUTH/);
+    }
+  });
+});
