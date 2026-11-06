@@ -2,6 +2,8 @@
 
 ## 機制
 
+**目前數字**：80 個場景、316 張截圖、發現 55 條（review 報告），未取證路由 1 條、彈出層缺口 3 個；下文帶「當時」「第 N 輪」的是歷史輪次敘述。
+
 `tests/e2e/hig-scenes.spec.js` 用既有 `api-mocks.js`（外加場景需要的端點 mock）把頁面開出來，**不碰 prod、不需真實登入**：
 
 - 80 個場景（60 個頁面與狀態、20 個彈出層）× 手機寬（390×844）與桌機寬（1280×800）× 淺色與深色 = 316 張截圖（`popup-trip-sheet` 是桌機寬才有的表面，只有 2 張；`trip-add-custom-stop` 只有手機寬 2 張；其餘 4 張），存在 `docs/qa/2026-11-04-hig-web-screenshots/`（桌機寬縮到 800px 寬以控制體積）。彈出層 14 個場景的圖在 Linux 容器（Playwright v1.64.1 noble）截；前 36 個場景的圖不是本輪重截的，截圖環境未重新確認，字型可能不同。
@@ -15,7 +17,7 @@
 
 第一輪收集時，`trip-health` 顯示「最新狀態未知；目前無法確認是否已有健檢」（健檢端點沒 mock），頁面測試與「有內容」檢查都通過。因此加了「API 4xx／5xx 即失敗」的斷言，並補上 `health-check`、`notes`、`notes/ai-state`、`segments`、`requests`、`dev/apps` 的場景 mock。`ai-data-consent`、`ai-authorization`、`public-config` 讀不到是功能關閉的設計（程式碼定義為「不強制」），列為可忽略。
 
-## 量測結果（15 個頁面場景加 3 個彈出層場景有違規）
+## 量測結果（當時輪次：15 個頁面場景加 3 個彈出層場景有違規；目前以 `hig-known-violations.js` 為準）
 
 | 場景 | 違規 |
 |---|---|
@@ -74,7 +76,7 @@
 ## 沒做的
 
 - 只有觸控目標有自動量測；字級、對比、標籤、文字縮放（Dynamic Type 對應的瀏覽器縮放）未量。
-- 未覆蓋（#1566、#1567 後）：`/oauth/*`、`/auth/callback`、`/trip/:id/stop/:entryId/map`、`/account/password`（#1565 未併入）；彈出層缺 3 個（見上）。登入／重設密碼各狀態、`/invite`、空資料與錯誤與限流狀態，以及 14 個彈出層已由第三、第四輪補上。
+- **目前未覆蓋（#1565～#1567 都併入後）**：只剩路由 `/trip/:id/stop/:entryId/map`（1 條）與沒有入口的 3 個彈出層元件（見上）；其餘缺口是「只取證一種狀態」「只有第一屏」等，列在 review 報告開頭的「web 取證的缺口與現況」。（先前版本列的 `/oauth/*`、`/auth/callback`、`/account/password` 已由 #1565 補齊。）
 - 只跑 chromium，沒有 Safari（webkit）。
 
 ## 第五輪（#1567）補充
