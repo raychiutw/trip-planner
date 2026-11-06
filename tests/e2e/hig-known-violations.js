@@ -58,5 +58,18 @@ module.exports = {
     "popup-share-link-modal": ["share-anon 17x17"],
     // 桌機寬量測（TripSheet 手機寬是 display:none）；聊天的建議 chip 與送出鈕，和 chat 場景同一組元件。
     "popup-trip-sheet": [],
+    // ── #1566：加入行程表單與錨定選單／下拉面板（Linux 容器量測）──
+    "add-to-trip": [],
+    "favorite-add-to-trip": [],
+    "popup-trip-card-menu": [],
+    "popup-trip-actions-menu": [],
+    // 選單項目高 42，差 2px 到 44（發現 47）。
+    "popup-rail-row-menu": ["下移一格 194x42", "刪除景點 194x42", "在地圖開啟 194x42", "換景點 194x42", "移到其他天 194x42", "編輯備註 194x42", "編輯景點 194x42", "複製到其他天 194x42", "重新排序 194x42"],
+    "popup-trip-select": [],
+    // 日期格 40x40、月份切換 36x36；格子標籤是英文全名，所以 spec 把「今天」固定在 2026-11-06（發現 48、49、50）。
+    "popup-trip-date-picker": ["Friday, December 4th, 20 40x40", "Friday, November 13th, 2 40x40", "Friday, November 20th, 2 40x40", "Friday, November 27th, 2 40x40", "Monday, November 16th, 2 40x40", "Monday, November 23rd, 2 40x40", "Monday, November 2nd, 20 40x40", "Monday, November 30th, 2 40x40", "Monday, November 9th, 20 40x40", "Saturday, December 5th,  40x40", "Saturday, November 14th, 40x40", "Saturday, November 21st, 40x40", "Saturday, November 28th, 40x40", "Saturday, November 7th,  40x40", "Sunday, November 15th, 2 40x40", "Sunday, November 1st, 20 40x40", "Sunday, November 22nd, 2 40x40", "Sunday, November 29th, 2 40x40", "Sunday, November 8th, 20 40x40", "Thursday, December 3rd,  40x40", "Thursday, November 12th, 40x40", "Thursday, November 19th, 40x40", "Thursday, November 26th, 40x40", "Thursday, November 5th,  40x40", "Today, Friday, November  40x40", "Tuesday, December 1st, 2 40x40", "Tuesday, November 10th,  40x40", "Tuesday, November 17th,  40x40", "Tuesday, November 24th,  40x40", "Tuesday, November 3rd, 2 40x40", "Wednesday, December 2nd, 40x40", "Wednesday, November 11th 40x40", "Wednesday, November 18th 40x40", "Wednesday, November 25th 40x40", "Wednesday, November 4th, 40x40", "上個月 36x36", "下個月 36x36"],
+    "popup-trip-time-picker": [],
+    // 手機寬：類型 chip 36 高、「加入行程 →」34 高、勾選框 13、搜尋輸入框內層 28（發現 51）。
+    "favorites-list": ["住宿 60x36", "全部 60x36", "加入行程 → 99x34", "搜尋收藏 288x28", "景點 60x36", "購物 60x36", "選取 首里城 收藏 13x13", "餐廳 60x36"],
   },
 };

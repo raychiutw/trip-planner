@@ -36,7 +36,7 @@ const VIEWPORTS = [
 const SCHEMES = ['light', 'dark'];
 
 const INTERACTIVE =
-  'a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=tab], [role=link], [role=menuitem], [role=switch], [role=checkbox], [role=radio]';
+  'a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=tab], [role=link], [role=menuitem], [role=option], [role=switch], [role=checkbox], [role=radio]';
 
 /**
  * 手機寬下，可見且可點擊、最短邊小於 44px 的元素（回傳 `標籤 寬x高`）。

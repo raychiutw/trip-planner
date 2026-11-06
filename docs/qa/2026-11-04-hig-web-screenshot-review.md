@@ -44,6 +44,16 @@
 | 23 | `popup-travel-pill-dialog` | E4 | 交通方式八個模式中，單軌、地鐵、火車、高鐵的圖示看起來相同，只能靠文字分辨（圖示小，判讀有限） | 看圖 |
 | 24 | `popup-error-banner` | G6、DESIGN.md 文案規則 | 「登出此裝置失敗，請稍後再試。」說了發生什麼，但沒有重試動作，也沒說明該裝置是否仍登入（文案規則三問缺一）；橫幅與上方清單卡的間距只有幾 px，下方卻是 16px | 看圖 |
 | 25 | `TripPickerPopover`、`CollabSheet`、`InfoSheet` | — | 三個元件沒有任何使用者走得到的入口（死碼，見下「彈出層缺口」），所以無法取證；已另開 PR #1584 移除 | 程式碼（grep 全 `src/`） |
+| 45 | `add-to-trip`、`favorite-add-to-trip` | 視覺一致 | 同一表單裡兩種欄位語彙：行程／天數（`TripSelect`）文字靠左、框線為強調色；開始／結束時間（`TripTimePicker`）空值「--:--」置中、框線為中性色。桌機與手機都有 | 看圖 |
+| 46 | `popup-rail-row-menu` | A1 | 停留點「⋯」選單的 9 個項目高度都是 42（寬 194），差 2px 到 44；手機寬量測 | 量測（Linux 容器） |
+| 47 | `popup-trip-date-picker` | A1 | 日期格 40×40（35 格）、月份切換「上個月／下個月」36×36，手機寬量測。清單見 `hig-known-violations.js` | 量測（Linux 容器） |
+| 48 | `popup-trip-date-picker` | WCAG 3.1.2、2.5.3 | 日期格的 `aria-label` 是英文全名（`Friday, December 4th, 2026`、`Today, Friday, November 6th, 2026`），畫面上星期標頭與月份都是中文；螢幕閱讀器會用英文念，語音控制說看得到的「6」也對不上。與發現 8 是同一元件，但這是格子的名稱，不是欄位 | 量測輸出的標籤文字（未用螢幕閱讀器驗證） |
+| 49 | `popup-trip-date-picker` | 版面 | 月份切換鈕（‹ ›）靠右、垂直壓在標題下方的分隔線上，分隔線在鈕前就截斷；桌機寬面板下緣超出 800 高的視窗，最後一列被切到邊緣 | 看圖 |
+| 50 | `popup-trip-time-picker` | 互動 | 欄位為空時，時間面板固定從 11 時、00 分起算，沒有任何選取態；要選早上的時間得先往上捲。（只看到第一屏，未驗證捲動行為與預設值是否刻意） | 看圖（行為未驗證） |
+| 51 | `favorites-list` | A1 | 手機寬：類型 chip（全部／餐廳／景點／購物／住宿）60×36、「加入行程 →」99×34、選取勾選框 13×13、搜尋輸入框內層 288×28；清單見 `hig-known-violations.js` | 量測（Linux 容器） |
+| 52 | `trips-list`、`popup-trip-card-menu` | 版面 | 桌機寬，選取中的行程卡左上角小圓點與國家小標「日本」重疊 | 看圖（桌機寬深色，兩張一致） |
+| 53 | `popup-toast-error` | G6 | 桌機寬：右上 Toast「搜尋失敗，請稍後再試」與頁內橫幅「搜尋失敗，仍顯示先前結果。」同時出現，同一件事通知兩次 | 看圖 |
+| 54 | `privacy` | 版面、文案 | 桌機寬：「防護時效 過後自動刪除」句中有疑似多餘的空格（未檢查原始文字是否為標記造成） | 看圖（疑似） |
 | 70 | `trip-add-custom-stop` | 版面、表單一致性 | 「地址或地標」輸入框（`#cs-address`）套的 `.tp-custom-stop-input` 在 CSS 裡已沒有規則（`AddCustomStopPage.tsx:147` 註解寫明 v2.33.22 移除），畫面上是原生樣式：253×26、沒有內距與圓角，和上方「標題」輸入框（高約 50）明顯不同。淺深色都看得到 | 看圖加程式碼（grep 無規則） |
 | 71 | `trip-add-custom-stop` | 版面 | 手機寬的全頁表單底部被浮動的主導覽列（聊天／行程／地圖／收藏）蓋住，「備註」欄標題被遮；表單捲到底之前這段是不可用的（捲到底後是否讓出空間沒有驗證） | 看圖（只看第一屏） |
 | 72 | `trip-add-custom-stop` | 場景限制 | 「位置」區是紅色錯誤文字「無法載入地圖，位置尚未選定」：Google Maps 被擋（見發現 4），拍不到真實的選位地圖，也就無法檢查地圖選位的觸控與手勢。列為缺口 | 看圖加 spec 原始碼 |
@@ -144,6 +154,53 @@
 | `popup-toast-error` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G6、發現 15、16 | 見修正狀態 15、16；場景改取證「搜尋失敗」Toast；axe 無違規 |
 | `popup-toast-online` | 重拍已看（桌機寬）| 重拍已看（手機寬）| 已處理 | G7、發現 14 | 原 `popup-toast-offline` 場景在 #1587 14 之後不再成立（橫幅在場時離線 Toast 不出現），改取證「已恢復連線」Toast；見修正狀態 14 |
 
+
+## 取證 3（trip-planner#1566）補充
+
+範圍：TripsList、Explore、PoiFavorites、GlobalMap、Map、Chat、Landing、Privacy 與相關彈出層。新場景的圖與棘輪在 Linux 容器（Playwright v1.64.1 noble）取得；**既有場景的圖沒有重拍**，所以有些圖反映的是修正前的畫面（例如 `explore` 桌機深色仍是「Sight」，發現 5 已修）。截圖都是 `fullPage:false`，只有第一屏：`landing`、`privacy` 往下的內容沒有被看到。
+
+### 新增場景（8 個頁面／表單、6 個錨定選單與下拉面板）
+
+| 場景 | 桌機寬 | 手機寬 | 結論 | 說明 |
+|---|---|---|---|---|
+| `add-to-trip` | 深色已看 | 淺色已看 | 觀察 | direct mode，選完行程後載入天數；見發現 45。觸控目標全 ≥ 44 |
+| `favorite-add-to-trip` | 深色已看 | 淺色已看 | 觀察 | 與上同一元件；見發現 45 |
+| `favorites-list` | 深色已看 | 淺色已看 | 疑慮 | 見發現 51；既有 `favorites` 只拍到空狀態 |
+| `popup-trip-card-menu` | 深色已看 | 淺色已看 | 符合 | 項目 ≥ 44、危險項紅色在最後、有圖示；尚缺 owner-only 的封存項（mock 限制） |
+| `popup-trip-actions-menu` | 淺色、深色已看 | 深色已看 | 符合 | 分組（行程／列印分享／下載格式）清楚，項目 ≥ 44 |
+| `popup-rail-row-menu` | 深色已看 | 淺色已看 | 疑慮 | 發現 46；分組以分隔線區隔、危險項在最後 |
+| `popup-trip-select` | 深色已看 | 淺色已看 | 符合 | 選取項有勾與強調色，項目 ≥ 44 |
+| `popup-trip-date-picker` | 深色已看 | 淺色已看 | 疑慮 | 發現 47、48、49 |
+| `popup-trip-time-picker` | 深色已看 | 淺色已看 | 觀察 | 發現 50；面板覆蓋下方欄位的說明文字（彈出層本質，不算問題） |
+
+### 既有場景補看桌機寬深色（逐張個別開啟）
+
+| 場景 | 判定 | 說明 |
+|---|---|---|
+| `landing` | 未見明顯問題（只看第一屏） | 深色標題與強調色對比清楚；右上「登入」是純文字連結，沒量桌機觸控目標（桌機不適用 44） |
+| `privacy` | 觀察 | 版面易讀；發現 54 |
+| `trips-list` | 疑慮 | 發現 52；「我的 0／共編 2」是 mock 登入帳號與 `ownerUserId` 對不上造成，不是產品問題 |
+| `trips-list-empty` | 符合 | 圖示、標題、說明、主要動作齊全 |
+| `trips-list-error` | 疑慮（已知） | 發現 10：沒有重試；橫幅與側欄各有一則載入失敗訊息 |
+| `explore` | 疑慮（已知） | 圖仍是修正前的「Sight」（發現 5 已修）；卡片上的「＋」「♥」圓鈕看起來夠大，沒另量桌機 |
+| `favorites` | 符合 | 空狀態有標題、說明與主要動作 |
+| `chat` | 未見明顯問題 | 空狀態、建議 chip、送出鈕停用態可辨；輸入框 placeholder 對比偏低但未量測 |
+| `map` | 受限（發現 4） | 地圖被擋，畫面是「地圖暫停服務」加「重試」「查看行程」，下方是 Day 卡片列；**不是真實地圖，無法評估地圖本身** |
+| `popup-ai-consent-sheet` | 觀察 | 桌機寬是貼底、置中的窄 sheet，深色層次分明；與淺色看到的一致 |
+| `popup-ai-data-consent-sheet` | 未見明顯問題 | 章節展開／收合箭頭方向正確 |
+| `popup-conflict-modal` | 疑慮（已知，發現 17） | 只有「知道了」一顆按鈕 |
+| `popup-input-modal` | 符合 | 焦點環明顯 |
+| `popup-account-sheet` | 符合 | 右側面板、✕ 關閉；內容超過一屏需捲動 |
+| `popup-trip-sheet` | 觀察（已知） | 先前已看；地圖分頁受限 |
+| `popup-toast-error` | 疑慮 | 發現 53 |
+| `popup-toast-online` | 觀察 | 「已恢復連線」疊在右側面板的錯誤卡右上角，短暫遮住卡片標題右端；Toast 本來就會停留 2～3 秒 |
+| `popup-server-status-banner` | 疑慮（已知，發現 12、13） | 此圖深色橫幅文字可讀，橫幅把整個版面下推 38px（桌機）；發現 12 若已修正，需重拍確認 |
+
+**沒看到的**：上列新場景的淺色桌機寬與其他寬度未全部逐張看（表內寫「未看」者）；手機寬深色只看了 `popup-trip-actions-menu`；既有場景在桌機寬深色以外的圖沿用前幾輪的結論；地圖類場景無法評估真實地圖；`TripCardMenu`／`TripActionsMenu` 的封存與還原項、`TripPickerPopover`、`CollabSheet`、`InfoSheet` 為缺口。
+
+### 這輪的量測改動
+
+- 觸控量測原本不含 `role=option`，所以下拉面板的選項量不到（`popup-trip-select` 觸發「量測沒有涵蓋彈出層內的任何可點擊元素」而紅燈）；已把 `[role=option]` 納入 `INTERACTIVE`。對既有場景沒有影響（沒有場景開著下拉面板）。
 ### 第五輪（#1567）：行程詳情與編輯流程新增場景
 
 每個場景手機寬淺深與桌機寬淺深共 4 張（`trip-add-custom-stop` 只有手機寬 2 張），圖是剛在 Linux 容器（Playwright v1.64.1 noble）建置的畫面；**我逐張看了 `mobile/light` 與 `desktop/dark` 各一張、`trip-share` 與 `trip-add-custom-stop` 另看了其餘寬度與主題**，`trip-stop-*` 其餘的淺深組合只靠 proof、棘輪與同組比對，沒有逐張看。
