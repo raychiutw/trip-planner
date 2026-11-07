@@ -38,7 +38,7 @@
 
 ### 不符合項的處理狀態
 
-已修並以測試守住：1～9（#1571）、12～22、24（#1587，其中 14、17 為 owner 決定）。待 owner 決定：23（缺三個交通方式圖示）。無法修（場景限制）：4。已另案：25（#1584 移除死碼）、26（#1589）。**其餘 10、11、27～54、70～80 尚未處理**，交 owner 決定是否開票；與既有 #1562（web 表單慣例一致性）同類的是 27（錯誤欄位的程式化關聯）與 28 內提到的密碼欄顯示切換，未逐條對照 #1562，開票前請 owner 比對避免重複。
+已修並以測試守住：1～9（#1571）、12～22、24（#1587，其中 14、17 為 owner 決定）。待 owner 決定：23（缺三個交通方式圖示）。無法修（場景限制）：4。已另案：25（#1584 移除死碼）。已處理：26（#1589）。**其餘 10、11、27～54、70～80 尚未處理**，交 owner 決定是否開票；與既有 #1562（web 表單慣例一致性）同類的是 27（錯誤欄位的程式化關聯）與 28 內提到的密碼欄顯示切換，未逐條對照 #1562，開票前請 owner 比對避免重複。
 
 ### 之後怎麼補
 
@@ -93,7 +93,7 @@
 | 23 | `popup-travel-pill-dialog` | E4 | 交通方式八個模式中，單軌、地鐵、火車、高鐵的圖示看起來相同，只能靠文字分辨（圖示小，判讀有限） | 看圖 | 有：HIG buttons（App 規範，web 屬類推） | `popup-travel-pill-dialog` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-travel-pill-dialog.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-travel-pill-dialog.png) |
 | 24 | `popup-error-banner` | G6、DESIGN.md 文案規則 | 「登出此裝置失敗，請稍後再試。」說了發生什麼，但沒有重試動作，也沒說明該裝置是否仍登入（文案規則三問缺一）；橫幅與上方清單卡的間距只有幾 px，下方卻是 16px | 看圖 | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3；專案規範 DESIGN.md，非 HIG | `popup-error-banner` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/popup-error-banner.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/popup-error-banner.png) |
 | 25 | `TripPickerPopover`、`CollabSheet`、`InfoSheet` | — | 三個元件沒有任何使用者走得到的入口（死碼，見下「彈出層缺口」），所以無法取證；已另開 PR #1584 移除 | 程式碼（grep 全 `src/`） | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | 無畫面（元件不存在，無截圖） |
-| 26 | `change-password-success` | G6 | 變更成功後 `showToast('密碼已更新，其他裝置已登出')` 再導回 `/account`，但 `ChangePasswordPage` 與 `AccountPage` 都沒有掛 `ToastContainer`（全 `src/` 只有 11 個頁面掛），使用者看不到任何成功回饋；場景已用斷言釘住「看不到」，修好後會紅，請改成取證 Toast 本身。已開票 #1589 | 看圖加程式碼（grep）加場景斷言 | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | `change-password-success` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/change-password-success.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/change-password-success.png) |
+| 26 | `change-password-success` | G6 | 變更成功後 `showToast('密碼已更新，其他裝置已登出')` 再導回 `/account`，但 `ChangePasswordPage` 與 `AccountPage` 都沒有掛 `ToastContainer`（全 `src/` 只有 11 個頁面掛），使用者看不到任何成功回饋；**已處理（#1589）**：`AccountPage` 掛上 `ToastContainer`（Toast 有單例守衛，不會與其他頁重複顯示），場景斷言改成「看得到」成功訊息。已開票 #1589 | 看圖加程式碼（grep）加場景斷言 | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | `change-password-success` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/change-password-success.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/change-password-success.png) |
 | 27 | `change-password-current-invalid` | G6、F | 目前密碼錯誤時，紅字訊息出現在兩列群組下方，欄位本身沒有錯誤外觀（只有 `aria-invalid`，無紅框或圖示）；新密碼欄同時有值，使用者要靠訊息文字才知道錯在哪一欄 | 看圖加程式碼 | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3；部分：HIG text-fields 有；passwords 專頁無一手來源 | `change-password-current-invalid` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/change-password-current-invalid.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/change-password-current-invalid.png) |
 | 28 | `oauth-authorize-login` | A1 | 「忘記密碼？」是 `display:inline` 的 `<a>`，樣式裡的 `min-height: 44px` 對行內元素無效，實際點擊高度約一行字；觸控量測因規則「不量行內連結」而量不到（量測盲點，不是沒有問題） | 看圖加程式碼 | 有：HIG accessibility（App 數值）；web 套 44 是專案自訂標準 | `oauth-authorize-login` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-login.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-authorize-login.png) |
 | 29 | `oauth-consent-unknown-scope` | H、F | 未知範圍（如 `admin:all`）和已知範圍一樣打綠勾圖示，只在文字尾端多一個「⚠ 未知範圍 — 請勿授權」；程式碼加了 `.unknown`／`.tp-consent-scope-warning` 類別，但全 repo 沒有對應樣式，所以警告沒有任何視覺強調，勾號反而暗示可以放行 | 看圖加程式碼（grep） | 有：HIG dark-mode（App 規範，web 屬類推）；部分：HIG text-fields 有；passwords 專頁無一手來源 | `oauth-consent-unknown-scope` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-unknown-scope.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent-unknown-scope.png) |
@@ -226,7 +226,7 @@
 | `change-password-too-short` | 符合 | 離開新密碼欄才顯示「新密碼至少 8 字元」，打字中不跳錯；焦點整列畫外框（目前密碼欄），淺深都清楚 |
 | `change-password-same` | 符合 | 同上，「新密碼不能和目前密碼相同」 |
 | `change-password-rate-limited` | 符合 | 「嘗試次數過多，請在 15 分鐘後再試」，429 的 Retry-After 900 秒換算正確；輸入保留 |
-| `change-password-success` | 疑慮 | 成功回到帳號頁，但沒有任何成功回饋，見發現 26 |
+| `change-password-success` | 符合 | 成功回到帳號頁，畫面上看得到「密碼已更新，其他裝置已登出」（發現 26 已處理，#1589） |
 | `oauth-authorize` | 未見明顯問題 | 以帳號晶片、單一「繼續」、可展開權限（預設收合）；沒有「拒絕」是設計決定（程式碼註解），改以「不是您本人要求的？直接關閉此頁」說明 |
 | `oauth-authorize-scopes` | 未見明顯問題 | 展開後六項權限含說明，文字折行正常 |
 | `oauth-authorize-login` | 疑慮 | 見發現 28；密碼欄沒有「顯示密碼」切換（與變更密碼頁不同，未對照 HIG） |

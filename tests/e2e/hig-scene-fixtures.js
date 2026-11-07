@@ -277,7 +277,7 @@ const SCENES = [
   { name: 'change-password-rate-limited', ...CHANGE_PASSWORD, stub: stubChangePassword(pwError('CHANGE_PASSWORD_RATE_LIMITED', '嘗試次數過多，請稍後再試', 429, { 'Retry-After': '900' })), act: submitPasswordChange, proofText: '嘗試次數過多，請在 15 分鐘後再試', intended: '429 /api/account/password' },
   // 成功後導回帳號頁；頁面程式碼有呼叫 showToast，但 ChangePasswordPage 與 AccountPage 都沒有掛 ToastContainer，
   // 所以使用者看不到任何成功回饋（review 發現 26）。這裡把「看不到」釘成斷言（用一次性的 count，不用會自動重試的 toHaveCount——Toast 3 秒後自己消失，重試會讓斷言誤綠）；修好後請改成取證 Toast 本身。
-  { name: 'change-password-success', ...CHANGE_PASSWORD, stub: stubChangePassword(json({ ok: true })), act: async (page) => { await submitPasswordChange(page); await page.getByTestId('account-page').waitFor(); await page.waitForTimeout(500); }, proof: 'account-page', proofAbsent: { selector: '.tp-toast', why: '已知缺口 #26：成功 Toast 沒有容器可顯示；若現在看得到，請把本場景改成取證 Toast' } },
+  { name: 'change-password-success', ...CHANGE_PASSWORD, stub: stubChangePassword(json({ ok: true })), act: async (page) => { await submitPasswordChange(page); await page.getByTestId('account-page').waitFor(); await page.waitForTimeout(500); }, proof: 'account-page', proofText: '密碼已更新，其他裝置已登出' },
   { name: 'oauth-authorize', ...AUTHORIZE, stub: stubAuthorizeRequest(true), proof: 'authz-continue' },
   { name: 'oauth-authorize-scopes', ...AUTHORIZE, stub: stubAuthorizeRequest(true), act: (page) => page.locator('.tp-authz-disc summary').click(), proof: 'authz-scopes' },
   { name: 'oauth-authorize-login', ...AUTHORIZE, stub: stubAuthorizeRequest(false), proof: 'authz-login-form' },
