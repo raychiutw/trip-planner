@@ -7292,6 +7292,15 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
+                /** @description 單一帳號 AI 請求超過頻率上限（SYS_RATE_LIMIT，帶 Retry-After 等待秒數） */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -9459,6 +9468,15 @@ export interface paths {
                 };
                 /** @description 沒有此行程的寫入權限 */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 單一帳號重算交通超過頻率上限（SYS_RATE_LIMIT，帶 Retry-After 等待秒數） */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
