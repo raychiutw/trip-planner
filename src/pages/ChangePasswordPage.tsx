@@ -16,6 +16,7 @@ import { isNewApiAuthEnabled } from '../lib/auth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
 import { CHANGE_PASSWORD_MIN_LENGTH, ERROR_MESSAGES } from '../types/api';
 import { showToast } from '../components/shared/Toast';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -36,8 +37,7 @@ const SCOPED_STYLES = `
 .tp-chgpw-row label { font-weight: 600; }
 /* 16px：iOS Safari 對小於 16px 的輸入框聚焦時會自動放大頁面 */
 .tp-chgpw-row input { border: 0; background: transparent; font: inherit; font-size: 16px; color: inherit; padding: 12px 0; outline: none; min-width: 0; }
-.tp-chgpw-toggle { background: none; border: 0; min-height: 44px; min-width: 44px; padding: 0 4px; font: inherit;
-  font-size: var(--font-size-footnote); color: var(--color-accent-text); cursor: pointer; }
+.tp-chgpw-row .tp-pw-toggle { align-self: center; }
 .tp-chgpw-foot, .tp-chgpw-error { margin: 8px 16px 0; font-size: var(--font-size-footnote); }
 .tp-chgpw-foot { color: var(--color-muted); }
 .tp-chgpw-error { color: var(--color-destructive); }
@@ -66,7 +66,7 @@ export default function ChangePasswordPage() {
   useEffect(() => { if (denied) navigate('/account', { replace: true }); }, [denied, navigate]);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
-  const [show, setShow] = useState(false);
+  const pw = usePasswordVisibility();
   const [busy, setBusy] = useState(false);
   /** 後端回的錯誤與它屬於哪一欄（目前密碼錯標在目前密碼，其餘標在新密碼）；使用者改動任一欄就清掉。 */
   const [server, setServer] = useState<{ message: string; field: 'current' | 'next' } | null>(null);
@@ -136,13 +136,11 @@ export default function ChangePasswordPage() {
             </div>
             <div className="tp-chgpw-row">
               <label htmlFor="chgpw-new">新密碼</label>
-              <input id="chgpw-new" data-testid="change-password-new" type={show ? 'text' : 'password'} placeholder="必填"
+              <input id="chgpw-new" data-testid="change-password-new" type={pw.type} placeholder="必填"
                 autoComplete="new-password" value={next} onChange={(e) => edit(setNext, e.target.value)}
                 onBlur={() => setShowLocal(true)}
                 aria-invalid={invalid('next')} aria-describedby={describedBy('next')} />
-              {/* 標籤固定、狀態只用 aria-pressed 表達（W3C APG：不要同時換文字又設 aria-pressed） */}
-              <button type="button" className="tp-chgpw-toggle" data-testid="change-password-toggle" aria-pressed={show}
-                onClick={() => setShow((v) => !v)}>顯示密碼</button>
+              <PasswordToggle {...pw.toggleProps} testId="change-password-toggle" />
             </div>
           </div>
           {/* 表單的預設送出鈕：主要動作在標題列（表單外），這顆讓 Enter 鍵可以送出 */}

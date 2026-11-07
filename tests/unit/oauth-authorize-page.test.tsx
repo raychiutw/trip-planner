@@ -135,6 +135,38 @@ describe('未登入', () => {
     expect(screen.getByTestId('authz-login-form')).toBeTruthy();
     expect(screen.queryByTestId('authz-continue')).toBeNull();
   });
+
+  it('密碼錯誤 → 兩欄標為無效並指向有文字的錯誤元素；無錯時屬性不存在（#1561）', async () => {
+    fake.state.loginError = { code: 'LOGIN_INVALID' };
+    renderAt('?request_id=req1');
+    const email = await screen.findByTestId('authz-email');
+    const password = screen.getByTestId('authz-password');
+    for (const el of [email, password]) {
+      expect(el.hasAttribute('aria-invalid')).toBe(false);
+      expect(el.hasAttribute('aria-describedby')).toBe(false);
+    }
+    fireEvent.change(email, { target: { value: 'ray@example.com' } });
+    fireEvent.change(password, { target: { value: 'bad' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+    await screen.findByTestId('authz-login-error');
+    for (const el of [screen.getByTestId('authz-email'), screen.getByTestId('authz-password')]) {
+      expect(el.getAttribute('aria-invalid')).toBe('true');
+      const target = document.getElementById(el.getAttribute('aria-describedby')!);
+      expect(target?.textContent).toContain('電子郵件或密碼錯誤');
+      expect(target?.closest('[role="alert"]')).toBeTruthy();
+    }
+  });
+
+  it('非帳密問題（登入失敗稍後再試）→ 不標無效（#1561）', async () => {
+    fake.state.loginError = { code: 'SERVER_BOOM' };
+    fake.login.mockImplementation(async () => { throw new AuthError('SERVER_BOOM', 'x', { status: 500 }); });
+    renderAt('?request_id=req1');
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'x' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+    await screen.findByTestId('authz-login-error');
+    expect(screen.getByTestId('authz-password').hasAttribute('aria-invalid')).toBe(false);
+  });
 });
 
 describe('已登入', () => {
@@ -197,5 +229,23 @@ describe('已登入', () => {
     act(() => { btn.click(); btn.click(); });
     await waitFor(() => expect(assign).toHaveBeenCalled());
     expect(fake.apiFetch.mock.calls.filter(([u]) => String(u).endsWith('/approve'))).toHaveLength(1);
+  });
+});
+
+describe('授權頁登入表單密碼顯示切換（#1560）', () => {
+  it('切換前後 input type 與 aria-pressed 正確，autoComplete 不變', async () => {
+    renderAt('?request_id=req1');
+    const input = (await screen.findByTestId('authz-password')) as HTMLInputElement;
+    const toggle = screen.getByRole('button', { name: '顯示密碼' });
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.classList.contains('tp-pw-toggle')).toBe(true);
+    expect(input.type).toBe('text');
+    expect(input.getAttribute('autocomplete')).toBe('current-password');
+    expect(fake.login).not.toHaveBeenCalled();
   });
 });

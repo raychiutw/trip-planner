@@ -185,3 +185,22 @@ describe('ResetPasswordPage', () => {
     expect(screen.getByTestId('reset-submit').hasAttribute('disabled')).toBe(false);
   });
 });
+
+describe('ResetPasswordPage 密碼顯示切換（#1560）', () => {
+  it('一個切換同時控制新密碼與確認欄，aria-pressed 正確，autoComplete 不變', () => {
+    renderAt('token=t');
+    const a = screen.getByTestId('reset-password-input') as HTMLInputElement;
+    const b = screen.getByTestId('reset-confirm') as HTMLInputElement;
+    const toggle = screen.getByRole('button', { name: '顯示密碼' });
+    expect([a.type, b.type]).toEqual(['password', 'password']);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.classList.contains('tp-pw-toggle')).toBe(true);
+    expect([a.type, b.type]).toEqual(['text', 'text']);
+    expect(a.getAttribute('autocomplete')).toBe('new-password');
+    expect(b.getAttribute('autocomplete')).toBe('new-password');
+  });
+});

@@ -379,3 +379,20 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
     expect(body.privacyConsent).toBe(true);
   });
 });
+
+describe('SignupPage 密碼顯示切換（#1560）', () => {
+  it('切換前後 input type 與 aria-pressed 正確，autoComplete 不變', () => {
+    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+    const input = screen.getByTestId('signup-password') as HTMLInputElement;
+    const toggle = screen.getByRole('button', { name: '顯示密碼' });
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.classList.contains('tp-pw-toggle')).toBe(true);
+    expect(input.type).toBe('text');
+    expect(input.getAttribute('autocomplete')).toBe('new-password');
+  });
+});
