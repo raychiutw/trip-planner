@@ -295,7 +295,7 @@ const SCENES = [
   { name: 'trip-notes', path: `/trip/${TRIP}/notes` },
   { name: 'trip-print', path: `/trip/${TRIP}/print` },
   { name: 'trip-collab', path: `/trip/${TRIP}/collab` },
-  { name: 'trip-health', path: `/trip/${TRIP}/health` },
+  { name: 'trip-health', path: `/trip/${TRIP}/health`, stub: stubTripAiAuthorization },
   { name: 'trip-edit', path: `/trip/${TRIP}/edit` },
   { name: 'trip-add-stop', path: `/trip/${TRIP}/add-stop` },
   { name: 'trip-add-entry', path: `/trip/${TRIP}/add-entry` },
