@@ -14,7 +14,7 @@ import { apiFetch } from '../../lib/apiClient';
 import { ApiError } from '../../lib/errors';
 import { showToast } from '../../lib/toastBus';
 
-const MAX_BYTES = 512 * 1024;
+const MAX_CHARS = 512 * 1024;
 
 export default function ImportTripButton() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -25,13 +25,14 @@ export default function ImportTripButton() {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-picking the same file
     if (!file) return;
-    if (file.size > MAX_BYTES) {
-      showToast('檔案過大（上限 512KB）', 'error', 3000);
-      return;
-    }
     setBusy(true);
     try {
       const text = await file.text();
+      // 與後端 text.length 同單位（字元數，非位元組），避免中文檔被前端提早拒絕（#1601）
+      if (text.length > MAX_CHARS) {
+        showToast('檔案過大（上限 512KB）', 'error', 3000);
+        return;
+      }
       let parsed: unknown;
       try {
         parsed = JSON.parse(text);
