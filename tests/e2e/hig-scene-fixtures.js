@@ -388,6 +388,9 @@ async function setupSceneExtras(page) {
   await page.route(new RegExp(`/api/trips/${TRIP}/segments$`), (r) =>
     r.fulfill(json([{ id: 1, tripId: TRIP, fromEntryId: 101, toEntryId: 102, mode: 'driving', submode: null, min: 13, distanceM: 6600, source: 'google', computedAt: 1, updatedAt: 1, noTravel: null }])));
   await page.route(new RegExp(`/api/trips/${TRIP}/health-check$`), (r) => r.fulfill(json({ report: null })));
+  // #1600：聊天（整頁、行程頁內嵌面板）與健檢頁送出前會查「這個行程的擁有者」是否已授權 AI。
+  // 放在所有場景共用的基礎設定而不是逐場景補：漏一個場景 CI 就紅一次（chat、trip-health、popup-trip-sheet 都漏過）。
+  await page.route(/\/api\/trips\/[^/]+\/ai-authorization$/, (r) => r.fulfill(json({ ownerAuthorized: true, isOwner: true })));
   await page.route('**/api/requests**', (r) => r.fulfill(json({ items: [], hasMore: false })));
   await page.route('**/api/dev/apps', (r) => {
     if (r.request().method() !== 'GET') return r.fallback();

@@ -6512,6 +6512,23 @@
           "ticket",
           "expires_in"
         ]
+      },
+      "Trips_AiAuthorizationStatus": {
+        "type": "object",
+        "properties": {
+          "ownerAuthorized": {
+            "type": "boolean",
+            "description": "行程擁有者是否已授權 Tripline AI（tp-request）"
+          },
+          "isOwner": {
+            "type": "boolean",
+            "description": "登入者是否就是行程擁有者"
+          }
+        },
+        "required": [
+          "ownerAuthorized",
+          "isOwner"
+        ]
       }
     },
     "parameters": {}
@@ -17924,6 +17941,58 @@
           },
           "422": {
             "description": "行程沒有任何景點（TRIP_EMPTY）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trips/{id}/ai-authorization": {
+      "get": {
+        "summary": "行程擁有者的 AI 授權狀態",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "行程擁有者是否已授權 Tripline AI（簽發 token 查的是擁有者，不是登入者）；isOwner 表示登入者是否就是擁有者。只回布林",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Trips_AiAuthorizationStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登入或 token 無效（AUTH_REQUIRED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "沒有此行程的讀取權限",
             "content": {
               "application/json": {
                 "schema": {

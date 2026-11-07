@@ -500,6 +500,8 @@ export default function TripHealthCheckPage() {
   // null = 還沒 fetch；number = 實際 entry 總數（跨所有天）。
   const [entryCount, setEntryCount] = useState<number | null>(null);
 
+  // 旅伴 + 行程擁有者未授權 AI（#1600）：健檢簽發 token 查的是擁有者，旅伴只能請擁有者授權。
+  const [ownerMustAuthorizeTrip, setOwnerMustAuthorizeTrip] = useState<string | null>(null);
   const currentTripRef = useRef(tripId);
   currentTripRef.current = tripId;
   const tripEpochRef = useRef(0);
@@ -565,6 +567,21 @@ export default function TripHealthCheckPage() {
 
   useEffect(() => { if (isAuthed) void loadReport(); }, [isAuthed, loadReport]);
 
+  useEffect(() => {
+    if (!isAuthed || !tripId) return;
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/ai-authorization`, { signal: ctrl.signal });
+        if (!r.ok) return; // 查不到就不攔，後端為最終關卡
+        const d = await r.json() as { ownerAuthorized?: unknown; isOwner?: unknown };
+        if (!ctrl.signal.aborted && d.ownerAuthorized === false && d.isOwner === false) setOwnerMustAuthorizeTrip(tripId);
+      } catch { /* 同上 */ }
+    })();
+    return () => ctrl.abort();
+  }, [isAuthed, tripId]);
+  const ownerMustAuthorize = ownerMustAuthorizeTrip === tripId;
+
   // Trip metadata and entry guard must not hide a report when either read fails.
   useEffect(() => {
     if (!isAuthed || !tripId) return;
@@ -614,7 +631,7 @@ export default function TripHealthCheckPage() {
   }, [loadReport, readStatus, visibleReport?.status]);
 
   const handleStart = useCallback(async () => {
-    if (!tripId || readStatus !== 'fresh' || entryCount === null || entryCount === 0
+    if (!tripId || ownerMustAuthorize || readStatus !== 'fresh' || entryCount === null || entryCount === 0
       || reportRef.current?.status === 'pending' || submitInFlightRef.current) return;
     submitInFlightRef.current = true;
     const tripEpoch = tripEpochRef.current;
@@ -666,7 +683,7 @@ export default function TripHealthCheckPage() {
         setSubmitting(false);
       }
     }
-  }, [tripId, readStatus, entryCount]);
+  }, [tripId, ownerMustAuthorize, readStatus, entryCount]);
 
   const goToDay = useCallback((day: number) => {
     if (!tripId) return;
@@ -726,6 +743,11 @@ export default function TripHealthCheckPage() {
             </button>
           </div>
         )}
+        {ownerMustAuthorize && (
+          <div className="tp-ai-health-notice" role="status" data-testid="ai-health-owner-unauthorized">
+            請行程擁有者授權 AI 後，才能執行 AI 健檢。
+          </div>
+        )}
         {!initialLoading && entryCount === 0 && (
           <div className="tp-ai-health-notice" role="status" data-testid="ai-health-empty-hint">
             此行程尚無景點，請先加入景點再執行健檢
@@ -745,7 +767,7 @@ export default function TripHealthCheckPage() {
                 type="button"
                 className={`tp-titlebar-action tp-titlebar-action--icon-only tp-ai-health-titlebar-btn${isPending ? ' is-spinning' : ''}`}
                 onClick={handleStart}
-                disabled={submitting || isPending || readStatus !== 'fresh' || entryCount === null || entryCount === 0}
+                disabled={ownerMustAuthorize || submitting || isPending || readStatus !== 'fresh' || entryCount === null || entryCount === 0}
                 aria-label={ctaLabel}
                 title={ctaLabel}
                 data-testid="ai-health-start-btn"
@@ -801,7 +823,7 @@ export default function TripHealthCheckPage() {
               type="button"
               className="tp-ai-health-body-cta"
               onClick={handleStart}
-              disabled={submitting || entryCount === null || entryCount === 0}
+              disabled={ownerMustAuthorize || submitting || entryCount === null || entryCount === 0}
               data-testid="ai-health-start-btn"
             >
               <Icon name="sparkle" />

@@ -526,6 +526,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // AI 授權 gate（Option E）：null=未知/載入中（放行，後端 mint 為最終關卡），
   // false=已知未授權（送出時攔下、跳授權 sheet），true=已授權。
   const [aiAuthorized, setAiAuthorized] = useState<boolean | null>(null);
+  // 這個行程的擁有者授權狀態（#1600）：簽發 token 查的是擁有者，旅伴不能替擁有者授權。
+  // null＝未知（載入中／查詢被拒），不攔，後端 mint 當最終關卡。
+  const [tripAi, setTripAi] = useState<{ tripId: string; ownerAuthorized: boolean; isOwner: boolean } | null>(null);
+  const isCompanion = tripAi?.tripId === activeTripId && !tripAi.isOwner;
+  const ownerMustAuthorize = isCompanion && !tripAi.ownerAuthorized;
   // 送出時被攔下的訊息（開著 sheet 時非 null）。授權後用它續送、取消則丟棄。
   const [consentGate, setConsentGate] = useState<{ text: string; tripId: string } | null>(null);
   const consentGateRef = useRef(consentGate);
@@ -647,10 +652,13 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       setDataError(null);
       return;
     }
+    // 旅伴 + 擁有者未授權：沒有可執行的動作，只能請擁有者授權（提示常駐顯示），輸入保留。
+    if (ownerMustAuthorize) return;
     // Option E：已知未授權 → 攔下、跳授權 sheet（避免建一筆 mint 不出 token 的死請求，
     // 卡住整條佇列）。null（授權狀態載入中，數毫秒窗；讀取失敗已 fail-closed 成 false）不攔，
     // 讓後端 mint 當最終關卡。
-    if (aiAuthorized === false) {
+    // 旅伴的授權由擁有者決定，旅伴自己有沒有授權無關，不跳授權視窗。
+    if (aiAuthorized === false && !isCompanion) {
       const pending = { text, tripId: activeTripId };
       consentGateRef.current = pending;
       setConsentGate(pending);
@@ -659,7 +667,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       return;
     }
     void doSend(text);
-  }, [activeTripId, inflightId, aiAuthorized, doSend, dataConsent.needsConsent]);
+  }, [activeTripId, inflightId, aiAuthorized, isCompanion, ownerMustAuthorize, doSend, dataConsent.needsConsent]);
 
   // 同意資料處理後續送被攔的訊息（切換行程後不續送）。
   const acceptDataAndSend = useCallback(async () => {
@@ -716,6 +724,15 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
       .catch(() => { if (!cancelled) setAiAuthorized(false); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!activeTripId) return;
+    let cancelled = false;
+    apiFetch<{ ownerAuthorized: boolean; isOwner: boolean }>(`/trips/${encodeURIComponent(activeTripId)}/ai-authorization`)
+      .then((r) => { if (!cancelled && typeof r?.ownerAuthorized === 'boolean') setTripAi({ tripId: activeTripId, ...r }); })
+      .catch(() => { /* 查不到就不攔 */ });
+    return () => { cancelled = true; };
+  }, [activeTripId]);
 
   function pickTrip(tripId: string) {
     // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
@@ -951,6 +968,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
       </div>
 
+      {ownerMustAuthorize && (
+        <div className="tp-chat-load-error" role="status" data-testid="chat-owner-unauthorized">
+          <span className="tp-chat-load-error-text">請行程擁有者授權 AI 後，才能在這個行程使用 AI。</span>
+        </div>
+      )}
       <form
         className="tp-chat-composer tp-glass"
         onSubmit={(e) => { e.preventDefault(); void send(input); }}
