@@ -83,3 +83,17 @@ describe('以不可猜 token 授權的回應也不可共用快取', () => {
     expect(cc(res)).toBe('private, no-store');
   });
 });
+
+describe('SSE 長連線不改快取標頭（與 api 的 securityHeaders 一致，標頭由串流 handler 自己決定）', () => {
+  it('已登入的 /api/requests/:id/events 維持 handler 自設的 no-cache，不被改成 private, no-store', async () => {
+    const row = await db
+      .prepare('INSERT INTO trip_requests (trip_id, message, submitted_by, status) VALUES (?, ?, ?, ?) RETURNING id')
+      .bind(PRIV, 'cache sse', OWNER, 'completed')
+      .first<{ id: number }>();
+    const res = await api.get(`/api/requests/${row!.id}/events`, { as: OWNER });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('text/event-stream');
+    expect(cc(res)).toBe('no-cache');
+    await res.text();
+  });
+});
