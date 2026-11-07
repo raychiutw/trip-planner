@@ -8334,6 +8334,8 @@ export interface paths {
                 query?: {
                     /** @description 預設 50；due-refresh 上限 200、pending-place-id 上限 500 */
                     limit?: number | null;
+                    /** @description 游標：只回 id 大於該值的列（id 升冪） */
+                    after_id?: number | null;
                 };
                 header?: never;
                 path?: never;
@@ -11839,6 +11841,10 @@ export interface components {
                 id: number;
                 name: string;
                 address: string | null;
+                /** @description 無座標為 null */
+                lat: number | null;
+                /** @description 無座標為 null */
+                lng: number | null;
                 /** @description 恆為 null（篩選條件） */
                 place_id: unknown;
             }[];

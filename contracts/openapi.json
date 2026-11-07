@@ -4725,6 +4725,16 @@
                   "type": "string",
                   "nullable": true
                 },
+                "lat": {
+                  "type": "number",
+                  "nullable": true,
+                  "description": "無座標為 null"
+                },
+                "lng": {
+                  "type": "number",
+                  "nullable": true,
+                  "description": "無座標為 null"
+                },
                 "place_id": {
                   "nullable": true,
                   "description": "恆為 null（篩選條件）"
@@ -4734,6 +4744,8 @@
                 "id",
                 "name",
                 "address",
+                "lat",
+                "lng",
                 "place_id"
               ]
             }
@@ -16327,6 +16339,17 @@
             "required": false,
             "description": "預設 50；due-refresh 上限 200、pending-place-id 上限 500",
             "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "游標：只回 id 大於該值的列（id 升冪）"
+            },
+            "required": false,
+            "description": "游標：只回 id 大於該值的列（id 升冪）",
+            "name": "after_id",
             "in": "query"
           }
         ],
