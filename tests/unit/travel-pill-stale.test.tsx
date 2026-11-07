@@ -48,6 +48,17 @@ describe('TravelPill — v2.29.2 stale-travel status chip (computed_at signal)',
     expect(screen.queryByText(/9\.3\s*km/)).toBeNull();
   });
 
+  it('#1436 source=manual 且有車程值、computedAt=null（匯入行程）→ 不算 stale，顯示 min', () => {
+    render(<TravelPill segment={seg({ source: 'manual', computedAt: null, min: 15, distanceM: 6200 })} tripId="t1" />);
+    expect(screen.queryByTestId('travel-pill-stale')).toBeNull();
+    expect(screen.queryByText('15 min')).toBeTruthy();
+  });
+
+  it('#1436 source=manual 但無車程值、computedAt=null → 仍 stale', () => {
+    render(<TravelPill segment={seg({ source: 'manual', computedAt: null, min: null, distanceM: null })} tripId="t1" />);
+    expect(screen.getByTestId('travel-pill-stale')).toBeTruthy();
+  });
+
   it('chip 顯示「車程重新計算中」文案 + aria-label 說明自動更新', () => {
     render(<TravelPill segment={seg({ computedAt: null })} tripId="t1" />);
     const stale = screen.getByTestId('travel-pill-stale');
