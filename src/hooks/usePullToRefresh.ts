@@ -33,6 +33,16 @@ interface PullToRefreshResult {
   failed: boolean;
 }
 
+/** 觸控起點到 root（不含）之間，是否有「可捲動且已捲離頂端」的內層 scroller。 */
+function hasScrolledInnerScroller(target: Element | null, root: HTMLElement): boolean {
+  for (let node = target; node && node !== root; node = node.parentElement) {
+    if (node.scrollTop <= 0) continue;
+    const overflowY = getComputedStyle(node).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') return true;
+  }
+  return false;
+}
+
 export function usePullToRefresh(
   scrollerRef: RefObject<HTMLElement | null>,
   onRefresh: () => void | Promise<void>,
@@ -69,6 +79,13 @@ export function usePullToRefresh(
         return;
       }
       if (!el || el.scrollTop > 0 || refreshingRef.current) {
+        startYRef.current = null;
+        return;
+      }
+      // 起點在「還能往上捲」的內層 scroller 內（例如 AI 聊天的 .tp-chat-body：<main> 自己恆在
+      // scrollTop=0）→ 這次下拖是在內層看較早的內容，不是下拉刷新；否則整頁位移、放開後 reload，
+      // 捲動位置被洗回最底，使用者感受是「聊天視窗無法滑動」。
+      if (hasScrolledInnerScroller(target, el)) {
         startYRef.current = null;
         return;
       }
