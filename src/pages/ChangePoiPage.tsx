@@ -535,6 +535,8 @@ interface SelectedPoi {
   category?: string | null;
   rating?: number | null;
   country?: string | null;
+  /** Google place_id（#1603）；手動座標沒有 */
+  placeId?: string;
 }
 
 function reportTravelResult(recompute: Promise<boolean>) {
@@ -643,6 +645,7 @@ export default function ChangePoiPage() {
     rating: poi.rating ?? undefined,
     country: poi.country ?? undefined,
     source: 'google',
+    place_id: poi.placeId,
   }), []);
 
   const handleTabChange = useCallback((nextTab: Tab) => {
@@ -771,6 +774,7 @@ export default function ChangePoiPage() {
               lat: selected.lat,
               lng: selected.lng,
               source: 'google',
+              place_id: selected.placeId,
               note: selected.address ?? undefined,
               // v2.50.0: 使用者當場覆寫的分類優先，否則沿用 Google primaryType auto-derive。
               poi_type: searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category),
@@ -1021,6 +1025,7 @@ export default function ChangePoiPage() {
                             category: result.category,
                             rating: result.rating ?? null,
                             country: result.country ?? null,
+                            placeId: result.place_id,
                           });
                           setSearchCatOverride(null);
                         }}
