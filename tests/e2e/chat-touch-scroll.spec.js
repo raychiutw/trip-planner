@@ -36,9 +36,13 @@ test('chat: touch drag down scrolls older messages without pull-to-refresh reloa
   const body = page.getByTestId('chat-body');
   const swipeDown = async (loc) => {
     const b = await loc.boundingBox();
+    const start = await loc.evaluate((el) => el.scrollTop);
     // CDP：yDistance 為正＝內容往下（看較早內容）＝手指往下拖
     await cdp.send('Input.synthesizeScrollGesture', { x: b.x + b.width / 2, y: b.y + b.height / 2, yDistance: 400, gestureSourceType: 'touch', speed: 800 });
-    await page.waitForTimeout(600);
+    // CI 機器慢，固定等 600ms 會在手勢還沒結束時就讀值：輪詢到 scrollTop 變動（或逾時，讓「不該動」的情境也能走完）
+    await expect.poll(() => loc.evaluate((el) => el.scrollTop), { timeout: 5000 }).not.toBe(start).catch(() => {});
+    // 下拉刷新若誤觸發，reload 發生在 touchend 之後：再多等一下，負向斷言（不重新載入）才有意義
+    await page.waitForTimeout(1500);
   };
 
   // 對照：普通可捲容器放在中段，同一個手勢要能往上捲，證明手勢本身有效
