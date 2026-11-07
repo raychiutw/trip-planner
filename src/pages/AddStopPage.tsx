@@ -755,6 +755,8 @@ export default function AddStopPage() {
       lat?: number;
       lng?: number;
       source?: string;
+      // #1598：Google place_id，後端只在 POI 尚無時填入
+      place_id?: string;
       // Auto-category: Google primaryType → whitelist poi_type，後端 entries.ts 只認
       // 這個 snake_case key（缺則 fallback 'attraction'）。
       poi_type?: string;
@@ -807,6 +809,7 @@ export default function AddStopPage() {
             lat: r.lat,
             lng: r.lng,
             source: 'google',
+            place_id: r.place_id,
             poi_type: searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category),
           };
         });

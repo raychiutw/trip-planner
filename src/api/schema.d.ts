@@ -2146,6 +2146,8 @@ export interface paths {
                         lat?: number | null;
                         lng?: number | null;
                         rating?: number | null;
+                        /** @description Google Places place_id；只在 POI 尚無 place_id 時填入，不覆寫既有值 */
+                        place_id?: string | null;
                         description?: string | null;
                         /** @description 成為正選 POI 的備註 */
                         note?: string | null;

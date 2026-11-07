@@ -66,3 +66,11 @@ describe('custom-stop category picker (Variant C) integration', () => {
     expect(CHANGE_POI).toMatch(/source: 'custom', type: customCategory/);
   });
 });
+
+// #1598：搜尋分頁要把 Google place_id 送給後端（後端 fill-null 進 pois.place_id），否則新增的景點沒有評分／營業時間。
+describe('AddStopPage 搜尋分頁送出 place_id', () => {
+  it('Body 型別有 place_id，搜尋 payload 帶 r.place_id', () => {
+    expect(ADD_STOP).toMatch(/place_id\?:\s*string/);
+    expect(ADD_STOP).toMatch(/place_id:\s*r\.place_id,/);
+  });
+});
