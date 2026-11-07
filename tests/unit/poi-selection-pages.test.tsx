@@ -192,6 +192,20 @@ describe('POI selection page source states', () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({ place_id: 'place-1' });
   });
 
+  it.each([
+    ['換主景點', '/trip/t1/stop/42/change-poi?mode=master', '/poi-id'],
+    ['加備選', '/trip/t1/stop/42/change-poi?mode=alternate', '/alternates'],
+    ['新增停留點', '/trip/t1/stop/0/change-poi?mode=new&day=1', '/entries'],
+  ])('ChangePoi %s 搜尋選到景點送出的 request body 帶 place_id（#1603）', async (_label, path, suffix) => {
+    mount(path);
+    fireEvent.input(screen.getByTestId('change-poi-search-input'), { target: { value: '東京' } });
+    fireEvent.click(await screen.findByTestId('change-poi-search-item-place-1'));
+    fireEvent.click(screen.getByTestId('change-poi-submit'));
+    await waitFor(() => expect(apiFetchRaw.mock.calls.some(([url]) => url.endsWith(suffix))).toBe(true));
+    const [, init] = apiFetchRaw.mock.calls.find(([url]) => url.endsWith(suffix))!;
+    expect(JSON.parse(String(init?.body))).toMatchObject({ place_id: 'place-1' });
+  });
+
   it('AddStop reports a saved entry with failed travel recompute without resending it', async () => {
     apiFetchRaw.mockImplementation(async (url) => url.startsWith('/poi-search')
       ? json({ results: [searchRow] })
