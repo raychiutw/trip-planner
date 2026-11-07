@@ -42,6 +42,8 @@ describe('已登入的 GET 回應帶 private, no-store', () => {
     ['未發布行程詳情', `/api/trips/${PRIV}`],
     ['行程列表', '/api/trips'],
     ['行程天數', `/api/trips/${PRIV}/days`],
+    ['行程筆記彙整（/notes）', `/api/trips/${PRIV}/notes`],
+    ['行程筆記 AI 狀態（/notes/ai-state）', `/api/trips/${PRIV}/notes/ai-state`],
     ['我的行程', '/api/my-trips'],
   ])('%s', async (_name, path) => {
     const res = await api.get(path, { as: OWNER });
