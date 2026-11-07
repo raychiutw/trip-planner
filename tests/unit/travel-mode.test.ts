@@ -85,9 +85,9 @@ describe('travelMethodLabel (v2.55.45)', () => {
 
 describe('travelMethodIcon (v2.55.45)', () => {
   it('transit 固定 submode → 對應 icon；未知 → bus fallback', () => {
-    expect(travelMethodIcon('transit', 'monorail')).toBe('train');
+    expect(travelMethodIcon('transit', 'monorail')).toBe('monorail');
     expect(travelMethodIcon('transit', 'bus')).toBe('bus');
-    expect(travelMethodIcon('transit', 'metro')).toBe('train');
+    expect(travelMethodIcon('transit', 'metro')).toBe('metro');
     expect(travelMethodIcon('transit', '水上巴士')).toBe('bus'); // 未知 → bus
   });
   it('無 submode → mode icon', () => {
@@ -106,5 +106,18 @@ describe('travelMethodKey (v2.55.45)', () => {
   it('transit 未知/NULL submode → other chip（legacy 大眾運輸 back-compat）', () => {
     expect(travelMethodKey('transit', '水上巴士')).toBe('other');
     expect(travelMethodKey('transit', null)).toBe('other');
+  });
+});
+
+// #1587 發現 23：單軌、地鐵、高鐵各有專屬圖示，火車維持 train
+describe('交通方式圖示彼此可分辨 (#1587 發現 23)', () => {
+  it('monorail / metro / hsr 各自不同 icon 名稱，train 維持 train', () => {
+    const icon = (k: string) => TRAVEL_METHODS.find((m) => m.key === k)!.iconName;
+    expect(icon('monorail')).toBe('monorail');
+    expect(icon('metro')).toBe('metro');
+    expect(icon('hsr')).toBe('hsr');
+    expect(icon('train')).toBe('train');
+    const four = ['monorail', 'metro', 'train', 'hsr'].map(icon);
+    expect(new Set(four).size).toBe(4);
   });
 });

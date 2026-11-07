@@ -51,11 +51,11 @@ export interface TravelMethod {
 export const TRAVEL_METHODS: readonly TravelMethod[] = [
   { key: 'driving', mode: 'driving', submode: null, label: '駕車', iconName: 'car', auto: true },
   { key: 'walking', mode: 'walking', submode: null, label: '步行', iconName: 'walking', auto: true },
-  { key: 'monorail', mode: 'transit', submode: 'monorail', label: '單軌', iconName: 'train', auto: true },
+  { key: 'monorail', mode: 'transit', submode: 'monorail', label: '單軌', iconName: 'monorail', auto: true },
   { key: 'bus', mode: 'transit', submode: 'bus', label: '公車', iconName: 'bus', auto: true },
-  { key: 'metro', mode: 'transit', submode: 'metro', label: '地鐵', iconName: 'train', auto: true },
+  { key: 'metro', mode: 'transit', submode: 'metro', label: '地鐵', iconName: 'metro', auto: true },
   { key: 'train', mode: 'transit', submode: 'train', label: '火車', iconName: 'train', auto: true },
-  { key: 'hsr', mode: 'transit', submode: 'hsr', label: '高鐵', iconName: 'train', auto: true },
+  { key: 'hsr', mode: 'transit', submode: 'hsr', label: '高鐵', iconName: 'hsr', auto: true },
   { key: 'other', mode: 'transit', submode: null, label: '其他', iconName: 'route', auto: false, freeText: true },
 ];
 
