@@ -199,3 +199,22 @@ describe('已登入', () => {
     expect(fake.apiFetch.mock.calls.filter(([u]) => String(u).endsWith('/approve'))).toHaveLength(1);
   });
 });
+
+describe('授權頁登入表單密碼顯示切換（#1560）', () => {
+  it('切換前後 input type 與 aria-pressed 正確，autoComplete 不變', async () => {
+    renderAt('?request_id=req1');
+    const input = (await screen.findByTestId('authz-password')) as HTMLInputElement;
+    const toggle = screen.getByRole('button', { name: '顯示密碼' });
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.style.minWidth).toBe('44px');
+    expect(toggle.style.minHeight).toBe('44px');
+    expect(input.type).toBe('text');
+    expect(input.getAttribute('autocomplete')).toBe('current-password');
+    expect(fake.login).not.toHaveBeenCalled();
+  });
+});

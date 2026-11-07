@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PasswordToggle from '../components/auth/PasswordToggle';
 import { AuthError, getAuthorizeAuth } from '../lib/auth';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
@@ -97,6 +98,7 @@ export default function OauthAuthorizePage() {
   const [view, setView] = useState<View>({ kind: 'init' });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
 
@@ -207,8 +209,9 @@ export default function OauthAuthorizePage() {
                 <input className="tp-authz-input" type="email" autoComplete="username" required value={email}
                   onChange={(e) => setEmail(e.target.value)} data-testid="authz-email" /></label>
               <label className="tp-authz-field"><span className="tp-authz-label">密碼</span>
-                <input className="tp-authz-input" type="password" autoComplete="current-password" required value={password}
+                <input className="tp-authz-input" type={showPw ? 'text' : 'password'} autoComplete="current-password" required value={password}
                   onChange={(e) => setPassword(e.target.value)} data-testid="authz-password" /></label>
+              <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
               <a className="tp-authz-link" href="/login/forgot" style={{ textAlign: 'center' }}>忘記密碼？</a>
             </form>
