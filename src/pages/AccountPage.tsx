@@ -286,6 +286,8 @@ interface SettingsRow {
   danger?: boolean;
 }
 
+const DELETE_PASSWORD_INVALID = '密碼不正確，帳號未刪除'; // 同時是欄位錯誤判準（#1561）
+
 export default function AccountPage() {
   const auth = useRequireAuth();
   const { user, reload: reloadUser } = useCurrentUser();
@@ -309,6 +311,7 @@ export default function AccountPage() {
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletePasswordInvalid = deleteError === DELETE_PASSWORD_INVALID;
   const [loggingOut, setLoggingOut] = useState(false);
 
   // v2.33.142: inline edit display_name — 取代 v2.33.122 modal。
@@ -473,7 +476,7 @@ export default function AccountPage() {
       setDeleting(false);
       setDeleteError(
         err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID'
-          ? '密碼不正確，帳號未刪除'
+          ? DELETE_PASSWORD_INVALID
           : err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED'
             ? '近期身分驗證已失效，請重新驗證。帳號尚未刪除。'
           : '刪除失敗，請稍後再試',
@@ -728,7 +731,9 @@ export default function AccountPage() {
               type={deletePreview.hasPassword ? 'password' : 'text'}
               autoComplete={deletePreview.hasPassword ? 'current-password' : 'off'}
               value={deleteInput}
-              onChange={(e) => setDeleteInput(e.target.value)}
+              onChange={(e) => { setDeleteInput(e.target.value); if (deletePasswordInvalid) setDeleteError(null); }}
+              aria-invalid={deletePasswordInvalid || undefined}
+              aria-describedby={deletePasswordInvalid ? 'tp-delete-confirm-error' : undefined}
               disabled={deleting}
             />
             {!deletePreview.hasPassword && !deletePreview.reauthenticated && (
@@ -737,7 +742,7 @@ export default function AccountPage() {
                 : '此帳號目前沒有可用的重新驗證方式，帳號尚未刪除。'}</p>
             )}
             {deleteError && (
-              <p className="tp-account-delete-error" role="alert">{deleteError}</p>
+              <p className="tp-account-delete-error" id="tp-delete-confirm-error" role="alert">{deleteError}</p>
             )}
           </div>
         )}

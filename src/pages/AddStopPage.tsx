@@ -601,6 +601,9 @@ const SCOPED_STYLES = `
 }
 `;
 
+// 同時是錯誤訊息與「錯誤屬於哪個欄位」的判準（#1561）
+const DURATION_ERROR = '停留時間請輸入正整數分鐘';
+
 export default function AddStopPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
@@ -772,7 +775,7 @@ export default function AddStopPage() {
         return;
       }
       if (customDuration && (!Number.isInteger(Number(customDuration)) || Number(customDuration) <= 0)) {
-        setCustomError('停留時間請輸入正整數分鐘');
+        setCustomError(DURATION_ERROR);
         return;
       }
     }
@@ -1259,7 +1262,9 @@ export default function AddStopPage() {
                               step={1}
                               inputMode="numeric"
                               value={customDuration}
-                              onChange={(e) => setCustomDuration(e.target.value)}
+                              onChange={(e) => { setCustomDuration(e.target.value); if (customError === DURATION_ERROR) setCustomError(null); }}
+                              aria-invalid={customError === DURATION_ERROR || undefined}
+                              aria-describedby={customError === DURATION_ERROR ? 'add-stop-custom-error' : undefined}
                               placeholder="90"
                               data-testid="add-stop-custom-duration"
                             />

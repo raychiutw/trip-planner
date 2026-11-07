@@ -381,6 +381,8 @@ export function CustomPoiForm({
             {error && (
               <div
                 className="tp-custom-poi-form-row-error"
+                id={`${testIdPrefix}-error`}
+                role="alert"
                 data-testid={`${testIdPrefix}-error`}
               >
                 {error}
@@ -400,6 +402,8 @@ export function CustomPoiForm({
                 onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                 placeholder="輸入地址縮放地圖（選填）"
                 autoComplete="off"
+                aria-invalid={addressError || undefined}
+                aria-describedby={addressError ? `${testIdPrefix}-address-error` : undefined}
                 data-testid={`${testIdPrefix}-address-typeahead`}
                 {...typeaheadKb.inputProps}
               />
@@ -435,7 +439,7 @@ export function CustomPoiForm({
             <div className="tp-custom-poi-form-helper">
               選填 — 縮放地圖到大概區域。最終 lat/lng 以地圖中心為準。
             </div>
-            {addressError && <div className="tp-custom-poi-form-row-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
+            {addressError && <div className="tp-custom-poi-form-row-error" id={`${testIdPrefix}-address-error`} role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
           </div>
         </div>
 
