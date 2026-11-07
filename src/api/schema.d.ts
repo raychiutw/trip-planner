@@ -9359,6 +9359,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trips/{id}/ai-authorization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 行程擁有者的 AI 授權狀態 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 行程擁有者是否已授權 Tripline AI（簽發 token 查的是擁有者，不是登入者）；isOwner 表示登入者是否就是擁有者。只回布林 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Trips_AiAuthorizationStatus"];
+                    };
+                };
+                /** @description 未登入或 token 無效（AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 沒有此行程的讀取權限 */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trips/{id}/health": {
         parameters: {
             query?: never;
@@ -11635,6 +11691,12 @@ export interface components {
             ticket: string;
             /** @example 30 */
             expires_in: number;
+        };
+        Trips_AiAuthorizationStatus: {
+            /** @description 行程擁有者是否已授權 Tripline AI（tp-request） */
+            ownerAuthorized: boolean;
+            /** @description 登入者是否就是行程擁有者 */
+            isOwner: boolean;
         };
     };
     responses: never;
