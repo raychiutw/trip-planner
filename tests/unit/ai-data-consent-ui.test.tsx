@@ -104,6 +104,26 @@ describe('AiDataConsentSheet（就地同意 A）', () => {
     fireEvent.click(screen.getByTestId('ai-data-consent-decline'));
     expect(base.onDecline).toHaveBeenCalled();
   });
+  const NOTICE = '我想用 Tripline 的 AI 排行程，請到 帳號設定 → AI 與資料 同意一下，謝謝！';
+  it('owner-missing：「複製這句話」把通知文字寫進剪貼簿並提示已複製，「知道了」仍可關閉', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<AiDataConsentSheet {...base} mode="owner-missing" />);
+    expect(screen.getByText(NOTICE)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '複製這句話' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(NOTICE));
+    expect((await screen.findByRole('status')).textContent).toContain('已複製');
+    fireEvent.click(screen.getByRole('button', { name: '知道了' }));
+    expect(base.onDecline).toHaveBeenCalled();
+  });
+  it('owner-missing：剪貼簿寫入失敗時選取文字並提示手動複製', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<AiDataConsentSheet {...base} mode="owner-missing" />);
+    fireEvent.click(screen.getByRole('button', { name: '複製這句話' }));
+    expect((await screen.findByRole('status')).textContent).toContain('請長按');
+    expect(window.getSelection()?.toString()).toBe(NOTICE);
+  });
   it('open=false 不渲染', () => {
     render(<AiDataConsentSheet {...base} open={false} />);
     expect(screen.queryByTestId('ai-data-consent-sheet')).toBeNull();
