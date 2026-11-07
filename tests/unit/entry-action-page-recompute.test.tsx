@@ -47,6 +47,7 @@ const recomputeMock = vi.fn(() => Promise.resolve(null));
 vi.mock('../../src/lib/travelRecompute', () => ({
   requestTravelRecompute: (...a: unknown[]) => recomputeMock(...a),
   getAutoRecomputeStatus: () => 'active',
+  recomputeFailedMessage: (message: string) => message,
 }));
 
 // GET /days?all=1（day 選單）+ GET /entries/:eid（current day）
