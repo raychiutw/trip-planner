@@ -161,6 +161,11 @@ const SCOPED_STYLES = `
     font-family: inherit;
     line-height: 1.5;
   }
+  /* textarea 自帶邊框，外框直接畫在它自己身上（比照 #1595 搜尋框；全域 focus ring token） */
+  .tp-custom-stop-textarea:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
   .tp-custom-stop-help {
     margin-top: 6px;
     font-size: var(--font-size-footnote);
