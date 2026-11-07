@@ -49,9 +49,6 @@ const sendChat = async (page) => {
 };
 const stubAiAuthorization = (authorized) => (page) =>
   page.route(/\/api\/account\/ai-authorization$/, (r) => r.fulfill(json({ authorized })));
-// #1600：ChatPage 送出前會查「這個行程的擁有者」是否已授權（旅伴才會被攔）；場景以擁有者身分、已授權呈現。
-const stubTripAiAuthorization = (page) =>
-  page.route(/\/api\/trips\/[^/]+\/ai-authorization$/, (r) => r.fulfill(json({ ownerAuthorized: true, isOwner: true })));
 // 形狀照 useAiDataConsent 的 isConsent 型別守衛；文案是 server 回的，這裡放同形狀的示意文字。
 const AI_DATA_CONSENT = {
   status: 'none', currentVersion: '2026-11-01', acceptedVersion: null, acceptedAt: null, enforced: true,
@@ -263,7 +260,7 @@ const SCENES = [
   { name: 'trips-new', path: '/trips/new' },
   { name: 'explore', path: '/explore' },
   { name: 'favorites', path: '/favorites' },
-  { name: 'chat', path: '/chat', stub: stubTripAiAuthorization },
+  { name: 'chat', path: '/chat' },
   { name: 'map', path: '/map' },
   { name: 'account', path: '/account' },
   { name: 'account-appearance', path: '/account/appearance' },
@@ -295,7 +292,7 @@ const SCENES = [
   { name: 'trip-notes', path: `/trip/${TRIP}/notes` },
   { name: 'trip-print', path: `/trip/${TRIP}/print` },
   { name: 'trip-collab', path: `/trip/${TRIP}/collab` },
-  { name: 'trip-health', path: `/trip/${TRIP}/health`, stub: stubTripAiAuthorization },
+  { name: 'trip-health', path: `/trip/${TRIP}/health` },
   { name: 'trip-edit', path: `/trip/${TRIP}/edit` },
   { name: 'trip-add-stop', path: `/trip/${TRIP}/add-stop` },
   { name: 'trip-add-entry', path: `/trip/${TRIP}/add-entry` },
@@ -391,6 +388,9 @@ async function setupSceneExtras(page) {
   await page.route(new RegExp(`/api/trips/${TRIP}/segments$`), (r) =>
     r.fulfill(json([{ id: 1, tripId: TRIP, fromEntryId: 101, toEntryId: 102, mode: 'driving', submode: null, min: 13, distanceM: 6600, source: 'google', computedAt: 1, updatedAt: 1, noTravel: null }])));
   await page.route(new RegExp(`/api/trips/${TRIP}/health-check$`), (r) => r.fulfill(json({ report: null })));
+  // #1600：聊天（整頁、行程頁內嵌面板）與健檢頁送出前會查「這個行程的擁有者」是否已授權 AI。
+  // 放在所有場景共用的基礎設定而不是逐場景補：漏一個場景 CI 就紅一次（chat、trip-health、popup-trip-sheet 都漏過）。
+  await page.route(/\/api\/trips\/[^/]+\/ai-authorization$/, (r) => r.fulfill(json({ ownerAuthorized: true, isOwner: true })));
   await page.route('**/api/requests**', (r) => r.fulfill(json({ items: [], hasMore: false })));
   await page.route('**/api/dev/apps', (r) => {
     if (r.request().method() !== 'GET') return r.fallback();
