@@ -66,6 +66,33 @@ function terminationText(reason: unknown): string {
   return TERMINATION_TEXT[reason as keyof typeof TERMINATION_TEXT] ?? TERMINATION_FALLBACK;
 }
 
+/** 系統筆記請求（backend 建立的 AI 生成工作）的訊息前綴 → 顯示用的筆記名稱。 */
+const NOTE_REQUEST_LABELS: ReadonlyArray<readonly [prefix: string, label: string]> = [
+  ['[行程筆記-lodging-tips]', '住宿在地建議'],
+  ['[行程筆記-tips]', '行前須知'],
+  ['[行程筆記-emergency]', '緊急聯絡'],
+];
+
+function noteRequestLabel(message: string | null | undefined): string | null {
+  if (!message) return null;
+  return NOTE_REQUEST_LABELS.find(([prefix]) => message.startsWith(prefix))?.[1] ?? null;
+}
+
+/**
+ * 筆記請求完成時 reply 仍是原始 JSON 陣列 → 後端 completion 沒有套用，也沒改寫成摘要。
+ * 常見原因：工作逾時（10 分鐘）後 agent 才完成，completion 看到工作已不是進行中就直接 return
+ * （production 的 #278、#279 就是如此）。原始 JSON 對旅伴沒有意義，改顯示人話。
+ * 只認「合法 JSON 且是陣列」；已改寫的摘要、agent 的一般說明、markdown 連結一律不動。
+ */
+function unappliedNoteReplyText(reply: string, label: string, tripId: string | undefined): string | null {
+  if (!reply.startsWith('[')) return null;
+  let parsed: unknown;
+  try { parsed = JSON.parse(reply); } catch { return null; }
+  if (!Array.isArray(parsed)) return null;
+  const link = tripId ? `\n\n[前往行程筆記 →](/trip/${tripId}/notes)` : '';
+  return `AI 回傳了 ${parsed.length} 筆${label}內容，但沒有套用到行程筆記（可能是生成逾時）。請到「行程 → 筆記」確認，必要時重新生成。${link}`;
+}
+
 /** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
 export function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const out: ChatMessage[] = [];
@@ -76,6 +103,7 @@ export function rowToMessages(row: RawRequestRow): ChatMessage[] {
   // (AI 完成時點),fallback 互換。
   const userTs = row.createdAt ?? row.updatedAt ?? null;
   const assistantTs = row.updatedAt ?? row.createdAt ?? null;
+  const noteLabel = noteRequestLabel(row.message);
   if (row.message) {
     // v2.31.27 fix #128: AI 健檢 message 是整個 HEALTH_CHECK_MESSAGE system
     // prompt (含 5 維度 + JSON schema + 範例)，user 看一大坨雜訊。改顯短摘要。
@@ -84,12 +112,8 @@ export function rowToMessages(row: RawRequestRow): ChatMessage[] {
     //   prompt（JSON schema + 5-8 維度），同樣 raw 顯示 → 套同 pattern substitution。
     const displayText = row.message.startsWith('[AI 健檢]')
       ? '已觸發 AI 行程健檢'
-      : row.message.startsWith('[行程筆記-lodging-tips]')
-      ? '已觸發 AI 行程筆記生成（住宿在地建議）'
-      : row.message.startsWith('[行程筆記-tips]')
-      ? '已觸發 AI 行程筆記生成（行前須知）'
-      : row.message.startsWith('[行程筆記-emergency]')
-      ? '已觸發 AI 行程筆記生成（緊急聯絡）'
+      : noteLabel
+      ? `已觸發 AI 行程筆記生成（${noteLabel}）`
       : row.message;
     out.push({
       id: baseId,
@@ -101,7 +125,14 @@ export function rowToMessages(row: RawRequestRow): ChatMessage[] {
     });
   }
   if (row.status === 'completed') {
-    out.push({ id: baseId + 1, role: 'assistant', text: row.reply?.trim() || '（沒有回覆內容）', markdown: true, createdAt: assistantTs });
+    const reply = row.reply?.trim() || '（沒有回覆內容）';
+    out.push({
+      id: baseId + 1,
+      role: 'assistant',
+      text: (noteLabel && unappliedNoteReplyText(reply, noteLabel, row.tripId)) || reply,
+      markdown: true,
+      createdAt: assistantTs,
+    });
   } else if (row.status === 'failed') {
     // reply 優先（後端 park 的指引、或 ADR-0007 的「遲到完成」回報都寫在這格）；
     // 沒有 reply 才用 terminal_reason 生文案 —— 停止等待與收屍刻意不寫 reply。
