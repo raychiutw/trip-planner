@@ -49,6 +49,9 @@ const sendChat = async (page) => {
 };
 const stubAiAuthorization = (authorized) => (page) =>
   page.route(/\/api\/account\/ai-authorization$/, (r) => r.fulfill(json({ authorized })));
+// #1600：ChatPage 送出前會查「這個行程的擁有者」是否已授權（旅伴才會被攔）；場景以擁有者身分、已授權呈現。
+const stubTripAiAuthorization = (page) =>
+  page.route(/\/api\/trips\/[^/]+\/ai-authorization$/, (r) => r.fulfill(json({ ownerAuthorized: true, isOwner: true })));
 // 形狀照 useAiDataConsent 的 isConsent 型別守衛；文案是 server 回的，這裡放同形狀的示意文字。
 const AI_DATA_CONSENT = {
   status: 'none', currentVersion: '2026-11-01', acceptedVersion: null, acceptedAt: null, enforced: true,
@@ -260,7 +263,7 @@ const SCENES = [
   { name: 'trips-new', path: '/trips/new' },
   { name: 'explore', path: '/explore' },
   { name: 'favorites', path: '/favorites' },
-  { name: 'chat', path: '/chat' },
+  { name: 'chat', path: '/chat', stub: stubTripAiAuthorization },
   { name: 'map', path: '/map' },
   { name: 'account', path: '/account' },
   { name: 'account-appearance', path: '/account/appearance' },
