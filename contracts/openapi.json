@@ -8884,6 +8884,11 @@
                     "type": "number",
                     "nullable": true
                   },
+                  "place_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Google Places place_id；只在 POI 尚無 place_id 時填入，不覆寫既有值"
+                  },
                   "description": {
                     "type": "string",
                     "nullable": true
