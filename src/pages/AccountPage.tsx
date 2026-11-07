@@ -14,7 +14,7 @@ import { apiFetch } from '../lib/apiClient';
 import { isNewApiAuthEnabled } from '../lib/auth';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
-import { showToast } from '../components/shared/Toast';
+import ToastContainer, { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -763,6 +763,7 @@ export default function AccountPage() {
   return (
     <>
       <style>{SCOPED_STYLES}</style>
+      <ToastContainer />
       <AppShell sidebar={sidebar} main={main} bottomNav={<GlobalBottomNav authed={auth.user !== null} />} />
     </>
   );
