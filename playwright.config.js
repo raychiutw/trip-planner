@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+const { HIG_SPECS } = require('./playwright.hig-servers.js');
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -19,6 +20,8 @@ export default defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 5'], browserName: 'chromium' } },
     { name: 'mobile-safari', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
   ],
+  // HIG 取證 specs 需要第二份新 api 旗標建置，另由 playwright.hig.config.js 執行（CI 有獨立步驟），這裡排除以免每次 e2e 多建一份。
+  testIgnore: HIG_SPECS,
   webServer: {
     command: 'npm run build && npx vite preview --port 3000',
     port: 3000,

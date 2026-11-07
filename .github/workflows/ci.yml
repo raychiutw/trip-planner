@@ -72,3 +72,7 @@ jobs:
           else
             npx playwright test
           fi
+
+      # HIG 取證場景（觸控目標棘輪）：另開 config，因為需要第二份新 api 旗標建置；Build 步驟已建好主 dist，這裡只多建 dist-newapi。
+      - name: Playwright HIG evidence (chromium)
+        run: npx playwright test -c playwright.hig.config.js --project=chromium
