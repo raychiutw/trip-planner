@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.57.133] - 2026-11-08
+
+### Fixed
+- **聊天輸入列與底部分頁的玻璃效果真的看得出來**：訊息區現在延伸到螢幕底，輸入列與分頁膠囊「浮」在訊息上面，模糊的是底下實際的訊息，不再是一片純色（之前 blur 數值都對，但底下沒有內容可折射，看起來像實心）。
+- **輸入框多行長高時，最新一則訊息不再被蓋住**：訊息區底部留白會跟著輸入列高度調整，原本在底部的人會自動停在最新訊息（QA 實測原本會被蓋住約 100px）。
+- **聊天裡友伴與 AI 看得出差別**：比照 App 的呈現——不用頭像，每則訊息上方一行名稱（「Tripline AI」／自己的帳號名／友伴的名字）；自己是淡褐色底、AI 是中性底加細框、友伴是淡靛藍底，名稱標籤也各自有色（淺色與深色都分得開，並有測試鎖定三者兩兩不同）。名稱標籤字級從 10px 提到 11px。
+- **真人不能再用「Tripline AI」當名字冒充 AI**：撞名（含大小寫、全形、空白、零寬字元、`Al` 等常見變體）時標籤會加註「（成員）」；名稱只有空白或不可見字元時改用 email 前綴。
+
+### Changed
+- 自己與友伴的氣泡多了透明 1px 邊框，讓「強制色彩」模式下仍看得到氣泡輪廓。
+
+### For contributors
+- 新增 `--color-collaborator`、`--color-collaborator-text`、`--collab-bubble-mix`、`--color-chat-ai-bubble` 四個 token（放在 plain `:root`／`body.dark`，不放 `@theme`，避免被 tree-shake）。DESIGN.md「AI聊天」改寫為「比照 App 的角色呈現」。
+- 測試：刪除 `chat-avatar-role-tone`（頭像已移除，前提不存在）；`chat-page-ai-avatar` 改寫並更名為 `chat-page-sender-label`；新增 `chat-role-colors-distinct`（解開 token 巢狀 `var()`／`color-mix` 比色，並要求最小色差）、`chat-composer-observer`（ResizeObserver 生命週期、貼底判斷、隱藏時不歸零）與 e2e 五條（訊息延伸到輸入列底下、留白隨輸入列長高、釘住最新訊息、手機版輸入列在分頁膠囊上方、擁有者提示條）。新增與改動的守衛都做過 mutation（改壞實作 → 轉紅）。
+- 審查：8 位專家＋Red Team、對抗審查共 5 輪（Codex 未安裝，外部覆蓋缺失）。最後一輪留下兩個已知限制：名稱比對擋不住土耳其語帶點 İ 的大寫變體，以及少數不可見字元（U+FFA0、U+2062–2064 等）組成的名稱仍會顯示空白標籤；根治要在伺服端限制顯示名稱，已列為後續。
+- 未驗證：真機 iPhone／Android 軟鍵盤開啟時訊息區留白（鍵盤位移 `--kb-inset` 沒有計入留白）、safe-area 是否重複計算（舊有）。
+
 ## [2.57.132] - 2026-11-03
 
 ### Added
