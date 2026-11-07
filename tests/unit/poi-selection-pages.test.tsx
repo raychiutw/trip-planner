@@ -182,6 +182,16 @@ describe('POI selection page source states', () => {
     expect(apiFetchRaw.mock.calls.some(([url]) => url.endsWith('/poi-id') || url.endsWith('/alternates'))).toBe(false);
   });
 
+  it('AddStop 搜尋分頁送出的新增停留點 request body 帶 place_id（#1598）', async () => {
+    mount('/trip/t1/add-stop?day=1');
+    fireEvent.input(screen.getByTestId('add-stop-search-input'), { target: { value: '東京' } });
+    fireEvent.click(await screen.findByTestId('add-stop-search-card-place-1'));
+    fireEvent.click(screen.getByTestId('add-stop-confirm'));
+    await waitFor(() => expect(apiFetchRaw.mock.calls.some(([url]) => url.endsWith('/entries'))).toBe(true));
+    const [, init] = apiFetchRaw.mock.calls.find(([url]) => url.endsWith('/entries'))!;
+    expect(JSON.parse(String(init?.body))).toMatchObject({ place_id: 'place-1' });
+  });
+
   it('AddStop reports a saved entry with failed travel recompute without resending it', async () => {
     apiFetchRaw.mockImplementation(async (url) => url.startsWith('/poi-search')
       ? json({ results: [searchRow] })
