@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import { AuthError, getAuthorizeAuth } from '../lib/auth';
+import { clearApiCache } from '../lib/logout';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
@@ -185,6 +186,7 @@ export default function OauthAuthorizePage() {
 
   async function onSwitchAccount() {
     await getAuthorizeAuth().logout();
+    await clearApiCache();
     setView({ kind: 'login' });
   }
 
