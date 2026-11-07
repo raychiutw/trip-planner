@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PasswordToggle from '../components/auth/PasswordToggle';
 import { apiFetchRaw } from '../lib/apiClient';
 import { AuthError, getNewApiAuth, type AuthClient } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
@@ -274,6 +275,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const googleErrorCode = params.get('google_error');
   const [bannerError, setBannerError] = useState<string | null>(
@@ -585,13 +587,14 @@ export default function LoginPage() {
             </div>
             <input
               id="login-password"
-              type="password"
+              type={showPw ? 'text' : 'password'}
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="login-password"
             />
+            <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="login-password-toggle" />
           </div>
 
           <button

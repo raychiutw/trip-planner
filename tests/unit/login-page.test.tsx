@@ -314,3 +314,27 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
       .toBe('/signup?invitation=invite-tok');
   });
 });
+
+describe('LoginPage 密碼顯示切換（#1560）', () => {
+  it('切換前後 input type 與 aria-pressed 正確，autoComplete 不變，標籤固定', () => {
+    renderAt();
+    const input = screen.getByTestId('login-password') as HTMLInputElement;
+    const toggle = screen.getByRole('button', { name: '顯示密碼' });
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(input.type).toBe('text');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
+    expect(input.getAttribute('autocomplete')).toBe('current-password');
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.style.minWidth).toBe('44px');
+    expect(toggle.style.minHeight).toBe('44px');
+  });
+
+  it('切換不會送出表單', () => {
+    renderAt();
+    fireEvent.click(screen.getByRole('button', { name: '顯示密碼' }));
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
