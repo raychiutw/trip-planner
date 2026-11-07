@@ -313,8 +313,13 @@ body.dark .tp-trips-sort {
 .tp-trips-search input {
   flex: 1; min-width: 0;
   border: 0; background: transparent;
-  font: inherit; font-size: var(--font-size-footnote); outline: none;
+  /* 16px：iOS Safari 對 <16px 的 input 聚焦會自動放大頁面 */
+  font: inherit; font-size: var(--font-size-body); outline: none;
   color: var(--color-foreground);
+}
+/* input 自己沒有框，焦點畫在外層膠囊；用 :has 限定 input 聚焦，免得 toggle 鈕聚焦時與它自己的 focus ring 疊成兩圈 */
+.tp-trips-search:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
 }
 .tp-trips-search-toggle {
   border: 0; background: transparent; cursor: pointer;
