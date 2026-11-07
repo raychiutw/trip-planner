@@ -164,6 +164,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/account/ai-data-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** AI 資料同意：狀態與說明文字 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 同意狀態（none／valid／stale／withdrawn）、目前版本、已接受版本與時間、目前版本的說明文字、enforced */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_AiDataConsentState"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description token 屬於非第一方的 client，或是 trip 範圍的受限 token（code: PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** AI 資料同意：同意目前版本 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Account_AiDataConsentBody"];
+                };
+            };
+            responses: {
+                /** @description 已同意（重複同意同一版冪等，不新增事件），回新狀態 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_AiDataConsentState"];
+                    };
+                };
+                /** @description 沒帶 version 或 body 不是合法 JSON（code: DATA_VALIDATION） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description token 屬於非第一方的 client，或是 trip 範圍的受限 token（code: PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description body 的 version 未知或不是目前版本（AI_CONSENT_VERSION_MISMATCH）；或目前版本的說明文字尚未填妥（AI_CONSENT_NOT_READY，GET／DELETE 不受影響）。兩者 error 內都帶 currentVersion，且不寫入 */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AiConsentVersionMismatchError"] | components["schemas"]["AiConsentNotReadyError"];
+                    };
+                };
+            };
+        };
+        /** AI 資料同意：撤回 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 已撤回（冪等；從未同意者回 none、不寫事件）。排隊中尚未開始的請求被終結；已開始的工作不保證能停，已送出的資料收不回來 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_AiDataConsentState"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description token 屬於非第一方的 client，或是 trip 範圍的受限 token（code: PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/account/connected-apps": {
         parameters: {
             query?: never;
@@ -300,7 +452,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 刪除前的影響預覽（確認對話框用） */
+                /** @description 刪除前的影響預覽（確認對話框用；含無密碼帳號可用的 reauthProvider） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -354,7 +506,7 @@ export interface paths {
                         "application/json": components["schemas"]["Account_DeleteResult"];
                     };
                 };
-                /** @description 沒帶二次確認：有密碼的帳號沒給 password，或純 OAuth 帳號的 confirm 不是 "DELETE"（code: ACCOUNT_DELETE_CONFIRM_REQUIRED） */
+                /** @description 沒帶二次確認：有密碼的帳號沒給 password，或無密碼帳號的 confirm 不是 "DELETE"（code: ACCOUNT_DELETE_CONFIRM_REQUIRED） */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -372,8 +524,198 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description token 屬於非第一方的 client，或是 trip 範圍的受限 token（code: PERM_DENIED） */
+                /** @description token 屬於非第一方 client 或受限 token（PERM_DENIED）；或無密碼帳號沒有「verified、同帳號、同 grant、同 client、同 surface（web／mobile 不可互用）、未過期」的 challenge，含 web 只帶 confirm、非 web 非 mobile 的 client（ACCOUNT_DELETE_REAUTH_REQUIRED，fail-closed，資料未動） */
                 403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/account/delete-reauth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查 challenge 狀態 */
+        get: {
+            parameters: {
+                query: {
+                    /** @description POST 回的 challengeId */
+                    challenge_id: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description challenge 狀態（Cache-Control: no-store）；過期為 expired */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_DeleteReauthStatus"];
+                    };
+                };
+                /** @description 沒帶 challenge_id（code: DATA_VALIDATION） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 不是 mobile／web（tripline-web）client 簽發、綁 grant 的 user token（PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description challenge 不存在，或不屬於這個使用者／grant／client／surface；一律同一個回應（DATA_NOT_FOUND） */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** 建立帳號刪除的 Google 重新驗證 challenge */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 已建立 challenge（5 分鐘有效，Cache-Control: no-store）。用瀏覽器開 authorizeUrl 完成 Google 驗證後，callback 會 302：mobile 回 mobile callback ?challenge_id=…&status=verified（失敗為 status=failed）；web（tripline-web）回固定網址 ${WEB_ORIGIN}/account?deleteReauth=done（驗證失敗、取消、過期一律 deleteReauth=failed；WEB_ORIGIN 缺省用 PUBLIC_ORIGIN）。同一路徑依呼叫者的 client 自動判斷 surface */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_DeleteReauthStarted"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 不是「與環境相符的 mobile client」或「tripline-web（Origin 須在 ALLOWED_ORIGINS）」簽發、綁 grant 的 user token（PERM_DENIED）；或此帳號沒有 Google 身分（ACCOUNT_DELETE_REAUTH_REQUIRED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description mobile：MOBILE_OAUTH_CALLBACK_URL 未設定、無效，或與環境契約不符；web：WEB_ORIGIN／PUBLIC_ORIGIN 未設定或無效（非 https、帶 path／query／userinfo）（SERVER_MISCONFIG） */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        /** 取消 challenge */
+        delete: {
+            parameters: {
+                query: {
+                    /** @description POST 回的 challengeId */
+                    challenge_id: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description pending／started／verified 轉為 cancelled；cancelled 重複取消維持 cancelled；failed 冪等維持 failed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_DeleteReauthCancelled"];
+                    };
+                };
+                /** @description 沒帶 challenge_id（code: DATA_VALIDATION） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 不是 mobile／web client 的 token（PERM_DENIED）；或 challenge 已過期（ACCOUNT_DELETE_REAUTH_REQUIRED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description challenge 不存在，或不屬於這個使用者／grant／client／surface（DATA_NOT_FOUND） */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description challenge 已 used（已用來刪帳號），或取消時狀態剛被並行請求改變（DATA_CONFLICT） */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -558,6 +900,91 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/account/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 變更密碼（已登入） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Account_ChangePasswordBody"];
+                };
+            };
+            responses: {
+                /** @description 密碼已更新；其他裝置的登入已全部失效，目前這個登入保留；已寄通知信（寄信失敗不影響結果） */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Account_Ok"];
+                    };
+                };
+                /** @description 新密碼少於 8 字元（CHANGE_PASSWORD_TOO_SHORT），或與目前密碼相同（CHANGE_PASSWORD_SAME） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 目前密碼不正確或沒帶（CHANGE_PASSWORD_CURRENT_INVALID，刻意不用 401，避免 client 當成登入過期）；或非第一方 client／受限 token（PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 此帳號沒有 local 密碼（只用 Google 登入）（CHANGE_PASSWORD_NO_PASSWORD） */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description 目前密碼輸錯過多被暫時鎖定，Retry-After 為等待秒數（CHANGE_PASSWORD_RATE_LIMITED） */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/account/sessions": {
@@ -5316,13 +5743,34 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 沒有該行程的權限（PERM_DENIED）；列或 id 不屬於該行程時也是 403 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"] | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                                /**
+                                 * @description 送出者自己目前的同意狀態
+                                 * @enum {string}
+                                 */
+                                status: "none" | "valid" | "stale" | "withdrawn";
+                            };
+                        } | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_OWNER_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                            };
+                        };
                     };
                 };
             };
@@ -5438,7 +5886,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description client／redirect_uri 有問題（不可導回 client），或 WEB_ORIGIN／PUBLIC_ORIGIN 未設定（server_error） */
+                /** @description client／redirect_uri 有問題（不可導回 client）；mobile client（tripline-mobile／-uat／-dev）與環境或精確 callback 不符（unauthorized_client）；或 WEB_ORIGIN／PUBLIC_ORIGIN 未設定（server_error） */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -5552,13 +6000,13 @@ export interface paths {
                         "application/json": components["schemas"]["OauthMisc_RedirectTo"];
                     };
                 };
-                /** @description 授權請求不存在、已過期、已使用，或 client 已停用（DATA_VALIDATION） */
+                /** @description 授權請求不存在、已過期、已使用，或 client 已停用（DATA_VALIDATION，ApiError 形狀）；mobile client 與環境不符（unauthorized_client，OAuth 扁平形狀，且該授權請求已被消耗） */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"] | components["schemas"]["OauthMisc_OAuthError"];
                     };
                 };
                 /** @description 沒有有效 bearer */
@@ -5617,13 +6065,13 @@ export interface paths {
                         "application/json": components["schemas"]["OauthMisc_RedirectTo"];
                     };
                 };
-                /** @description 授權請求不存在、已過期、已使用，或 client 已停用（DATA_VALIDATION） */
+                /** @description 授權請求不存在、已過期、已使用，或 client 已停用（DATA_VALIDATION，ApiError 形狀）；mobile client 與環境不符（unauthorized_client，OAuth 扁平形狀，且該授權請求已被消耗） */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"] | components["schemas"]["OauthMisc_OAuthError"];
                     };
                 };
                 /** @description 沒有有效 bearer */
@@ -6052,11 +6500,17 @@ export interface paths {
         /** Google 登入（導向 Google） */
         get: {
             parameters: {
-                query: {
-                    client_id: string;
-                    redirect_uri: string;
-                    /** @description S256，必填 */
-                    code_challenge: string;
+                query?: {
+                    /** @description 帳號刪除的 Google 重新驗證：帶 purpose=account-delete 與 challenge，其餘參數不需要（見 /api/account/delete-reauth） */
+                    purpose?: "account-delete";
+                    /** @description purpose=account-delete 時必填：POST /api/account/delete-reauth 發出的 challengeId */
+                    challenge?: string;
+                    /** @description 一般登入必填 */
+                    client_id?: string;
+                    /** @description 一般登入必填 */
+                    redirect_uri?: string;
+                    /** @description 一般登入必填；S256 */
+                    code_challenge?: string;
                     code_challenge_method?: string;
                     state?: string;
                     scope?: string;
@@ -6069,7 +6523,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 導向 https://accounts.google.com/o/oauth2/v2/auth（query 含 response_type、client_id、redirect_uri、scope、state、nonce、code_challenge、code_challenge_method）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...（無 JSON 內容） */
+                /** @description 導向 https://accounts.google.com/o/oauth2/v2/auth（query 含 response_type、client_id、redirect_uri、scope、state、nonce、code_challenge、code_challenge_method；purpose=account-delete 另帶 prompt=select_account、max_age=0、claims={"id_token":{"auth_time":{"essential":true}}}，state 5 分鐘有效）；web surface 的 challenge 已取消／過期／用過：Location 為 ${WEB_ORIGIN}/account?deleteReauth=failed（狀態不動）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...（無 JSON 內容） */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -6083,6 +6537,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["OauthMisc_OAuthError"];
+                    };
+                };
+                /** @description purpose=account-delete：沒帶 challenge，或 challenge 不存在，或 mobile challenge 已過期／client 與環境不符／狀態不是 pending 或 started，或 web challenge 的 client 不是 tripline-web（ACCOUNT_DELETE_REAUTH_REQUIRED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description 尚未設定 Google 登入（OAUTH_NOT_CONFIGURED） */
@@ -6125,7 +6588,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 成功：Location 為 client 註冊的 redirect_uri?code=<我們的 code>&state=...；使用者在 Google 取消：redirect_uri?error=access_denied&state=...（無 JSON 內容） */
+                /** @description 成功：Location 為 client 註冊的 redirect_uri?code=<我們的 code>&state=...；帳號刪除重新驗證（state 帶 reauth）：mobile surface：Location 為 mobile callback?challenge_id=…&status=verified，任何失敗為 status=failed；web surface：Location 為 ${WEB_ORIGIN}/account?deleteReauth=done，任何失敗（含取消、過期）為 deleteReauth=failed（固定網址，不收呼叫者參數；皆不發 code、不建 user）；使用者在 Google 取消：redirect_uri?error=access_denied&state=...（無 JSON 內容） */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -6150,7 +6613,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 帳號已停用（OAUTH_ACCOUNT_SUSPENDED） */
+                /** @description 帳號已停用（OAUTH_ACCOUNT_SUSPENDED）；帳號刪除重新驗證失敗且沒有可導回的 challenge（state 的 client 與 surface 不符）（ACCOUNT_DELETE_REAUTH_REQUIRED） */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -7283,13 +7746,34 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 對該行程沒有寫權限 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"] | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                                /**
+                                 * @description 送出者自己目前的同意狀態
+                                 * @enum {string}
+                                 */
+                                status: "none" | "valid" | "stale" | "withdrawn";
+                            };
+                        } | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_OWNER_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                            };
+                        };
                     };
                 };
                 /** @description 單一帳號 AI 請求超過頻率上限（SYS_RATE_LIMIT，帶 Retry-After 等待秒數） */
@@ -9333,13 +9817,34 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 沒有此行程的寫入權限 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"] | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                                /**
+                                 * @description 送出者自己目前的同意狀態
+                                 * @enum {string}
+                                 */
+                                status: "none" | "valid" | "stale" | "withdrawn";
+                            };
+                        } | {
+                            error: {
+                                /** @enum {string} */
+                                code: "AI_CONSENT_OWNER_REQUIRED";
+                                message: string;
+                                detail?: string;
+                                requiredVersion: string;
+                            };
+                        };
                     };
                 };
                 /** @description 行程沒有任何景點（TRIP_EMPTY） */
@@ -9758,7 +10263,7 @@ export interface paths {
                         "application/json": components["schemas"]["TokenResponse"];
                     };
                 };
-                /** @description invalid_request／invalid_grant／invalid_scope／unsupported_grant_type／invalid_dpop_proof */
+                /** @description invalid_request／invalid_grant／invalid_scope／unsupported_grant_type／invalid_dpop_proof；mobile client（tripline-mobile／-uat／-dev）與環境不符，或 authorization_code 的 redirect_uri 不是該環境的精確 callback（invalid_client，任何 grant 都檢查） */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -9999,6 +10504,59 @@ export interface components {
                 detail?: string;
             };
         };
+        Account_AiDataConsentState: {
+            /**
+             * @description none＝從未同意；valid＝已接受目前版本；stale＝接受的是舊版；withdrawn＝已撤回
+             * @enum {string}
+             */
+            status: "none" | "valid" | "stale" | "withdrawn";
+            /** @example ai-data-v1 */
+            currentVersion: string;
+            /** @description 已接受的版本（valid／stale）；none／withdrawn 為 null */
+            acceptedVersion: string | null;
+            /** @description 接受時間（UTC ISO 8601）；none／withdrawn 為 null */
+            acceptedAt: string | null;
+            text: components["schemas"]["Account_AiDataConsentText"];
+            /** @description 三個受管制入口目前是否真的檢查同意（旗標開且文字已填妥） */
+            enforced: boolean;
+        };
+        /** @description 目前版本的說明文字（web 與 Flutter 只顯示這份） */
+        Account_AiDataConsentText: {
+            version: string;
+            title: string;
+            intro: string;
+            sections: {
+                heading: string;
+                items: string[];
+            }[];
+            /** @description 撤回的如實說明（新請求立即拒絕、排隊中尚未開始的被終結、已開始的不保證能停、已送出的收不回來） */
+            withdrawal: string[];
+        };
+        AiConsentVersionMismatchError: {
+            error: {
+                /** @enum {string} */
+                code: "AI_CONSENT_VERSION_MISMATCH";
+                message: string;
+                detail?: string;
+                currentVersion: string;
+            };
+        };
+        AiConsentNotReadyError: {
+            error: {
+                /** @enum {string} */
+                code: "AI_CONSENT_NOT_READY";
+                message: string;
+                detail?: string;
+                currentVersion: string;
+            };
+        };
+        Account_AiDataConsentBody: {
+            /**
+             * @description 使用者實際看到的同意版本；必須等於目前版本，否則 409 AI_CONSENT_VERSION_MISMATCH
+             * @example ai-data-v1
+             */
+            version: string;
+        };
         Account_ConnectedAppsList: {
             apps: components["schemas"]["Account_ConnectedApp"][];
         };
@@ -10020,8 +10578,15 @@ export interface components {
             revoked_client_id: string;
         };
         Account_DeletePreview: {
-            /** @description 有 local 密碼身分 → 刪除時必須帶 password；否則帶 confirm: "DELETE" */
+            /** @description 有 local 密碼身分 → 刪除時必須帶 password；否則要走 Google 重新驗證 challenge */
             hasPassword: boolean;
+            /**
+             * @description 無密碼帳號可用的重新驗證 provider（目前只有 google）；有密碼或沒有 Google 身分時為 null（此時無法刪除，fail-closed）
+             * @enum {string|null}
+             */
+            reauthProvider: "google" | null;
+            /** @description web 呼叫者（tripline-web）：本 grant 有一個 verified、未過期、未使用的 web challenge 時為 true；其餘（含 mobile、有密碼帳號）恆為 false */
+            reauthenticated: boolean;
             tripsOwned: number;
             /** @description 這些行程上「不是自己」的 distinct 共編者人數 */
             collaboratorsAffected: number;
@@ -10039,10 +10604,58 @@ export interface components {
             /** @description 帳號有 local 密碼身分時必填 */
             password?: string;
             /**
-             * @description 純 OAuth 帳號（沒有密碼）改用此確認字串
+             * @description 無密碼帳號的確認字串。mobile 必填；web（tripline-web）不需要（Google 重新驗證即確認，帶了也接受）。只帶它不夠，還要 challengeId
              * @enum {string}
              */
             confirm?: "DELETE";
+            /** @description 無密碼帳號必填：POST /api/account/delete-reauth 取得、且已 verified（同帳號、同 grant、同 client、同 surface〔web／mobile 不可互用〕、未過期）的 challenge；只能消耗一次。web 的完整 body 為 { "challengeId": "<id>" } */
+            challengeId?: string;
+        };
+        /**
+         * @example {
+         *       "challengeId": "ch_Zk3...（不透明字串）",
+         *       "authorizeUrl": "https://api.example.com/api/oauth/login/google?purpose=account-delete&challenge=ch_Zk3...",
+         *       "expiresIn": 300
+         *     }
+         */
+        Account_DeleteReauthStarted: {
+            challengeId: string;
+            /** @description 用瀏覽器開啟（導覽，不能帶 bearer）：/api/oauth/login/google?purpose=account-delete&challenge=<challengeId>；Google 驗證後 mobile 導回 mobile callback（?challenge_id=…&status=…），web 導回 ${WEB_ORIGIN}/account?deleteReauth=done|failed（固定網址，不收呼叫者傳入的網址） */
+            authorizeUrl: string;
+            /**
+             * @description challenge 與 Google 驗證的有效期（秒）；Google auth_time 也必須在這段時間內
+             * @enum {number}
+             */
+            expiresIn: 300;
+        };
+        /**
+         * @example {
+         *       "status": "verified"
+         *     }
+         */
+        Account_DeleteReauthStatus: {
+            /**
+             * @description pending 剛建立 → started 已開始 Google 驗證 → verified 驗證成功（可刪帳號）→ used 已消耗；failed／cancelled 為終態；過期一律 expired
+             * @enum {string}
+             */
+            status: "pending" | "started" | "verified" | "failed" | "cancelled" | "used" | "expired";
+            /**
+             * @description 只在 expired 時出現（0）
+             * @enum {number}
+             */
+            expiresIn?: 0;
+        };
+        /**
+         * @example {
+         *       "status": "cancelled"
+         *     }
+         */
+        Account_DeleteReauthCancelled: {
+            /**
+             * @description cancelled：已取消；failed：驗證早已失敗，取消視為冪等的收尾（維持 failed）
+             * @enum {string}
+             */
+            status: "cancelled" | "failed";
         };
         Account_NotificationPreferencesResponse: {
             preferences: components["schemas"]["Account_NotificationPreferences"];
@@ -10072,6 +10685,16 @@ export interface components {
         Account_ProfilePatchBody: {
             /** @description trim 後寫入（最多 50 字）；null 或空字串＝清除；省略＝不更新（但整個 body 沒有可更新欄位會 400） */
             displayName?: string | null;
+        };
+        Account_Ok: {
+            /** @enum {boolean} */
+            ok: true;
+        };
+        Account_ChangePasswordBody: {
+            /** @description 目前密碼；沒帶或錯誤一律 CHANGE_PASSWORD_CURRENT_INVALID */
+            current_password?: string;
+            /** @description 新密碼，至少 8 字元，不可與目前密碼相同 */
+            new_password: string;
         };
         Account_SessionsList: {
             /** @description 目前憑證的 grantId；查不到為 null */
@@ -10221,10 +10844,6 @@ export interface components {
          * @enum {string}
          */
         Account_PermissionRole: "member" | "viewer";
-        Account_Ok: {
-            /** @enum {boolean} */
-            ok: true;
-        };
         /** @description 角色沒變 → { ok, unchanged: true }；有變 → { ok, role } */
         Account_PermissionUpdated: {
             /** @enum {boolean} */
@@ -11068,6 +11687,8 @@ export interface components {
             hasMore: boolean;
         };
         Requests_RowWithName: components["schemas"]["Requests_Row"] & {
+            /** @description 送出者 email；**服務 token 讀取時省略此欄**（資料最小化，ADR-0012），一般使用者照舊 */
+            submittedBy?: string | null;
             submittedByDisplayName: string | null;
         };
         Requests_Row: {
