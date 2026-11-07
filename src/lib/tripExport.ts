@@ -8,6 +8,7 @@
  * (entry id is auto-increment and changes on import).
  */
 import { apiFetch } from './apiClient';
+import { ApiError } from './errors';
 import type { Trip } from '../types/trip';
 
 /* ===== Helpers ===== */
@@ -121,13 +122,17 @@ export function buildTripExportJson(input: {
 async function fetchExportData(tripId: string) {
   const id = encodeURIComponent(tripId);
   // meta + days are the core structure — if either fails the export is meaningless,
-  // so they stay fatal (Promise.all rejects). segments + notes are secondary
-  // (a trip may legitimately have none / a 404), so they degrade to empty.
+  // so they stay fatal (Promise.all rejects). segments + notes: 只有 404 視為「沒有資料」，
+  // 網路錯誤／5xx 一律讓匯出失敗（#1440），否則匯出檔會靜默少掉資料、再匯入就永久遺失。
+  const only404 = <T,>(fallback: T) => (e: unknown): T => {
+    if (e instanceof ApiError && e.status === 404) return fallback;
+    throw e;
+  };
   const [meta, days, segments, notes] = await Promise.all([
     apiFetch<Record<string, unknown>>(`/trips/${id}`),
     apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/days?all=1`),
-    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/segments`).catch(() => []),
-    apiFetch<Record<string, unknown>>(`/trips/${id}/notes`).catch(() => EMPTY_NOTES),
+    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/segments`).catch(only404([])),
+    apiFetch<Record<string, unknown>>(`/trips/${id}/notes`).catch(only404(EMPTY_NOTES)),
   ]);
   return { meta, days: asArr(days), segments: asArr(segments), notes: notes ?? EMPTY_NOTES };
 }

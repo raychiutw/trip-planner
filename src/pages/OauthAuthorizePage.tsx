@@ -14,7 +14,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { AuthError, getAuthorizeAuth } from '../lib/auth';
+import { clearApiCache } from '../lib/logout';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
@@ -34,7 +36,7 @@ interface AuthRequestView {
 
 type View =
   | { kind: 'init' }
-  | { kind: 'login'; error?: string }
+  | { kind: 'login'; error?: string; credential?: boolean }
   | { kind: 'confirm'; request: AuthRequestView; email: string }
   | { kind: 'error'; message: string };
 
@@ -81,9 +83,15 @@ const CheckIcon = () => (
   </svg>
 );
 
+const CREDENTIAL_ERROR = '電子郵件或密碼錯誤。';
+
+function isCredentialError(e: unknown): boolean {
+  return e instanceof AuthError && (e.code === 'LOGIN_INVALID' || e.status === 401);
+}
+
 function loginErrorMessage(e: unknown): string {
   if (e instanceof AuthError) {
-    if (e.code === 'LOGIN_INVALID' || e.status === 401) return '電子郵件或密碼錯誤。';
+    if (isCredentialError(e)) return CREDENTIAL_ERROR;
     if (e.status === 429 || e.code === 'LOGIN_RATE_LIMITED') {
       return e.retryAfter ? `嘗試次數過多，請 ${Math.ceil(e.retryAfter / 60)} 分鐘後再試。` : '嘗試次數過多，請稍後再試。';
     }
@@ -97,6 +105,7 @@ export default function OauthAuthorizePage() {
   const [view, setView] = useState<View>({ kind: 'init' });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const pw = usePasswordVisibility();
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
 
@@ -145,7 +154,7 @@ export default function OauthAuthorizePage() {
     try {
       await getAuthorizeAuth().login(email.trim(), password);
     } catch (err) {
-      setView({ kind: 'login', error: loginErrorMessage(err) });
+      setView({ kind: 'login', error: loginErrorMessage(err), credential: isCredentialError(err) });
       setBusy(false);
       return;
     }
@@ -185,9 +194,11 @@ export default function OauthAuthorizePage() {
 
   async function onSwitchAccount() {
     await getAuthorizeAuth().logout();
+    await clearApiCache();
     setView({ kind: 'login' });
   }
 
+  const credentialInvalid = view.kind === 'login' && view.credential === true;
   return (
     <main className="tp-authz-shell" data-testid="oauth-authorize-page">
       <style>{SCOPED_STYLES}</style>
@@ -205,10 +216,13 @@ export default function OauthAuthorizePage() {
               {view.error && <ErrorBanner message={view.error} testId="authz-login-error" />}
               <label className="tp-authz-field"><span className="tp-authz-label">電子郵件</span>
                 <input className="tp-authz-input" type="email" autoComplete="username" required value={email}
-                  onChange={(e) => setEmail(e.target.value)} data-testid="authz-email" /></label>
+                  onChange={(e) => setEmail(e.target.value)} data-testid="authz-email"
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
               <label className="tp-authz-field"><span className="tp-authz-label">密碼</span>
-                <input className="tp-authz-input" type="password" autoComplete="current-password" required value={password}
-                  onChange={(e) => setPassword(e.target.value)} data-testid="authz-password" /></label>
+                <input className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
+                  onChange={(e) => setPassword(e.target.value)} data-testid="authz-password"
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
+              <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
               <a className="tp-authz-link" href="/login/forgot" style={{ textAlign: 'center' }}>忘記密碼？</a>
             </form>

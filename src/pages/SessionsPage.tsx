@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { clearApiCache } from '../lib/logout';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -293,6 +294,7 @@ export default function SessionsPage() {
       const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
       if (!response.ok) throw new Error('Logout failed');
       writeAuthHint(false);
+      void clearApiCache();
       navigate('/login', { replace: true });
     } catch {
       // The server may have revoked the session even if its response was lost.

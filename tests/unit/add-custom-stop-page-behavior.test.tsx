@@ -125,6 +125,51 @@ describe('AddCustomStopPage public form', () => {
     expect(requests.filter((r) => r.init?.method === 'POST' && r.path.includes('/entries'))).toHaveLength(0);
   });
 
+  function expectLinked(input: HTMLElement, text: RegExp) {
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    const target = document.getElementById(input.getAttribute('aria-describedby')!);
+    expect(target?.textContent).toMatch(text);
+    expect(target?.closest('[role="alert"]')).toBeTruthy();
+  }
+  function expectClean(input: HTMLElement) {
+    expect(input).not.toHaveAttribute('aria-invalid');
+    expect(input).not.toHaveAttribute('aria-describedby');
+  }
+
+  it('links the address error to the address field and drops it once the user edits (#1561)', async () => {
+    resolveFails = true;
+    openPage();
+    const address = screen.getByRole('combobox', { name: '地址或地標' });
+    expectClean(address);
+    fireEvent.change(address, { target: { value: '東京塔-1326' } });
+    const option = await screen.findByRole('option', { name: /東京塔/ });
+    fireEvent.keyDown(address, { key: 'ArrowDown' });
+    await waitFor(() => expect(option).toHaveAttribute('aria-selected', 'true'));
+    fireEvent.keyDown(address, { key: 'Enter' });
+    await screen.findByText(/無法取得此地址的位置/);
+    expectLinked(address, /無法取得此地址的位置/);
+    fireEvent.change(address, { target: { value: '東京' } });
+    expectClean(address);
+  });
+
+  it('links the duration error to the duration field and drops it once corrected (#1561)', async () => {
+    openPage();
+    fireEvent.change(screen.getByRole('textbox', { name: '標題' }), { target: { value: '朋友家' } });
+    await screen.findByRole('application');
+    await waitFor(() => expect(listeners.has('idle')).toBe(true));
+    center = { lat: 36, lng: 140 };
+    act(() => { listeners.get('dragstart')!(); listeners.get('idle')!(); });
+    await waitFor(() => expect(screen.getByRole('button', { name: '完成' })).toBeEnabled());
+    const duration = screen.getByRole('spinbutton', { name: '停留時間（分鐘）' });
+    expectClean(duration);
+    fireEvent.change(duration, { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+    await screen.findByText('停留時間請輸入正整數分鐘');
+    expectLinked(duration, /停留時間請輸入正整數分鐘/);
+    fireEvent.change(duration, { target: { value: '30' } });
+    expectClean(duration);
+  });
+
   it('explains map failure and keeps the existing return path available', async () => {
     mapLoadError = new Error('Google Maps denied');
     const router = openPage();

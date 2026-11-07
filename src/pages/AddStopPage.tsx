@@ -28,6 +28,7 @@
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DURATION_ERROR } from '../lib/timelineUtils';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -601,6 +602,8 @@ const SCOPED_STYLES = `
 }
 `;
 
+// 同時是錯誤訊息與「錯誤屬於哪個欄位」的判準（#1561）
+
 export default function AddStopPage() {
   const auth = useRequireAuth();
   const { tripId } = useParams<{ tripId: string }>();
@@ -650,7 +653,14 @@ export default function AddStopPage() {
   const [customTime, setCustomTime] = useState('');
   const [customDuration, setCustomDuration] = useState('');
   const [customNote, setCustomNote] = useState('');
-  const [customError, setCustomError] = useState<string | null>(null);
+  // field 標記錯誤歸屬的輸入欄位（不靠比對訊息文字）
+  const [customErr, setCustomErr] = useState<{ message: string; field?: 'duration' } | null>(null);
+  const customError = customErr?.message ?? null;
+  const setCustomError = useCallback(
+    (message: string | null, field?: 'duration') => setCustomErr(message === null ? null : { message, field }),
+    [],
+  );
+  const customDurationInvalid = customErr?.field === 'duration';
   // v2.31.94: 自訂 tab 新增地址 typeahead + map pin 機制，確保 entry 一定有 lat/lng
   const [customCoord, setCustomCoord] = useState<CustomCoord | null>(null);
   const [customHintConfirmed, setCustomHintConfirmed] = useState(false);
@@ -772,7 +782,7 @@ export default function AddStopPage() {
         return;
       }
       if (customDuration && (!Number.isInteger(Number(customDuration)) || Number(customDuration) <= 0)) {
-        setCustomError('停留時間請輸入正整數分鐘');
+        setCustomError(DURATION_ERROR, 'duration');
         return;
       }
     }
@@ -1259,7 +1269,9 @@ export default function AddStopPage() {
                               step={1}
                               inputMode="numeric"
                               value={customDuration}
-                              onChange={(e) => setCustomDuration(e.target.value)}
+                              onChange={(e) => { setCustomDuration(e.target.value); if (customDurationInvalid) setCustomError(null); }}
+                              aria-invalid={customDurationInvalid || undefined}
+                              aria-describedby={customDurationInvalid ? 'add-stop-custom-error' : undefined}
                               placeholder="90"
                               data-testid="add-stop-custom-duration"
                             />

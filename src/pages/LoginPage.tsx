@@ -16,6 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { apiFetchRaw } from '../lib/apiClient';
 import { AuthError, getNewApiAuth, type AuthClient } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
@@ -274,11 +275,16 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const pw = usePasswordVisibility();
   const [submitting, setSubmitting] = useState(false);
   const googleErrorCode = params.get('google_error');
-  const [bannerError, setBannerError] = useState<string | null>(
-    googleErrorCode ? googleErrorMessage(googleErrorCode) : null,
+  // credential 標記錯誤是否屬於帳密欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
+  const [banner, setBanner] = useState<{ message: string; credential?: boolean } | null>(
+    googleErrorCode ? { message: googleErrorMessage(googleErrorCode) } : null,
   );
+  const bannerError = banner?.message ?? null;
+  const credentialError = banner?.credential === true;
+  const setBannerError = (message: string | null, credential = false) => setBanner(message === null ? null : { message, credential });
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
   const isLocked = lockedRetryAfter !== null;
@@ -407,11 +413,11 @@ export default function LoginPage() {
       const code = outcome.code;
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
-          setBannerError('請輸入電子郵件與密碼');
+          setBannerError('請輸入電子郵件與密碼', true);
           break;
         case 'LOGIN_INVALID':
           bumpFailure();
-          setBannerError('電子郵件或密碼錯誤');
+          setBannerError('電子郵件或密碼錯誤', true);
           break;
         case 'LOGIN_RATE_LIMITED': {
           const retryAfter = outcome.retryAfter;
@@ -576,6 +582,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               data-testid="login-email"
+              aria-invalid={credentialError || undefined}
+              aria-describedby={credentialError ? 'login-banner-error' : undefined}
             />
           </div>
           <div className="tp-form-row">
@@ -585,13 +593,16 @@ export default function LoginPage() {
             </div>
             <input
               id="login-password"
-              type="password"
+              type={pw.type}
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="login-password"
+              aria-invalid={credentialError || undefined}
+              aria-describedby={credentialError ? 'login-banner-error' : undefined}
             />
+            <PasswordToggle {...pw.toggleProps} testId="login-password-toggle" />
           </div>
 
           <button

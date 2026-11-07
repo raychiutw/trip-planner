@@ -53,6 +53,7 @@ export default function ErrorBanner({ message, testId, className = '', action }:
     <>
       <style>{SCOPED_STYLES}</style>
       <div
+        id={testId}
         className={`tp-error-banner-shared ${className}`.trim()}
         role="alert"
         data-testid={testId}
