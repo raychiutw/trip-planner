@@ -36,6 +36,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry } from '../lib/entryMutations';
+import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { buildPoiNote } from '../lib/poiNote';
 import { mapGooglePrimaryTypeToPoiType, type PoiType } from '../lib/poiCategory';
 import {
@@ -765,6 +766,8 @@ export default function AddStopPage() {
       lat?: number;
       lng?: number;
       source?: string;
+      // #1598：Google place_id，後端只在 POI 尚無時填入
+      place_id?: string;
       // Auto-category: Google primaryType → whitelist poi_type，後端 entries.ts 只認
       // 這個 snake_case key（缺則 fallback 'attraction'）。
       poi_type?: string;
@@ -817,6 +820,7 @@ export default function AddStopPage() {
             lat: r.lat,
             lng: r.lng,
             source: 'google',
+            place_id: r.place_id,
             poi_type: searchCatOverride[r.place_id] ?? mapGooglePrimaryTypeToPoiType(r.category),
           };
         });
@@ -856,7 +860,7 @@ export default function AddStopPage() {
       });
       const recomputed = await Promise.all(results.filter((result) => result.ok).map((result) => result.recompute));
       if (recomputed.some((ok) => !ok)) {
-        showToast('景點已儲存，但車程更新失敗，重新整理後再試', 'info', 5000);
+        showToast(recomputeFailedMessage('景點已儲存，但車程更新失敗，重新整理後再試'), 'info', 5000);
       }
       const failed = results.filter((r) => !r.ok);
       if (failed.length > 0) {

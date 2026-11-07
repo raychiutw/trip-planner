@@ -36,6 +36,7 @@ import { requireAuth, requireTripWrite } from '../../_auth';
 import { logAudit } from '../../_audit';
 import { AppError } from '../../_errors';
 import { json } from '../../_utils';
+import { consumeUserBucket, RATE_LIMITS } from '../../_rate_limit';
 import { assertGoogleAvailable } from '../../_maps_lock';
 import { computeRoute } from '../../../../src/server/maps/google-client';
 import { haversineMeters } from '../../../../src/lib/geo';
@@ -82,6 +83,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
+  // #1597 每帳號頻率限制：在任何 Google Routes 呼叫之前
+  const limited = await consumeUserBucket(db, `recompute-travel:user:${auth.userId}`, RATE_LIMITS.RECOMPUTE_TRAVEL_PER_USER);
+  if (limited) return limited;
   await assertGoogleAvailable(db);
 
   const url = new URL(context.request.url);

@@ -81,7 +81,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    const response = await handleAuth(context);
+    const response = markPrivateIfAuthenticated(context, await handleAuth(context));
 
     // Log 4xx/5xx responses
     const duration = Date.now() - start;
@@ -153,6 +153,28 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return errorResponse(new AppError('SYS_INTERNAL'));
   }
 };
+
+/**
+ * 有登入身分、或以不可猜 token 授權的回應 → `private, no-store`（#1599，承接 #1437）。
+ * PWA 的 cacheWillUpdate 看請求的 Cookie 標頭判斷登入，但 Service Worker 讀不到 HttpOnly cookie，
+ * 回應標頭才是可靠訊號。匿名公開端點（auth=null，例如已發布行程）不動，維持可快取。
+ * 集中在 middleware，不逐端點；SSE 串流自己管（no-cache），不重包 body。
+ */
+function markPrivateIfAuthenticated(
+  context: EventContext<Env, string, Record<string, unknown>>,
+  response: Response,
+): Response {
+  const url = new URL(context.request.url);
+  const tokenGated =
+    url.pathname === '/api/invitations' && url.searchParams.has('token') && !url.searchParams.has('tripId');
+  if (context.data.auth == null && !tokenGated) return response;
+  if (response.headers.get('Content-Type')?.includes('text/event-stream')) return response;
+  const cc = response.headers.get('Cache-Control') ?? '';
+  if (cc.includes('private') || cc.includes('no-store')) return response;
+  const out = new Response(response.body, response);
+  out.headers.set('Cache-Control', 'private, no-store');
+  return out;
+}
 
 /**
  * 原有的認證邏輯，抽成獨立函式以便被錯誤記錄 wrapper 包裹。

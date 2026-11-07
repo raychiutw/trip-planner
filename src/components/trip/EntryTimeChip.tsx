@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import { updateEntry } from '../../lib/entryMutations';
+import { recomputeFailedMessage } from '../../lib/travelRecompute';
 import { isAnySheetOpen } from '../../hooks/useSheetBehavior';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
@@ -71,7 +72,7 @@ export function EntryTimeChip({ tripId, entryId, dayNum, start, end }: {
       return;
     }
     void r.recompute.then((ok) => {
-      if (!ok) showToast('時間已儲存，車程更新失敗，重新整理後再試', 'info', 5000);
+      if (!ok) showToast(recomputeFailedMessage('時間已儲存，車程更新失敗，重新整理後再試'), 'info', 5000);
     });
   }, [tripId, entryId, dayNum, startDraft, endDraft, start, end]);
 

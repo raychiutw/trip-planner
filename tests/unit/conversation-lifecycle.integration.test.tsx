@@ -44,6 +44,7 @@ beforeEach(() => {
     if (url.pathname === '/api/account/ai-authorization') return response({ authorized: true });
     if (url.pathname === '/api/requests') {
       if (init?.method === 'POST') {
+        if (postStatus === 429) return new Response(JSON.stringify({ error: { code: 'SYS_RATE_LIMIT', message: '操作太頻繁，請稍等' } }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '120' } });
         if (postStatus !== 200) return response({ error: '送出服務暫時失敗' }, postStatus);
         const body = JSON.parse(String(init.body));
         const row = makeRow(42 + posts.length, body.tripId, body.message, 'open');
@@ -77,6 +78,12 @@ async function pick(id: string) {
 }
 
 describe('conversation lifecycle through the real chat', () => {
+  it('送出被限流（429 + Retry-After）時失敗訊息顯示要等多久', async () => {
+    show(true); await screen.findByTestId('chat-input');
+    postStatus = 429;
+    await send('太頻繁');
+    expect(await screen.findByText(/操作太頻繁，請於 2 分鐘後再試/)).toBeInTheDocument();
+  });
   it('the sheet can send after a POST failure and receive a reply via polling after SSE disconnects', async () => {
     show(true); await screen.findByTestId('chat-input');
     await waitFor(() => expect(screen.getByTestId('chat-input')).not.toBeDisabled());

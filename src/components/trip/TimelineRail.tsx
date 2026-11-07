@@ -19,6 +19,7 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { reorderEntries } from '../../lib/entryMutations';
+import { recomputeFailedMessage } from '../../lib/travelRecompute';
 import { captureDragScroll, restoreDragScroll } from '../../lib/preserveScroll';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import { showToast } from '../shared/Toast';
@@ -121,7 +122,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId, 
       if (!r.ok) throw new Error(`batch reorder failed: ${r.status}`);
       void sourceEntryId;
       void r.recompute.then((ok) => {
-        if (!ok && currentScope.current.lifecycle === lifecycle) showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
+        if (!ok && currentScope.current.lifecycle === lifecycle) showToast(recomputeFailedMessage('順序已儲存，但車程時間更新失敗，重新整理後再試'), 'info');
       });
     } catch {
       if (currentScope.current.lifecycle === lifecycle) setOrderOverride(null);
