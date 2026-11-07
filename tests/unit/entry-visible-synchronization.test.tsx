@@ -140,8 +140,21 @@ async function dragToDayTwo() {
     return { x: 0, y: n * 200, left: 0, top: n * 200, right: 300, bottom: n * 200 + 80,
       width: 300, height: 80, toJSON: () => ({}) };
   });
-  fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
-  fireEvent.click(screen.getByTestId('timeline-rail-menu-sort-11'));
+  // 進入排序模式要等到握把真的啟用（aria-disabled="false"）才能拖：排序模式是 rail 的區域 state，
+  // 載入中的資料若在點擊之後才到、讓 rail 重新掛載，模式會被重置，握把退回停用、dnd-kit 不掛 mouseDown 監聽，
+  // 整個拖曳被忽略而等不到任何寫入（#1585，不需要負載也約 1/15 機率）。所以把「開選單→選重新排序」放進 waitFor 重試，
+  // 條件是握把啟用；每次重新查詢握把，避免拿到被替換掉的舊節點。
+  // 重試點擊最多每 500ms 一次：waitFor 會因 DOM 變動立刻重跑，不節流會變成同步迴圈而餓死計時器。
+  let lastClick = 0;
+  await waitFor(() => {
+    const gripNow = screen.getByTestId('timeline-rail-grip-11');
+    if (gripNow.getAttribute('aria-disabled') !== 'false' && Date.now() - lastClick > 500) {
+      lastClick = Date.now();
+      fireEvent.click(screen.getByTestId('timeline-rail-menu-11'));
+      fireEvent.click(screen.getByTestId('timeline-rail-menu-sort-11'));
+    }
+    expect(screen.getByTestId('timeline-rail-grip-11')).toHaveAttribute('aria-disabled', 'false');
+  });
   const grip = screen.getByTestId('timeline-rail-grip-11');
   fireEvent.mouseDown(grip, { button: 0, clientX: 280, clientY: 220 });
   fireEvent.mouseMove(document, { clientX: 280, clientY: 240 });
