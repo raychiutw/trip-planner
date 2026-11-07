@@ -413,7 +413,7 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
-  --glass-alpha: 92%; --glass-filter: blur(14px);   /* recipe：tokens.css 的 .tp-glass */
+  --glass-alpha: 55%; --glass-filter: blur(24px);   /* recipe：tokens.css 的 .tp-glass；owner 選 A3（原 92%／14px 只透出 8%，看不出玻璃）。輸入框自己維持實心 */
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
   /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
