@@ -39,6 +39,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
 import { apiFetch } from '../lib/apiClient';
 import { copyEntry, moveEntry } from '../lib/entryMutations';
+import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { dayColor } from '../lib/dayPalette';
 import {
   ENTRY_ACTION_TIME_SLOTS,
@@ -344,7 +345,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     try {
       if (retryRecompute.current) {
         if (!await retryRecompute.current()) {
-          if (operationGeneration.current === generation) setSubmitError('景點已儲存，但交通更新失敗，請重試更新交通');
+          if (operationGeneration.current === generation) setSubmitError(recomputeFailedMessage('景點已儲存，但交通更新失敗，請重試更新交通'));
           return;
         }
       } else {
@@ -363,7 +364,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         }
         retryRecompute.current = r.retryRecompute;
         if (!await r.recompute) {
-          if (operationGeneration.current === generation) setSubmitError('景點已儲存，但交通更新失敗，請重試更新交通');
+          if (operationGeneration.current === generation) setSubmitError(recomputeFailedMessage('景點已儲存，但交通更新失敗，請重試更新交通'));
           return;
         }
       }

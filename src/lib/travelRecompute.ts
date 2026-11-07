@@ -43,6 +43,7 @@
  */
 import { apiFetchRaw } from './apiClient';
 import { EVENT } from './events';
+import { rateLimitMessage } from './errors';
 
 export interface RecomputeTravelResult {
   pairsComputed?: number;
@@ -74,12 +75,21 @@ function normalizeDayNum(dayNum: number | string | null | undefined): number | n
   return Number.isFinite(n) && n >= 1 ? n : null;
 }
 
+// shortcut: 全域只記最近一次失敗是否為 429（不分 trip）；失敗提示是緊接失敗後同步讀取，夠用。
+let lastRateLimit: { retryAfter?: number } | null = null;
+
+/** 車程重算失敗提示：最近一次是 429 就顯示要等多久，否則用呼叫端原本的文案。 */
+export function recomputeFailedMessage(defaultMessage: string): string {
+  return lastRateLimit ? `${rateLimitMessage(lastRateLimit.retryAfter)}（車程時間尚未更新）` : defaultMessage;
+}
+
 /** @internal 測試用 — 清空 module state。 */
 export function __resetTravelRecomputeState(): void {
   inflight.clear();
   autoAttemptedSig.clear();
   autoNoWriteTrips.clear();
   autoFailedScopes.clear();
+  lastRateLimit = null;
 }
 
 export type AutoRecomputeStatus = 'active' | 'blocked' | 'failed';
@@ -149,8 +159,11 @@ export function requestTravelRecompute(
       { method: 'POST', credentials: 'same-origin' },
     );
     if (!res.ok) {
+      const seconds = Number(res.headers?.get('Retry-After'));
+      lastRateLimit = res.status === 429 ? { retryAfter: Number.isInteger(seconds) && seconds > 0 ? seconds : undefined } : null;
       throw Object.assign(new Error(`recompute-travel ${res.status}`), { status: res.status });
     }
+    lastRateLimit = null;
     const data = await res.json().catch(() => ({})) as RecomputeTravelResult;
     window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
     return data;

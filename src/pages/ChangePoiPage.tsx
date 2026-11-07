@@ -22,6 +22,7 @@ import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSelection } from '../hooks/usePoiSelection';
 import { apiFetch } from '../lib/apiClient';
 import { createEntry, addAlternate, replaceMasterPoi } from '../lib/entryMutations';
+import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { regionToApiParam } from '../lib/maps/region';
 import { mapGooglePrimaryTypeToPoiType, mapNominatimCategory, type PoiType } from '../lib/poiCategory';
 import {
@@ -538,7 +539,7 @@ interface SelectedPoi {
 
 function reportTravelResult(recompute: Promise<boolean>) {
   void recompute.then((ok) => {
-    if (!ok) showToast('景點已儲存，但車程更新失敗，重新整理後再試', 'info', 5000);
+    if (!ok) showToast(recomputeFailedMessage('景點已儲存，但車程更新失敗，重新整理後再試'), 'info', 5000);
   });
 }
 

@@ -11,7 +11,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { apiFetch } from '../lib/apiClient';
-import { ApiError } from '../lib/errors';
+import { ApiError, formatWait } from '../lib/errors';
 import { isNewApiAuthEnabled } from '../lib/auth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
 import { CHANGE_PASSWORD_MIN_LENGTH, ERROR_MESSAGES } from '../types/api';
@@ -47,8 +47,7 @@ const SCOPED_STYLES = `
 /** 後端的 CHANGE_PASSWORD_* 錯誤碼已登記人話文案（types/api.ts）；429 帶 Retry-After 時告訴使用者要等多久。 */
 function messageFor(err: unknown): string {
   if (err instanceof ApiError && err.code === 'CHANGE_PASSWORD_RATE_LIMITED' && err.retryAfter) {
-    const wait = err.retryAfter < 60 ? `${err.retryAfter} 秒` : `${Math.ceil(err.retryAfter / 60)} 分鐘`;
-    return `嘗試次數過多，請在 ${wait}後再試`;
+    return `嘗試次數過多，請在 ${formatWait(err.retryAfter)}後再試`;
   }
   if (err instanceof ApiError && err.code.startsWith('CHANGE_PASSWORD_')) return err.message;
   return '無法變更密碼，請稍後再試';

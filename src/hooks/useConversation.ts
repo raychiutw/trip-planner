@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { apiFetch } from '../lib/apiClient';
+import { ApiError, rateLimitMessage } from '../lib/errors';
 import { mergeConversation, mergeLatestConversation, rowToMessages, type ChatMessage, type RawRequestRow } from '../lib/conversation';
 import { useChatPagination } from './useChatPagination';
 import { useRequestSSE } from './useRequestSSE';
@@ -136,7 +137,7 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
         return;
       }
       setMessages((previous) => previous.map((message) => message.id === now + 1
-        ? { ...message, text: `送出失敗：${error instanceof Error ? error.message : '網路錯誤'}`, pendingRequestId: null, failed: true }
+        ? { ...message, text: `送出失敗：${error instanceof ApiError && error.status === 429 ? rateLimitMessage(error.retryAfter) : error instanceof Error ? error.message : '網路錯誤'}`, pendingRequestId: null, failed: true }
         : message));
     } finally {
       scope.sending = false;

@@ -176,6 +176,16 @@ it('排序已儲存但車程失敗時保留新位置並提示交通待更新', a
   expect(apiFetchRawMock.mock.calls.filter(([path]) => path.includes('/entries/batch'))).toHaveLength(1);
 });
 
+it('排序已儲存但車程重算被限流（429 + Retry-After）時提示顯示要等多久', async () => {
+  apiFetchMock.mockResolvedValue([]);
+  apiFetchRawMock.mockImplementation(async (path) => path.includes('/recompute-travel')
+    ? new Response('{}', { status: 429, headers: { 'Retry-After': '120' } })
+    : new Response('{}', { status: 200 }));
+  renderRail([entry(1), entry(2), entry(3)]);
+  fireEvent.click(screen.getByTestId('timeline-rail-move-down-1'));
+  await waitFor(() => expect(getToasts().some((toast) => toast.message.includes('請於 2 分鐘後再試'))).toBe(true));
+});
+
 it('A→B→A 切換時晚到的舊讀取不替目前行程確認缺口', async () => {
   const oldA = deferred<unknown>();
   const oldB = deferred<unknown>();

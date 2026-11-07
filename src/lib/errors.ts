@@ -6,6 +6,16 @@ import type { ErrorCodeType } from '../types/api';
 
 export type ErrorSeverity = 'minor' | 'moderate' | 'severe' | 'background';
 
+/** Retry-After 秒數轉人話：未滿 60 秒顯示秒、其餘無條件進位成分鐘。 */
+export function formatWait(seconds: number): string {
+  return seconds < 60 ? `${seconds} 秒` : `${Math.ceil(seconds / 60)} 分鐘`;
+}
+
+/** 通用限流文案；後端帶 Retry-After 時告訴使用者要等多久，缺值退回「請稍等」。 */
+export function rateLimitMessage(retryAfter?: number): string {
+  return retryAfter ? `操作太頻繁，請於 ${formatWait(retryAfter)}後再試` : '操作太頻繁，請稍等';
+}
+
 /** 結構化 API 錯誤（新格式 + 舊格式 sniff） */
 export class ApiError extends Error {
   readonly code: ErrorCodeType;
