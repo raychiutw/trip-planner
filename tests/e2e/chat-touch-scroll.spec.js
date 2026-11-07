@@ -1,23 +1,21 @@
 /**
- * AI 聊天頁的觸控捲動（iPhone 往下拖看較早訊息）。
+ * AI 聊天頁的下拉刷新誤判（iPhone 往下拖看較早訊息，聊天視窗「無法滑動」）。
  *
- * 症狀：手機上聊天視窗「無法滑動」。AppShell 的 usePullToRefresh 掛在 <main>（scrollTop 恆為 0），
- * 聊天頁的訊息清單是內層 scroller（.tp-chat-body）。往下拖看歷史時，touch 起點在內層 scroller，
- * 卻被當成 <main> 的下拉刷新：整頁被拉下，放開後沒登記 refetch 的頁面 fall back 整頁 reload，
- * 捲動位置被洗回最底。滑鼠滾輪不經 touch 事件，所以桌機看不出來。
+ * 症狀：AppShell 的 usePullToRefresh 掛在 <main>（scrollTop 恆為 0），聊天頁的訊息清單是內層
+ * scroller（.tp-chat-body）。往下拖看歷史時，touch 起點在內層 scroller，卻被當成 <main> 的下拉刷新：
+ * 整頁被拉下，放開後沒登記 refetch 的頁面 fall back 整頁 reload，捲動位置被洗回最底。
+ * 滑鼠滾輪不經 touch 事件，所以桌機看不出來。
  *
- * 用 CDP 的 synthesizeScrollGesture 送真正的觸控手勢（Playwright 沒有 swipe API；WebKit 無法用，
- * 所以只在 chromium 跑）。對照：同一個手勢打一個普通可捲容器要能捲，證明手勢本身有效。
+ * 為什麼直接送 TouchEvent、不用 CDP 的 synthesizeScrollGesture：後者在 CI 的 Chromium 上不可靠
+ * （連對照容器都不捲，PR #1617 的第一版因此在 CI 紅）。bug 的機制就是下拉刷新監聽器對
+ * touchstart／touchmove／touchend 的反應，直接送這組事件給真實的 AppShell 與聊天頁，
+ * 確定性高，未修正時一定紅（頁面載入 1 次、<main> 被位移）。
+ * 內層 scroller 是否真的往上捲由瀏覽器負責，不在這裡測。
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks, MOCK_TRIPS_LIST } = require('./api-mocks');
 
-test('chat: touch drag down scrolls older messages without pull-to-refresh reload', async ({ browser, browserName }) => {
-  test.skip(browserName !== 'chromium', 'CDP 觸控手勢只在 chromium 可用');
-  const ctx = await browser.newContext({
-    viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3,
-  });
-  const page = await ctx.newPage();
+async function openChat(page) {
   await setupApiMocks(page);
   const tripId = MOCK_TRIPS_LIST[0].tripId;
   const row = (id) => ({ id, tripId, message: `歷史訊息 ${id}`, status: 'completed',
@@ -32,44 +30,61 @@ test('chat: touch drag down scrolls older messages without pull-to-refresh reloa
   });
   await page.goto(`/chat?tripId=${tripId}`);
   await expect(page.getByTestId('chat-body').getByText('歷史訊息 14', { exact: true })).toBeVisible();
-  const cdp = await ctx.newCDPSession(page);
+}
+
+/** 在 selector 的元素上送一次完整的下拖：起點 y=100、拖到 y=300（過下拉刷新門檻），放開。 */
+function dragDown(page, selector) {
+  return page.evaluate((sel) => {
+    const target = document.querySelector(sel);
+    const fire = (type, y) => {
+      const touch = new Touch({ identifier: 1, target, clientX: 200, clientY: y });
+      const live = type === 'touchend' ? [] : [touch];
+      target.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: live, targetTouches: live, changedTouches: [touch] }));
+    };
+    fire('touchstart', 100);
+    fire('touchmove', 200);
+    fire('touchmove', 300);
+    fire('touchend', 300);
+  }, selector);
+}
+
+test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== 'chromium', '只在 chromium 專案跑'); });
+
+const MOBILE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 };
+
+test('chat: 內層清單已捲離頂端時，下拖看歷史不觸發下拉刷新（不位移、不重新載入）', async ({ browser }) => {
+  const ctx = await browser.newContext(MOBILE);
+  const page = await ctx.newPage();
+  await openChat(page);
   const body = page.getByTestId('chat-body');
-  const swipeDown = async (loc) => {
-    const b = await loc.boundingBox();
-    const start = await loc.evaluate((el) => el.scrollTop);
-    // CDP：yDistance 為正＝內容往下（看較早內容）＝手指往下拖
-    await cdp.send('Input.synthesizeScrollGesture', { x: b.x + b.width / 2, y: b.y + b.height / 2, yDistance: 400, gestureSourceType: 'touch', speed: 800 });
-    // CI 機器慢，固定等 600ms 會在手勢還沒結束時就讀值：輪詢到 scrollTop 變動（或逾時，讓「不該動」的情境也能走完）
-    await expect.poll(() => loc.evaluate((el) => el.scrollTop), { timeout: 5000 }).not.toBe(start).catch(() => {});
-    // 下拉刷新若誤觸發，reload 發生在 touchend 之後：再多等一下，負向斷言（不重新載入）才有意義
-    await page.waitForTimeout(1500);
-  };
-
-  // 對照：普通可捲容器放在中段，同一個手勢要能往上捲，證明手勢本身有效
-  await page.evaluate(() => {
-    const d = document.createElement('div');
-    d.id = 'ctl'; d.style.cssText = 'position:fixed;left:10px;top:60px;width:200px;height:200px;overflow:auto;z-index:99999;background:#fff';
-    d.innerHTML = '<div style="height:3000px">control</div>';
-    document.body.appendChild(d);
-    d.scrollTop = 1500;
-  });
-  const ctl = page.locator('#ctl');
-  const ctlBefore = await ctl.evaluate((el) => el.scrollTop);
-  await swipeDown(ctl);
-  expect(await ctl.evaluate((el) => el.scrollTop), '對照容器：手勢本身要能捲動').toBeLessThan(ctlBefore - 200);
-  await page.evaluate(() => document.getElementById('ctl').remove());
-
-  // 聊天：把清單放到中段，數頁面載入次數，再做同一個手勢
   await body.evaluate((el) => { el.scrollTop = 1500; });
   await page.waitForTimeout(400);
+  expect(await body.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+
   let loads = 0;
   page.on('load', () => { loads += 1; });
-  const before = await body.evaluate((el) => el.scrollTop);
-  await swipeDown(body);
-  const after = await body.evaluate((el) => el.scrollTop);
-
-  expect(loads, '下拖看歷史不該觸發整頁重新載入（pull-to-refresh 誤判）').toBe(0);
-  expect(after, '清單要往上捲（scrollTop 減少），不能被洗回最底').toBeLessThan(before - 200);
+  await dragDown(page, '.tp-chat-msg');
+  await page.waitForTimeout(1500); // 誤觸發的 reload 發生在 touchend 之後
+  expect(loads, '下拖看歷史不該觸發整頁重新載入（下拉刷新誤判）').toBe(0);
   expect(await page.locator('.app-shell-main').evaluate((el) => el.style.transform), '<main> 不該被下拉位移').toBe('');
+  await ctx.close();
+});
+
+test('chat: 內層清單在最頂端時，下拖仍可下拉刷新（既有行為不變）', async ({ browser }) => {
+  const ctx = await browser.newContext(MOBILE);
+  const page = await ctx.newPage();
+  await openChat(page);
+  const body = page.getByTestId('chat-body');
+  await body.evaluate((el) => { el.scrollTop = 0; });
+  await page.waitForTimeout(400);
+
+  const moved = [];
+  await page.exposeFunction('__rec', (v) => moved.push(v));
+  await page.evaluate(() => {
+    const m = document.querySelector('.app-shell-main');
+    new MutationObserver(() => window.__rec(m.style.transform || '')).observe(m, { attributes: true, attributeFilter: ['style'] });
+  });
+  await dragDown(page, '.tp-chat-msg');
+  await expect.poll(() => moved.some((v) => v.startsWith('translateY(')), { timeout: 3000 }).toBe(true);
   await ctx.close();
 });
