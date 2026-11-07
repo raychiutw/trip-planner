@@ -318,6 +318,9 @@ const SCOPED_STYLES = `
   }
 `;
 
+// 同時是錯誤訊息與「錯誤屬於哪個欄位」的判準（#1561）
+const DURATION_ERROR = '停留時間請輸入正整數分鐘';
+
 export default function AddCustomStopPage() {
   const auth = useRequireAuth();
   const params = useParams<{ tripId: string }>();
@@ -390,6 +393,7 @@ export default function AddCustomStopPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [addressError, setAddressError] = useState(false);
+  const durationInvalid = submitError === DURATION_ERROR;
   const allowLeaveRef = useRef(false);
 
   const typeahead = usePlacesAutocomplete();
@@ -433,7 +437,7 @@ export default function AddCustomStopPage() {
       return;
     }
     if (duration && (!Number.isInteger(Number(duration)) || Number(duration) <= 0)) {
-      setSubmitError('停留時間請輸入正整數分鐘');
+      setSubmitError(DURATION_ERROR);
       return;
     }
 
@@ -555,7 +559,7 @@ export default function AddCustomStopPage() {
             )}
 
             {submitError && (
-              <div className="tp-custom-stop-error" data-testid="add-custom-stop-error">
+              <div className="tp-custom-stop-error" id="add-custom-stop-error" role="alert" data-testid="add-custom-stop-error">
                 {submitError}
               </div>
             )}
@@ -589,6 +593,8 @@ export default function AddCustomStopPage() {
                     onChange={(e) => { setAddressError(false); typeahead.setQuery(e.target.value); }}
                     placeholder="輸入地址縮放地圖（選填）"
                     autoComplete="off"
+                    aria-invalid={addressError || undefined}
+                    aria-describedby={addressError ? 'cs-address-error' : undefined}
                     data-testid="add-custom-stop-address-typeahead"
                     {...typeaheadKb.inputProps}
                   />
@@ -622,7 +628,7 @@ export default function AddCustomStopPage() {
                   )}
                 </div>
                 <div className="tp-custom-stop-help">選填 — 用來把地圖縮放到大概區域，最終位置仍以地圖中心為準。</div>
-                {addressError && <div className="tp-custom-stop-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
+                {addressError && <div className="tp-custom-stop-error" id="cs-address-error" role="alert">無法取得此地址的位置。請改選其他候選，或拖曳地圖選位置。</div>}
               </div>
 
               <div className="tp-custom-stop-field">
@@ -676,7 +682,9 @@ export default function AddCustomStopPage() {
                       step={1}
                       className="tp-input-short"
                       value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
+                      onChange={(e) => { setDuration(e.target.value); if (durationInvalid) setSubmitError(null); }}
+                      aria-invalid={durationInvalid || undefined}
+                      aria-describedby={durationInvalid ? 'add-custom-stop-error' : undefined}
                       placeholder="60"
                       data-testid="add-custom-stop-duration"
                     />

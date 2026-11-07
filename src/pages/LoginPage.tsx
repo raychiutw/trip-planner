@@ -279,6 +279,8 @@ export default function LoginPage() {
   const [bannerError, setBannerError] = useState<string | null>(
     googleErrorCode ? googleErrorMessage(googleErrorCode) : null,
   );
+  // 只有帳密類錯誤屬於輸入欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
+  const credentialError = bannerError === '請輸入電子郵件與密碼' || bannerError === '電子郵件或密碼錯誤';
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
   const isLocked = lockedRetryAfter !== null;
@@ -576,6 +578,8 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               data-testid="login-email"
+              aria-invalid={credentialError || undefined}
+              aria-describedby={credentialError ? 'login-banner-error' : undefined}
             />
           </div>
           <div className="tp-form-row">
@@ -591,6 +595,8 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="login-password"
+              aria-invalid={credentialError || undefined}
+              aria-describedby={credentialError ? 'login-banner-error' : undefined}
             />
           </div>
 

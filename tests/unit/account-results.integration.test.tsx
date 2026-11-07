@@ -109,6 +109,36 @@ it('keeps the account and confirmation open when the server rejects deletion', a
   expect(screen.getByTestId('confirm-modal')).toBeVisible();
 });
 
+it('links the wrong-password error to the confirm input; other delete failures do not blame it (#1561)', async () => {
+  showAccount();
+  fireEvent.click(await screen.findByTestId('account-row-delete-account'));
+  const password = await screen.findByTestId('delete-account-confirm-input');
+  expect(password).not.toHaveAttribute('aria-invalid');
+  expect(password).not.toHaveAttribute('aria-describedby');
+  fireEvent.change(password, { target: { value: 'wrong-password' } });
+  fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+  await screen.findByText('密碼不正確，帳號未刪除');
+  expect(password).toHaveAttribute('aria-invalid', 'true');
+  const target = document.getElementById(password.getAttribute('aria-describedby')!);
+  expect(target?.textContent).toBe('密碼不正確，帳號未刪除');
+  expect(target).toHaveAttribute('role', 'alert');
+  fireEvent.change(password, { target: { value: 'other' } });
+  expect(password).not.toHaveAttribute('aria-invalid');
+  expect(password).not.toHaveAttribute('aria-describedby');
+});
+
+it('does not mark the confirm input invalid for a server failure (#1561)', async () => {
+  deleteResponse = json({ error: { code: 'SYS_INTERNAL' } }, 500);
+  showAccount();
+  fireEvent.click(await screen.findByTestId('account-row-delete-account'));
+  const password = await screen.findByTestId('delete-account-confirm-input');
+  fireEvent.change(password, { target: { value: 'whatever' } });
+  fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
+  await screen.findByText('刪除失敗，請稍後再試');
+  expect(password).not.toHaveAttribute('aria-invalid');
+  expect(password).not.toHaveAttribute('aria-describedby');
+});
+
 it('does not present an incomplete delete preview as valid impact data', async () => {
   preview = { hasPassword: false };
   showAccount();

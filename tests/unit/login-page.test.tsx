@@ -314,3 +314,79 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
       .toBe('/signup?invitation=invite-tok');
   });
 });
+
+describe('LoginPage 錯誤關聯（#1561）', () => {
+  function fieldsAndError() {
+    const email = screen.getByTestId('login-email');
+    const password = screen.getByTestId('login-password');
+    return { email, password };
+  }
+  function expectLinked(input: HTMLElement) {
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    const id = input.getAttribute('aria-describedby');
+    expect(id).toBeTruthy();
+    const target = document.getElementById(id!);
+    expect(target?.textContent).toContain('電子郵件或密碼');
+    expect(target?.closest('[role="alert"]')).toBeTruthy();
+  }
+
+  it('無錯時兩欄都沒有 aria-invalid／aria-describedby', () => {
+    renderAt();
+    for (const el of Object.values(fieldsAndError())) {
+      expect(el.hasAttribute('aria-invalid')).toBe(false);
+      expect(el.hasAttribute('aria-describedby')).toBe(false);
+    }
+  });
+
+  it('帳密錯誤 → 兩欄標為無效並指向有文字的錯誤元素', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: 'LOGIN_INVALID', message: 'bad' } }), { status: 401 }),
+    ));
+    vi.useRealTimers();
+    renderAt();
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.queryByTestId('login-banner-error')).toBeTruthy());
+    const { email, password } = fieldsAndError();
+    expectLinked(email);
+    expectLinked(password);
+  });
+
+  it('網路失敗不屬於任何欄位 → 不標無效', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('net')));
+    vi.useRealTimers();
+    renderAt();
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'pass1234' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.queryByTestId('login-banner-error')).toBeTruthy());
+    for (const el of Object.values(fieldsAndError())) {
+      expect(el.hasAttribute('aria-invalid')).toBe(false);
+      expect(el.hasAttribute('aria-describedby')).toBe(false);
+    }
+  });
+
+  it('再次送出時錯誤清除 → 屬性移除', async () => {
+    let logins = 0;
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (!String(url).includes('login')) return Promise.resolve(new Response('{}', { status: 200 }));
+      return ++logins === 1
+        ? Promise.resolve(new Response(JSON.stringify({ error: { code: 'LOGIN_INVALID', message: 'bad' } }), { status: 401 }))
+        : new Promise(() => {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.useRealTimers();
+    renderAt();
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.queryByTestId('login-banner-error')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.queryByTestId('login-banner-error')).toBeNull());
+    for (const el of Object.values(fieldsAndError())) {
+      expect(el.hasAttribute('aria-invalid')).toBe(false);
+      expect(el.hasAttribute('aria-describedby')).toBe(false);
+    }
+  });
+});

@@ -648,6 +648,7 @@ const SCOPED_STYLES = `
 /* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */
 `;
 
+const TRANSIT_MIN_ERROR = '分鐘需為 1–1440'; // 同時是欄位錯誤判準（#1561）
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 // v2.33.28: dedupe — POI_TYPE_LABEL 用 canonical POI_TYPE_LABELS（poiCategory.ts），
 // POI icon 用 canonical CATEGORY_ICON（CategoryPicker.tsx，8 類齊全），
@@ -1250,11 +1251,12 @@ function EditEntryPageContent() {
     // v2.55.72：大眾運輸分鐘改選填（留空＝預設用駕車估、選了即存）；有填才驗範圍。
     if (mode === 'transit' && transitMin.trim() !== '') {
       const n = parseInt(transitMin, 10);
-      if (!Number.isFinite(n) || n < 1 || n > 1440) return '分鐘需為 1–1440';
+      if (!Number.isFinite(n) || n < 1 || n > 1440) return TRANSIT_MIN_ERROR;
     }
     return null;
   }, [startTime, endTime, mode, transitMin]);
 
+  const transitMinInvalid = validation === TRANSIT_MIN_ERROR;
   const original = originalRef.current;
   const entryDirty = startTime !== original.startTime || endTime !== original.endTime || description !== original.description;
   const segmentDirty = noTravel !== original.noTravel || mode !== original.mode || (mode === 'transit' && transitMin !== original.transitMin);
@@ -2020,6 +2022,8 @@ function EditEntryPageContent() {
                         max="1440"
                         value={transitMin}
                         onChange={(e) => setTransitMin(e.target.value)}
+                        aria-invalid={transitMinInvalid || undefined}
+                        aria-describedby={transitMinInvalid ? 'edit-entry-validation-error' : undefined}
                         data-testid="edit-entry-transit-min"
                       />
                       <span className="tp-edit-entry-transit-unit">
@@ -2049,7 +2053,7 @@ function EditEntryPageContent() {
                   docs/design-sessions/2026-05-11-entry-time-segment-mode-edit.html */}
               {validation && (
                 <div className="tp-edit-entry-error" data-testid="edit-entry-validation">
-                  <InlineError message={validation} />
+                  <InlineError message={validation} testId="edit-entry-validation-error" />
                 </div>
               )}
 

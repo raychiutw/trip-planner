@@ -442,6 +442,27 @@ describe('EditEntryPage — segment 不存在時手動建立 (v2.55.x)', () => {
     vi.useRealTimers();
   });
 
+  it('分鐘超出範圍 → 分鐘欄標為無效並指向錯誤元素；改正後移除；時間順序錯誤不怪到分鐘欄 (#1561)', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.queryByTestId('edit-entry-mode-transit')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('edit-entry-mode-transit'));
+    const min = await screen.findByTestId('edit-entry-transit-min');
+    expect(min.hasAttribute('aria-invalid')).toBe(false);
+    expect(min.hasAttribute('aria-describedby')).toBe(false);
+    fireEvent.change(min, { target: { value: '0' } });
+    expect(min.getAttribute('aria-invalid')).toBe('true');
+    const target = document.getElementById(min.getAttribute('aria-describedby')!);
+    expect(target?.textContent).toContain('分鐘需為 1–1440');
+    expect(target?.closest('[role="alert"]')).toBeTruthy();
+    fireEvent.change(min, { target: { value: '35' } });
+    expect(min.hasAttribute('aria-invalid')).toBe(false);
+    expect(min.hasAttribute('aria-describedby')).toBe(false);
+    pickTime('edit-entry-start-time', '22:00');
+    pickTime('edit-entry-end-time', '21:00');
+    expect(screen.getByTestId('edit-entry-validation').textContent).toContain('抵達時間需早於離開時間');
+    expect(min.hasAttribute('aria-invalid')).toBe(false);
+  });
+
   it('no-segment + 選大眾運輸 + 填分鐘 → POST /segments 帶 mode=transit + min', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     renderPage();
