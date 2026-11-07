@@ -15,6 +15,7 @@
  *   - 完成 → POST entries + recompute-travel + navigate back
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DURATION_ERROR } from '../lib/timelineUtils';
 import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -319,7 +320,6 @@ const SCOPED_STYLES = `
 `;
 
 // 同時是錯誤訊息與「錯誤屬於哪個欄位」的判準（#1561）
-const DURATION_ERROR = '停留時間請輸入正整數分鐘';
 
 export default function AddCustomStopPage() {
   const auth = useRequireAuth();
@@ -391,9 +391,15 @@ export default function AddCustomStopPage() {
   const [duration, setDuration] = useState('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // field 標記錯誤歸屬的輸入欄位（不靠比對訊息文字）
+  const [submitErr, setSubmitErr] = useState<{ message: string; field?: 'duration' } | null>(null);
+  const submitError = submitErr?.message ?? null;
+  const setSubmitError = useCallback(
+    (message: string | null, field?: 'duration') => setSubmitErr(message === null ? null : { message, field }),
+    [],
+  );
   const [addressError, setAddressError] = useState(false);
-  const durationInvalid = submitError === DURATION_ERROR;
+  const durationInvalid = submitErr?.field === 'duration';
   const allowLeaveRef = useRef(false);
 
   const typeahead = usePlacesAutocomplete();
@@ -437,7 +443,7 @@ export default function AddCustomStopPage() {
       return;
     }
     if (duration && (!Number.isInteger(Number(duration)) || Number(duration) <= 0)) {
-      setSubmitError(DURATION_ERROR);
+      setSubmitError(DURATION_ERROR, 'duration');
       return;
     }
 
@@ -462,7 +468,7 @@ export default function AddCustomStopPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack]);
+  }, [submitting, tripId, dayNum, title, pickedCoord, duration, note, startTime, handleBack, setSubmitError]);
 
   // 未送出的表單草稿離頁前先確認，包含地址與時間欄位。
   const [discardOpen, setDiscardOpen] = useState(false);

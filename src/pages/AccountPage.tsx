@@ -286,7 +286,7 @@ interface SettingsRow {
   danger?: boolean;
 }
 
-const DELETE_PASSWORD_INVALID = '密碼不正確，帳號未刪除'; // 同時是欄位錯誤判準（#1561）
+const DELETE_PASSWORD_INVALID = '密碼不正確，帳號未刪除';
 
 export default function AccountPage() {
   const auth = useRequireAuth();
@@ -310,8 +310,11 @@ export default function AccountPage() {
   const reloadPreview = accountPreview.reload;
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const deletePasswordInvalid = deleteError === DELETE_PASSWORD_INVALID;
+  // field 標記錯誤歸屬哪個輸入欄位（不靠比對訊息文字）
+  const [deleteErr, setDeleteErr] = useState<{ message: string; field?: 'password' } | null>(null);
+  const deleteError = deleteErr?.message ?? null;
+  const deletePasswordInvalid = deleteErr?.field === 'password';
+  const setDeleteError = (message: string | null, field?: 'password') => setDeleteErr(message === null ? null : { message, field });
   const [loggingOut, setLoggingOut] = useState(false);
 
   // v2.33.142: inline edit display_name — 取代 v2.33.122 modal。
@@ -474,13 +477,15 @@ export default function AccountPage() {
       window.location.href = '/';
     } catch (err) {
       setDeleting(false);
-      setDeleteError(
-        err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID'
-          ? DELETE_PASSWORD_INVALID
-          : err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED'
+      if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID') {
+        setDeleteError(DELETE_PASSWORD_INVALID, 'password');
+      } else {
+        setDeleteError(
+          err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED'
             ? '近期身分驗證已失效，請重新驗證。帳號尚未刪除。'
-          : '刪除失敗，請稍後再試',
-      );
+            : '刪除失敗，請稍後再試',
+        );
+      }
       if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
         writeDeleteChallenge(null);
         patchPreview((current) => ({ ...current, reauthenticated: false }));

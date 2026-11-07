@@ -278,11 +278,13 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const googleErrorCode = params.get('google_error');
-  const [bannerError, setBannerError] = useState<string | null>(
-    googleErrorCode ? googleErrorMessage(googleErrorCode) : null,
+  // credential 標記錯誤是否屬於帳密欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
+  const [banner, setBanner] = useState<{ message: string; credential?: boolean } | null>(
+    googleErrorCode ? { message: googleErrorMessage(googleErrorCode) } : null,
   );
-  // 只有帳密類錯誤屬於輸入欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
-  const credentialError = bannerError === '請輸入電子郵件與密碼' || bannerError === '電子郵件或密碼錯誤';
+  const bannerError = banner?.message ?? null;
+  const credentialError = banner?.credential === true;
+  const setBannerError = (message: string | null, credential = false) => setBanner(message === null ? null : { message, credential });
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   const lockoutHeadingRef = useRef<HTMLHeadingElement>(null);
   const isLocked = lockedRetryAfter !== null;
@@ -411,11 +413,11 @@ export default function LoginPage() {
       const code = outcome.code;
       switch (code) {
         case 'LOGIN_INVALID_INPUT':
-          setBannerError('請輸入電子郵件與密碼');
+          setBannerError('請輸入電子郵件與密碼', true);
           break;
         case 'LOGIN_INVALID':
           bumpFailure();
-          setBannerError('電子郵件或密碼錯誤');
+          setBannerError('電子郵件或密碼錯誤', true);
           break;
         case 'LOGIN_RATE_LIMITED': {
           const retryAfter = outcome.retryAfter;

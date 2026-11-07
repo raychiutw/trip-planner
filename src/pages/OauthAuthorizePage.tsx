@@ -35,7 +35,7 @@ interface AuthRequestView {
 
 type View =
   | { kind: 'init' }
-  | { kind: 'login'; error?: string }
+  | { kind: 'login'; error?: string; credential?: boolean }
   | { kind: 'confirm'; request: AuthRequestView; email: string }
   | { kind: 'error'; message: string };
 
@@ -84,9 +84,13 @@ const CheckIcon = () => (
 
 const CREDENTIAL_ERROR = '電子郵件或密碼錯誤。';
 
+function isCredentialError(e: unknown): boolean {
+  return e instanceof AuthError && (e.code === 'LOGIN_INVALID' || e.status === 401);
+}
+
 function loginErrorMessage(e: unknown): string {
   if (e instanceof AuthError) {
-    if (e.code === 'LOGIN_INVALID' || e.status === 401) return CREDENTIAL_ERROR;
+    if (isCredentialError(e)) return CREDENTIAL_ERROR;
     if (e.status === 429 || e.code === 'LOGIN_RATE_LIMITED') {
       return e.retryAfter ? `嘗試次數過多，請 ${Math.ceil(e.retryAfter / 60)} 分鐘後再試。` : '嘗試次數過多，請稍後再試。';
     }
@@ -149,7 +153,7 @@ export default function OauthAuthorizePage() {
     try {
       await getAuthorizeAuth().login(email.trim(), password);
     } catch (err) {
-      setView({ kind: 'login', error: loginErrorMessage(err) });
+      setView({ kind: 'login', error: loginErrorMessage(err), credential: isCredentialError(err) });
       setBusy(false);
       return;
     }
@@ -192,7 +196,7 @@ export default function OauthAuthorizePage() {
     setView({ kind: 'login' });
   }
 
-  const credentialInvalid = view.kind === 'login' && view.error === CREDENTIAL_ERROR;
+  const credentialInvalid = view.kind === 'login' && view.credential === true;
   return (
     <main className="tp-authz-shell" data-testid="oauth-authorize-page">
       <style>{SCOPED_STYLES}</style>

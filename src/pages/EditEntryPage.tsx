@@ -648,7 +648,7 @@ const SCOPED_STYLES = `
 /* discard-changes 用 shared <ConfirmModal>（沒額外樣式） */
 `;
 
-const TRANSIT_MIN_ERROR = '分鐘需為 1–1440'; // 同時是欄位錯誤判準（#1561）
+const TRANSIT_MIN_ERROR = '分鐘需為 1–1440';
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 // v2.33.28: dedupe — POI_TYPE_LABEL 用 canonical POI_TYPE_LABELS（poiCategory.ts），
 // POI icon 用 canonical CATEGORY_ICON（CategoryPicker.tsx，8 類齊全），
@@ -1244,19 +1244,21 @@ function EditEntryPageContent() {
     // Keep the local choice for retry, but advance the server baseline.
   }, [segment, mode, transitMin, noTravel]);
 
-  const validation = useMemo(() => {
-    if (startTime && !TIME_RE.test(startTime)) return '抵達時間格式錯誤（HH:MM）';
-    if (endTime && !TIME_RE.test(endTime)) return '離開時間格式錯誤（HH:MM）';
-    if (startTime && endTime && startTime >= endTime) return '抵達時間需早於離開時間';
+  // field 標記錯誤歸屬的輸入欄位（不靠比對訊息文字）；時間類錯誤目前不標欄位
+  const validationState = useMemo((): { message: string; field?: 'transit' } | null => {
+    if (startTime && !TIME_RE.test(startTime)) return { message: '抵達時間格式錯誤（HH:MM）' };
+    if (endTime && !TIME_RE.test(endTime)) return { message: '離開時間格式錯誤（HH:MM）' };
+    if (startTime && endTime && startTime >= endTime) return { message: '抵達時間需早於離開時間' };
     // v2.55.72：大眾運輸分鐘改選填（留空＝預設用駕車估、選了即存）；有填才驗範圍。
     if (mode === 'transit' && transitMin.trim() !== '') {
       const n = parseInt(transitMin, 10);
-      if (!Number.isFinite(n) || n < 1 || n > 1440) return TRANSIT_MIN_ERROR;
+      if (!Number.isFinite(n) || n < 1 || n > 1440) return { message: TRANSIT_MIN_ERROR, field: 'transit' };
     }
     return null;
   }, [startTime, endTime, mode, transitMin]);
 
-  const transitMinInvalid = validation === TRANSIT_MIN_ERROR;
+  const validation = validationState?.message ?? null;
+  const transitMinInvalid = validationState?.field === 'transit';
   const original = originalRef.current;
   const entryDirty = startTime !== original.startTime || endTime !== original.endTime || description !== original.description;
   const segmentDirty = noTravel !== original.noTravel || mode !== original.mode || (mode === 'transit' && transitMin !== original.transitMin);

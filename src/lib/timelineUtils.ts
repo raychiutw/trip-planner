@@ -173,3 +173,6 @@ export function poiTypeToTone(poiType: string | null | undefined): StopTone {
   if (t === 'attraction' || t === 'shopping' || t === 'activity') return 'accent';
   return 'neutral';
 }
+
+/** 自訂停留點「停留時間」欄位的驗證訊息（AddStop／AddCustomStop 共用）。 */
+export const DURATION_ERROR = '停留時間請輸入正整數分鐘';
