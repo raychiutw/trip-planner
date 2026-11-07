@@ -21,6 +21,8 @@
  *   3. 若 process 失敗 → bumpRateLimit() count++
  */
 import type { D1Database } from '@cloudflare/workers-types';
+import { buildRateLimitResponse } from './_errors';
+import { ERROR_MESSAGES } from '../../src/types/api';
 
 interface RateLimitConfig {
   maxAttempts: number;
@@ -223,11 +225,7 @@ export async function consumeUserBucket(
   const pre = await checkRateLimit(db, key, config);
   const res = pre.ok ? await bumpRateLimit(db, key, config) : pre;
   if (res.ok) return null;
-  return new Response(
-    JSON.stringify({ error: { code: 'SYS_RATE_LIMIT', message: '操作太頻繁，請稍等' } }),
-    {
-      status: 429,
-      headers: { 'Content-Type': 'application/json', 'Retry-After': String(res.retryAfter ?? Math.ceil(config.lockoutMs / 1000)) },
-    },
-  );
+  return buildRateLimitResponse(res.retryAfter ?? Math.ceil(config.lockoutMs / 1000), {
+    error: { code: 'SYS_RATE_LIMIT', message: ERROR_MESSAGES.SYS_RATE_LIMIT },
+  });
 }

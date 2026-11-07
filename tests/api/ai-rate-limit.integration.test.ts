@@ -76,8 +76,10 @@ describe('POST /api/requests — AI 聊天每帳號限流', () => {
       const resp = await sendAi(message);
       expect(resp.status).toBe(429);
       expect(Number(resp.headers.get('Retry-After'))).toBeGreaterThan(0);
-      const body = await resp.json() as { error: { code: string } };
+      const body = await resp.json() as { error: { code: string; message: string } };
       expect(body.error.code).toBe('SYS_RATE_LIMIT');
+      expect(resp.headers.get('Cache-Control')).toMatch(/no-store/);
+      expect(body.error.message).toBe('操作太頻繁，請稍等');
       const n = await db.prepare('SELECT COUNT(*) AS c FROM trip_requests WHERE message = ?').bind(message).first<{ c: number }>();
       expect(n?.c).toBe(0);
     }
