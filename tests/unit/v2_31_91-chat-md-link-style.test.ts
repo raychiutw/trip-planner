@@ -26,7 +26,9 @@ describe('v2.31.91: chat bubble markdown link site style', () => {
     expect(src).toMatch(/\.tp-chat-msg a:hover\s*\{\s*opacity:\s*0\.7/);
   });
 
-  it('.tp-chat-msg-user a 用 accent-foreground（white on orange bg）+ semi-transparent underline', () => {
-    expect(src).toMatch(/\.tp-chat-msg-user a\s*\{[\s\S]*?color:\s*var\(--color-accent-foreground\)[\s\S]*?text-decoration-color:\s*rgba\(255,\s*255,\s*255,\s*0\.55\)/);
+  it('.tp-chat-msg-user a 用 accent-text（自己氣泡改為 accent 淡染底，不再是實心底配白字）+ 同色淡化 underline', () => {
+    expect(src).toMatch(/\.tp-chat-msg-user a\s*\{[\s\S]*?color:\s*var\(--color-accent-text\)[\s\S]*?text-decoration-color:\s*color-mix\(in srgb,\s*var\(--color-accent-text\)\s*55%,\s*transparent\)/);
+    // 舊樣式（白字、rgba 白色 underline）在淡染底上會看不見，不可回來
+    expect(src).not.toMatch(/\.tp-chat-msg-user a\s*\{[^}]*accent-foreground/);
   });
 });

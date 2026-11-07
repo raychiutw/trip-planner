@@ -160,7 +160,7 @@
 >
 > **不要**寫成「同色系淡底 + 同色系深字」再去調色救對比 —— 那是把一個色相同時當 fill 又當 label，正是上面第二段勸阻的。實測差距也很大：`.tp-pill-current` 走中性字是 **12.30:1**，走「壓深的語意色字」只有 ~5.x，而且中性字**底色日後怎麼改都不會再壞**。
 >
-> 這不是新發明 —— 本檔 §行程一覽三色（「字一律 `--color-foreground`／`--color-muted`」）與 §AI聊天 avatar（「`--t-bg` 底 + `--color-foreground` 字，不用 vivid 實心」）**已經各拍板過一次**，本節只是把同一條規則推廣到語意色。
+> 這不是新發明 —— 本檔 §行程一覽三色（「字一律 `--color-foreground`／`--color-muted`」）與 §AI聊天 avatar（「`--t-bg` 底 + `--color-foreground` 字，不用 vivid 實心」；avatar 版已於 2.57.133 淘汰，僅留作當時的歷史決策）**已經各拍板過一次**，本節只是把同一條規則推廣到語意色。
 >
 > 另有 HIG 明文要求的第三重編碼：
 >
@@ -269,9 +269,13 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - 視覺（mockup V3「整卡同色」）：cover 用 `--t → --t-deep` 漸層、卡身 `--t-subtle` 淡底、border/hover/選取框/選取點都跟 `--t`、avatar `--t-bg` 底。**字一律 `--color-foreground`/`--color-muted`**（不用 `--t-deep` 當字 —— light mode sage/粉 `-deep` 對 `-subtle` 對比 <4.5:1；色由 cover + 卡底承載）。canonical mockup：`design-sessions/2026-06-07-trips-list-by-destination.html`。
 - 取代了舊的 `--color-cover-*` 國家別 cover 漸層 token（jp/kr/tw/other，v2.54.8 移除）。
 
-**AI聊天 — 依角色三色（v2.54.9，`ChatPage`）**：聊天泡泡的 avatar 依「誰在說話」上 tone（mockup V1「輕觸」，只 avatar 上色、泡泡維持中性）：
-- **你=柔褐**（`.tp-chat-avatar` base = `--color-accent`，右側、實心）、**AI 助理=sage**（`.is-ai` = `--color-accent-2-bg`）、**共編旅伴=pink**（`.is-other-user` = `--color-accent-3-bg`）。修掉原本 AI 與旅伴 avatar 撞色（都 secondary/foreground）分不出真人/AI 的問題。
-- avatar 用 `--t-bg` 底 + `--color-foreground` 字（~7–12:1，light/dark 皆過）—— **不用 vivid `--color-accent-2/-3` 實心**（dark mode 對 foreground 字僅 1.78:1 fail）。canonical mockup：`design-sessions/2026-06-08-chat-tricolor-by-role.html`。
+**AI聊天 — 比照 App 的角色呈現（`ChatPage`；v2.54.9 三色頭像版已淘汰）**：**不用頭像**。每則訊息上方一行名稱標籤，氣泡依「誰在說話」分色，與 App（`chat_screen.dart` `_MessageBubble`）一致：
+- **自己**：右側；標籤＝帳號名（`--color-accent-text`）；氣泡＝accent 淡染（`--color-accent-bg` 底 + `--color-foreground` 字；App 的 `primaryContainer`）。
+- **AI**：左側；標籤＝「Tripline AI」（`--color-muted`）；氣泡＝`--color-chat-ai-bubble`（淺色 `--color-background`、深色 `--color-tertiary`）+ 1px `--color-border`（App 的 `surfaceContainerHigh`）。淺色不用 `--color-tertiary`：它與自己的 `--color-accent-bg` 只差 ≈5/765，肉眼等於同色。
+- **協作者**：左側；標籤＝對方名字（`--color-collaborator-text`）；氣泡＝靛藍淡染（`color-mix(--color-collaborator var(--collab-bubble-mix), --color-chat-ai-bubble)`，淺 10%／深 18%，App 的 `systemIndigo`）。標籤字不直接用 systemIndigo（深色對聊天底只有 2.75:1），淺 `#4F4DC9`（5.93:1）、深 `#9A98FF`（5.51:1）。
+- 這是**聊天專用**的角色色，不重啟已退場的 sage／pink 三色系統（V3 三色退場，v2.55.88）；靛藍 token 在 `css/tokens.css` 的 plain `:root`／`body.dark`。時間行只剩時間（名稱已搬到氣泡上方）。
+- 為什麼改：V3 三色退場把 `--color-accent-2-bg` 與 `--color-accent-3-bg` 收斂成同值，原本靠它們區分 AI 與旅伴的頭像變成同色；owner 2026-11-07 指示「不用頭像，比照 App」。`tests/unit/chat-role-colors-distinct.test.ts` 把 token 展開成實際色值，三種氣泡底色與三種標籤色都必須兩兩不同，且自己與 AI 的氣泡色差要夠大（RGB 差總和 ≥ 24，擋住「值不同但看起來一樣」）。
+- **聊天底部材質**：訊息區延伸到螢幕底，輸入 dock（`.tp-chat-dock` ＝ 擁有者授權提示條 ＋ composer〔`.tp-glass`〕）與手機 tab 膠囊浮在訊息上面；訊息區底部留白 = dock 高度（含提示條；ResizeObserver 量測，`--chat-composer-h`）+ `--nav-overlay-h` + safe-area。dock 長高（textarea 多行、提示條出現）時，若使用者本來就在底部，捲動位置會重新釘回底部，最新一則不會被蓋住；「跳到最新」按鈕以 dock 為定位容器，在提示條之上。玻璃要有東西可折射——曾經因為用 padding 把訊息擋在輸入列上方，底下只剩純色，blur 數值都對卻看起來是實心。`tests/e2e/chat-composer-glass.spec.js` 驗訊息區真的延伸到 composer 底下、留白隨輸入長高並涵蓋提示條、長高後仍貼底、手機上 composer 在膠囊之上、提示條貼在 composer 上方。
 
 **AI 聊天捲動（#1209，owner 核准 A）**：離底部 >80px 時，在 composer 上方 12px、聊天欄置中顯示 44×44px 中性描邊向下箭頭；≤80px 隱藏。按箭頭使用原生平滑捲動，減少動態效果時立即捲動。回到底部的邊界只刷新最新五筆一次；刷新 spinner／失敗重試佔用箭頭位置。距頂 ≤80px 載入較早訊息時，頂部中央以不改變訊息高度的 sticky 狀態顯示載入／失敗重試。獨立與嵌入聊天共用規則。五態原型：[Cloudflare preview](https://59a64497.trip-planner-dby.pages.dev/prototype-1209-chat-scroll.html)。
 

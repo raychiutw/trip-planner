@@ -114,18 +114,21 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   background: var(--color-secondary);
   /* owner 2026-07-20「全版」：AppShell main 已不為透明 tab 保留空間（功能頁鋪到螢幕底）。
-   * 聊天底部的輸入 composer 是互動元件，被浮在上面的 tab 蓋住就打不了字 → 這裡自行讓位。
-   * --nav-overlay-h 在桌機 / 無 tab 的操作頁為 0，故不影響那些情境。
-   * #1140 item 8：加 safe-area，讓 iPhone 有 home indicator 時 composer 與膠囊間距一致（不被吃掉）。 */
-  padding-bottom: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
-  box-sizing: border-box;
+   * 聊天底部的輸入 dock（提示條＋composer）是互動元件，不能被浮在上面的 tab 蓋住，但玻璃要有東西可折射：
+   * 所以訊息區延伸到螢幕底，dock 與 tab 膠囊「浮」在訊息上面，由訊息區自己的 padding-bottom 讓位
+   * （曾用 padding 把訊息擋在 composer 上方，底下只剩純色，blur 數值都對卻看起來是實心）。
+   * --chat-bottom-inset ＝ dock 要避開的空間：tab 膠囊（--nav-overlay-h，桌機／無 tab 的操作頁為 0）
+   * ＋ iPhone home indicator（#1140 item 8）。--chat-composer-h 是 dock 高度，由 ResizeObserver 量測寫入。 */
+  --chat-bottom-inset: calc(var(--nav-overlay-h, 0px) + env(safe-area-inset-bottom, 0px));
+  /* 72px＝ResizeObserver 首次量測前的 dock 高度估值；12px＝最後一則訊息與 dock 之間的呼吸空間 */
+  --chat-body-pad-b: calc(var(--chat-composer-h, 72px) + var(--chat-bottom-inset) + 12px);
 }
 /* tp-chat-header / .tp-page-header CSS 已退役。改用 <TitleBar>，自帶
  * padding 0 24px (desktop) / 0 16px (compact)，不需額外覆寫。 */
 
 .tp-chat-body {
   flex: 1; min-height: 0; overflow-y: auto;
-  padding: 20px 24px;
+  padding: 20px 24px var(--chat-body-pad-b);
   display: flex; flex-direction: column; gap: 12px;
 }
 .tp-chat-history-status {
@@ -152,7 +155,7 @@ const SCOPED_STYLES = `
 }
 @keyframes tp-chat-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tp-chat-spinner { animation: none; } }
-@media (max-width: 760px) { .tp-chat-body { padding: 16px; } }
+@media (max-width: 760px) { .tp-chat-body { padding: 16px 16px var(--chat-body-pad-b); } }
 
 /* Initial history load error stays visible while messages sent during the outage remain mounted. */
 .tp-chat-load-error {
@@ -168,6 +171,8 @@ const SCOPED_STYLES = `
   margin-bottom: 8px;
 }
 .tp-chat-load-error-text { flex: 1; min-width: 0; }
+/* dock 內的提示條不吃左右 padding（dock 是貼邊的），自己留邊 */
+.tp-chat-dock .tp-chat-load-error { margin: 0 12px 8px; }
 .tp-chat-load-error-retry {
   height: 32px; padding: 0 12px;
   background: var(--color-destructive);
@@ -231,35 +236,35 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-msg-user {
   align-self: flex-end;
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
+  background: var(--color-accent-bg);
+  color: var(--color-foreground);
+  /* 透明邊框：一般模式看不見；forced-colors 會把背景拿掉，這圈邊框才是氣泡唯一的輪廓（WCAG 1.4.11） */
+  border: 1px solid transparent;
   border-bottom-right-radius: 4px;
 }
+/* 比照 App（chat_screen.dart _MessageBubble）：不用頭像，每則上方一行名稱標籤；
+ * 三種氣泡 自己＝accent 淡染、AI＝中性、協作者＝靛藍淡染疊在中性底上。
+ * 三者色值不可相同，由 tests/unit/chat-role-colors-distinct.test.ts 把 token 解析成實際色值驗證。 */
 .tp-chat-msg-assistant {
   align-self: flex-start;
-  background: var(--color-secondary);
+  background: var(--color-chat-ai-bubble);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   border-bottom-left-radius: 4px;
   white-space: normal;
 }
-/* 2026-04-29:其他 collaborator 訊息(LINE 群組對方 style)— bubble bg
- * 跟 AI 接近 secondary 但稍區隔(border-color 用 muted hint)。 */
 .tp-chat-msg-other-user {
   align-self: flex-start;
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-collaborator) var(--collab-bubble-mix), var(--color-chat-ai-bubble));
   color: var(--color-foreground);
+  border: 1px solid transparent;
   border-bottom-left-radius: 4px;
   white-space: normal;
 }
-.tp-chat-msg-time-other-user {
-  align-self: flex-start;
-  margin-left: calc(40px + 8px);
-}
+.tp-chat-msg-time-other-user { align-self: flex-start; }
 /* v2.31.91：markdown link 對齊 site terracotta 風格（取代 browser 預設藍/紫 underline）。
  * Assistant bubble: terracotta accent text + subtle underline，hover 變淺。
- * User bubble (accent bg): 文字用 accent-foreground (white)，underline 用 rgba(255,255,255,.5)。
+ * User bubble (accent 淡染底): 文字用 --color-accent-text（與氣泡底對比足夠），underline 同色淡化。
  * AI 健檢 reply 內「前往健檢報告 →」link 是主要 trigger。 */
 .tp-chat-msg a {
   color: var(--color-accent-deep, var(--color-accent));
@@ -271,10 +276,10 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-msg a:hover { opacity: 0.7; }
 .tp-chat-msg-user a {
-  color: var(--color-accent-foreground);
-  text-decoration-color: rgba(255, 255, 255, 0.55);
+  color: var(--color-accent-text);
+  text-decoration-color: color-mix(in srgb, var(--color-accent-text) 55%, transparent);
 }
-/* Bubble meta：每則訊息下方時間 + AI agent 標籤(F-004,2026-04-29 對齊 mockup)
+/* Bubble meta：每則訊息下方只有時間（角色名稱在氣泡上方的 .tp-chat-msg-sender-name）
  * — user 對齊 right、assistant 對齊 left。font-size caption2 + muted color +
  * weight 500 + margin-top 4。 */
 .tp-chat-msg-time {
@@ -287,43 +292,27 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-msg-time-user { align-self: flex-end; }
 .tp-chat-msg-time-assistant { align-self: flex-start; }
-/* Section 4.8 (terracotta-ui-parity-polish)：assistant message 旁的 AI avatar
- * + bubble row wrapper，user message 不顯示 avatar 維持非對稱 visual。 */
-.tp-chat-msg-row { display: flex; gap: 8px; align-items: flex-end; }
+.tp-chat-msg-row { display: flex; }
 .tp-chat-msg-row.is-assistant { align-self: flex-start; max-width: min(680px, 85%); }
-.tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); flex-direction: row-reverse; }
-/* 2026-04-29:multi-user trip 共編 — 其他 collaborator 訊息照 LINE 群組規則
- * 顯示左側 + avatar + sender 名上方。bubble visual 跟 AI 接近(secondary bg)
- * 但 sender 名突出區隔。 */
 .tp-chat-msg-row.is-other-user { align-self: flex-start; max-width: min(680px, 85%); }
+.tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); }
 .tp-chat-msg-bubble-wrap { display: flex; flex-direction: column; min-width: 0; }
+.tp-chat-msg-row.is-user .tp-chat-msg-bubble-wrap { align-items: flex-end; }
+/* 每則上方的名稱標籤（App：labelSmall、w600、依角色上色）：AI＝muted、自己＝accent 文字色、協作者＝靛藍文字色。 */
 .tp-chat-msg-sender-name {
-  font-size: var(--font-size-eyebrow);
+  /* 名稱是辨識角色的主要線索，不能比 HIG 下限 11px 小（eyebrow 10px 是給全大寫短標籤的）；
+   * 中文與混合大小寫名稱不適合寬字距。 */
+  font-size: var(--font-size-caption2);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  max-inline-size: 100%;
   color: var(--color-muted);
-  margin: 0 0 3px 4px;
+  margin: 0 4px 3px 4px;
 }
-/* v2.54.9 依角色三色（mockup V1）：共編旅伴 avatar = pink（人/協作）。--color-accent-3-bg
-   底 + --color-foreground 字（對比安全、light/dark 皆過）。修掉原本與 AI avatar 撞色
-   （都 secondary）分不出真人/AI 的問題。 */
-.tp-chat-avatar.is-other-user {
-  background: var(--color-accent-3-bg);
-  color: var(--color-foreground);
-}
+.tp-chat-msg-sender-name.is-user { color: var(--color-accent-text); }
+.tp-chat-msg-sender-name.is-other-user { color: var(--color-collaborator-text); }
 .tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
-.tp-chat-avatar {
-  width: 40px; height: 40px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: var(--font-size-footnote); font-weight: 700;
-  flex-shrink: 0;
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
-}
-/* v2.54.9 依角色三色（mockup V1）：AI avatar = sage。用 --color-accent-2-bg 底 +
-   --color-foreground 字（隨 light/dark 翻轉、~7–12:1）；不用 vivid --color-accent-2
-   實心 —— dark mode 對 foreground 字僅 1.78:1（< WCAG）。 */
-.tp-chat-avatar.is-ai { background: var(--color-accent-2-bg); color: var(--color-foreground); }
 .tp-chat-day-divider {
   text-align: center;
   margin: 12px 0 4px;
@@ -410,16 +399,20 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 }
 .tp-chat-jump-latest:disabled { cursor: default; }
 
+/* dock ＝（擁有者授權提示條＋composer）。浮在訊息上面，高度含提示條，所以提示條出現時留白自動變多、
+ * 「跳到最新」按鈕（以 dock 為定位容器）也自然在提示條之上。
+ * W8：手機軟鍵盤彈出時 bottom 定位會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset 由 visualViewport 設；
+ * 桌機/鍵盤收起恆 0）上移到鍵盤上方。transition 讓收放平順。 */
+.tp-chat-dock {
+  position: absolute; inset-inline: 0; inset-block-end: var(--chat-bottom-inset); z-index: 3;
+  transform: translateY(calc(-1 * var(--kb-inset, 0px)));
+  transition: transform var(--transition-duration-fast, 150ms) ease-out;
+}
 .tp-chat-composer {
-  position: sticky; inset-block-end: 0;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
   --glass-alpha: 55%; --glass-filter: blur(24px);   /* recipe：tokens.css 的 .tp-glass；owner 選 A3（原 92%／14px 只透出 8%，看不出玻璃）。輸入框自己維持實心 */
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
-  /* W8：手機軟鍵盤彈出時 sticky bottom:0 會被鍵盤蓋 → 依 --kb-inset（useKeyboardInset
-   * 由 visualViewport 設；桌機/鍵盤收起恆 0）上移到鍵盤上方。transition 讓收放平順。 */
-  transform: translateY(calc(-1 * var(--kb-inset, 0px)));
-  transition: transform var(--transition-duration-fast, 150ms) ease-out;
 }
 @media (max-width: 760px) {
 .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
@@ -475,6 +468,28 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
   font-size: var(--font-size-footnote);
 }
 `;
+
+// dock 長高時，距底部在這個範圍內視為「本來就在底部」而重新釘回；比分頁的 80px 嚴，
+// 因為這裡只在 dock 高度變動當下判斷，不該把正在讀舊訊息的人拉走。
+const COMPOSER_REPIN_THRESHOLD_PX = 24;
+
+// AI 的身分只靠標籤文字辨識（沒有頭像了），所以真人不能用同一個名字冒充：撞名時加註「（成員）」。
+const AI_LABEL = 'Tripline AI';
+// 顯示用：只拿掉會造成誤導的不可見字元（bidi 覆寫、零寬空格、BOM、軟連字號、空白填充字元）。
+// 保留 ZWJ／ZWNJ：emoji 組合與波斯文、印度系文字的名字依賴它們。
+const SPOOF_INVISIBLES = /[\u202A-\u202E\u2066-\u2069\u200B\u2060\uFEFF\u00AD\u061C\u200E\u200F\u3164\u115F\u1160\u2800\u17B5]/gu;
+export function sanitizeSenderName(name?: string | null): string {
+  const clean = (name ?? '').replace(SPOOF_INVISIBLES, '').trim();
+  return /^[\s\u200C\u200D]*$/u.test(clean) ? '' : clean; // 只剩 ZWJ／ZWNJ 也是空白名稱
+}
+// 比對用：比顯示更狠。NFKC 折全形，去掉所有格式字元／組合符號／空白，再把 i、1、ı、| 折成 l
+// （大寫 I 與小寫 l 在無襯線字體幾乎一樣）。跨字母系統的形近字（西里爾）擋不住，根治要伺服端限制顯示名稱。
+const nameKey = (s: string) =>
+  s.normalize('NFKC').replace(/[\p{Cf}\p{M}\s\u3164\u115F\u1160\u2800\u17B5]+/gu, '').toLowerCase().replace(/[i1ı|]/g, 'l');
+export function humanSenderLabel(name: string): string {
+  const clean = sanitizeSenderName(name);
+  return nameKey(clean) === nameKey(AI_LABEL) ? `${clean}（成員）` : clean;
+}
 
 const SUGGESTIONS = [
   '幫我規劃 Day 1 的早午餐',
@@ -555,6 +570,27 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   }, [activeTripId]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // dock 浮在訊息上面（玻璃要有東西折射），訊息區要留出它的高度：量測後寫進 shell 的 CSS 變數。
+  // textarea 會隨輸入長高，所以用 ResizeObserver；用 callback ref 是因為 dock 不一定在第一次 render 就掛上。
+  // 長高時若使用者本來就在底部，留白增加後要把捲動位置重新釘回底部，否則最新一則會被 dock 蓋住。
+  const composerObserverRef = useRef<ResizeObserver | null>(null);
+  const composerRef = useCallback((el: HTMLDivElement | null) => {
+    composerObserverRef.current?.disconnect();
+    composerObserverRef.current = null;
+    const shell = el?.closest<HTMLElement>('.tp-chat-shell');
+    if (!el || !shell || typeof ResizeObserver === 'undefined') return;
+    const apply = () => {
+      // 被隱藏（display:none，例如嵌入的分頁切走）時高度是 0：不寫入，免得留白被歸零、切回來時最新訊息被蓋住
+      if (el.offsetHeight === 0) return;
+      const body = bodyRef.current;
+      const wasAtBottom = !!body && body.scrollHeight - body.scrollTop - body.clientHeight <= COMPOSER_REPIN_THRESHOLD_PX;
+      shell.style.setProperty('--chat-composer-h', `${el.offsetHeight}px`);
+      if (body && wasAtBottom) body.scrollTop = body.scrollHeight;
+    };
+    apply();
+    composerObserverRef.current = new ResizeObserver(apply);
+    composerObserverRef.current.observe(el);
+  }, []);
   const tripMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -850,45 +886,34 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
           const isAssistant = m.role === 'assistant';
           /* 2026-04-29:LINE 群組規則 — user message 分自己 vs 其他 collaborator。
            * 自己:右側 accent bubble(現狀)。
-           * 其他人:左側 + avatar(首字)+ sender 名在 bubble 上方(LINE 對方 style)。
-           * AI:左側 + AI avatar(現狀)。
+           * 其他人:左側 + 名字在 bubble 上方。AI:左側 + 「Tripline AI」在 bubble 上方。
+           * 三者都不用頭像（比照 App）。
            *
            * isOtherUser:user role 且 submittedBy 不等於當前登入者 email。
            * Legacy 訊息沒 submittedBy 視為自己(避免老資料全變對方 view)。 */
           const senderLocalPart = m.submittedBy?.split('@')[0];
           const isOtherUser = !isAssistant && !!m.submittedBy && m.submittedBy !== user?.email;
-          // 2026-05-07：sender label 與 avatar initial 用「帳號名稱」(displayName)
-          // 第一字母 — 不是 email。
+          // 2026-05-07：sender label 用「帳號名稱」(displayName) — 不是 email。
           //   - 自己（is-user）：current user displayName
           //   - 他人（is-other-user）：API LEFT JOIN users 帶 submittedByDisplayName，
           //     fallback email local part（users 表查無對應的 legacy 帳號）
-          const otherDisplayName = m.submittedByDisplayName || senderLocalPart || '?';
-          const selfDisplayName = user?.displayName || user?.email?.split('@')[0] || '我';
-          const senderDisplay = isOtherUser ? otherDisplayName : selfDisplayName;
-          const senderInitial = senderDisplay.charAt(0).toUpperCase();
+          const otherDisplayName = sanitizeSenderName(m.submittedByDisplayName) || senderLocalPart || '?';
+          const selfDisplayName = sanitizeSenderName(user?.displayName) || user?.email?.split('@')[0] || '我';
+          const senderDisplay = humanSenderLabel(isOtherUser ? otherDisplayName : selfDisplayName);
           // v2.33.93 simplify: 兩個 ternary 同時依 isAssistant/isOtherUser/user 分支，
           // 抽 byRole 一次決定。clsx 已在其他 component 用，這裡也採用。
           const byRole = <A, O, U>(a: A, o: O, u: U): A | O | U => (isAssistant ? a : isOtherUser ? o : u);
+          const roleCls = byRole('is-assistant', 'is-other-user', 'is-user');
           return (
             <Fragment key={m.id}>
-              <div className={clsx('tp-chat-msg-row', byRole('is-assistant', 'is-other-user', 'is-user'))}>
-                {isAssistant && (
-                  <div className="tp-chat-avatar is-ai" aria-hidden="true" data-testid="chat-avatar-ai">AI</div>
-                )}
-                {isOtherUser && (
-                  <div className="tp-chat-avatar is-other-user" aria-hidden="true" data-testid={`chat-avatar-other-${m.id}`}>
-                    {senderInitial}
-                  </div>
-                )}
-                {!isAssistant && !isOtherUser && (
-                  <div className="tp-chat-avatar is-user" aria-hidden="true" data-testid={`chat-avatar-self-${m.id}`}>
-                    {senderInitial}
-                  </div>
-                )}
+              <div className={clsx('tp-chat-msg-row', roleCls)}>
                 <div className="tp-chat-msg-bubble-wrap">
-                  {isOtherUser && (
-                    <div className="tp-chat-msg-sender-name" data-testid={`chat-sender-${m.id}`}>{senderDisplay}</div>
-                  )}
+                  <div
+                    className={clsx('tp-chat-msg-sender-name', roleCls)}
+                    data-testid={`chat-sender-${m.id}`}
+                  >
+                    {isAssistant ? AI_LABEL : senderDisplay}
+                  </div>
                   <div
                     className={clsx(
                       'tp-chat-msg',
@@ -942,9 +967,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
                   dateTime={m.createdAt}
                   data-testid={`chat-msg-time-${m.id}`}
                 >
-                  {isAssistant
-                    ? `Tripline AI · ${formatChatTime(m.createdAt)}`
-                    : `${senderDisplay} · ${formatChatTime(m.createdAt)}`}
+                  {formatChatTime(m.createdAt)}
                 </time>
               )}
             </Fragment>
@@ -968,67 +991,69 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         )}
       </div>
 
-      {ownerMustAuthorize && (
-        <div className="tp-chat-load-error" role="status" data-testid="chat-owner-unauthorized">
-          <span className="tp-chat-load-error-text">請行程擁有者授權 AI 後，才能在這個行程使用 AI。</span>
-        </div>
-      )}
-      <form
-        className="tp-chat-composer tp-glass"
-        onSubmit={(e) => { e.preventDefault(); void send(input); }}
-      >
-        {/* 捲到底箭頭跟隨 composer 定位；只在 user 捲離底部時出現。
-            aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
-        {activeTripId && latestRefreshing && (
-          <div className="tp-chat-jump-latest" role="status" aria-live="polite" aria-label="正在更新最新訊息" data-testid="chat-latest-refreshing">
-            <span className="tp-chat-spinner" aria-hidden="true" /><span className="sr-only">正在更新最新訊息</span>
+      <div className="tp-chat-dock" ref={composerRef}>
+        {ownerMustAuthorize && (
+          <div className="tp-chat-load-error" role="status" data-testid="chat-owner-unauthorized">
+            <span className="tp-chat-load-error-text">請行程擁有者授權 AI 後，才能在這個行程使用 AI。</span>
           </div>
         )}
-        {activeTripId && !latestRefreshing && latestError && (
-          <button type="button" className="tp-chat-jump-latest" onClick={retryLatest}
-            aria-label="更新最新訊息失敗，重試" data-testid="chat-latest-retry">↻</button>
-        )}
-        {activeTripId && !latestRefreshing && !latestError && !isAtBottom && (
-          <button
-            type="button"
-            className="tp-chat-jump-latest"
-            data-testid="chat-jump-to-latest"
-            onClick={scrollToBottom}
-            aria-label="回到最新訊息"
-            title="回到最新訊息"
-          >
-            <span aria-hidden="true">↓</span>
-          </button>
-        )}
-        <label htmlFor="chat-input" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
-          輸入訊息
-        </label>
-        <textarea
-          id="chat-input"
-          ref={inputRef}
-          className="tp-chat-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onComposerKeyDown}
-          placeholder={activeTripId ? '輸入訊息或語音指令…' : '先選一個行程才能聊'}
-          rows={1}
-          aria-label="輸入訊息"
-          disabled={composerDisabled}
-          data-testid="chat-input"
-        />
-        {/* Section 4.8 (terracotta-ui-parity-polish): mockup icon-only send button
-         * (line 7245-7247)，aria-label「送出」保留 a11y。inflight 顯示 hourglass icon
-         * 取代「送出中…」文字。 */}
-        <button
-          type="submit"
-          className="tp-chat-send"
-          disabled={composerDisabled || !input.trim()}
-          aria-label={inflightId ? '送出中' : '送出'}
-          data-testid="chat-send"
+        <form
+          className="tp-chat-composer tp-glass"
+          onSubmit={(e) => { e.preventDefault(); void send(input); }}
         >
-          <Icon name={inflightId ? 'hourglass' : 'send'} />
-        </button>
-      </form>
+          {/* 捲到底箭頭以 dock 為定位容器（在提示條與 composer 之上）；只在 user 捲離底部時出現。
+              aria-live 不用 —— 它是導覽控制項不是狀態播報。 */}
+          {activeTripId && latestRefreshing && (
+            <div className="tp-chat-jump-latest" role="status" aria-live="polite" aria-label="正在更新最新訊息" data-testid="chat-latest-refreshing">
+              <span className="tp-chat-spinner" aria-hidden="true" /><span className="sr-only">正在更新最新訊息</span>
+            </div>
+          )}
+          {activeTripId && !latestRefreshing && latestError && (
+            <button type="button" className="tp-chat-jump-latest" onClick={retryLatest}
+              aria-label="更新最新訊息失敗，重試" data-testid="chat-latest-retry">↻</button>
+          )}
+          {activeTripId && !latestRefreshing && !latestError && !isAtBottom && (
+            <button
+              type="button"
+              className="tp-chat-jump-latest"
+              data-testid="chat-jump-to-latest"
+              onClick={scrollToBottom}
+              aria-label="回到最新訊息"
+              title="回到最新訊息"
+            >
+              <span aria-hidden="true">↓</span>
+            </button>
+          )}
+          <label htmlFor="chat-input" style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
+            輸入訊息
+          </label>
+          <textarea
+            id="chat-input"
+            ref={inputRef}
+            className="tp-chat-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onComposerKeyDown}
+            placeholder={activeTripId ? '輸入訊息或語音指令…' : '先選一個行程才能聊'}
+            rows={1}
+            aria-label="輸入訊息"
+            disabled={composerDisabled}
+            data-testid="chat-input"
+          />
+          {/* Section 4.8 (terracotta-ui-parity-polish): mockup icon-only send button
+           * (line 7245-7247)，aria-label「送出」保留 a11y。inflight 顯示 hourglass icon
+           * 取代「送出中…」文字。 */}
+          <button
+            type="submit"
+            className="tp-chat-send"
+            disabled={composerDisabled || !input.trim()}
+            aria-label={inflightId ? '送出中' : '送出'}
+            data-testid="chat-send"
+          >
+            <Icon name={inflightId ? 'hourglass' : 'send'} />
+          </button>
+        </form>
+      </div>
 
       {dataConsent.consent && (
         <AiDataConsentSheet
