@@ -335,7 +335,9 @@ export default function TravelPill({
   // segmentUpdated → useTripSegments refetch → pill 自動消失，無需手動鈕）；missingCoords
   // （缺座標、self-healing 排除）→「缺座標」誠實訊息，不假稱計算中。2026-07-06：missing
   // （pair 無 row）視同 stale。
-  const isStale = missing === true || (segment != null && segment.computedAt == null);
+  // #1436：手動段（匯入／手填）有車程值就是 SoT；recompute 本來就跳過 manual，不排除會永遠 stale。
+  const manualWithValue = segment?.source === 'manual' && (segment.min != null || segment.distanceM != null);
+  const isStale = missing === true || (segment != null && segment.computedAt == null && !manualWithValue);
 
   // 若 segment 提供，優先用 segment.mode/min/distanceM 顯示（v2.24.0 SoT）
   const effectiveType = segment?.mode ?? type ?? null;
