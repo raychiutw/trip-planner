@@ -1351,6 +1351,11 @@ body.dark .tp-toast { background: var(--color-secondary); }
 .tp-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* 密碼欄位的「顯示密碼」切換（PasswordToggle）：觸控目標 44×44 */
+.tp-pw-toggle { align-self: flex-end; min-width: 44px; min-height: 44px; padding: 0 4px; background: none; border: 0; font: inherit; font-size: var(--font-size-footnote); color: var(--color-accent-text); cursor: pointer; }
+.tp-pw-toggle:hover { text-decoration: underline; }
+.tp-pw-toggle:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+
 .tp-btn-primary {
   background: var(--color-accent-fill);
   color: var(--color-accent-foreground);

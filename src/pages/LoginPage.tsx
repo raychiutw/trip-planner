@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
-import PasswordToggle from '../components/auth/PasswordToggle';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { apiFetchRaw } from '../lib/apiClient';
 import { AuthError, getNewApiAuth, type AuthClient } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
@@ -275,7 +275,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const pw = usePasswordVisibility();
   const [submitting, setSubmitting] = useState(false);
   const googleErrorCode = params.get('google_error');
   // credential 標記錯誤是否屬於帳密欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
@@ -593,7 +593,7 @@ export default function LoginPage() {
             </div>
             <input
               id="login-password"
-              type={showPw ? 'text' : 'password'}
+              type={pw.type}
               autoComplete="current-password"
               required
               value={password}
@@ -602,7 +602,7 @@ export default function LoginPage() {
               aria-invalid={credentialError || undefined}
               aria-describedby={credentialError ? 'login-banner-error' : undefined}
             />
-            <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="login-password-toggle" />
+            <PasswordToggle {...pw.toggleProps} testId="login-password-toggle" />
           </div>
 
           <button

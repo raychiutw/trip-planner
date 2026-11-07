@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
-import PasswordToggle from '../components/auth/PasswordToggle';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { AuthError, getAuthorizeAuth } from '../lib/auth';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
@@ -104,7 +104,7 @@ export default function OauthAuthorizePage() {
   const [view, setView] = useState<View>({ kind: 'init' });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const pw = usePasswordVisibility();
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
 
@@ -217,10 +217,10 @@ export default function OauthAuthorizePage() {
                   onChange={(e) => setEmail(e.target.value)} data-testid="authz-email"
                   aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
               <label className="tp-authz-field"><span className="tp-authz-label">密碼</span>
-                <input className="tp-authz-input" type={showPw ? 'text' : 'password'} autoComplete="current-password" required value={password}
+                <input className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
                   onChange={(e) => setPassword(e.target.value)} data-testid="authz-password"
                   aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
-              <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="authz-password-toggle" />
+              <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
               <a className="tp-authz-link" href="/login/forgot" style={{ textAlign: 'center' }}>忘記密碼？</a>
             </form>

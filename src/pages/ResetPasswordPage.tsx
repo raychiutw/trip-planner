@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
 import InlineError from '../components/shared/InlineError';
-import PasswordToggle from '../components/auth/PasswordToggle';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { MIN_PASSWORD_LEN } from '../server/password';
 
 const SCOPED_STYLES = `
@@ -150,7 +150,7 @@ export default function ResetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const pw = usePasswordVisibility();
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -311,7 +311,7 @@ export default function ResetPasswordPage() {
             <input
               id="reset-password"
               ref={passwordRef}
-              type={showPw ? 'text' : 'password'}
+              type={pw.type}
               autoComplete="new-password"
               minLength={MIN_PASSWORD_LEN}
               required
@@ -321,7 +321,7 @@ export default function ResetPasswordPage() {
               aria-describedby={pwError?.field === 'password' ? 'reset-pw-error' : undefined}
               data-testid="reset-password-input"
             />
-            <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="reset-password-toggle" />
+            <PasswordToggle {...pw.toggleProps} testId="reset-password-toggle" />
             {pwError?.field === 'password' && <InlineError message={pwError.message} testId="reset-pw-error" />}
             <div className="tp-pw-strength" data-testid="reset-pw-strength">
               <div className="tp-pw-bars">
@@ -367,7 +367,7 @@ export default function ResetPasswordPage() {
             <input
               id="reset-confirm"
               ref={confirmRef}
-              type={showPw ? 'text' : 'password'}
+              type={pw.type}
               autoComplete="new-password"
               required
               value={confirm}

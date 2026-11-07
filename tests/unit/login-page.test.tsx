@@ -328,8 +328,7 @@ describe('LoginPage 密碼顯示切換（#1560）', () => {
     expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
     expect(input.getAttribute('autocomplete')).toBe('current-password');
     expect(toggle.getAttribute('type')).toBe('button');
-    expect(toggle.style.minWidth).toBe('44px');
-    expect(toggle.style.minHeight).toBe('44px');
+    expect(toggle.classList.contains('tp-pw-toggle')).toBe(true);
   });
 
   it('切換不會送出表單', () => {

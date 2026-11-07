@@ -243,8 +243,7 @@ describe('授權頁登入表單密碼顯示切換（#1560）', () => {
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: '顯示密碼' })).toBe(toggle);
     expect(toggle.getAttribute('type')).toBe('button');
-    expect(toggle.style.minWidth).toBe('44px');
-    expect(toggle.style.minHeight).toBe('44px');
+    expect(toggle.classList.contains('tp-pw-toggle')).toBe(true);
     expect(input.type).toBe('text');
     expect(input.getAttribute('autocomplete')).toBe('current-password');
     expect(fake.login).not.toHaveBeenCalled();

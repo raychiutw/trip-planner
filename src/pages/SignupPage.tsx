@@ -17,7 +17,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import { apiFetchRaw } from '../lib/apiClient';
 import InlineError from '../components/shared/InlineError';
-import PasswordToggle from '../components/auth/PasswordToggle';
+import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -125,7 +125,7 @@ export default function SignupPage() {
   const invitationToken = params.get('invitation');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const pw = usePasswordVisibility();
   const [displayName, setDisplayName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   /* 個資條款同意（owner 決策 2026-07-20）。後端 signup 也會擋 ——
@@ -298,7 +298,7 @@ export default function SignupPage() {
             <input
               ref={passwordRef}
               id="signup-password"
-              type={showPw ? 'text' : 'password'}
+              type={pw.type}
               autoComplete="new-password"
               placeholder="輸入密碼"
               minLength={8}
@@ -309,7 +309,7 @@ export default function SignupPage() {
               aria-invalid={passwordError ? true : undefined}
               aria-describedby={passwordError ? 'signup-password-hint signup-password-error' : 'signup-password-hint'}
             />
-            <PasswordToggle pressed={showPw} onToggle={() => setShowPw((v) => !v)} testId="signup-password-toggle" />
+            <PasswordToggle {...pw.toggleProps} testId="signup-password-toggle" />
             {/* §9.3：密碼規則改常駐 helper（原只在 placeholder，打字即消失）。 */}
             <p id="signup-password-hint" className="tp-hint" data-testid="signup-password-hint">密碼至少 8 字元</p>
             {passwordError && <div id="signup-password-error"><InlineError message={passwordError} testId="signup-password-error" /></div>}
