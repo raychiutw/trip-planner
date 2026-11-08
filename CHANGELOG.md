@@ -10,7 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `typedApi`（`src/lib/api/typed.ts`）：契約型別的 typed client，傳輸與錯誤語意沿用 `apiFetch`；變更密碼、刪除帳號、更新顯示名稱三處已改用。
 
 ### Fixed
-- **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。旗標預設仍關閉，production 行為不變。
+- **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。
 
 ### Changed
 - **移除新 api 登入旗標 `VITE_NEW_API_AUTH`：網站只走新認證（尚未部署，切換日期待定）**：登入（帳密與 Google）、登出與所有 `/api` 請求一律是 PKCE＋DPoP、access token 只放記憶體、refresh 輪替、SSE ticket；`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。舊的同源 cookie 登入／登出、`/api/oauth/login/google` 連結、cookie 的 SSE（`withCredentials`）與帳號刪除的舊重新驗證導向都已刪除。部署這一版後**所有人需要重新登入一次**；回切要重新部署前一版 web（旗標已不存在，無法用設定回切）。
