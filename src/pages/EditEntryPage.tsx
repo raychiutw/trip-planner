@@ -377,7 +377,7 @@ const SCOPED_STYLES = `
 .tp-poi-note-input {
   width: 100%;
   font: inherit;
-  font-size: var(--font-size-footnote);
+  font-size: var(--font-size-body);
   line-height: 1.5;
   background: var(--color-background);
   border: 1.5px solid var(--color-accent);

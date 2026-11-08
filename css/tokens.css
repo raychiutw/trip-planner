@@ -1512,7 +1512,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
 }
 .tp-form-row > textarea {
   font-family: 'SF Mono', ui-monospace, monospace;
-  font-size: var(--font-size-footnote);
+  font-size: var(--font-size-body);
   min-height: 80px;
   resize: vertical;
 }
@@ -2157,7 +2157,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-trip-row.is-active .tp-titlebar-trip-row-check { color: var(--color-accent-text); }
 .tp-titlebar-trip-search {
   width: 100%; box-sizing: border-box; margin: 0 0 6px;
-  padding: 7px 10px; font: inherit; font-size: var(--font-size-footnote);
+  padding: 7px 10px; font: inherit; font-size: var(--font-size-body); /* ≥16px：iOS 聚焦不放大（#1633） */
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-background); color: var(--color-foreground);
 }
