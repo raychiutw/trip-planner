@@ -2,7 +2,7 @@
  * round-12-server-security.test.ts — architectural guard for v2.33.58 fix
  *
  * Source-grep 鎖以下 fix 不被回退:
- *   C2: google-id-token enforce email_verified === true + azp check
+ *   （C2 Google ID token 驗證已隨 Google 登入移除，#1643）
  *   C3: email-templates Subject sanitizeHeaderField (CRLF strip)
  *   C4: D1Adapter.consume() conditional UPDATE + boolean return
  *   H1: validate-redirect-uris reject hash/userinfo/search
@@ -19,7 +19,6 @@ import path from 'node:path';
 const read = (p: string) => readFileSync(path.resolve(__dirname, '../..', p), 'utf-8');
 
 const JWT_SRC = read('src/server/jwt.ts');
-const GOOGLE_ID_SRC = read('src/server/oauth-client/google-id-token.ts');
 const EMAIL_TPL_SRC = read('src/server/email-templates.ts');
 const ADAPTER_SRC = read('src/server/oauth-d1-adapter.ts');
 const REDIRECT_SRC = read('src/server/oauth-server/validate-redirect-uris.ts');
@@ -37,19 +36,6 @@ describe('v2.33.58 C1 — JWT alg pin', () => {
     // Verify the exp check uses nowSec >= claims.exp (strict), not nowSec - skew >= claims.exp
     expect(JWT_SRC).toMatch(/nowSec >= claims\.exp/);
     expect(JWT_SRC).not.toMatch(/nowSec - skew >= claims\.exp/);
-  });
-});
-
-describe('v2.33.58 C2/H4 — Google ID token enforce email_verified + azp', () => {
-  it('verifier 內 enforce email_verified === true', () => {
-    // variable is camelCase emailVerified, claim is snake_case email_verified
-    expect(GOOGLE_ID_SRC).toMatch(/emailVerified !== true/);
-    expect(GOOGLE_ID_SRC).toMatch(/throw.*email_verified/);
-  });
-
-  it('azp check (OIDC §3.1.3.7 step 8)', () => {
-    expect(GOOGLE_ID_SRC).toMatch(/azp.*!==.*expectedAud/);
-    expect(GOOGLE_ID_SRC).toMatch(/azp mismatch/);
   });
 });
 

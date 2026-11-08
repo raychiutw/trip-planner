@@ -66,8 +66,8 @@ describe('GlobalMapPage (v2.17.5 — sidebar /map redirect to trip-bound)', () =
   });
 });
 
-describe('LoginPage (V2 password-first + optional Google — sole auth, no CF Access fallback)', () => {
-  it('render 「登入」heading + signup link (Google gated on /api/public-config probe; CF Access link removed in cutover)', () => {
+describe('LoginPage (V2 password-only — sole auth, no CF Access fallback)', () => {
+  it('render 「登入」heading + signup link (CF Access link removed in cutover)', () => {
     const { getByTestId, queryByTestId, getByRole } = renderWithRouter(<LoginPage />);
     expect(getByTestId('login-page')).toBeTruthy();
     const heading = getByRole('heading', { level: 1 }).textContent ?? '';
@@ -75,7 +75,7 @@ describe('LoginPage (V2 password-first + optional Google — sole auth, no CF Ac
     // Self-signup link (primary V2 path per "先開放自建帳號")
     const signup = getByTestId('login-signup-link') as HTMLAnchorElement;
     expect(signup.getAttribute('href')).toBe('/signup');
-    // Google login button is hidden until the public-config probe confirms env
+    // Google 登入已移除（#1643）
     expect(queryByTestId('login-google')).toBeNull();
     // CF Access transitional link is REMOVED (V2 is sole auth post-cutover)
     expect(queryByTestId('login-cf-access')).toBeNull();

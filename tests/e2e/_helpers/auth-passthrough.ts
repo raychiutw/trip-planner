@@ -18,8 +18,6 @@ const passthrough: AuthClient = {
   login: async () => { throw new Error('穿透 auth 不支援登入；要驗登入請用 playwright.newapi.config.js'); },
   refresh: async () => {},
   logout: async () => {},
-  startGoogleLogin: async () => { throw new Error('穿透 auth 不支援 Google 登入'); },
-  finishGoogleLogin: async () => { throw new Error('穿透 auth 不支援 Google 登入'); },
 };
 
 export const getNewApiBase = (): string => '';

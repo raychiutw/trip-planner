@@ -6,7 +6,7 @@
  * 不是 page.route 的罐頭。每個斷言都同時看「瀏覽器這端」（畫面、IndexedDB）與「api 這端」（/__fake/state），
  * 因為這類流程最容易出的錯是「畫面看起來登出了，但憑證其實還有效」。
  *
- * 不涵蓋：真實 Google／真實 api 的行為（沒有真實帳號，也不連外網）、Firefox／WebKit。
+ * 不涵蓋：真實 api 的行為（沒有真實帳號，也不連外網）、Firefox／WebKit。
  */
 import { test, expect } from '@playwright/test';
 
@@ -87,11 +87,6 @@ async function loginWithPassword(page, { email, password } = DEMO) {
   await page.getByTestId('login-submit').click();
 }
 
-async function loginWithGoogle(page) {
-  await page.goto('/login');
-  await page.getByTestId('login-google').click();
-}
-
 test.describe('登入回跳', () => {
   test('帳密登入：PKCE＋DPoP 換到 token，落在 /trips，瀏覽器只持久化 refresh token 與金鑰', async ({ page, request }) => {
     await loginWithPassword(page);
@@ -100,7 +95,7 @@ test.describe('登入回跳', () => {
     expect(s.stats.codeGrants).toBe(1);
     expect(s.stats.dpopRejected).toBe(0);
     const store = await readAuthStore(page);
-    expect(store.keys).toEqual(['keyPair', 'refreshToken']); // 沒有 access token、沒有殘留的 pendingLogin
+    expect(store.keys).toEqual(['keyPair', 'refreshToken']); // 沒有 access token
     expect(store.refreshToken).toBeTruthy();
     // access token 不落地：localStorage／sessionStorage／cookie 都不該有任何 token
     const leaked = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }) + document.cookie);
@@ -114,19 +109,11 @@ test.describe('登入回跳', () => {
     expect((await readAuthStore(page)).keys).toEqual([]);
   });
 
-  test('Google 登入：發起 → 新 api 入口 → /auth/callback → /trips（redirect_uri 與 state 對得上）', async ({ page, request }) => {
-    await loginWithGoogle(page);
-    await expect(page).toHaveURL(/\/trips/);
-    expect((await apiState(request)).stats.codeGrants).toBe(1);
-    expect((await readAuthStore(page)).keys).toEqual(['keyPair', 'refreshToken']); // pendingLogin 用過即刪
-  });
-
-  test('回跳的 state 不符：拒絕、回登入頁帶錯誤碼、不換 token', async ({ page, request }) => {
+  test('登入頁沒有 Google 登入入口（#1643 已移除）', async ({ page }) => {
     await page.goto('/login');
-    await page.getByTestId('login-google').waitFor();
-    await page.goto('/auth/callback?code=forged&state=forged');
-    await expect(page).toHaveURL(/\/login\?google_error=OAUTH_STATE_MISMATCH/);
-    expect((await apiState(request)).stats.codeGrants).toBe(0);
+    await expect(page.getByTestId('login-submit')).toBeVisible();
+    await expect(page.getByTestId('login-google')).toHaveCount(0);
+    await expect(page.getByText('使用 Google 登入')).toHaveCount(0);
   });
 });
 
@@ -264,7 +251,7 @@ test.describe('變更密碼（fresh-auth：必須提供目前密碼）', () => {
   });
 });
 
-test.describe('帳號刪除（fresh-auth）', () => {
+test.describe('帳號刪除（只走密碼確認）', () => {
   test('有密碼：密碼錯誤不刪；密碼正確才刪，刪後憑證全撤銷、無法再登入', async ({ page, request }) => {
     await loginWithPassword(page);
     await expect(page).toHaveURL(/\/trips/);
@@ -283,25 +270,5 @@ test.describe('帳號刪除（fresh-auth）', () => {
     expect(s.families.every((f) => f.revoked)).toBe(true);
     await page.goto('/account');
     await expect(page).toHaveURL(/\/login/);
-  });
-
-  test('僅 Google 帳號：必須先經 fresh-auth challenge（導去驗證再回來），沒有就是 403，驗過才刪', async ({ page, request }) => {
-    await loginWithGoogle(page);
-    await expect(page).toHaveURL(/\/trips/);
-    await page.goto('/account');
-    await page.getByTestId('account-row-delete-account').click();
-    await page.getByTestId('delete-account-confirm-input').fill('DELETE');
-    await Promise.all([page.waitForURL(/\/account$/), page.getByTestId('confirm-modal-confirm').click()]);
-    // 第一次點只會發起驗證（api 建立 challenge），不會刪除
-    expect((await apiState(request)).users).toContain('google@example.test');
-    await expect(page.getByTestId('account-page')).toBeVisible();
-
-    await page.getByTestId('account-row-delete-account').click();
-    await page.getByTestId('delete-account-confirm-input').fill('DELETE');
-    await page.getByTestId('confirm-modal-confirm').click();
-    await expect(page).toHaveURL(/\/$/);
-    const s = await apiState(request);
-    expect(s.users).not.toContain('google@example.test');
-    expect(s.families.every((f) => f.revoked)).toBe(true);
   });
 });

@@ -721,7 +721,7 @@ async function setupApiMocks(page) {
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ hasPassword: true, reauthProvider: null, reauthenticated: false, tripsOwned: 2, collaboratorsAffected: 1 }),
+      body: JSON.stringify({ hasPassword: true, tripsOwned: 2, collaboratorsAffected: 1 }),
     });
   });
 

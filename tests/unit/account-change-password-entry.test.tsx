@@ -20,7 +20,7 @@ vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => nu
 import AccountPage from '../../src/pages/AccountPage';
 
 const preview = (hasPassword: boolean) => ({
-  hasPassword, reauthProvider: hasPassword ? null : 'google', reauthenticated: false, tripsOwned: 0, collaboratorsAffected: 0,
+  hasPassword, tripsOwned: 0, collaboratorsAffected: 0,
 });
 function setup(accountResult: () => Promise<unknown>) {
   apiFetchMock.mockImplementation((path) => (path === '/account' ? accountResult() : Promise.resolve({ tripCount: 0, totalDays: 0, collaboratorCount: 0 })));

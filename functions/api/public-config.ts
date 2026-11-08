@@ -1,11 +1,11 @@
 /**
  * GET /api/public-config
  *
- * Public capability probe — tells unauthenticated clients which optional providers
- * are configured for this deployment so the UI can hide buttons that would lead
- * to a 503. No secrets are exposed; we only signal "configured / not configured".
+ * Public capability probe — tells unauthenticated clients which optional features
+ * are configured for this deployment. No secrets are exposed.
+ * Google 登入已移除（#1643），不再有 providers 欄位。
  *
- * Response: { providers: { google: boolean }, features: { passwordSignup: boolean } }
+ * Response: { features: { passwordSignup: boolean, emailVerification: boolean } }
  *
  * NOTE: keep this endpoint side-effect-free (no D1 writes, no state tokens).
  * It runs on every login/signup page load, so any work done here multiplies.
@@ -16,9 +16,6 @@ export const onRequestGet: PagesFunction<Env> = (context) => {
   const env = context.env;
   return new Response(
     JSON.stringify({
-      providers: {
-        google: Boolean(env.GOOGLE_CLIENT_ID),
-      },
       features: {
         passwordSignup: true,
         // 2026-05-02 cutover: gate on TRIPLINE_API_URL + TRIPLINE_API_SECRET

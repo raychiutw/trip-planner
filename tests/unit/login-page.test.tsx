@@ -7,7 +7,6 @@ import { MemoryRouter } from 'react-router-dom';
 import LoginPage from '../../src/pages/LoginPage';
 
 const navigateMock = vi.fn();
-const googleStart = vi.hoisted(() => vi.fn(async (_o: { redirectUri: string; redirectAfterLogin?: string | null }) => 'https://api.test/api/oauth/login/google?x=1'));
 
 // LoginPage 的帳密登入走 auth.login（PKCE＋DPoP 的真實流程見 auth-new-api／new-api-wiring 測試）。
 // 這個檔案測的是「登入頁怎麼呈現各種結果」，所以用 fetch 的結果模擬 auth.login 的對外行為：
@@ -29,7 +28,6 @@ vi.mock('../../src/lib/auth', async (importOriginal) => {
       throw new actual.AuthError(body?.error?.code ?? 'UNKNOWN', '', { status: res.status, retryAfter: Number(res.headers.get('Retry-After')) || undefined });
     },
     refresh: async () => {}, logout: async () => {},
-    startGoogleLogin: googleStart, finishGoogleLogin: async () => ({ redirectAfterLogin: null }),
   };
   return { ...actual, getNewApiAuth: () => client, getNewApiBase: () => '' };
 });
@@ -64,24 +62,25 @@ afterEach(() => {
 });
 
 describe('LoginPage form', () => {
-  it('renders email + password + submit + signup link (Google hidden until probe confirms)', () => {
+  it('renders email + password + submit + signup link', () => {
     renderAt();
     expect(screen.getByRole('textbox', { name: '電子郵件' }).getAttribute('autocomplete')).toBe('email');
     expect(screen.getByLabelText('密碼', { exact: true }).getAttribute('autocomplete')).toBe('current-password');
     expect(screen.getByTestId('login-submit')).toBeTruthy();
     expect(screen.getByTestId('login-signup-link')).toBeTruthy();
     expect(screen.getByRole('link', { name: '忘記密碼？' })).toBeTruthy();
-    // Google button is gated on /api/public-config probe (not stubbed here, so absent)
-    expect(screen.queryByTestId('login-google')).toBeNull();
   });
 
-  it('shows Google button when /api/public-config reports it enabled', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ providers: { google: true } }), { status: 200 }),
-    ));
+  it('不再有 Google 登入入口：即使 /api/public-config 回舊的 providers.google=true 也不顯示', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ providers: { google: true } }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
     renderAt();
-    await waitFor(() => expect(screen.queryByTestId('login-google')).not.toBeNull());
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId('login-google')).toBeNull();
+    expect(screen.queryByText(/Google/)).toBeNull();
+    // 登入頁不再探測 public-config（只為了 Google 按鈕才有那個請求）
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('successful login → navigate /manage by default', async () => {
@@ -254,7 +253,7 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
   it('after login success, accept invitation + window.location.href redirect to trip', async () => {
     const fetchMock = stubByRoute([
       { match: /\/api\/public-config/, status: 200, body: {} },
-      { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
+      { match: /\/api\/oauth\/login/, status: 200, body: { ok: true } },
       { match: /\/api\/invitations\/accept/, status: 200, body: { ok: true, tripId: 'trip-1', tripTitle: '沖繩' } },
     ]);
     vi.useRealTimers();
@@ -307,7 +306,7 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
   it('login OK but accept fails: returns to the original invitation for its result', async () => {
     stubByRoute([
       { match: /\/api\/public-config/, status: 200, body: {} },
-      { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
+      { match: /\/api\/oauth\/login/, status: 200, body: { ok: true } },
       { match: /\/api\/invitations\/accept/, status: 410, body: { error: { code: 'INVITATION_EXPIRED', message: '已過期' } } },
     ]);
     vi.useRealTimers();
@@ -323,19 +322,6 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/invite?token=expired-tok'));
-  });
-
-  it('Google login returns to the same invitation for manual acceptance', async () => {
-    stubByRoute([{ match: /\/api\/public-config/, status: 200, body: { providers: { google: true } } }]);
-    vi.useRealTimers();
-    renderAt('invitation=google-tok');
-    const assign = vi.fn();
-    vi.stubGlobal('location', { origin: 'https://web.test', pathname: '/login', search: '', assign });
-    await waitFor(() => screen.getByTestId('login-google'));
-    fireEvent.click(screen.getByTestId('login-google'));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://api.test/api/oauth/login/google?x=1'));
-    // 登入完成後回到同一份邀請頁（由使用者手動接受）
-    expect(googleStart).toHaveBeenCalledWith({ redirectUri: 'https://web.test/auth/callback', redirectAfterLogin: '/invite?token=google-tok' });
   });
 
   it('signup link preserves the invitation context', () => {

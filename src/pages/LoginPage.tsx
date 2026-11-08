@@ -1,14 +1,12 @@
 /**
- * LoginPage — V2 sign-in UI（local password + Google OIDC）
+ * LoginPage — V2 sign-in UI（email + password；Google 登入已移除，#1643）
  *
  * Flow:
  *   - Primary: email + password form → auth.login（PKCE＋DPoP，POST 新 api 的 /api/oauth/login 再換 token）→ navigate redirect_after
- *   - Alt: 「使用 Google 登入」→ 導向新 api 的 Google 入口（PKCE＋DPoP），回跳頁是 /auth/callback
  *
  * Query params handled:
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
- *   ?google_error=<code> → Google 登入失敗／取消的提示（由 /auth/callback 帶回）
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
  *   ?invitation=token → 登入後接受邀請；失敗回原邀請頁顯示結果
  */
@@ -190,17 +188,6 @@ const SCOPED_STYLES = `
 }
 /* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
-.tp-divider {
-  display: flex; align-items: center; gap: 12px;
-  margin: 20px 0;
-  color: var(--color-muted); font-size: var(--font-size-caption);
-  font-weight: 500;
-}
-.tp-divider::before, .tp-divider::after {
-  content: ''; flex: 1; height: 1px;
-  background: var(--color-border);
-}
-
 .tp-banner {
   display: flex; gap: 12px;
   padding: 14px 16px;
@@ -233,30 +220,10 @@ const SCOPED_STYLES = `
 }
 `;
 
-function GoogleLogo() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M16.51 8.18c0-.55-.05-1.08-.14-1.59H9v3.01h4.21c-.18.97-.74 1.79-1.57 2.34v1.94h2.54c1.49-1.37 2.34-3.39 2.34-5.7z" />
-      <path fill="#34A853" d="M9 16c2.13 0 3.92-.71 5.22-1.91l-2.54-1.94c-.71.48-1.61.76-2.68.76-2.06 0-3.81-1.39-4.43-3.26H2v2.01C3.3 14.06 5.96 16 9 16z" />
-      <path fill="#FBBC04" d="M4.57 9.65c-.16-.48-.25-.99-.25-1.5s.09-1.02.25-1.5V4.64H2C1.36 5.79 1 7.13 1 8.55s.36 2.76 1 3.91l2.57-1.81z" />
-      <path fill="#EA4335" d="M9 4.18c1.16 0 2.2.4 3.02 1.18l2.26-2.26C12.92 1.83 11.13 1 9 1 5.96 1 3.3 2.94 2 4.64l2.57 2.01C5.19 5.57 6.94 4.18 9 4.18z" />
-    </svg>
-  );
-}
-
 // v2.33.39 round 4: sanitizeRedirectAfter 移到 src/lib/redirect.ts 集中
 // hardening (`\\` / `%2f` / whitespace 等 open-redirect 變形)。
 
 const RATE_LIMIT_WARN_THRESHOLD = 4;
-
-/** /auth/callback 帶回的錯誤碼 → 登入頁提示。不信任 query 內容，只認得下列碼，其餘一律通用訊息。 */
-function googleErrorMessage(code: string): string {
-  switch (code) {
-    case 'access_denied': return 'Google 登入已取消';
-    case 'OAUTH_STATE_MISMATCH': return '登入驗證已失效，請重新登入';
-    default: return 'Google 登入失敗，請稍後再試';
-  }
-}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -266,17 +233,13 @@ export default function LoginPage() {
   const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
   const invitationToken = params.get('invitation');
   const invitationPath = invitationToken ? `/invite?token=${encodeURIComponent(invitationToken)}` : null;
-  const googleRedirect = invitationPath ?? redirectAfter;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const pw = usePasswordVisibility();
   const [submitting, setSubmitting] = useState(false);
-  const googleErrorCode = params.get('google_error');
-  // credential 標記錯誤是否屬於帳密欄位；Google／網路／伺服器失敗不標欄位無效（#1561）
-  const [banner, setBanner] = useState<{ message: string; credential?: boolean } | null>(
-    googleErrorCode ? { message: googleErrorMessage(googleErrorCode) } : null,
-  );
+  // credential 標記錯誤是否屬於帳密欄位；網路／伺服器失敗不標欄位無效（#1561）
+  const [banner, setBanner] = useState<{ message: string; credential?: boolean } | null>(null);
   const bannerError = banner?.message ?? null;
   const credentialError = banner?.credential === true;
   const setBannerError = (message: string | null, credential = false) => setBanner(message === null ? null : { message, credential });
@@ -294,27 +257,6 @@ export default function LoginPage() {
       return 0;
     }
   });
-  // Whether the deployment has Google OIDC env configured. We optimistically
-  // assume "no" so the button doesn't flash on slow networks; the probe flips
-  // it on if /api/public-config confirms.
-  const [googleAvailable, setGoogleAvailable] = useState(false);
-
-  // Probe public-config to know which providers are enabled. Side-effect-free.
-  useEffect(() => {
-    let cancelled = false;
-    apiFetchRaw('/public-config')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((cfg) => {
-        if (cancelled || !cfg) return;
-        const providers = (cfg as { providers?: { google?: boolean } }).providers;
-        if (providers?.google) setGoogleAvailable(true);
-      })
-      .catch(() => {
-        // Network error — leave Google hidden. Email/password still works.
-      });
-    return () => { cancelled = true; };
-  }, []);
-
   function bumpFailure() {
     const next = failureCount + 1;
     setFailureCount(next);
@@ -342,20 +284,6 @@ export default function LoginPage() {
         return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
       }
       throw err;
-    }
-  }
-
-  /** Google 登入：發起（暫存 PKCE／state／金鑰）後整頁導向新 api 入口。 */
-  async function startGoogleLogin() {
-    setBannerError(null);
-    try {
-      const target = await getNewApiAuth().startGoogleLogin({
-        redirectUri: `${globalThis.location.origin}/auth/callback`,
-        redirectAfterLogin: googleRedirect,
-      });
-      globalThis.location.assign(target);
-    } catch {
-      setBannerError('Google 登入失敗，請稍後再試');
     }
   }
 
@@ -594,20 +522,6 @@ export default function LoginPage() {
             {submitting ? '登入中…' : '登入'}
           </button>
         </form>
-
-        {googleAvailable && (
-          <>
-            <div className="tp-divider">或</div>
-            <button
-              type="button"
-              className="tp-btn tp-btn-secondary"
-              onClick={() => { void startGoogleLogin(); }}
-              data-testid="login-google"
-            >
-              <GoogleLogo /><span>使用 Google 登入</span>
-            </button>
-          </>
-        )}
 
         <div className="tp-login-footer">
           沒有帳號？<a href={invitationToken ? `/signup?invitation=${encodeURIComponent(invitationToken)}` : '/signup'} data-testid="login-signup-link">建立帳號</a>

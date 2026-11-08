@@ -1,7 +1,16 @@
 # ADR-0009：刪除帳號需要「伺服器驗證的近期 Google 重新驗證」，無法驗證就 fail-closed
 
-- **Status**：Accepted（實作於 PR #1458；**尚未可上線**，見 Consequences 的未驗證項）
+- **Status**：**已被取代（Superseded，2026-11-08，#1643）**。原狀態：Accepted（實作於 PR #1458）。以下內容保留當時的決策紀錄，不再是現行做法。
 - **來源**：2026-10-30 `/implement` #1347，含四輪 pre-landing review
+
+## 現行做法（取代本 ADR）
+
+owner 決議（2026-11-08，#1643）整個移除 Google 登入：production 48 個帳號全有密碼、0 個 Google 身分，`GOOGLE_CLIENT_ID` 從未設定，原本寫在 Consequences 的「Google 是否回 `auth_time`」風險因此不再需要驗證。Google 重新驗證隨之移除（api：trip-planner-api#63，web：本次變更）。
+
+- **帳號刪除只走密碼確認**：有 local 密碼身分的帳號，`DELETE /api/account` 必須帶 `{ password }`，缺密碼 400 `ACCOUNT_DELETE_CONFIRM_REQUIRED`、密碼錯 401 `ACCOUNT_DELETE_PASSWORD_INVALID`，且都不動資料。
+- **沒有密碼身分的帳號 fail-closed 的原則不變**：一律 403 `ACCOUNT_DELETE_REAUTH_REQUIRED`，`confirm`、`challengeId` 都不算證明，**不退回**「只輸入 DELETE」。web 對這種帳號不提供輸入欄，只顯示「此帳號沒有設定密碼，無法在此刪除帳號」並停用確認鈕（現實中不存在這類帳號）。
+- `POST／GET／DELETE /api/account/delete-reauth`、`GET /api/oauth/login/google`、`GET /api/oauth/callback/google` 已不存在；`GET /api/account` 的 `reauthProvider`（恆 null）、`reauthenticated`（恆 false）只是 api 保留的已棄用相容欄位，web 不讀。
+- 資料庫不動：`oauth_models` 內既有的 challenge／proof 資料列不再使用，也不寫 destructive migration。
 
 ## Context
 

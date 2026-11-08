@@ -8,7 +8,7 @@
  *   - 登出撤銷 family；變更密碼撤銷「其他」family；刪除帳號撤銷全部
  *   - SSE 一次性 ticket（用過即失效）、CORS（跨埠，和 production 的 pages.dev ↔ workers.dev 一樣是跨 origin）
  * 它**不是** production 行為的證明（那是 api repo 自己的測試）；它證明的是「web 這端送出的東西合不合 api 的規矩」。
- * 登入帳密與「Google」都是假的：Google 入口直接 302 回 redirect_uri，不碰任何真實身分提供者。
+ * 登入帳密是假的，不碰任何真實身分提供者。
  *
  * 控制面（僅測試用）：GET /__fake/state、POST /__fake/reset、POST /__fake/expire-access。
  */
@@ -28,8 +28,7 @@ const sha256 = (s) => b64u(crypto.createHash('sha256').update(s).digest());
 const rand = (n = 24) => b64u(crypto.randomBytes(n));
 
 const USERS = () => ({
-  'demo@example.test': { id: 'u-demo', email: 'demo@example.test', displayName: 'Demo', password: 'correct-horse-1', provider: null },
-  'google@example.test': { id: 'u-google', email: 'google@example.test', displayName: 'Google User', password: null, provider: 'google' },
+  'demo@example.test': { id: 'u-demo', email: 'demo@example.test', displayName: 'Demo', password: 'correct-horse-1' },
 });
 
 const FAKE_TRIP = { tripId: 'fake-trip', name: '假行程', owner: 'Demo', title: '假行程', role: 'owner', countries: '["JP"]', published: 0, lang: 'zh-TW', dataSource: 'manual' };
@@ -44,7 +43,6 @@ function reset() {
     families: new Map(), // id -> { userId, jkt, revoked, scope }
     jtis: new Set(),
     tickets: new Map(), // ticket -> { userId, requestId, used }
-    challenges: new Map(), // id -> { userId, done }
     stats: { codeGrants: 0, refreshGrants: 0, reuseDetected: 0, ticketsIssued: 0, ticketsConsumed: 0, ticketsRejected: 0, dpopRejected: 0 },
     log: [], // { method, path, status }
     unhandled: [],
@@ -155,14 +153,9 @@ async function handle(req, res) {
   }
   if (path === '/__fake/reset' && req.method === 'POST') { reset(); return send(req, res, 200, { ok: true }); }
   if (path === '/__fake/expire-access' && req.method === 'POST') { for (const a of S.access.values()) a.expired = true; return send(req, res, 200, { ok: true }); }
-  if (path === '/__fake/google-reauth') {
-    const c = S.challenges.get(url.searchParams.get('challenge'));
-    if (c) c.done = true;
-    cors(req, res); res.writeHead(302, { Location: `${WEB_ORIGIN}/account` }); return res.end();
-  }
 
   // ---- 公開端點 ----
-  if (path === '/api/public-config' && req.method === 'GET') return send(req, res, 200, { providers: { google: true } });
+  if (path === '/api/public-config' && req.method === 'GET') return send(req, res, 200, { features: { passwordSignup: true } });
 
   if (path === '/api/oauth/login' && req.method === 'POST') {
     let b; try { b = JSON.parse(await readBody(req)); } catch { return err(req, res, 400, 'LOGIN_INVALID_INPUT'); }
@@ -174,17 +167,6 @@ async function handle(req, res) {
     const code = rand();
     S.codes.set(code, { challenge: b.code_challenge, jkt: b.dpop_jkt, userId: user.id, clientId: b.client_id });
     return send(req, res, 200, { code });
-  }
-
-  if (path === '/api/oauth/login/google' && req.method === 'GET') {
-    const q = url.searchParams;
-    for (const k of ['client_id', 'redirect_uri', 'code_challenge', 'code_challenge_method', 'state']) if (!q.get(k)) return err(req, res, 400, 'INVALID_REQUEST', k);
-    if (q.get('redirect_uri') !== `${WEB_ORIGIN}/auth/callback`) return err(req, res, 400, 'INVALID_REDIRECT_URI');
-    const code = rand();
-    S.codes.set(code, { challenge: q.get('code_challenge'), jkt: q.get('dpop_jkt'), userId: S.users['google@example.test'].id, clientId: q.get('client_id') });
-    cors(req, res);
-    res.writeHead(302, { Location: `${q.get('redirect_uri')}?code=${code}&state=${encodeURIComponent(q.get('state'))}` });
-    return res.end();
   }
 
   if (path === '/api/oauth/token' && req.method === 'POST') {
@@ -237,8 +219,7 @@ async function handle(req, res) {
     if (path === '/api/requests' && m === 'GET') return send(req, res, 200, []);
 
     if (path === '/api/account' && m === 'GET') {
-      const done = [...S.challenges.values()].some((c) => c.userId === user.id && c.done);
-      return send(req, res, 200, { hasPassword: user.password !== null, reauthProvider: user.provider, reauthenticated: done, tripsOwned: 0, collaboratorsAffected: 0 });
+      return send(req, res, 200, { hasPassword: user.password !== null, tripsOwned: 0, collaboratorsAffected: 0 });
     }
     if (path === '/api/account/password' && m === 'POST') {
       const b = JSON.parse((await readBody(req)) || '{}');
@@ -247,18 +228,10 @@ async function handle(req, res) {
       revokeUser(user.id, familyId); // 其他裝置登出，這個 family 保留
       return send(req, res, 200, { ok: true });
     }
-    if (path === '/api/account/delete-reauth' && m === 'POST') {
-      const id = rand(8);
-      S.challenges.set(id, { userId: user.id, done: false });
-      return send(req, res, 200, { challengeId: id, authorizeUrl: `${ORIGIN}/__fake/google-reauth?challenge=${id}` });
-    }
     if (path === '/api/account' && m === 'DELETE') {
       const b = JSON.parse((await readBody(req)) || '{}');
-      if (user.password !== null) {
-        if (b.password !== user.password) return err(req, res, 403, 'ACCOUNT_DELETE_PASSWORD_INVALID');
-      } else if (!(S.challenges.get(b.challengeId)?.done && S.challenges.get(b.challengeId).userId === user.id)) {
-        return err(req, res, 403, 'ACCOUNT_DELETE_REAUTH_REQUIRED');
-      }
+      if (user.password === null) return err(req, res, 403, 'ACCOUNT_DELETE_REAUTH_REQUIRED'); // 無密碼：fail-closed
+      if (b.password !== user.password) return err(req, res, 403, 'ACCOUNT_DELETE_PASSWORD_INVALID');
       revokeUser(user.id);
       delete S.users[user.email];
       return send(req, res, 200, { ok: true });

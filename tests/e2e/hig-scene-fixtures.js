@@ -154,12 +154,11 @@ const openTimePicker = async (page) => {
 /**
  * 把登入憑證種進 IndexedDB（結構照 src/lib/auth/storage.ts：db tripline-auth、store kv）。
  * 先開一頁空白文件（只為了取得同源的 IndexedDB，不載入 app，避免 app 搶先讀寫），種完再由場景自己 goto。
- * pending 有值時另存一筆 Google 登入暫存（/auth/callback 場景用）。
  */
-const seedNewApiAuth = async (page, pending) => {
+const seedNewApiAuth = async (page) => {
   await page.route(`${NEWAPI_ORIGIN}/__seed`, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>seed</title>' }));
   await page.goto(`${NEWAPI_ORIGIN}/__seed`);
-  await page.evaluate(async (pending) => {
+  await page.evaluate(async () => {
     const keyPair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
     const db = await new Promise((resolve, reject) => {
       const req = indexedDB.open('tripline-auth', 1);
@@ -170,13 +169,13 @@ const seedNewApiAuth = async (page, pending) => {
     await new Promise((resolve, reject) => {
       const tx = db.transaction('kv', 'readwrite');
       const store = tx.objectStore('kv');
-      if (pending) store.put({ ...pending, keyPair, createdAt: Date.now() }, 'pendingLogin');
-      else { store.put('rt-demo', 'refreshToken'); store.put(keyPair, 'keyPair'); }
+      store.put('rt-demo', 'refreshToken');
+      store.put(keyPair, 'keyPair');
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
     db.close();
-  }, pending ?? null);
+  });
 };
 // refresh 換 token：只要形狀對（DPoP 綁定），proof 由頁面真的簽出來，mock 不驗。
 const stubNewApiToken = (page) =>
@@ -190,7 +189,7 @@ const stubNewApiSession = async (page) => {
 const stubChangePassword = (reply) => async (page) => {
   await stubNewApiSession(page);
   await page.route(/\/api\/account$/, (r) =>
-    r.fulfill(json({ hasPassword: true, reauthProvider: null, reauthenticated: false, tripsOwned: 2, collaboratorsAffected: 1 })));
+    r.fulfill(json({ hasPassword: true, tripsOwned: 2, collaboratorsAffected: 1 })));
   if (reply) await page.route(/\/api\/account\/password$/, (r) => (r.request().method() === 'POST' ? r.fulfill(reply) : r.fallback()));
 };
 const CHANGE_PASSWORD = { path: '/account/password', newApi: true };
@@ -226,14 +225,9 @@ const stubClientInfo = (page) =>
   page.route(/\/api\/oauth\/client-info\?/, (r) =>
     r.fulfill(json({ app_name: 'Travel Planner Mobile', app_description: null, app_logo_url: null, homepage_url: null })));
 const CONSENT_QUERY = 'client_id=tp_app&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcb&state=demo&response_type=code&code_challenge=abc&code_challenge_method=S256';
-// 回跳頁的暫存要先存在（state 對得上），頁面才會真的去換 token；token 端點刻意不回應，停在「登入中…」。
-const stubGoogleCallbackPending = async (page) => {
-  await page.route(/\/api\/oauth\/token$/, () => {});
-  await seedNewApiAuth(page, { state: 'st-demo', verifier: 'v'.repeat(43), redirectAfterLogin: null });
-};
 
 /**
- * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[], newApi?: boolean, noIdle?: boolean, intended?: string, proofAbsent?: { selector: string, why: string }, proofPath?: string }} Scene
+ * @typedef {{ name: string, path: string, loggedIn?: boolean, proof?: string, proofText?: string | RegExp, stub?: (page: any) => Promise<void>, act?: (page: any) => Promise<void>, scope?: string, noTargets?: boolean, viewports?: ('mobile' | 'desktop')[], newApi?: boolean, intended?: string, proofAbsent?: { selector: string, why: string }, proofPath?: string }} Scene
  * proof：頁面渲染完成時一定存在的 data-testid；proofText 是畫面上一定要出現的文字（錯誤態、空狀態用，
  * 證明拍到的是想取證的那一種狀態，不是任意一種）；沒有時退而求其次檢查沒有錯誤頁。
  * stub：進頁前追加的 API 覆寫（後註冊的 route 優先）；act：進頁後的互動（例如送出表單）。
@@ -243,7 +237,6 @@ const stubGoogleCallbackPending = async (page) => {
  * noTargets：彈出層本來就沒有可點擊元素（橫幅、Toast），不要求量到元素。
  * viewports：只在這些寬度取證（桌機寬才有的表面，例如 TripSheet 右欄；預設兩種寬度都跑）。
  * newApi：走真 auth（不套穿透版）的那份建置（埠 3001）；憑證由 stub 種進 IndexedDB。
- * noIdle：不等 networkidle（畫面刻意停在一個永遠不回應的請求上，例如 /auth/callback 的「登入中…」）。
  * proofPath：頁面最後所在的 pathname（不含 query）。兩個場景共用同一個 proof testid 時（複製／移動、direct／收藏加入行程是同一元件的不同模式，DOM 幾乎相同），
  *   用它證明各自真的停在自己的路由，沒有被轉址到另一個。
  * proofAbsent：證明「看不到」也是取證結果（已知缺口）：selector 在 proof 之後必須量到 0 個；用一次性的 count，不用會自動重試的 toHaveCount（Toast 會自己消失，重試會誤綠）。
@@ -269,7 +262,7 @@ const SCENES = [
   { name: 'account-connected-apps', path: '/account/connected-apps' },
   { name: 'developer-apps', path: '/developer/apps' },
   { name: 'developer-apps-new', path: '/developer/apps/new' },
-  // ── 認證與帳號類補強（#1565）：變更密碼的各狀態、OAuth 授權與同意、Google 回跳 ──
+  // ── 認證與帳號類補強（#1565）：變更密碼的各狀態、OAuth 授權與同意 ──
   { name: 'change-password', ...CHANGE_PASSWORD, stub: stubChangePassword(), proof: 'change-password-page' },
   { name: 'change-password-current-invalid', ...CHANGE_PASSWORD, stub: stubChangePassword(pwError('CHANGE_PASSWORD_CURRENT_INVALID', '目前密碼不正確', 403)), act: submitPasswordChange, proofText: '目前密碼不正確', intended: '403 /api/account/password' },
   { name: 'change-password-too-short', ...CHANGE_PASSWORD, stub: stubChangePassword(), act: async (page) => { await fillPasswords(page, CURRENT_PW, 'abc12'); await leaveNewPassword(page); }, proofText: /^新密碼至少 8 字元$/ },
@@ -286,7 +279,6 @@ const SCENES = [
   { name: 'oauth-consent', path: `/oauth/consent?${CONSENT_QUERY}&scope=openid%20profile%20email%20trips%3Aread`, stub: stubClientInfo, proof: 'consent-allow' },
   { name: 'oauth-consent-unknown-scope', path: `/oauth/consent?${CONSENT_QUERY}&scope=openid%20admin%3Aall`, stub: stubClientInfo, proof: 'consent-scope-admin:all' },
   { name: 'oauth-consent-error', path: '/oauth/consent?scope=openid', proof: 'consent-error' },
-  { name: 'auth-callback', path: '/auth/callback?code=demo-code&state=st-demo', newApi: true, stub: stubGoogleCallbackPending, noIdle: true, proof: 'auth-callback-page', proofText: '登入中…' },
   { name: 'trip-detail', path: `/trip/${TRIP}` },
   { name: 'trip-map', path: `/trip/${TRIP}/map` },
   { name: 'trip-notes', path: `/trip/${TRIP}/notes` },
@@ -366,7 +358,7 @@ async function proveScene(page, scene) {
 async function openScene(page, scene) {
   if (scene.stub) await scene.stub(page);
   await page.goto(sceneUrl(scene));
-  if (!scene.noIdle) await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('networkidle');
   await page.waitForTimeout(400);
   if (scene.act) await scene.act(page);
   // 彈出層有 150～260ms 的進場動畫（淡入、上滑）；不等它跑完會拍到半透明的過場畫面（Toast 只停留 2～3 秒，所以只等一小段）。

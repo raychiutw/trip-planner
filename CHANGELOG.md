@@ -12,6 +12,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 - **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。
 
+### Removed
+- **移除 Google 登入（#1643）**：登入頁不再有「使用 Google 登入」按鈕與 `/api/public-config` 探測、`/auth/callback` 回跳頁、auth client 的 `startGoogleLogin`／`finishGoogleLogin` 與其 IndexedDB 暫存；舊入口（`functions/api`）的 `oauth/login/google`、`oauth/callback/google`、`account/delete-reauth` 與相關程式一併刪除。production 48 個帳號全有密碼、0 個 Google 身分。
+- **帳號刪除只走密碼確認**：沒有密碼身分的帳號 fail-closed（不提供輸入欄、不送 DELETE，顯示「此帳號沒有設定密碼，無法在此刪除帳號」）；ADR-0009 標為已被取代。`contracts/openapi.json` 與 `schema.d.ts` 同步到 production 現況（117 → 114 條路徑）。
+
 ### Changed
 - **移除新 api 登入旗標 `VITE_NEW_API_AUTH`：網站只走新認證（尚未部署，切換日期待定）**：登入（帳密與 Google）、登出與所有 `/api` 請求一律是 PKCE＋DPoP、access token 只放記憶體、refresh 輪替、SSE ticket；`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。舊的同源 cookie 登入／登出、`/api/oauth/login/google` 連結、cookie 的 SSE（`withCredentials`）與帳號刪除的舊重新驗證導向都已刪除。部署這一版後**所有人需要重新登入一次**；回切要重新部署前一版 web（旗標已不存在，無法用設定回切）。
 - `.env.local.example` 補 `VITE_API_BASE_URL`：本機開發現在也必須指定新 api 的網址。

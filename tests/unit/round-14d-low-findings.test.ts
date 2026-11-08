@@ -5,7 +5,7 @@
  *   1. permissions.ts invitationExpiresAt() 用 default 取代寫死 7
  *   2. oauth-d1-adapter 16KB payload size cap
  *   3. session.ts CryptoKey isolate cache (避免每 request importKey)
- *   4. google-id-token JWKS cache 加 KV upgrade path doc
+ *   4. （已移除：Google ID token 驗證，Google 登入整個拿掉 #1643）
  *   5. manifest maskable icon 192/512 加入
  *   + stale v2.18.0 comment 從 tokens.css 清掉 (1 處)
  */
@@ -19,7 +19,6 @@ const exists = (p: string) => existsSync(path.resolve(__dirname, '../..', p));
 const PERMISSIONS = read('functions/api/permissions.ts');
 const ADAPTER = read('src/server/oauth-d1-adapter.ts');
 const SESSION = read('src/server/session.ts');
-const GOOGLE_ID = read('src/server/oauth-client/google-id-token.ts');
 const MANIFEST = JSON.parse(read('public/manifest.json'));
 const TOKENS_CSS = read('css/tokens.css');
 
@@ -45,12 +44,6 @@ describe('v2.33.63 #3 — session CryptoKey cache', () => {
   it('importHmacKey 先查 cache', () => {
     expect(SESSION).toMatch(/KEY_CACHE\.get\(secret\)/);
     expect(SESSION).toMatch(/KEY_CACHE\.set\(secret, key\)/);
-  });
-});
-
-describe('v2.33.63 #4 — JWKS KV upgrade doc', () => {
-  it('comment 標 V2-P7 KV cache upgrade path', () => {
-    expect(GOOGLE_ID).toMatch(/V2-P7 infra|KV cache/);
   });
 });
 

@@ -404,7 +404,7 @@ tests/
 | [0006](docs/adr/0006-occ-scoped-to-multi-poi-entry.md) | OCC 只用在 entry 的 multi-POI（v2.27.0） |
 | [0007](docs/adr/0007-request-termination-cancel-and-reap.md) | 請求終結：取消＝停止等待，終結原因獨立成欄、兩層收屍 |
 | [0008](docs/adr/0008-published-trips-are-fully-public.md) | 已發布行程對匿名讀者全公開：隱私邊界畫在『筆記區塊』，不在行程本體 |
-| [0009](docs/adr/0009-account-deletion-requires-fresh-google-reauth.md) | 刪除帳號需伺服器驗證的近期 Google 重新驗證，無法驗證就 fail-closed（⚠️ Google 是否回 `auth_time` 待驗證） |
+| [0009](docs/adr/0009-account-deletion-requires-fresh-google-reauth.md) | 刪除帳號需伺服器驗證的近期 Google 重新驗證，無法驗證就 fail-closed（**已被取代**，2026-11-08 #1643：Google 登入移除，刪除只走密碼確認，無密碼 fail-closed） |
 | [0010](docs/adr/0010-mobile-oauth-public-client-callback-contract.md) | Mobile OAuth 是 public client，callback 與 client 依環境精確綁定、用 HTTPS app link |
 | [0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md) | 拆成 web、api、agent 三個專案，認證改 bearer token（Accepted 2026-11-02；web 尚未切換、無 WAF，含殘留風險） |
 | [0012](docs/adr/0012-ai-data-consent-requester-and-owner.md) | AI 資料同意：送出者與行程 owner 雙方持有，server 端把關（Accepted；文案欄位待補） |

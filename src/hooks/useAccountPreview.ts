@@ -7,7 +7,7 @@
  * - `reload()`：發一次請求（永不 throw，失敗回 null）；已有進行中的請求就回同一個 promise（去重）。
  *   失敗時保留既有 preview（status=error），暫時性的重試失敗不該讓已知的 hasPassword 消失。
  * - `autoLoad`：掛載時就取一次（呼叫端傳 `!!user`，登入還原前不打請求）。
- * - 刪除確認要自己判斷預覽是否「剛取到」（status==='ready'）；`patch()` 就地改已載入的預覽。
+ * - 刪除確認要自己判斷預覽是否「剛取到」（status==='ready'）。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiClient';
@@ -43,11 +43,7 @@ export function useAccountPreview(autoLoad: boolean) {
     return p;
   }, []);
 
-  const patch = useCallback((fn: (p: AccountPreview) => AccountPreview) => {
-    setState((s) => (s.preview ? { ...s, preview: fn(s.preview) } : s));
-  }, []);
-
   useEffect(() => { if (autoLoad) void reload(); }, [autoLoad, reload]);
 
-  return { ...state, reload, patch };
+  return { ...state, reload };
 }
