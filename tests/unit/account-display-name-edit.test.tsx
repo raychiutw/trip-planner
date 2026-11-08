@@ -65,8 +65,7 @@ describe('PR17 inline state hooks + helpers', () => {
   });
 
   it('commitEditName: PATCH /account/profile + reloadUser + 成功 silent (無 toast)', () => {
-    expect(SRC).toMatch(/apiFetch\(['"]\/account\/profile['"]/);
-    expect(SRC).toMatch(/method: ['"]PATCH['"]/);
+    expect(SRC).toMatch(/typedApi\.patch\(['"]\/api\/account\/profile['"]/);
     expect(SRC).toMatch(/displayName: trimmed\.length === 0 \? null : trimmed/);
     expect(SRC).toMatch(/reloadUser\(\)/);
     // 成功 path 不應有 showToast('名稱已更新'...) — v2.33.122 已拔
