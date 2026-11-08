@@ -7,6 +7,32 @@ import { MemoryRouter } from 'react-router-dom';
 import LoginPage from '../../src/pages/LoginPage';
 
 const navigateMock = vi.fn();
+const googleStart = vi.hoisted(() => vi.fn(async (_o: { redirectUri: string; redirectAfterLogin?: string | null }) => 'https://api.test/api/oauth/login/google?x=1'));
+
+// LoginPage 的帳密登入走 auth.login（PKCE＋DPoP 的真實流程見 auth-new-api／new-api-wiring 測試）。
+// 這個檔案測的是「登入頁怎麼呈現各種結果」，所以用 fetch 的結果模擬 auth.login 的對外行為：
+// 2xx 成功；非 2xx 丟 AuthError（code 取自回應本文、retryAfter 取自 Retry-After）；網路錯誤丟 AUTH_NETWORK。
+vi.mock('../../src/lib/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/lib/auth')>();
+  const client: import('../../src/lib/auth').AuthClient = {
+    isAuthenticated: () => true, restoreSession: async () => true,
+    apiFetch: (input, init) => globalThis.fetch(String(input), init),
+    login: async (email, password) => {
+      let res: Response;
+      try {
+        res = await fetch('/api/oauth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      } catch {
+        throw new actual.AuthError('AUTH_NETWORK', 'net');
+      }
+      if (res.ok) return;
+      const body = (await res.json().catch(() => null)) as { error?: { code?: string } } | null;
+      throw new actual.AuthError(body?.error?.code ?? 'UNKNOWN', '', { status: res.status, retryAfter: Number(res.headers.get('Retry-After')) || undefined });
+    },
+    refresh: async () => {}, logout: async () => {},
+    startGoogleLogin: googleStart, finishGoogleLogin: async () => ({ redirectAfterLogin: null }),
+  };
+  return { ...actual, getNewApiAuth: () => client, getNewApiBase: () => '' };
+});
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -303,9 +329,13 @@ describe('LoginPage with ?invitation=token (V2 共編)', () => {
     stubByRoute([{ match: /\/api\/public-config/, status: 200, body: { providers: { google: true } } }]);
     vi.useRealTimers();
     renderAt('invitation=google-tok');
+    const assign = vi.fn();
+    vi.stubGlobal('location', { origin: 'https://web.test', pathname: '/login', search: '', assign });
     await waitFor(() => screen.getByTestId('login-google'));
-    expect((screen.getByTestId('login-google') as HTMLAnchorElement).getAttribute('href'))
-      .toBe('/api/oauth/login/google?redirect_after_login=%2Finvite%3Ftoken%3Dgoogle-tok');
+    fireEvent.click(screen.getByTestId('login-google'));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://api.test/api/oauth/login/google?x=1'));
+    // 登入完成後回到同一份邀請頁（由使用者手動接受）
+    expect(googleStart).toHaveBeenCalledWith({ redirectUri: 'https://web.test/auth/callback', redirectAfterLogin: '/invite?token=google-tok' });
   });
 
   it('signup link preserves the invitation context', () => {

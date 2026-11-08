@@ -13,6 +13,7 @@ class RequestEvents {
   closed = false;
   constructor(public url: string) { RequestEvents.instances.push(this); }
   close() { this.closed = true; }
+  addEventListener() { /* ticket 連線會註冊 reconnect 事件；這裡不模擬 */ }
   emit(data: unknown) { if (!this.closed) this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) })); }
 }
 function deferred<T>() {
@@ -55,6 +56,7 @@ beforeEach(() => {
       const snapshot = structuredClone(rows.filter((row) => row.tripId === tripId).toReversed());
       return historyGate?.(tripId, url.searchParams.get('beforeId'), snapshot) ?? response({ items: snapshot, hasMore: false });
     }
+    if (/^\/api\/requests\/\d+\/sse-ticket$/.test(url.pathname)) return response({ ticket: 'tk', expires_in: 30 });
     const match = url.pathname.match(/^\/api\/requests\/(\d+)$/);
     if (match) {
       const id = Number(match[1]); const row = rows.find((item) => item.id === id);
@@ -94,6 +96,8 @@ describe('conversation lifecycle through the real chat', () => {
     postStatus = 200;
     vi.useFakeTimers();
     await send('第二筆可正常回覆', false);
+    // 先換一次性 ticket（動態載入的 ticket 連線模組）才會建立 EventSource
+    await act(async () => { await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0); });
     const events = RequestEvents.instances.at(-1)!;
     await act(async () => { events.onerror?.(); });
     rows[0] = { ...rows[0]!, status: 'completed', reply: '斷線後由輪詢補回的成果' };

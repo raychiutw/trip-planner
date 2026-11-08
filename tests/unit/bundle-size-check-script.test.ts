@@ -84,23 +84,28 @@ describe('ci.yml — HIG 取證步驟與 Playwright config 分工', () => {
     expect(cfg).toMatch(/testIgnore:\s*\[?\s*HIG_SPECS/);
     expect(cfg).not.toMatch(/VITE_NEW_API_AUTH/);
     expect(cfg).not.toMatch(/port:\s*3001/);
+    expect(cfg).toMatch(/E2E_AUTH_PASSTHROUGH=1[^']*--outDir dist-e2e/); // 不用正式建置（API 網址指向 production）
   });
 
   it('新 api 模式 e2e：CI 有獨立步驟、預設 config 排除它、它自己的 config 建旗標開啟的 dist 並啟動假 api', () => {
     expect(CI_YML).toMatch(/npx playwright test -c playwright\.newapi\.config\.js/);
     expect(read('playwright.config.js')).toMatch(/new-api-e2e\\\.spec\\\.js/);
     const cfg = read('playwright.newapi.config.js');
-    expect(cfg).toMatch(/VITE_NEW_API_AUTH=1/);
+    expect(cfg).toMatch(/VITE_API_BASE_URL=http:\/\/localhost:\$\{API\}/); // 指向假 api，不是 production
+    expect(cfg).not.toMatch(/E2E_AUTH_PASSTHROUGH/); // 要驗真的 auth，不套穿透版
     expect(cfg).toMatch(/fake-new-api\.cjs/);
     expect(cfg).toMatch(/--outDir dist-newapi-e2e/);
   });
 
   it('兩台 HIG server 的建置指令只定義在 playwright.hig-servers.js，兩個 HIG config 共用', () => {
-    expect(read('playwright.hig-servers.js')).toMatch(/VITE_NEW_API_AUTH=1/);
+    const servers = read('playwright.hig-servers.js');
+    expect(servers).toMatch(/E2E_AUTH_PASSTHROUGH=1[^']*--outDir dist-e2e/); // 主站：穿透 auth、另建 dist-e2e（不用正式建置）
+    expect(servers).toMatch(/VITE_API_BASE_URL=http:\/\/localhost:3001[^']*--outDir dist-newapi/); // 真 auth 的那份指向自己
+    expect(servers).not.toMatch(/VITE_NEW_API_AUTH/);
     for (const f of ['playwright.hig.config.js', 'playwright.hig-webkit.config.js']) {
       const cfg = read(f);
       expect(cfg, f).toMatch(/HIG_WEB_SERVERS/);
-      expect(cfg, f).not.toMatch(/VITE_NEW_API_AUTH/);
+      expect(cfg, f).not.toMatch(/E2E_AUTH_PASSTHROUGH|VITE_API_BASE_URL/);
     }
   });
 });

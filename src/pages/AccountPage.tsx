@@ -12,7 +12,6 @@ import { useAccountPreview } from '../hooks/useAccountPreview';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { typedApi, unwrap } from '../lib/api/typed';
-import { isNewApiAuthEnabled } from '../lib/auth';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -303,8 +302,8 @@ export default function AccountPage() {
    * 所以確認畫面一定要先讓使用者看到「會刪掉幾個行程、影響幾位共編者」——
    * 那兩個數字前端算不出來，由 GET /api/account 提供。 */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  /** 與「變更密碼」入口共用同一份 GET /api/account；旗標關閉（舊入口）時不主動取，開刪除確認才取。 */
-  const accountPreview = useAccountPreview(!!auth.user && isNewApiAuthEnabled());
+  /** 與「變更密碼」入口共用同一份 GET /api/account。 */
+  const accountPreview = useAccountPreview(!!auth.user);
   // 只有「剛取到」的預覽才可用於刪除確認；重取中或重取失敗時為 null（確認鈕不可按）
   const deletePreview = accountPreview.status === 'ready' ? accountPreview.preview : null;
   const patchPreview = accountPreview.patch;
@@ -374,15 +373,12 @@ export default function AccountPage() {
   }, [draftName, reloadUser, user]);
 
   /**
-   * 只有有 local 密碼的帳號才顯示「變更密碼」（只用 Google 登入的沒有密碼可改）；
-   * 而且要新 api 旗標開啟：這個端點只存在於新 api，舊入口（旗標關閉，目前正式站的狀態）沒有。
-   * 旗標關閉時不主動取預覽，hasPassword 就永遠是 false，入口不會出現。
+   * 只有有 local 密碼的帳號才顯示「變更密碼」（只用 Google 登入的沒有密碼可改）。
    * 預覽取失敗時入口位置改顯示一列錯誤與「重試」（見 previewFailed）。
    */
-  const newApiEnabled = isNewApiAuthEnabled();
-  const hasPassword = newApiEnabled && accountPreview.preview?.hasPassword === true;
+  const hasPassword = accountPreview.preview?.hasPassword === true;
   // 重試列只在「完全沒有預覽」時出現；已知 hasPassword 後的暫時性失敗不影響入口
-  const previewFailed = newApiEnabled && accountPreview.status === 'error' && !accountPreview.preview;
+  const previewFailed = accountPreview.status === 'error' && !accountPreview.preview;
 
   useEffect(() => {
     if (!auth.user) return;
@@ -430,13 +426,8 @@ export default function AccountPage() {
 
   const deleteAccount = useCallback(async () => {
     if (!deletePreview || !canConfirmDelete || deleting) return;
-    const newApi = isNewApiAuthEnabled();
     if (!deletePreview.hasPassword && !deletePreview.reauthenticated) {
-      if (!newApi) {
-        window.location.href = '/api/oauth/login/google?purpose=account-delete';
-        return;
-      }
-      // 新 api 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
+      // 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
       setDeleteError(null);
       try {
         const started = unwrap(await typedApi.post('/api/account/delete-reauth'));
@@ -449,7 +440,7 @@ export default function AccountPage() {
       return;
     }
     let challengeId: string | null = null;
-    if (!deletePreview.hasPassword && newApi) {
+    if (!deletePreview.hasPassword) {
       challengeId = readDeleteChallenge();
       if (!challengeId) {
         setDeleteError('近期身分驗證已失效，請重新驗證。帳號尚未刪除。');

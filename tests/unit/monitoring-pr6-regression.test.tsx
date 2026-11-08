@@ -47,8 +47,8 @@ describe('G9: useRequestSSE pollOnce AbortController 10s timeout', () => {
     expect(SSE).toMatch(/setTimeout\(\(\) => ctrl\.abort\(\), POLL_FETCH_TIMEOUT_MS\)/);
   });
 
-  it('apiFetchRaw 傳 signal: ctrl.signal', () => {
-    expect(SSE).toMatch(/apiFetchRaw\(`\/requests\/\$\{requestId\}`,\s*\{ signal: ctrl\.signal \}\)/);
+  it('輪詢請求傳 signal: ctrl.signal（typed client 的 GET /api/requests/{id}）', () => {
+    expect(SSE).toMatch(/api\.get\('\/api\/requests\/\{id\}'[\s\S]*?signal: ctrl\.signal/);
   });
 
   it('finally clearTimeout 防 timer leak', () => {

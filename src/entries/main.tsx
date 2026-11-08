@@ -322,7 +322,7 @@ if (el) {
               <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
               <Route path="/settings/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
-              {/* 新 api 的第一方 App「瀏覽器登入」授權頁（登入＋一鍵繼續）；不看新 api 旗標 */}
+              {/* 新 api 的第一方 App「瀏覽器登入」授權頁（登入＋一鍵繼續） */}
               <Route path="/oauth/authorize" element={<OauthAuthorizePage />} />
               {/* Google 登入（新 api）的回跳頁；回跳網址登記在授權伺服器（flutter#527） */}
               <Route path="/auth/callback" element={<AuthCallbackPage />} />

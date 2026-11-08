@@ -1,5 +1,5 @@
 /** /account/password 的進入守衛：旗標關閉、沒有 local 密碼、預覽失敗一律導回 /account（replace）。 */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -28,9 +28,7 @@ const renderPage = () => render(<MemoryRouter initialEntries={['/account/passwor
 beforeEach(() => {
   apiFetchMock.mockReset();
   navigateMock.mockReset();
-  vi.stubEnv('VITE_NEW_API_AUTH', '1');
 });
-afterEach(() => { vi.unstubAllEnvs(); });
 
 describe('ChangePasswordPage 進入守衛', () => {
   it('有 local 密碼：顯示表單，不導走', async () => {
@@ -45,15 +43,6 @@ describe('ChangePasswordPage 進入守衛', () => {
     renderPage();
     expect(screen.queryByTestId('change-password-page')).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
-  });
-
-  it('新 api 旗標關閉（舊入口沒有這個端點）：導回 /account，也不打 GET /account', async () => {
-    vi.stubEnv('VITE_NEW_API_AUTH', '');
-    apiFetchMock.mockResolvedValue(preview(true));
-    renderPage();
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/account', { replace: true }));
-    expect(screen.queryByTestId('change-password-page')).toBeNull();
-    expect(apiFetchMock).not.toHaveBeenCalled();
   });
 
   it('只用 Google 登入（hasPassword=false）：導回 /account', async () => {

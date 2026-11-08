@@ -1,26 +1,23 @@
 /**
- * 帳號刪除的 fresh-auth（web，新 api 模式 VITE_NEW_API_AUTH=1）：
+ * 帳號刪除的 fresh-auth（web，新 api）：
  * 新 api 沒有 cookie，無密碼帳號要先 POST /api/account/delete-reauth 拿 challenge，導去 Google 驗證，
  * 回到 /account?deleteReauth=done 後 DELETE /api/account 帶 { challengeId }（不是 { confirm }）。
- * 旗標關閉（舊入口）的行為必須完全不變。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-const flag = vi.hoisted(() => ({ on: false }));
 vi.mock('../../src/lib/auth', async (orig) => {
   const m = await orig<typeof import('../../src/lib/auth')>();
   return {
     ...m,
-    isNewApiAuthEnabled: () => flag.on,
-    // 新 api 模式：apiClient 走 getNewApiAuth().apiFetch；這裡轉成同一個被 stub 的 fetch，方便記錄請求
-    getNewApiAuth: () => (flag.on ? {
+    // apiClient 走 getNewApiAuth().apiFetch；這裡轉成同一個被 stub 的 fetch，方便記錄請求
+    getNewApiAuth: () => ({
       isAuthenticated: () => true,
       restoreSession: async () => true,
       apiFetch: (input: string | URL, init?: RequestInit) => fetch(String(input), init),
       login: async () => {}, refresh: async () => {}, logout: async () => {},
-    } : null),
+    }),
     getNewApiBase: () => 'https://api.test',
   };
 });
@@ -49,7 +46,6 @@ function setLocation(search = '') {
 }
 
 beforeEach(() => {
-  flag.on = true;
   sessionStorage.clear();
   localStorage.clear();
   requests = [];
@@ -157,25 +153,7 @@ describe('新 api 模式：驗證失敗回到 /account?deleteReauth=failed', () 
   });
 });
 
-describe('不受影響的路徑', () => {
-  it('旗標關閉（舊入口）：仍導向 /api/oauth/login/google?purpose=account-delete，不打 delete-reauth', async () => {
-    flag.on = false;
-    show();
-    await openAndConfirm();
-    await waitFor(() => expect(hrefSet).toEqual(['/api/oauth/login/google?purpose=account-delete']));
-    expect(calls('/api/account/delete-reauth', 'POST')).toHaveLength(0);
-    expect(sessionStorage.getItem(KEY)).toBeNull();
-  });
-
-  it('旗標關閉＋已驗證：DELETE 仍帶 { confirm }', async () => {
-    flag.on = false;
-    preview = { ...preview, reauthenticated: true };
-    show();
-    await openAndConfirm();
-    await waitFor(() => expect(calls('/api/account', 'DELETE')).toHaveLength(1));
-    expect(JSON.parse(calls('/api/account', 'DELETE')[0]!.body!)).toEqual({ confirm: 'DELETE' });
-  });
-
+describe('有密碼的帳號', () => {
   it('有密碼的帳號（新 api 模式）：DELETE 帶 { password }，不打 delete-reauth', async () => {
     preview = { hasPassword: true, reauthProvider: null, reauthenticated: false, tripsOwned: 1, collaboratorsAffected: 0 };
     show();

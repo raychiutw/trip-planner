@@ -1,5 +1,5 @@
 /**
- * 邀請頁「切換帳號並繼續邀請」在新 api 模式（VITE_NEW_API_AUTH=1）：
+ * 邀請頁「切換帳號並繼續邀請」：
  * 舊入口是一條 `<a href="/api/oauth/logout?redirect_after=…">` 的導覽，靠 cookie 登出。
  * 新 api 沒有 cookie，登出是受保護的 POST（導覽帶不了 bearer），所以改成：撤銷 token → 才導去登入頁。
  * 這條連結若仍是導覽，使用者會以為已切換，實際上新 api 的登入還在（回到邀請頁又是同一個帳號）。
@@ -13,7 +13,6 @@ vi.mock('../../src/lib/auth', async (orig) => {
   const m = await orig<typeof import('../../src/lib/auth')>();
   return {
     ...m,
-    isNewApiAuthEnabled: () => true,
     getNewApiBase: () => 'https://api.test',
     getNewApiAuth: () => ({
       isAuthenticated: () => true,

@@ -33,7 +33,7 @@ web 與 api（Pages Functions）現在是同一個 Pages 專案、同一個網�
 
 **與本文決策不同、或尚未完成的部分**（接受時如實記錄，不是已解決）：
 
-- **web 尚未切換。** 網站的登入旗標（`VITE_NEW_API_AUTH`）在 production 仍是關的，網站走舊入口；「切換當天所有人強制重新登入一次」只會在翻旗標時發生。目前實際上是 **App 走新 api、網站走舊入口並行**，不是大爆炸一次切完。回切＝把 App 的 base URL 指回舊入口、網站旗標維持關閉。
+- **web 的程式碼已只走新 api，但切換日期待定。** 登入旗標（`VITE_NEW_API_AUTH`）已從程式移除，登入、登出與所有 `/api` 請求一律是新認證（PKCE＋DPoP、access token 只存記憶體、refresh 輪替、SSE ticket），`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。production 實際切換發生在**部署含此變更的 web 版本那天**（日期待定），當天所有人需重新登入一次。因為旗標已不存在，**回切不再是改設定**，而是重新部署前一版 web（Cloudflare Pages 的前一個 production deployment，或 revert 該 PR 後重建）；App 的 base URL 另行指回舊入口。本 ADR 的狀態、T21（#1483）的其餘驗收（真實 Google 登入測試、T20 callback 搬遷等）由 owner 確認，不在程式變更內。
 - **沒有 WAF。** 不買自訂網域，api 在 `workers.dev`，沒有 zone，Cloudflare 的 WAF 規則無處可掛（T11 的這一項延後）；應用層 rate limit、稽核與告警已做。要補 WAF 得先有 api 的正式網域。
 - **新 api 的刪帳號對 web 的無密碼帳號尚無路徑。** 舊入口靠瀏覽器 cookie 做重新驗證，新 api 沒有 cookie；production 目前沒有無密碼帳號，但在補設計前這是缺口。
 - **舊入口目前不只是備援，網站與 agent 還在實際使用它**（agent 的排程腳本呼叫的就是舊入口），所以下方的「舊入口是旁路」殘留風險現在是**生效中**，不是未來才會發生。

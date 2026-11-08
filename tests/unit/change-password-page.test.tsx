@@ -14,7 +14,7 @@ vi.mock('../../src/lib/apiClient', () => ({
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'ray@x.com' }, reload: () => {} }),
 }));
-// 進入守衛（旗標＋hasPassword）另有 change-password-guard.test.tsx；這裡固定為「可進入」
+// 進入守衛（hasPassword）另有 change-password-guard.test.tsx；這裡固定為「可進入」
 vi.mock('../../src/hooks/useAccountPreview', () => ({
   useAccountPreview: () => ({ status: 'ready', preview: { hasPassword: true }, reload: vi.fn(), patch: vi.fn() }),
 }));
@@ -25,7 +25,6 @@ vi.mock('../../src/lib/auth', async (orig) => {
   const m = await orig<typeof import('../../src/lib/auth')>();
   return {
     ...m,
-    isNewApiAuthEnabled: () => true,
     getNewApiAuth: () => ({ isAuthenticated: () => true, logout: authLogoutMock }),
   };
 });

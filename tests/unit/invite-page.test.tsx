@@ -159,7 +159,7 @@ describe('InvitePage', () => {
     renderInvite('valid-token');
     await waitFor(() => expect(screen.queryByText(/不屬於你/)).toBeTruthy());
     expect((screen.getByTestId('invite-switch-account') as HTMLAnchorElement).getAttribute('href'))
-      .toBe('/api/oauth/logout?redirect_after=%2Flogin%3Finvitation%3Dvalid-token');
+      .toBe('/login?invitation=valid-token');
   });
 
   it('anonymous: shows login + signup CTAs with invitation token in query', async () => {

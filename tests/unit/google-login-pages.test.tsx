@@ -1,8 +1,10 @@
 /**
  * 網頁版 Google 登入改走新 api（flutter#527）：LoginPage 的 Google 按鈕與 /auth/callback 回跳頁。
- * 旗標（VITE_NEW_API_AUTH=1）開：按鈕導向新 api 入口；關：維持舊的同網域連結，完全不碰新路徑。
+ * 按鈕導向新 api 入口（沒有舊的同網域連結）。用真的 auth 實作（不套全域的穿透 mock）。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.unmock('../../src/lib/auth');
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { IDBFactory } from 'fake-indexeddb';
@@ -20,7 +22,7 @@ let idb: IDBFactory;
 let assignMock: ReturnType<typeof vi.fn>;
 let idbOpenSpy: ReturnType<typeof vi.spyOn>;
 
-async function boot(flag: string | null) {
+async function boot() {
   idb = new IDBFactory();
   idbOpenSpy = vi.spyOn(idb, 'open');
   api = createFakeOAuthApi();
@@ -34,7 +36,6 @@ async function boot(flag: string | null) {
   vi.stubGlobal('indexedDB', idb);
   assignMock = vi.fn();
   vi.stubGlobal('location', { origin: WEB_ORIGIN, pathname: '/login', search: '', assign: assignMock });
-  if (flag !== null) vi.stubEnv('VITE_NEW_API_AUTH', flag);
   vi.stubEnv('VITE_API_BASE_URL', FAKE_API_BASE);
   vi.resetModules();
   const LoginPage = (await import('../../src/pages/LoginPage')).default;
@@ -47,8 +48,8 @@ beforeEach(() => { navigateMock.mockClear(); sessionStorage.clear(); localStorag
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.resetModules(); });
 
 describe('LoginPage Google 按鈕', () => {
-  it('旗標開：點下去導向新 api 的 Google 入口（redirect_uri 是本站 /auth/callback、帶行程 scope、PKCE、dpop_jkt），並暫存 redirect_after_login', async () => {
-    const { LoginPage } = await boot('1');
+  it('點下去導向新 api 的 Google 入口（redirect_uri 是本站 /auth/callback、帶行程 scope、PKCE、dpop_jkt），並暫存 redirect_after_login', async () => {
+    const { LoginPage } = await boot();
     render(<MemoryRouter initialEntries={['/login?redirect_after=%2Ftrips%3Fselected%3Dt1']}><LoginPage /></MemoryRouter>);
     const btn = await screen.findByTestId('login-google');
     fireEvent.click(btn);
@@ -64,28 +65,11 @@ describe('LoginPage Google 按鈕', () => {
     expect(u.searchParams.get('state')).toBeTruthy();
   });
 
-  it('旗標開：按鈕不再是指向同網域舊入口的連結', async () => {
-    const { LoginPage } = await boot('1');
+  it('按鈕不是指向同網域舊入口的連結', async () => {
+    const { LoginPage } = await boot();
     render(<MemoryRouter initialEntries={['/login']}><LoginPage /></MemoryRouter>);
     const btn = await screen.findByTestId('login-google');
     expect(btn.getAttribute('href')).toBeNull();
-  });
-
-  it('旗標關：維持舊連結（含 redirect_after_login），點擊不導頁、不碰 IndexedDB', async () => {
-    const { LoginPage } = await boot(null);
-    render(<MemoryRouter initialEntries={['/login?redirect_after=%2Ftrips%3Fselected%3Dt1']}><LoginPage /></MemoryRouter>);
-    const btn = await screen.findByTestId('login-google');
-    expect(btn.getAttribute('href')).toBe('/api/oauth/login/google?redirect_after_login=%2Ftrips%3Fselected%3Dt1');
-    fireEvent.click(btn);
-    expect(assignMock).not.toHaveBeenCalled();
-    expect(idbOpenSpy).not.toHaveBeenCalled();
-  });
-
-  it('旗標明確設為 0 也視為關閉', async () => {
-    const { LoginPage } = await boot('0');
-    render(<MemoryRouter initialEntries={['/login']}><LoginPage /></MemoryRouter>);
-    const btn = await screen.findByTestId('login-google');
-    expect(btn.getAttribute('href')).toBe('/api/oauth/login/google');
   });
 
   it.each([
@@ -93,7 +77,7 @@ describe('LoginPage Google 按鈕', () => {
     ['OAUTH_STATE_MISMATCH', '登入驗證已失效，請重新登入'],
     ['whatever', 'Google 登入失敗，請稍後再試'],
   ])('?google_error=%s 時登入頁顯示訊息', async (code, text) => {
-    const { LoginPage } = await boot('1');
+    const { LoginPage } = await boot();
     render(<MemoryRouter initialEntries={[`/login?google_error=${code}`]}><LoginPage /></MemoryRouter>);
     expect((await screen.findByRole('alert')).textContent).toContain(text);
   });
@@ -101,7 +85,7 @@ describe('LoginPage Google 按鈕', () => {
 
 describe('AuthCallbackPage（/auth/callback）', () => {
   async function startAndGetCallback(opts: { redirectAfterLogin?: string; deny?: boolean } = {}) {
-    const ctx = await boot('1');
+    const ctx = await boot();
     const auth = ctx.auth.getNewApiAuth()!;
     const href = await auth.startGoogleLogin({ redirectUri: `${WEB_ORIGIN}/auth/callback`, redirectAfterLogin: opts.redirectAfterLogin });
     const back = api.googleLogin(href, { deny: opts.deny });
@@ -160,10 +144,10 @@ describe('AuthCallbackPage（/auth/callback）', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/login?google_error=access_denied', { replace: true }));
   });
 
-  it('旗標關閉時打到這一頁：不嘗試換 token，回登入頁', async () => {
-    const { AuthCallbackPage } = await boot(null);
+  it('不是從這個瀏覽器發起的回跳（沒有暫存）：不換 token，回登入頁', async () => {
+    const { AuthCallbackPage } = await boot();
     renderCallback(AuthCallbackPage, '?code=c&state=s');
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/login?google_error=AUTH_DISABLED', { replace: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/login?google_error=OAUTH_STATE_MISMATCH', { replace: true }));
     expect(api.tokenRequests()).toHaveLength(0);
   });
 });

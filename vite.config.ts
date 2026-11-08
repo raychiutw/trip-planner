@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
@@ -25,12 +25,27 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
     ]
   : [];
 
+/**
+ * e2e／MOCK_API 專用：把 `src/lib/auth/index.ts` 換成穿透版（見 tests/e2e/_helpers/auth-passthrough.ts）。
+ * 只有 `E2E_AUTH_PASSTHROUGH=1`（playwright 的建置指令）或 `MOCK_API`（本機假 api 開發）才啟用；正式建置沒有這個外掛。
+ */
+const authPassthrough = (): Plugin => ({
+  name: 'auth-passthrough',
+  enforce: 'pre',
+  async resolveId(source, importer, options) {
+    if (!importer || !/(^|\/)auth(\/index)?$/.test(source)) return null;
+    const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
+    return resolved?.id.endsWith('/src/lib/auth/index.ts') ? resolve(__dirname, 'tests/e2e/_helpers/auth-passthrough.ts') : null;
+  },
+});
+
 export default defineConfig({
   // 注入給前端顯示（帳號頁版本頁尾）。與 sentryRelease 同源，見上方註解。
   define: versionDefine,
   plugins: [
     // MOCK_API=1 npx vite dev → 攔截 /api/* 返回假資料
     ...(process.env.MOCK_API ? [mockApiPlugin()] : []),
+    ...(process.env.MOCK_API || process.env.E2E_AUTH_PASSTHROUGH === '1' ? [authPassthrough()] : []),
     tailwindcss(),
     react(),
     VitePWA({

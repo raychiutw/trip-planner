@@ -2,9 +2,8 @@
  * LoginPage — V2 sign-in UI（local password + Google OIDC）
  *
  * Flow:
- *   - Primary: email + password form → POST /api/oauth/login → navigate redirect_after
- *   - Alt: 「使用 Google 登入」→ 旗標關：/api/oauth/login/google（舊 cookie 流程）；
- *          旗標開（VITE_NEW_API_AUTH=1）：導向新 api 的 Google 入口（PKCE＋DPoP），回跳頁是 /auth/callback
+ *   - Primary: email + password form → auth.login（PKCE＋DPoP，POST 新 api 的 /api/oauth/login 再換 token）→ navigate redirect_after
+ *   - Alt: 「使用 Google 登入」→ 導向新 api 的 Google 入口（PKCE＋DPoP），回跳頁是 /auth/callback
  *
  * Query params handled:
  *   ?verified=1 → "Email 驗證成功" toast
@@ -18,7 +17,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { apiFetchRaw } from '../lib/apiClient';
-import { AuthError, getNewApiAuth, type AuthClient } from '../lib/auth';
+import { AuthError, getNewApiAuth } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
@@ -234,10 +233,6 @@ const SCOPED_STYLES = `
 }
 `;
 
-interface ApiError {
-  error: { code: string; message: string };
-}
-
 function GoogleLogo() {
   return (
     <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
@@ -302,7 +297,6 @@ export default function LoginPage() {
   // Whether the deployment has Google OIDC env configured. We optimistically
   // assume "no" so the button doesn't flash on slow networks; the probe flips
   // it on if /api/public-config confirms.
-  const newApiAuth = getNewApiAuth();
   const [googleAvailable, setGoogleAvailable] = useState(false);
 
   // Probe public-config to know which providers are enabled. Side-effect-free.
@@ -333,43 +327,29 @@ export default function LoginPage() {
   }
 
   /**
-   * 送出帳密。旗標 VITE_NEW_API_AUTH 關閉（預設）：同源 POST /api/oauth/login（cookie session）。
-   * 開啟：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。兩條路都回同形狀，後續導向與錯誤文案共用。
+   * 送出帳密：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。
    * 網路層錯誤照舊 throw，由呼叫端 catch 顯示「網路連線失敗」。
    */
   async function submitCredentials(
     trimmedEmail: string,
     pwd: string,
   ): Promise<{ ok: true } | { ok: false; code: string; retryAfter: string | null }> {
-    const auth = getNewApiAuth();
-    if (auth) {
-      try {
-        await auth.login(trimmedEmail, pwd);
-        return { ok: true };
-      } catch (err) {
-        if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {
-          return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
-        }
-        throw err;
+    try {
+      await getNewApiAuth().login(trimmedEmail, pwd);
+      return { ok: true };
+    } catch (err) {
+      if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {
+        return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
       }
+      throw err;
     }
-    const res = await apiFetchRaw('/oauth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: trimmedEmail, password: pwd }),
-    });
-    if (res.ok) return { ok: true };
-    const errJson = (await res.json().catch(() => null)) as ApiError | null;
-    return { ok: false, code: errJson?.error?.code ?? 'UNKNOWN', retryAfter: res.headers.get('Retry-After') };
   }
 
-  /** 新舊兩種 Google 登入入口（新 api 用 button、舊入口用 a）共用的內容。 */
-  const googleButtonContent = (<><GoogleLogo /><span>使用 Google 登入</span></>);
-
-  /** 新 api 的 Google 登入：發起（暫存 PKCE／state／金鑰）後整頁導向新 api 入口。 */
-  async function startNewApiGoogleLogin(auth: AuthClient) {
+  /** Google 登入：發起（暫存 PKCE／state／金鑰）後整頁導向新 api 入口。 */
+  async function startGoogleLogin() {
     setBannerError(null);
     try {
-      const target = await auth.startGoogleLogin({
+      const target = await getNewApiAuth().startGoogleLogin({
         redirectUri: `${globalThis.location.origin}/auth/callback`,
         redirectAfterLogin: googleRedirect,
       });
@@ -618,24 +598,14 @@ export default function LoginPage() {
         {googleAvailable && (
           <>
             <div className="tp-divider">或</div>
-            {newApiAuth ? (
-              <button
-                type="button"
-                className="tp-btn tp-btn-secondary"
-                onClick={() => { void startNewApiGoogleLogin(newApiAuth); }}
-                data-testid="login-google"
-              >
-                {googleButtonContent}
-              </button>
-            ) : (
-              <a
-                className="tp-btn tp-btn-secondary"
-                href={`/api/oauth/login/google${googleRedirect ? `?redirect_after_login=${encodeURIComponent(googleRedirect)}` : ''}`}
-                data-testid="login-google"
-              >
-                {googleButtonContent}
-              </a>
-            )}
+            <button
+              type="button"
+              className="tp-btn tp-btn-secondary"
+              onClick={() => { void startGoogleLogin(); }}
+              data-testid="login-google"
+            >
+              <GoogleLogo /><span>使用 Google 登入</span>
+            </button>
           </>
         )}
 

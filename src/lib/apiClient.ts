@@ -9,12 +9,10 @@ import { getNewApiAuth, getNewApiBase } from './auth';
 import { sendViaNewApi } from './auth/transport';
 
 /**
- * 所有 `/api` 請求的單一出口。旗標 VITE_NEW_API_AUTH 關閉（預設）時就是原本的同源 fetch；
- * 開啟時改送新 api（DPoP token、401 refresh 重試一次；見 lib/auth/transport）。
+ * 所有 `/api` 請求的單一出口：送新 api（DPoP token、401 refresh 重試一次；見 lib/auth/transport）。
  */
 function sendApi(path: string, init: RequestInit): Promise<Response> {
-  const auth = getNewApiAuth();
-  return auth ? sendViaNewApi(auth, getNewApiBase(), '/api' + path, init) : fetch('/api' + path, init);
+  return sendViaNewApi(getNewApiAuth(), getNewApiBase(), '/api' + path, init);
 }
 
 /**

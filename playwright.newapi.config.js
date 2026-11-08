@@ -1,5 +1,5 @@
-// 新 api 模式（VITE_NEW_API_AUTH=1）的 e2e：旗標是建置期常數，所以另建一份（dist-newapi-e2e），
-// 並啟動本機有狀態的假 api（tests/e2e/_helpers/fake-new-api.cjs，跨埠，和 production 的 web ↔ api 一樣是跨 origin）。
+// 真 auth（PKCE＋DPoP）的 e2e：不套穿透版（見 vite.config.ts 的 authPassthrough），另建一份（dist-newapi-e2e），
+// API 網址指向本機有狀態的假 api（tests/e2e/_helpers/fake-new-api.cjs，跨埠，和 production 的 web ↔ api 一樣是跨 origin）。
 // 用法：npx playwright test -c playwright.newapi.config.js
 // 不連任何外部網路、不用真實帳號；CI 的獨立步驟會跑它（見 .github/workflows/ci.yml）。
 import { defineConfig } from '@playwright/test';
@@ -24,7 +24,7 @@ export default defineConfig({
       timeout: 15000,
     },
     {
-      command: `VITE_NEW_API_AUTH=1 VITE_API_BASE_URL=http://localhost:${API} npx vite build --outDir dist-newapi-e2e && npx vite preview --outDir dist-newapi-e2e --port ${WEB}`,
+      command: `VITE_API_BASE_URL=http://localhost:${API} npx vite build --outDir dist-newapi-e2e && npx vite preview --outDir dist-newapi-e2e --port ${WEB}`,
       port: WEB,
       reuseExistingServer: false,
       timeout: 180000,

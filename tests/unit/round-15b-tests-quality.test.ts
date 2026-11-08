@@ -32,7 +32,7 @@ describe('v2.33.65 #1 — vitest config clearMocks + restoreMocks + setup-dom re
   });
 
   it('setup-dom.js renamed (not setup-jest-dom.js)', () => {
-    expect(VITEST_CONFIG).toMatch(/setupFiles: \['\.\/tests\/setup-dom\.js'\]/);
+    expect(VITEST_CONFIG).toMatch(/setupFiles: \['\.\/tests\/setup-dom\.js'/);
     expect(exists('tests/setup-dom.js')).toBe(true);
     expect(exists('tests/setup-jest-dom.js')).toBe(false);
   });

@@ -1,11 +1,12 @@
 // @vitest-environment node
 /**
  * `.env.production`（vite build 的正式環境變數）守衛：
- *  - `/oauth/authorize` 頁需要新 api 的網址 → VITE_API_BASE_URL 必須是 production 的 api。
- *  - 新 api 的登入旗標在 production 仍是關閉的 → VITE_NEW_API_AUTH 不可在這個檔案裡被打開（切換是 T21 的人工動作）。
+ *  - web 的所有 API 請求與認證都走新 api（ADR-0011）→ VITE_API_BASE_URL 必須是 production 的 api。
+ *  - 旗標 VITE_NEW_API_AUTH 已移除（新認證是唯一路徑）→ 不可再出現在 `.env.production` 與 `src/`，免得有人以為它還能切回舊入口。
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const HEADERS = readFileSync('public/_headers', 'utf8');
 
@@ -21,8 +22,14 @@ describe('.env.production', () => {
   it('VITE_API_BASE_URL 指向 production 的新 api（https、無尾斜線）', () => {
     expect(env.VITE_API_BASE_URL).toBe('https://trip-planner-api-production.lean-lean.workers.dev');
   });
-  it('不打開 VITE_NEW_API_AUTH（production 仍走舊入口，切換是人工動作）', () => {
-    expect(env.VITE_NEW_API_AUTH ?? '').not.toBe('1');
+  it('旗標 VITE_NEW_API_AUTH 已移除：.env.production 與 src/ 都不再出現', () => {
+    expect('VITE_NEW_API_AUTH' in env).toBe(false);
+    const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      return e.isDirectory() ? walk(p) : /\.(ts|tsx)$/.test(e.name) ? [p] : [];
+    });
+    const offenders = walk('src').filter((f) => readFileSync(f, 'utf8').includes('VITE_NEW_API_AUTH'));
+    expect(offenders).toEqual([]);
   });
 });
 

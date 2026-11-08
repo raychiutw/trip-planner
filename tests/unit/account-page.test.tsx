@@ -6,7 +6,7 @@
  *   - 3 group settings rows: 應用程式 / 共編 & 整合 / 帳號
  *   - row Link to= /account/appearance / /account/notifications / /settings/* /
  *     登出 (button onClick → confirm modal)
- *   - logout confirm modal open + 確認 → POST /api/oauth/logout + navigate /login
+ *   - logout confirm modal open + 確認 → logoutSession()（撤銷新 api 的 token，見 logout.ts）+ navigate /login
  *   - stats fetch /account/stats render values
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -15,6 +15,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
 const apiFetchRawMock = vi.fn<(path: string, init?: RequestInit) => Promise<Response>>();
+const logoutSessionMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../../src/lib/logout', () => ({ logoutSession: logoutSessionMock }));
 vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: (path: string, init?: RequestInit) => apiFetchMock(path, init),
   apiFetchRaw: (path: string, init?: RequestInit) => apiFetchRawMock(path, init),
@@ -151,18 +153,11 @@ describe('AccountPage', () => {
     expect(screen.getByTestId('confirm-modal-confirm')).toBeTruthy();
   });
 
-  it('confirm logout → POST /api/oauth/logout + navigate /login', async () => {
-    apiFetchRawMock.mockResolvedValue(new Response(null, { status: 204 }));
+  it('confirm logout → logoutSession() + navigate /login', async () => {
     renderPage();
     fireEvent.click(screen.getByTestId('account-row-logout'));
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
-    // v2.33.33: logout 改透過 apiFetchRaw('/oauth/logout', { method: 'POST' })
-    await waitFor(() => {
-      expect(apiFetchRawMock).toHaveBeenCalledWith(
-        '/oauth/logout',
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
+    await waitFor(() => expect(logoutSessionMock).toHaveBeenCalledTimes(1));
     await waitFor(() => {
       // v2.33.47 round 7b: navigate 改 { replace: true } 不留 history entry
       expect(navigateMock).toHaveBeenCalledWith('/login', { replace: true });

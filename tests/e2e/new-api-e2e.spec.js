@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * 新 api 模式（VITE_NEW_API_AUTH=1）的 e2e（#1480 缺口）。執行：npx playwright test -c playwright.newapi.config.js
+ * 新 api 認證（唯一路徑）的 e2e（#1480 缺口）。執行：npx playwright test -c playwright.newapi.config.js
  *
  * 對象是 tests/e2e/_helpers/fake-new-api.cjs —— 有狀態、真的驗 PKCE／DPoP／refresh 輪替與重放撤銷的本機假 api，
  * 不是 page.route 的罐頭。每個斷言都同時看「瀏覽器這端」（畫面、IndexedDB）與「api 這端」（/__fake/state），

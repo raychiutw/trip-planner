@@ -1,5 +1,5 @@
 /**
- * 旗標開啟（VITE_NEW_API_AUTH=1）時，apiClient／useCurrentUser 的傳輸層：請求改送新 api。
+ * apiClient／useCurrentUser 的傳輸層：請求送新 api。
  *
  * - 受保護路徑：交給 auth client 的 `apiFetch`（帶 `Authorization: DPoP` 與 proof；401 時 single-flight refresh 並重試一次）。
  *   auth client 判定需重新登入時（`AuthError: AUTH_REQUIRED`）轉成合成的 401 Response，呼叫端沿用既有的 401 處理。

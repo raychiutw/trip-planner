@@ -20,7 +20,7 @@ vi.mock('../../src/hooks/useAccountPreview', () => ({
 }));
 vi.mock('../../src/lib/auth', async (orig) => {
   const m = await orig<typeof import('../../src/lib/auth')>();
-  return { ...m, isNewApiAuthEnabled: () => true, getNewApiAuth: () => ({ isAuthenticated: () => true, logout: vi.fn() }) };
+  return { ...m, getNewApiAuth: () => ({ isAuthenticated: () => true, logout: vi.fn() }) };
 });
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));

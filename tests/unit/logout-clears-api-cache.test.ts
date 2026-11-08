@@ -4,10 +4,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/lib/auth', () => ({ getNewApiAuth: () => null }));
-vi.mock('../../src/lib/apiClient', () => ({
-  apiFetchRaw: vi.fn(async () => new Response(null, { status: 204 })),
-}));
+vi.mock('../../src/lib/auth', () => ({ getNewApiAuth: () => ({ logout: vi.fn(async () => {}) }) }));
 
 afterEach(() => vi.unstubAllGlobals());
 
