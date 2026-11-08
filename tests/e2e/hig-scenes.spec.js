@@ -40,8 +40,8 @@ const INTERACTIVE =
 
 /**
  * 手機寬下，可見且可點擊、最短邊小於 44px 的元素（回傳 `標籤 寬x高`）。
- * scope（彈出層場景）：只量該 selector 內的元素，且不剔除視窗外的元素（高於一屏的對話框，
- * 下半截仍是真實的點擊目標）；回傳 measured＝實際量到幾個可見元素，用來確認量測真的涵蓋彈出層。
+ * 不剔除視窗外的元素（#1638：長頁面第一屏之外的列同樣是真實的點擊目標，只量視窗內會漏掉）。
+ * scope（彈出層場景）：只量該 selector 內的元素；回傳 measured＝實際量到幾個可見元素，用來確認量測真的涵蓋彈出層。
  */
 async function tapViolations(page, scope) {
   return page.evaluate(
@@ -58,7 +58,6 @@ async function tapViolations(page, scope) {
         }
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) continue;
-        if (!scope && (r.bottom < 0 || r.right < 0 || r.top > innerHeight || r.left > innerWidth)) continue;
         // 行內文字連結（段落內）不適用 44px 規則
         if (el.tagName === 'A' && style.display === 'inline') continue;
         measured++;

@@ -149,7 +149,9 @@ export const RAIL_ROW_STYLES = `
 
 /* caret 現為獨立 toggle button（無障礙 toggle）；rotate 由 tokens.css
    .tp-rail-item[data-expanded] 處理，這裡只補 button reset + focus/disabled。 */
-.tp-rail-caret { transition: transform 120ms; display: inline-block; background: none; border: none; padding: 0; margin: 0; font: inherit; line-height: 1; color: var(--color-muted); cursor: pointer; }
+.tp-rail-caret { transition: transform 120ms; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; padding: 0; margin: 0 -14px 0 0; font: inherit; line-height: 1; color: var(--color-muted); cursor: pointer;
+  /* #1638：button 本體 ≥44×44（rotate 90deg 展開時方形不變）；› 字形維持原大小，右側負 margin 讓字形回到原本靠右的位置、不吃掉標題寬度。 */
+  min-width: var(--spacing-tap-min); min-height: var(--spacing-tap-min); }
 .tp-rail-caret:disabled { cursor: default; opacity: 0.4; }
 .tp-rail-caret:focus-visible { border-radius: var(--radius-sm); outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 
@@ -161,8 +163,8 @@ export const RAIL_ROW_STYLES = `
 /* rev2 Section 02：head 右側動作簇 — ⋯ context menu + 展開 caret。
  * 取代舊「展開明細底部一排 icon 工具列」（複/移/編/刪），把動作收進單顆 ⋯（Apple 列表語彙）。 */
 .tp-rail-head-actions {
-  /* owner 2026-07-19：⋯ 與 ⌄ 兩鈕 gap 2px 太近 → 6px 拉開。 */
-  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  /* #1638：兩鈕各 44×44，視覺間距由鈕內留白提供，gap 歸零免得相鄰重疊／過寬。 */
+  display: inline-flex; align-items: center; gap: 0; flex-shrink: 0;
 }
 
 /* ⋯ trigger：桌機 hover / focus / menu 開啟才顯（Apple Music track row 行為，resting 列乾淨）；
@@ -282,7 +284,8 @@ export const ENTRY_TIME_CHIP_STYLES = `
 export const RAIL_MENU_STYLES = `
 .tp-rail-menu-trigger {
   border: 0; background: transparent; cursor: pointer;
-  width: 32px; height: 32px; border-radius: var(--radius-full);
+  /* #1638：觸控目標 44×44（⋯ 圖示仍 18px）。 */
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min); border-radius: var(--radius-full);
   display: inline-flex; align-items: center; justify-content: center;
   color: var(--color-muted);
   opacity: 0; transition: opacity 140ms, background 140ms, color 140ms;

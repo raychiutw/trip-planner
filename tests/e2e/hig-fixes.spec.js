@@ -271,3 +271,21 @@ for (const [vpName, vp] of [['手機', MOBILE], ['桌機', DESKTOP]]) {
     expect(small, '低於 44 的「移除 Day」鈕').toEqual([]);
   });
 }
+
+// #1638：trip-detail 每個景點列的「展開景點」「更多動作」鈕觸控目標 ≥44。直接量元素（不看視窗內、不捲動），
+// 因為棘輪原本只算視窗內元素，Day 2 以後第一屏之外的列曾因此漏掉。
+for (const [vpName, vp] of [['手機', MOBILE], ['桌機', DESKTOP]]) {
+  test(`每個景點列的「展開景點」「更多動作」觸控目標 ≥44：trip-detail · ${vpName}`, async ({ page }) => {
+    await open(page, 'trip-detail', vp);
+    const btns = page.locator('button[aria-label^="展開景點："], button[aria-label^="收合景點："], button[aria-label^="更多動作："]');
+    const n = await btns.count();
+    expect(n, '找不到任何景點列的展開／更多動作鈕').toBeGreaterThan(8);
+    const small = [];
+    for (let i = 0; i < n; i++) {
+      const b = await btns.nth(i).boundingBox();
+      if (!b) continue; // display:none（例如收起的日期）不是點擊目標
+      if (Math.min(b.width, b.height) < 44) small.push(`${await btns.nth(i).getAttribute('aria-label')} ${Math.round(b.width)}x${Math.round(b.height)}`);
+    }
+    expect(small, '低於 44 的鈕').toEqual([]);
+  });
+}
