@@ -14,7 +14,7 @@
  * Backoff：連續 fetch 失敗有 ERROR_BACKOFF_MS gate 防 401/網路 storm。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 
 /** 初次載入 + 每次 scroll 到頂載 N 筆 tp-request row。每筆 = user + assistant 兩個 bubble。
  *  設小是手機 chat 風格：先看到最新對話、需要往上才載歷史。 */
@@ -182,9 +182,9 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     prependScrollRef.current = null;
     (async () => {
       try {
-        const res = await apiFetch<PageResponse<TRow>>(
-          `/requests?tripId=${encodeURIComponent(activeTripId)}&limit=${CHAT_PAGE_SIZE}&sort=desc`,
-        );
+        const res = unwrap(await typedApi.get('/api/requests', {
+          query: { tripId: activeTripId, limit: CHAT_PAGE_SIZE, sort: 'desc' },
+        })) as unknown as PageResponse<TRow>;
         if (cancelled) return;
         const { rows, oldest, hasMore } = parseRequestPage(res);
         const next: TMsg[] = [];
@@ -231,14 +231,15 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     loadingOlderRef.current = true;
     setLoadingOlder(true);
     try {
-      const params = new URLSearchParams({
-        tripId: fetchTripId,
-        limit: String(CHAT_PAGE_SIZE),
-        sort: 'desc',
-        before: oldestCursor.createdAt,
-        beforeId: String(oldestCursor.id),
-      });
-      const res = await apiFetch<PageResponse<TRow>>(`/requests?${params.toString()}`);
+      const res = unwrap(await typedApi.get('/api/requests', {
+        query: {
+          tripId: fetchTripId,
+          limit: CHAT_PAGE_SIZE,
+          sort: 'desc',
+          before: oldestCursor.createdAt,
+          beforeId: String(oldestCursor.id),
+        },
+      })) as unknown as PageResponse<TRow>;
       // Trip 切換中不套用任何 state,避免舊 trip 訊息污染新 trip 列表
       if (activeTripIdRef.current !== fetchTripId || generationRef.current !== generation) return;
       const { rows, oldest, hasMore } = parseRequestPage(res);
@@ -290,9 +291,9 @@ export function useChatPagination<TRow extends PaginatedRow, TMsg extends { id: 
     setLatestRefreshing(true);
     setLatestError(null);
     try {
-      const res = await apiFetch<PageResponse<TRow>>(
-        `/requests?tripId=${encodeURIComponent(fetchTripId)}&limit=${CHAT_PAGE_SIZE}&sort=desc`,
-      );
+      const res = unwrap(await typedApi.get('/api/requests', {
+        query: { tripId: fetchTripId, limit: CHAT_PAGE_SIZE, sort: 'desc' },
+      })) as unknown as PageResponse<TRow>;
       if (activeTripIdRef.current !== fetchTripId || generationRef.current !== generation) return;
       const { rows } = parseRequestPage(res);
       const latest = rows.flatMap((row) => rowToMessagesRef.current(row));

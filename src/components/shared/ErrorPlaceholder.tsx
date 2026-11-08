@@ -1,4 +1,4 @@
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi } from '../../lib/api/typed';
 import type { ApiError } from '../../lib/errors';
 
 interface ErrorPlaceholderProps {
@@ -62,10 +62,7 @@ function ReportButton({ error, tripId }: { error: ApiError; tripId: string }) {
     };
 
     try {
-      await apiFetch('/reports', {
-        method: 'POST',
-        body: JSON.stringify(report),
-      });
+      await typedApi.post('/api/reports', { body: report });
       const { showToast } = await import('./Toast');
       showToast('已回報問題，感謝！', 'success', 2000);
     } catch {
@@ -106,10 +103,7 @@ export async function flushPendingReports() {
 
     const results = await Promise.allSettled(
       pending.map(r =>
-        apiFetch('/reports', {
-          method: 'POST',
-          body: JSON.stringify(r),
-        })
+        typedApi.post('/api/reports', { body: r })
       )
     );
 

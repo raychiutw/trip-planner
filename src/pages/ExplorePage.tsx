@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { ApiError } from '../lib/errors';
 import { mapNominatimCategory, poiCategoryLabel } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
@@ -605,7 +605,7 @@ export default function ExplorePage() {
   const loadSaved = useCallback(async () => {
     const version = favoriteMutationVersionRef.current;
     try {
-      const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
+      const rows = unwrap(await typedApi.get('/api/poi-favorites')) as unknown as SavedKeyRow[];
       if (version === favoriteMutationVersionRef.current) setSavedKeyRows(rows);
     } catch {
       // silent — likely 401 or transient; heart disable 退回「皆未收藏」 fallback。
@@ -658,11 +658,10 @@ export default function ExplorePage() {
     setSearchError(false);
     try {
       const regionApi = regionToApiParam(region);
-      const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
-      const body = await apiFetch<{ results?: PoiSearchResult[]; nextPageToken?: string | null }>(
-        `/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`,
-        { signal: ctrl.signal },
-      );
+      const body = unwrap(await typedApi.get('/api/poi-search', {
+        query: { q, limit: 20, ...(regionApi ? { region: regionApi } : {}) },
+        signal: ctrl.signal,
+      })) as unknown as { results?: PoiSearchResult[]; nextPageToken?: string | null };
       if (searchAbortRef.current === ctrl) {
         searchScopeRef.current = { query: q, region };
         setResults(body.results ?? []);
@@ -697,12 +696,10 @@ export default function ExplorePage() {
     setLoadMoreError(false);
     try {
       const regionApi = regionToApiParam(scope.region);
-      const regionParam = regionApi ? `&region=${encodeURIComponent(regionApi)}` : '';
-      const body = await apiFetch<{ results?: PoiSearchResult[]; nextPageToken?: string | null }>(
-        `/poi-search?q=${encodeURIComponent(scope.query)}&limit=20${regionParam}`
-          + `&pageToken=${encodeURIComponent(nextPageToken)}`,
-        { signal: ctrl.signal },
-      );
+      const body = unwrap(await typedApi.get('/api/poi-search', {
+        query: { q: scope.query, limit: 20, ...(regionApi ? { region: regionApi } : {}), pageToken: nextPageToken },
+        signal: ctrl.signal,
+      })) as unknown as { results?: PoiSearchResult[]; nextPageToken?: string | null };
       if (generation !== searchGenerationRef.current) return;
       setResults((prev) => {
         const seen = new Set(prev.map((poi) => poi.place_id));
@@ -772,7 +769,7 @@ export default function ExplorePage() {
           showToast('找不到對應收藏 id，請重整頁面', 'error', 3000);
           return;
         }
-        await apiFetch(`/poi-favorites/${favoriteId}`, { method: 'DELETE' });
+        await typedApi.delete('/api/poi-favorites/{id}', { path: { id: String(favoriteId) } });
         favoriteMutationVersionRef.current++;
         setSavedKeyRows((rows) => rows.filter((row) => row.id !== favoriteId));
         showToast(`已取消收藏「${poi.name}」`, 'success', 2000);
@@ -780,9 +777,8 @@ export default function ExplorePage() {
       }
       // PR-T 2026-04-26：Nominatim raw 'tourism' / 'amenity' / 'shop' 會被
       // pois.type CHECK constraint 拒收 → 503；走 mapNominatimCategory 映射。
-      const createResp = await apiFetch<{ id: number }>('/pois/find-or-create', {
-        method: 'POST',
-        body: JSON.stringify({
+      const createResp = unwrap(await typedApi.post('/api/pois/find-or-create', {
+        body: {
           name: poi.name,
           type: mapNominatimCategory(poi.category ?? ''),
           lat: poi.lat,
@@ -791,19 +787,18 @@ export default function ExplorePage() {
           category: poi.category ?? '',
           source: 'user-explore',
           place_id: poi.place_id,
-        }),
-      });
+        },
+      })) as unknown as { id: number };
       let saved: { id: number };
       try {
-        saved = await apiFetch<{ id: number }>('/poi-favorites', {
-          method: 'POST',
-          body: JSON.stringify({ poiId: createResp.id }),
-        });
+        saved = unwrap(await typedApi.post('/api/poi-favorites', {
+          body: { poiId: createResp.id },
+        })) as unknown as { id: number };
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
           favoriteMutationVersionRef.current++;
           try {
-            const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
+            const rows = unwrap(await typedApi.get('/api/poi-favorites')) as unknown as SavedKeyRow[];
             const key = `${mapNominatimCategory(poi.category ?? '')}::${poi.name}`;
             if (rows.some((row) => `${row.poiType}::${row.poiName}` === key)) {
               setSavedKeyRows(rows);

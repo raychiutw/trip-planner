@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
 import { normalizeEmail } from '../server/email-utils';
@@ -117,8 +117,9 @@ export default function InvitePage() {
       return;
     }
     let cancelled = false;
-    apiFetch<InvitationDetails>(`/invitations?token=${encodeURIComponent(token)}`)
-      .then((data) => {
+    typedApi.get('/api/invitations', { query: { token } })
+      .then((res) => {
+        const data = unwrap(res) as unknown as InvitationDetails;
         if (cancelled) return;
         setState({ status: 'ok', token, data });
       })
@@ -143,10 +144,9 @@ export default function InvitePage() {
     setAccepting(true);
     setAcceptError(null);
     try {
-      const data = await apiFetch<{ ok: true; tripId: string; tripTitle: string }>('/invitations/accept', {
-        method: 'POST',
-        body: JSON.stringify({ token: currentState.token }),
-      });
+      const data = unwrap(await typedApi.post('/api/invitations/accept', {
+        body: { token: currentState.token },
+      })) as unknown as { ok: true; tripId: string; tripTitle: string };
       window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
     } catch (err) {
       if (err instanceof ApiError && ['INVITATION_ACCEPTED', 'INVITATION_EXPIRED', 'INVITATION_INVALID'].includes(err.code)) {

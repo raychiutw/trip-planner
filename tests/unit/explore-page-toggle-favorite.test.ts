@@ -49,10 +49,10 @@ describe('v2.31.43 ExplorePage heart toggle favorite', () => {
 
   it('handleToggleFavorite 包 add + remove 分支', () => {
     expect(SRC).toMatch(/async function handleToggleFavorite/);
-    expect(SRC).toMatch(/method:\s*'DELETE'/);
+    expect(SRC).toMatch(/typedApi\.delete\(\s*'\/api\/poi-favorites\/\{id\}'/);
   });
 
   it('DELETE 用 favoriteKeyMap.get(key) 取 id 後 path 加 :id', () => {
-    expect(SRC).toMatch(/`\/poi-favorites\/\$\{[^}]+\}`/);
+    expect(SRC).toMatch(/'\/api\/poi-favorites\/\{id\}',\s*\{\s*path:\s*\{\s*id:\s*String\(favoriteId\)/);
   });
 });

@@ -18,7 +18,7 @@
  */
 import { useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 import { buildMapsUrl } from '../../lib/mapsUrl';
 import type { GooglePoiClick } from '../../lib/mapHelpers';
 
@@ -41,8 +41,9 @@ export default function GooglePoiCard({ poi, onClose }: GooglePoiCardProps) {
     let cancelled = false;
     setLoading(true);
     setName(null);
-    apiFetch<PlaceResolveResponse>(`/places/resolve?placeId=${encodeURIComponent(poi.placeId)}`)
-      .then((res) => {
+    typedApi.get('/api/places/resolve', { query: { placeId: poi.placeId } })
+      .then((r) => {
+        const res = unwrap(r) as unknown as PlaceResolveResponse;
         if (cancelled) return;
         setName(res.name?.trim() || FALLBACK_NAME);
       })

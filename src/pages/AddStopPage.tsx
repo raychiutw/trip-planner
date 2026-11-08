@@ -34,7 +34,7 @@ import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { createEntry } from '../lib/entryMutations';
 import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { buildPoiNote } from '../lib/poiNote';
@@ -778,9 +778,9 @@ export default function AddStopPage() {
         const detailById = new Map<string, { hours?: string | null; priceLevel?: string | null }>();
         await Promise.all(selected.map(async (r) => {
           try {
-            const d = await apiFetch<{ hours?: string | null; priceLevel?: string | null }>(
-              `/places/resolve?placeId=${encodeURIComponent(r.place_id)}`,
-            );
+            const d = unwrap(await typedApi.get('/api/places/resolve', {
+              query: { placeId: r.place_id },
+            })) as unknown as { hours?: string | null; priceLevel?: string | null };
             detailById.set(r.place_id, { hours: d.hours, priceLevel: d.priceLevel });
           } catch {
             // 無 enrich → note fallback 地址

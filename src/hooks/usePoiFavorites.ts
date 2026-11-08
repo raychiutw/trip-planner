@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import type { PoiFavorite } from '../types/api';
 
 export type PoiFavoriteRow = Pick<PoiFavorite, 'id' | 'poiId' | 'poiAddress' | 'poiLat' | 'poiLng' | 'poiType' | 'poiRating'> & { poiName: string };
@@ -41,8 +41,9 @@ export function usePoiFavorites(enabled: boolean): { state: FavoriteState; retry
   useEffect(() => {
     if (!enabled || result?.generation === generation) return;
     let cancelled = false;
-    apiFetch<unknown>('/poi-favorites')
-      .then((data) => {
+    typedApi.get('/api/poi-favorites')
+      .then((res) => {
+        const data: unknown = unwrap(res);
         if (!cancelled) setResult({ generation, state: { status: 'ready', rows: normalizePoiFavorites(data) } });
       })
       .catch(() => {

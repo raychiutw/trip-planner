@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { ApiError, rateLimitMessage } from '../lib/errors';
 import { mergeConversation, mergeLatestConversation, rowToMessages, type ChatMessage, type RawRequestRow } from '../lib/conversation';
 import { useChatPagination } from './useChatPagination';
@@ -47,8 +47,8 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
   useEffect(() => {
     if (!inflightId || (status !== 'completed' && status !== 'failed')) return;
     let cancelled = false;
-    void apiFetch<RawRequestRow>(`/requests/${inflightId}`).then((row) => {
-      if (!cancelled) applyTerminal(row);
+    void typedApi.get('/api/requests/{id}', { path: { id: String(inflightId) } }).then((res) => {
+      if (!cancelled) applyTerminal(unwrap(res) as unknown as RawRequestRow);
     }).catch(() => { /* A read failure is not a failed AI operation. */ });
     return () => { cancelled = true; };
   }, [status, inflightId, applyTerminal]);
@@ -72,9 +72,10 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
       try {
         await Promise.all([...ids].map(async (id) => {
           try {
-            const row = await apiFetch<RawRequestRow>(`/requests/${id}`, {
+            const row = unwrap(await typedApi.get('/api/requests/{id}', {
+              path: { id: String(id) },
               signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]),
-            });
+            })) as unknown as RawRequestRow;
             if (!cancelled && row.tripId === activeTripId) applyTerminal(row);
           } catch { /* Retry on the next refresh; retain the known result. */ }
         }));
@@ -97,11 +98,12 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
     const id = inflightId;
     setStopping(true);
     try {
-      await apiFetch(`/requests/${id}`, {
-        method: 'PATCH', body: JSON.stringify({ status: 'failed', terminalReason: 'cancelled' }),
+      await typedApi.patch('/api/requests/{id}', {
+        path: { id: String(id) },
+        body: { status: 'failed', terminalReason: 'cancelled' },
       });
       if (scopeRef.current !== scope || !scope.active) return;
-      applyTerminal(await apiFetch<RawRequestRow>(`/requests/${id}`));
+      applyTerminal(unwrap(await typedApi.get('/api/requests/{id}', { path: { id: String(id) } })) as unknown as RawRequestRow);
     } catch {
       if (scopeRef.current !== scope || !scope.active) return;
       setMessages((previous) => previous.map((message) => message.pendingRequestId === id
@@ -121,9 +123,9 @@ export function useConversation(activeTripId: string | null, bodyRef: RefObject<
       { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
     ]);
     try {
-      const row = await apiFetch<{ id: number }>('/requests', {
-        method: 'POST', body: JSON.stringify({ tripId: activeTripId, message: text }),
-      });
+      const row = unwrap(await typedApi.post('/api/requests', {
+        body: { tripId: activeTripId, message: text },
+      })) as unknown as { id: number };
       if (scopeRef.current !== scope || !scope.active) return;
       setMessages((previous) => mergeConversation([], previous.map((message) =>
         message.id === now || message.id === now + 1
