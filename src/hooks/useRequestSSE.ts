@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { apiFetchRaw } from '../lib/apiClient';
-import { isNewApiAuthEnabled } from '../lib/auth';
 
 type RequestStatus = 'open' | 'processing' | 'completed' | 'failed';
 type ProcessedBy = 'api' | 'job' | null;
@@ -56,7 +54,6 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
   const [isConnected, setIsConnected] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
 
-  const esRef = useRef<EventSource | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const terminalRef = useRef(false);
@@ -77,11 +74,8 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     terminalRef.current = false;
     let disposed = false;
     const controllers = new Set<AbortController>();
-    // 新 api 認證（flag 開啟）：ticket 連線＋typed client。flag 關閉時 ticketMode 是 null，下面所有分支都走原本的程式。
-    // 動態載入：flag 關閉時 typed client 與 ticket 連線的執行期程式不會被載入。
-    const ticketMode = isNewApiAuthEnabled()
-      ? import('../lib/sse/ticketMode').then((m) => ({ ...m.createTicketMode(), openTicketStream: m.openTicketStream }))
-      : null;
+    // 新 api：ticket 連線＋typed client。動態載入：ticket 連線的執行期程式不放進首屏 bundle。
+    const ticketMode = import('../lib/sse/ticketMode').then((m) => ({ ...m.createTicketMode(), openTicketStream: m.openTicketStream }));
     let closeTicketStream: (() => void) | null = null;
     setStatus(null); setProcessedBy(null); setError(null); setErrorReason(null); setElapsedMs(0);
     const startTime = Date.now();
@@ -89,10 +83,6 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     const cleanupAll = () => {
       disposed = true;
       for (const controller of controllers) controller.abort();
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
       closeTicketStream?.();
       closeTicketStream = null;
       if (pollTimerRef.current) {
@@ -131,15 +121,10 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       controllers.add(ctrl);
       const abortTimer = setTimeout(() => ctrl.abort(), POLL_FETCH_TIMEOUT_MS);
       try {
-        let res: { status: number; ok: boolean; json: () => Promise<unknown> };
-        if (ticketMode) {
-          // flag 開啟：走新 api（Bearer/DPoP）；舊的 cookie 路徑在這個模式下不再使用
-          const { api } = await ticketMode;
-          const r = await api.get('/api/requests/{id}', { path: { id: String(requestId) }, signal: ctrl.signal });
-          res = { status: r.status, ok: r.ok, json: async () => (r.ok ? r.data : r.error) };
-        } else {
-          res = await apiFetchRaw(`/requests/${requestId}`, { signal: ctrl.signal });
-        }
+        // 新 api（Bearer/DPoP）
+        const { api } = await ticketMode;
+        const r = await api.get('/api/requests/{id}', { path: { id: String(requestId) }, signal: ctrl.signal });
+        const res = { status: r.status, ok: r.ok, json: async () => (r.ok ? r.data : r.error) };
         if (disposed) return;
         if (res.status === 401) {
           setErrorReason('auth_expired');
@@ -205,49 +190,32 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       }
     };
 
-    if (ticketMode) {
-      // 一次性 ticket：重連一律自己重新換票（原生自動重連會重送用過的 ticket → 401）
-      ticketMode.then((mode) => {
-        if (disposed) return;
-        closeTicketStream = mode.openTicketStream({
-          requestId,
-          apiBase: mode.apiBase,
-          api: mode.api,
-          auth: mode.auth,
-          createEventSource: (url) => new EventSource(url),
-          onOpen: onSseOpen,
-          onMessage: onSseMessage,
-          onFatal: (reason) => {
-            if (disposed) return;
-            setIsConnected(false);
-            if (reason === 'auth_required') {
-              setErrorReason('auth_expired');
-              setError(new Error('登入已過期，請重新整理頁面'));
-              cleanupAll();
-            } else {
-              setErrorReason('sse_failed'); // polling 兜底繼續跑
-            }
-          },
-        });
-      }, () => {
-        if (!disposed) setErrorReason('sse_failed');
+    // 一次性 ticket：重連一律自己重新換票（原生自動重連會重送用過的 ticket → 401）
+    ticketMode.then((mode) => {
+      if (disposed) return;
+      closeTicketStream = mode.openTicketStream({
+        requestId,
+        apiBase: mode.apiBase,
+        api: mode.api,
+        auth: mode.auth,
+        createEventSource: (url) => new EventSource(url),
+        onOpen: onSseOpen,
+        onMessage: onSseMessage,
+        onFatal: (reason) => {
+          if (disposed) return;
+          setIsConnected(false);
+          if (reason === 'auth_required') {
+            setErrorReason('auth_expired');
+            setError(new Error('登入已過期，請重新整理頁面'));
+            cleanupAll();
+          } else {
+            setErrorReason('sse_failed'); // polling 兜底繼續跑
+          }
+        },
       });
-    } else {
-      const baseUrl = import.meta.env.DEV ? 'http://localhost:8788' : '';
-      const url = `${baseUrl}/api/requests/${requestId}/events`;
-      const es = new EventSource(url, { withCredentials: true });
-      esRef.current = es;
-
-      es.onopen = onSseOpen;
-      es.onmessage = onSseMessage;
-
-      es.onerror = () => {
-        if (disposed) return;
-        // 不 close — 讓 EventSource auto-reconnect。polling 兜底，不 silent fail。
-        setIsConnected(false);
-        setErrorReason('sse_failed');
-      };
-    }
+    }, () => {
+      if (!disposed) setErrorReason('sse_failed');
+    });
 
     return cleanupAll;
   }, [requestId]);

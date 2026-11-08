@@ -124,9 +124,9 @@ const searchFails = async (page) => {
   await page.getByTestId('explore-search-submit').click();
 };
 
-// ── 認證與帳號類（#1565）：這幾頁要新 api 認證旗標，走另一份建置（埠 3001，見 playwright.config.js）──
+// ── 認證與帳號類（#1565）：這幾頁要真的 auth client（還原登入、token 端點），走不套穿透版的另一份建置（埠 3001，見 playwright.hig-servers.js）──
 const NEWAPI_ORIGIN = 'http://localhost:3001';
-/** 場景的完整網址：newApi 場景改走旗標開啟的那份建置。 */
+/** 場景的完整網址：newApi 場景改走真 auth 的那份建置。 */
 const sceneUrl = (scene) => (scene.newApi ? NEWAPI_ORIGIN : '') + scene.path;
 
 // ── #1566：加入行程表單與錨定選單／下拉面板 ──
@@ -242,7 +242,7 @@ const stubGoogleCallbackPending = async (page) => {
  *   且必須至少量到一個元素（量不到代表量測沒涵蓋彈出層）。
  * noTargets：彈出層本來就沒有可點擊元素（橫幅、Toast），不要求量到元素。
  * viewports：只在這些寬度取證（桌機寬才有的表面，例如 TripSheet 右欄；預設兩種寬度都跑）。
- * newApi：走新 api 認證旗標開啟的那份建置（埠 3001）；憑證由 stub 種進 IndexedDB。
+ * newApi：走真 auth（不套穿透版）的那份建置（埠 3001）；憑證由 stub 種進 IndexedDB。
  * noIdle：不等 networkidle（畫面刻意停在一個永遠不回應的請求上，例如 /auth/callback 的「登入中…」）。
  * proofPath：頁面最後所在的 pathname（不含 query）。兩個場景共用同一個 proof testid 時（複製／移動、direct／收藏加入行程是同一元件的不同模式，DOM 幾乎相同），
  *   用它證明各自真的停在自己的路由，沒有被轉址到另一個。

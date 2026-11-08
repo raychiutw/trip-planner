@@ -2,13 +2,16 @@
 // playwright.hig-webkit.config.js（跨引擎截圖）共用，避免建置指令字串各寫一份而漂移。
 // 預設的 playwright.config.js 不啟動它們（以 testIgnore 排除 HIG specs），所以一般 e2e 不必多建一份。
 
-// CI 的前一步（Build）已經建好 dist，直接 preview；本機沒有 dist，要先建。
-const MAIN_CMD = process.env.CI ? 'npx vite preview --port 3000' : 'npm run build && npx vite preview --port 3000';
+// 主站（埠 3000）：多數場景用 page.route 回罐頭資料、驗畫面不驗認證，所以建置時把 auth 換成穿透版
+// （E2E_AUTH_PASSTHROUGH=1，見 vite.config.ts 的 authPassthrough；請求仍是同源 /api/...，罐頭照常攔截）。
+// 一律另建 dist-e2e：CI 的 Build 步驟建的是正式設定（API 網址指向 production），不能拿來跑 e2e。
+const MAIN_CMD = 'E2E_AUTH_PASSTHROUGH=1 npx vite build --outDir dist-e2e && npx vite preview --outDir dist-e2e --port 3000';
 
-// 新 api 認證旗標開啟的建置（變更密碼、/oauth/authorize、/auth/callback 要旗標才會渲染）。
-// 旗標是建置期常數，無法在同一份建置裡切換，所以另建一份、另開埠；API 網址指向自己，由場景的 page.route 攔截。
+// 真 auth 的建置（埠 3001）：變更密碼、/oauth/authorize、/auth/callback 要真的 auth client（憑證由場景種進 IndexedDB、
+// token 端點由場景攔截；「沒有憑證 → 顯示登入表單」這類場景也要真的還原邏輯），所以不套穿透版。
+// API 網址指向自己，由場景的 page.route 攔截。
 const NEWAPI_CMD =
-  'VITE_NEW_API_AUTH=1 VITE_API_BASE_URL=http://localhost:3001 npx vite build --outDir dist-newapi && npx vite preview --outDir dist-newapi --port 3001';
+  'VITE_API_BASE_URL=http://localhost:3001 npx vite build --outDir dist-newapi && npx vite preview --outDir dist-newapi --port 3001';
 
 const HIG_WEB_SERVERS = [
   { command: MAIN_CMD, port: 3000, reuseExistingServer: true, timeout: 120000 },

@@ -21,11 +21,9 @@ type Op = { requestBody?: { content?: Record<string, { schema?: Schema }> } };
 const spec = JSON.parse(readFileSync(SPEC_FILE, 'utf8')) as { paths: Record<string, Record<string, Op>> };
 
 // 已知且有理由的落差；每一筆都要寫清楚為何不算漂移。新增前先確認不是真漂移。
-const KNOWN_GAPS: Record<string, string> = {
-  // 旗標 VITE_NEW_API_AUTH 關閉時的舊入口帳密登入；新 api 的登入改走 PKCE（ADR 見 web 的 auth 文件），
-  // 必填的 client_id／code_challenge 由旗標開啟的分支送出。
-  'POST /api/oauth/login': '舊入口（旗標關閉）帳密登入，不帶 PKCE 欄位',
-};
+// 目前沒有：POST /api/oauth/login 原本因旗標關閉的舊入口帳密登入（不帶 PKCE 欄位）列在這裡，旗標移除後該分支已刪（帳密登入一律走 auth.login，
+// 其 body 與契約必填欄位的對照見 tests/unit/new-api-login-contract.test.ts）。
+const KNOWN_GAPS: Record<string, string> = {};
 
 function listSources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

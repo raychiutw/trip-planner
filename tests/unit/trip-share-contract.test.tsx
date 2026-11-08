@@ -6,6 +6,19 @@ import LoginPage from '../../src/pages/LoginPage';
 
 vi.mock('../../src/components/print/renderTripPrintPdf', () => ({ renderTripPrintPdf: vi.fn() }));
 
+// 登入走 auth.login（PKCE＋DPoP，真實流程見 auth-new-api／new-api-wiring 測試）；這裡只要「登入成功後 userinfo 回 200」
+const session = vi.hoisted(() => ({ loggedIn: false }));
+vi.mock('../../src/lib/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/lib/auth')>();
+  const client: import('../../src/lib/auth').AuthClient = {
+    isAuthenticated: () => true, restoreSession: async () => true,
+    apiFetch: (input, init) => globalThis.fetch(String(input), init),
+    login: async () => { session.loggedIn = true; }, refresh: async () => {}, logout: async () => {},
+    startGoogleLogin: async () => '', finishGoogleLogin: async () => ({ redirectAfterLogin: null }),
+  };
+  return { ...actual, getNewApiAuth: () => client, getNewApiBase: () => '' };
+});
+
 const tokenA = 'tok_abc123def456ghi789';
 const tokenB = 'tok_xyz123def456ghi789';
 const payload = (title: string) => ({
@@ -117,15 +130,14 @@ describe('public share read contract', () => {
   });
 
   it('returns to the same share after login and clones only on a new copy action', async () => {
-    let loggedIn = false;
+    session.loggedIn = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input);
       if (path === '/api/oauth/userinfo') {
-        return loggedIn ? json({ id: 'u1', email: 'test@example.com', emailVerified: true, displayName: 'Test', avatarUrl: null, createdAt: '' }) : json({}, 401);
+        return session.loggedIn ? json({ id: 'u1', email: 'test@example.com', emailVerified: true, displayName: 'Test', avatarUrl: null, createdAt: '' }) : json({}, 401);
       }
       if (path === `/api/share/${tokenA}`) return json(payload('沖繩五日'));
       if (path === '/api/public-config') return json({ providers: { google: false } });
-      if (path === '/api/oauth/login') { loggedIn = true; return json({ ok: true }); }
       if (path === `/api/share/${tokenA}/clone`) return json({ tripId: 'new-trip' });
       throw new Error(`Unexpected request: ${path}`);
     });

@@ -12,6 +12,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 - **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。旗標預設仍關閉，production 行為不變。
 
+### Changed
+- **移除新 api 登入旗標 `VITE_NEW_API_AUTH`：網站只走新認證（尚未部署，切換日期待定）**：登入（帳密與 Google）、登出與所有 `/api` 請求一律是 PKCE＋DPoP、access token 只放記憶體、refresh 輪替、SSE ticket；`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。舊的同源 cookie 登入／登出、`/api/oauth/login/google` 連結、cookie 的 SSE（`withCredentials`）與帳號刪除的舊重新驗證導向都已刪除。部署這一版後**所有人需要重新登入一次**；回切要重新部署前一版 web（旗標已不存在，無法用設定回切）。
+- `.env.local.example` 補 `VITE_API_BASE_URL`：本機開發現在也必須指定新 api 的網址。
+
+### For contributors
+- 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
+- `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
+
 ## [2.57.133] - 2026-11-08
 
 ### Fixed

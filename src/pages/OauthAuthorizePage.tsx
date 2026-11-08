@@ -9,7 +9,7 @@
  *   3. 「繼續」→ POST approve → 導向 api 回傳的 redirect_to（server 端存的、驗過的 callback；這裡只再擋掉非 https／loopback）。
  *   「使用其他帳號」→ 登出本機憑證回到登入表單。沒有「拒絕」按鈕（設計稿決定：不是本人要求就直接關閉頁面）。
  *
- * 這一頁不看 VITE_NEW_API_AUTH 旗標，只需要 VITE_API_BASE_URL（見 getAuthorizeAuth）。
+ * 只需要 VITE_API_BASE_URL（見 getAuthorizeAuth）。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';

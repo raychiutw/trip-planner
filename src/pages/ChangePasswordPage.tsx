@@ -12,7 +12,6 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { typedApi } from '../lib/api/typed';
 import { ApiError, formatWait } from '../lib/errors';
-import { isNewApiAuthEnabled } from '../lib/auth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
 import { CHANGE_PASSWORD_MIN_LENGTH, ERROR_MESSAGES } from '../types/api';
 import { showToast } from '../components/shared/Toast';
@@ -56,12 +55,11 @@ function messageFor(err: unknown): string {
 export default function ChangePasswordPage() {
   const { user } = useRequireAuth();
   const navigate = useNavigate();
-  // 進入守衛：端點只存在於新 api（旗標開啟），而且只有有 local 密碼的帳號能改；
+  // 進入守衛：只有有 local 密碼的帳號能改；
   // 其餘（含預覽取失敗，無法確認）一律導回帳號頁，不顯示一張必定失敗的表單。
-  const newApi = isNewApiAuthEnabled();
-  const { status, preview } = useAccountPreview(!!user && newApi);
-  const allowed = newApi && preview?.hasPassword === true;
-  const denied = !newApi || (status === 'error' && !preview) || (status === 'ready' && preview?.hasPassword !== true);
+  const { status, preview } = useAccountPreview(!!user);
+  const allowed = preview?.hasPassword === true;
+  const denied = (status === 'error' && !preview) || (status === 'ready' && preview?.hasPassword !== true);
   useEffect(() => { if (denied) navigate('/account', { replace: true }); }, [denied, navigate]);
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');

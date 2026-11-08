@@ -26,10 +26,21 @@ class MockEventSource {
     MockEventSource.instances.push(this);
   }
   close() { this.readyState = 2; }
+  addEventListener() { /* ticket 連線註冊 reconnect 事件；這裡不模擬 */ }
   static reset() { MockEventSource.instances = []; }
 }
 
 const originalEventSource = globalThis.EventSource;
+
+/** 輪詢請求回 `poll`；換 SSE ticket 的請求（POST …/sse-ticket）回一張假 ticket。 */
+function mockFetch(poll: Response) {
+  (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(async (url: string) =>
+    String(url).endsWith('/sse-ticket')
+      ? new Response(JSON.stringify({ ticket: 'tk', expires_in: 30 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      : new Response(await poll.clone().text(), { status: poll.status, headers: { 'Content-Type': 'application/json' } }));
+}
+/** ticket 連線模組是動態載入、換票是非同步：等它們落定，EventSource 才會建立。 */
+const settle = () => act(async () => { await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0); });
 
 describe('useRequestSSE — safety-net polling', () => {
   beforeEach(() => {
@@ -46,11 +57,12 @@ describe('useRequestSSE — safety-net polling', () => {
   });
 
   it('polling runs as safety-net even when SSE connects ok', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ status: 'processing', processedBy: null }), { status: 200 }),
     );
 
     renderHook(() => useRequestSSE(42));
+    await settle();
 
     expect(MockEventSource.instances.length).toBe(1);
 
@@ -60,21 +72,23 @@ describe('useRequestSSE — safety-net polling', () => {
   });
 
   it('polling sees completed', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ status: 'completed', processedBy: 'api' }), { status: 200 }),
     );
 
     const { result } = renderHook(() => useRequestSSE(42));
+    await settle();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_001); });
     expect(result.current.status).toBe('completed');
   });
 
   it('401 from polling sets errorReason=auth_expired', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }),
     );
 
     const { result } = renderHook(() => useRequestSSE(99));
+    await settle();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_001); });
     expect(result.current.errorReason).toBe('auth_expired');
   });
@@ -82,7 +96,7 @@ describe('useRequestSSE — safety-net polling', () => {
   it('elapsedMs ticks up at minute boundaries while in flight', async () => {
     // v2.33.31 (simplify PR-4): tick changed from 1s to 60s — UI consumers
     // only read minute buckets so per-second updates wasted React renders.
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ status: 'processing', processedBy: null }), { status: 200 }),
     );
 
@@ -99,11 +113,12 @@ describe('useRequestSSE — safety-net polling', () => {
   });
 
   it('SSE onmessage completed terminates polling', async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ status: 'processing', processedBy: null }), { status: 200 }),
     );
 
     const { result } = renderHook(() => useRequestSSE(55));
+    await settle();
     const es = MockEventSource.instances[0]!;
     await act(async () => {
       es.onmessage?.call(es as unknown as EventSource, new MessageEvent('message', {

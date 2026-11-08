@@ -1,7 +1,7 @@
 /**
  * 新 api 的本機假伺服器（只給 playwright.newapi.config.js 的 e2e 用）。
  *
- * 目的：讓「旗標開啟（VITE_NEW_API_AUTH=1）」的 web 建置在真瀏覽器裡，對一個**真的有狀態、真的驗證**的 api 跑完整流程，
+ * 目的：讓 web 建置（真的 auth client，不套穿透版）在真瀏覽器裡，對一個**真的有狀態、真的驗證**的 api 跑完整流程，
  * 而不是 page.route 回罐頭。它實作的是 api 契約（contracts/openapi.json）裡 web 會碰到的那一小塊：
  *   - PKCE（S256 驗 code_verifier）、DPoP（驗簽章、htm、htu、ath、jkt 綁定、jti 不可重複）
  *   - refresh token 每次輪替；**用過的 refresh token 再出現 = 重放 → 撤銷整個 family**（RFC 9700 §4.14）

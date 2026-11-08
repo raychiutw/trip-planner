@@ -52,8 +52,6 @@ export interface UseCurrentUserResult {
   reload: () => void;
 }
 
-const USERINFO_ENDPOINT = '/api/oauth/userinfo';
-
 // Module-level：同一個 effect flush 裡的多個 hook instance 共享同一個 in-flight
 // fetch，下一輪 microtask 就清空（見檔頭註解）。
 let sharedFetchPromise: Promise<CurrentUser | null> | null = null;
@@ -62,11 +60,8 @@ function fetchCurrentUser(forceFresh = false): Promise<CurrentUser | null> {
   if (!sharedFetchPromise || forceFresh) {
     // 共享 fetch 不能被單一 consumer abort，改用序號擋掉「比登出等較新寫入還舊」的落地結果。
     const hintSeq = nextAuthHintSeq();
-    // 旗標開（VITE_NEW_API_AUTH=1）：改用新 api 的 token 還原登入並取 userinfo；關閉時維持 cookie fetch。
-    const newApiAuth = getNewApiAuth();
-    const promise: Promise<CurrentUser | null> = (newApiAuth
-      ? fetchCurrentUserViaNewApi(newApiAuth)
-      : fetch(USERINFO_ENDPOINT, { credentials: 'include' }))
+    // 以新 api 的 token 還原登入並取 userinfo（沒有任何本機憑證回 401，不送請求）
+    const promise: Promise<CurrentUser | null> = fetchCurrentUserViaNewApi(getNewApiAuth())
       .then(async (res) => {
         if (!res.ok) {
           // 401 / 503 / etc. → 視為未登入

@@ -53,7 +53,7 @@ export default defineConfig({
           ],
           environment: 'jsdom',
           // v2.33.65: renamed from setup-jest-dom.js
-          setupFiles: ['./tests/setup-dom.js'],
+          setupFiles: ['./tests/setup-dom.js', './tests/setup-auth-passthrough.ts'],
         },
       },
       {
@@ -63,7 +63,8 @@ export default defineConfig({
           include: ['tests/unit/**/*.test.ts'],
           exclude: TS_DOM_FILES,
           environment: 'node',
-          // 不需 jsdom polyfill setup
+          // 不需 jsdom polyfill setup；只套用認證穿透 mock（見該檔說明）
+          setupFiles: ['./tests/setup-auth-passthrough.ts'],
           /*
            * 2026-07-26：從 vitest 預設的 5s 提高。這個 project 裡有兩類**會 spawn 真子程序**的
            * 測試，它們在機器吃緊時（例如同時在跑 playwright）會超過 5s 而變成間歇失敗：

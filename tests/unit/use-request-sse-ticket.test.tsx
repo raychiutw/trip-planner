@@ -1,9 +1,6 @@
 /**
- * useRequestSSE 的新 api 認證模式（VITE_NEW_API_AUTH=1）與旗標關閉時的隔離。
- *
- * - 旗標關閉：行為與原本完全一致（既有的 use-request-sse.test.tsx 負責細節），這裡只證明「不碰新東西」：
- *   不打新 api、不碰 IndexedDB、typed client 的模組根本沒被載入。
- * - 旗標開啟：換 ticket → 連 ?ticket=；reconnect／onerror 重新換票；polling 走新 api；auth 失效回報 auth_expired。
+ * useRequestSSE 的新 api 認證模式（唯一路徑）：換 ticket → 連 ?ticket=；reconnect／onerror 重新換票；polling 走新 api；
+ * auth 失效回報 auth_expired。沒有舊的 cookie 流程（withCredentials 的 EventSource）。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -20,7 +17,7 @@ vi.mock('../../src/lib/auth', async (importOriginal) => {
   const orig = await importOriginal<typeof import('../../src/lib/auth')>();
   return {
     ...orig,
-    getNewApiAuth: () => (orig.isNewApiAuthEnabled() ? { apiFetch: authApiFetch.fn, refresh: refreshFn.fn } : null),
+    getNewApiAuth: () => ({ apiFetch: authApiFetch.fn, refresh: refreshFn.fn }),
   };
 });
 
@@ -79,41 +76,11 @@ afterEach(() => {
 });
 
 const flush = () => act(async () => { await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(0); });
-const enableFlag = () => { vi.stubEnv('VITE_NEW_API_AUTH', '1'); vi.stubEnv('VITE_API_BASE_URL', 'https://api.test'); };
+const setApiBase = () => { vi.stubEnv('VITE_API_BASE_URL', 'https://api.test'); };
 
-describe('useRequestSSE — 旗標關閉（預設）', () => {
-  it('走原本的 cookie 流程：withCredentials 的 EventSource、polling 走 apiFetchRaw', async () => {
-    renderHook(() => useRequestSSE(42));
-    await flush();
-    expect(FakeEventSource.instances).toHaveLength(1);
-    expect(FakeEventSource.instances[0]!.url).toMatch(/^(http:\/\/localhost:8788)?\/api\/requests\/42\/events$/);
-    expect(FakeEventSource.instances[0]!.init).toEqual({ withCredentials: true });
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/requests/42', expect.anything());
-  });
-
-  it('不打新 api、不碰 IndexedDB、typed client 模組沒有被載入', async () => {
-    const { unmount } = renderHook(() => useRequestSSE(42));
-    await flush();
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
-    expect(authApiFetch.fn).not.toHaveBeenCalled();
-    expect(idbAccess).not.toHaveBeenCalled();
-    expect(clientLoaded.count).toBe(0);
-    expect(FakeEventSource.instances.every((e) => !e.url.includes('ticket='))).toBe(true);
-    unmount();
-  });
-
-  it('onerror 不 close（交給瀏覽器自動重連），與原本一致', async () => {
-    renderHook(() => useRequestSSE(42));
-    await flush();
-    act(() => { FakeEventSource.instances[0]!.onerror?.(); });
-    expect(FakeEventSource.instances[0]!.closed).toBe(false);
-    expect(FakeEventSource.instances).toHaveLength(1);
-  });
-});
-
-describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
+describe('useRequestSSE — 新 api', () => {
   it('先換 ticket 再連 events?ticket=，不帶 cookie；typed client 此時才載入', async () => {
-    enableFlag();
+    setApiBase();
     const { result } = renderHook(() => useRequestSSE(42));
     await flush();
     expect(calls).toContain('POST /api/requests/42/sse-ticket');
@@ -126,7 +93,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('polling 走新 api（GET /api/requests/42），不再打 cookie 的舊路徑', async () => {
-    enableFlag();
+    setApiBase();
     renderHook(() => useRequestSSE(42));
     await flush();
     expect(calls).toContain('GET /api/requests/42');
@@ -134,7 +101,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('SSE 訊息照舊更新 status，completed 後關閉連線', async () => {
-    enableFlag();
+    setApiBase();
     const { result } = renderHook(() => useRequestSSE(42));
     await flush();
     act(() => { FakeEventSource.instances[0]!.onmessage?.({ data: JSON.stringify({ status: 'completed', processedBy: 'api' }) }); });
@@ -144,7 +111,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('reconnect 事件 → 重新換票並連線', async () => {
-    enableFlag();
+    setApiBase();
     renderHook(() => useRequestSSE(42));
     await flush();
     act(() => { FakeEventSource.instances[0]!.listeners.get('reconnect')?.({ data: '{"reason":"token_expired"}' }); });
@@ -154,7 +121,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('onerror → 自己關閉並（退避後）重新換票，不用已用過的 ticket', async () => {
-    enableFlag();
+    setApiBase();
     renderHook(() => useRequestSSE(42));
     await flush();
     act(() => { FakeEventSource.instances[0]!.onerror?.(); });
@@ -165,7 +132,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('grant_revoked 先 refresh() 再換票', async () => {
-    enableFlag();
+    setApiBase();
     renderHook(() => useRequestSSE(42));
     await flush();
     act(() => { FakeEventSource.instances[0]!.listeners.get('reconnect')?.({ data: '{"reason":"grant_revoked"}' }); });
@@ -175,7 +142,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('換票 401（登入失效）→ errorReason=auth_expired', async () => {
-    enableFlag();
+    setApiBase();
     ticketResponder = () => json({ error: { code: 'AUTH_REQUIRED', message: 'x' } }, 401);
     const { result } = renderHook(() => useRequestSSE(42));
     await flush();
@@ -184,7 +151,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('unmount 後關閉連線，不再換票', async () => {
-    enableFlag();
+    setApiBase();
     const { unmount } = renderHook(() => useRequestSSE(42));
     await flush();
     act(() => { FakeEventSource.instances[0]!.onerror?.(); });
@@ -195,7 +162,7 @@ describe('useRequestSSE — VITE_NEW_API_AUTH=1', () => {
   });
 
   it('換票前就 unmount：不建立連線', async () => {
-    enableFlag();
+    setApiBase();
     const { unmount } = renderHook(() => useRequestSSE(42));
     unmount();
     await flush();

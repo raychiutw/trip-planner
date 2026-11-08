@@ -153,15 +153,14 @@ describe('useCurrentUser', () => {
     expect(readAuthHint()).toBe(false);
   });
 
-  it('fetch uses credentials: include for cookie-based auth', async () => {
+  it('經 auth client 取 userinfo（沒有 cookie；token 由 auth client 帶，見 new-api-wiring 測試）', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
     renderHook(() => useCurrentUser());
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/oauth/userinfo',
-      expect.objectContaining({ credentials: 'include' }),
-    );
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    expect(fetchSpy.mock.calls[0]![0]).toBe('/api/oauth/userinfo');
+    expect(fetchSpy.mock.calls[0]![1]?.credentials).not.toBe('include');
   });
 
   it('cancelled fetch (unmount) does not crash when it resolves late', async () => {

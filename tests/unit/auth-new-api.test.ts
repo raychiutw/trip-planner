@@ -1,9 +1,11 @@
 /**
  * T18：web 登入改 OAuth public client（PKCE + DPoP）的 plumbing。
  * 以「假 api」（tests/unit/__helpers__/fake-oauth-api.ts）做往返測試；不連任何外部服務。
- * 預設關閉：VITE_NEW_API_AUTH !== '1' 時整條新路徑不會被碰到。
+ * 認證只有這一條路徑（旗標已移除）；auth 用真的實作，不套全域穿透 mock。
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.unmock('../../src/lib/auth');
 import { IDBFactory } from 'fake-indexeddb';
 import { createPkcePair } from '../../src/lib/auth/pkce';
 import { createDpopProof, exportPublicJwk, generateDpopKeyPair, jwkThumbprint } from '../../src/lib/auth/dpop';
@@ -530,41 +532,34 @@ describe('logout', () => {
   });
 });
 
-describe('feature flag（預設關閉）', () => {
-  it('未設定或不是 "1" → getNewApiAuth／useNewApiAuth 回 null，不呼叫 fetch、不碰 IndexedDB', async () => {
+describe('入口 getNewApiAuth（沒有旗標，認證只有這一條路）', () => {
+  it('有 VITE_API_BASE_URL → 回同一個單例 client；建立時不呼叫 fetch、不碰 IndexedDB（延遲到第一次使用）', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     const idbTouched = vi.fn();
     Object.defineProperty(globalThis, 'indexedDB', { configurable: true, get: () => { idbTouched(); return undefined; } });
-    for (const v of [undefined, '', '0', 'true']) {
-      vi.stubEnv('VITE_NEW_API_AUTH', v as string);
-      vi.resetModules();
-      const mod = await import('../../src/lib/auth');
-      expect(mod.isNewApiAuthEnabled()).toBe(false);
-      expect(mod.getNewApiAuth()).toBeNull();
-      expect(mod.useNewApiAuth()).toBeNull();
-    }
+    vi.stubEnv('VITE_API_BASE_URL', FAKE_API_BASE);
+    vi.resetModules();
+    const mod = await import('../../src/lib/auth');
+    const c = mod.getNewApiAuth();
+    expect(c).toBeTruthy();
+    expect(mod.getNewApiAuth()).toBe(c);
+    expect(c.isAuthenticated()).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(idbTouched).not.toHaveBeenCalled();
     Reflect.deleteProperty(globalThis, 'indexedDB');
   });
 
-  it('VITE_NEW_API_AUTH=1 且有 VITE_API_BASE_URL → 回同一個單例 client', async () => {
-    vi.stubEnv('VITE_NEW_API_AUTH', '1');
-    vi.stubEnv('VITE_API_BASE_URL', FAKE_API_BASE);
-    vi.resetModules();
-    const mod = await import('../../src/lib/auth');
-    expect(mod.isNewApiAuthEnabled()).toBe(true);
-    const c = mod.useNewApiAuth();
-    expect(c).not.toBeNull();
-    expect(mod.getNewApiAuth()).toBe(c);
-  });
-
-  it('啟用但沒設 VITE_API_BASE_URL → 明確丟設定錯誤（不要悄悄打到同源）', async () => {
-    vi.stubEnv('VITE_NEW_API_AUTH', '1');
+  it('沒設 VITE_API_BASE_URL → 明確丟設定錯誤（不要悄悄打到同源）', async () => {
     vi.stubEnv('VITE_API_BASE_URL', '');
     vi.resetModules();
     const mod = await import('../../src/lib/auth');
     expect(() => mod.getNewApiAuth()).toThrow(/VITE_API_BASE_URL/);
+  });
+
+  it('旗標已移除：模組不再匯出 isNewApiAuthEnabled／useNewApiAuth', async () => {
+    const mod = await import('../../src/lib/auth') as Record<string, unknown>;
+    expect(mod.isNewApiAuthEnabled).toBeUndefined();
+    expect(mod.useNewApiAuth).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 /**
  * 頁面用的 typed client（#1481）：路徑、path／query／body、回應型別都從 contracts/openapi.json 推導，
- * 傳輸與錯誤語意則**原封沿用 `apiFetch`**：旗標關閉走同源 cookie、開啟走新 api token；
+ * 傳輸與錯誤語意則**原封沿用 `apiFetch`**（新 api 的 DPoP token）；
  * 非 2xx 丟 `ApiError`（含 `Retry-After`）、429／邊緣擋頁的重試、SYS_* 上報 Sentry、204 無 body 都照舊。
  *
  * 所以從 `apiFetch<T>(...)` 換成 `typedApi` 不改變任何使用者看得到的行為，只多了編譯期的契約檢查

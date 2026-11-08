@@ -1,10 +1,11 @@
 /**
- * T21：web 的登入與 API 呼叫接到新 api（旗標 VITE_NEW_API_AUTH=1 後面，預設關）。
- * 旗標開啟的情境以 T18 的 fake-oauth-api 做 HTTP 邊界級測試（fetch 是唯一被替換的東西）：
+ * T21：web 的登入與 API 呼叫走新 api（唯一的認證路徑）。
+ * 以 T18 的 fake-oauth-api 做 HTTP 邊界級測試（fetch 是唯一被替換的東西，auth 用真的實作、不套全域穿透 mock）：
  *   登入（PKCE＋DPoP）→ API 呼叫帶 Authorization＋DPoP → 401→refresh→重試一次 → 登出撤銷並清除。
- * 旗標關閉的行為由既有測試（login-page／api-client／use-current-user／account-page…）守住，這裡只補「關閉時不碰新路徑」。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.unmock('../../src/lib/auth');
 import { render, renderHook, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { IDBFactory } from 'fake-indexeddb';
@@ -35,10 +36,9 @@ function installBrowserStubs() {
   });
 }
 
-async function boot(flag: string | null = '1') {
+async function boot() {
   idb = new IDBFactory();
   installBrowserStubs();
-  if (flag !== null) vi.stubEnv('VITE_NEW_API_AUTH', flag);
   vi.stubEnv('VITE_API_BASE_URL', FAKE_API_BASE);
   vi.resetModules();
   const auth = await import('../../src/lib/auth');
@@ -60,7 +60,7 @@ afterEach(() => {
 
 const apiCalls = () => api.requests.filter((r) => !new URL(r.url).pathname.startsWith('/api/oauth/'));
 
-describe('apiClient 走新 api（旗標開）', () => {
+describe('apiClient 走新 api', () => {
   it('登入後 apiFetch 打到 VITE_API_BASE_URL，帶 Authorization: DPoP 與 DPoP proof，且不帶 cookie', async () => {
     const { auth, apiClient } = await boot();
     await auth.getNewApiAuth()!.login(FAKE_EMAIL, FAKE_PASSWORD);
@@ -112,20 +112,9 @@ describe('apiClient 走新 api（旗標開）', () => {
     expect(sent.url).toBe(`${FAKE_API_BASE}/api/public-config`);
     expect(sent.headers['authorization']).toBeUndefined();
   });
-
-  it('旗標關閉（未設或非 "1"）：apiFetch 仍打同源 /api，不碰新 api 與 IndexedDB', async () => {
-    for (const flag of [null, '0', 'true']) {
-      const { apiClient } = await boot(flag);
-      fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: 1 }), { status: 200, headers: { 'content-type': 'application/json' } }));
-      await apiClient.apiFetch('/my-trips');
-      expect(fetchSpy.mock.calls[0]![0]).toBe('/api/my-trips');
-      vi.unstubAllEnvs();
-      vi.unstubAllGlobals();
-    }
-  });
 });
 
-describe('登出（旗標開）', () => {
+describe('登出', () => {
   it('撤銷 refresh token 家族、清除 IndexedDB 憑證與記憶體 token，之後的受保護請求被擋在本機', async () => {
     const { auth } = await boot();
     const client = auth.getNewApiAuth()!;
@@ -141,19 +130,9 @@ describe('登出（旗標開）', () => {
     expect(await storage.getKeyPair()).toBeNull();
     expect(client.isAuthenticated()).toBe(false);
   });
-
-  it('旗標關閉：照舊 POST 同源 /api/oauth/logout（cookie 流程），不碰新 api', async () => {
-    await boot(null);
-    fetchSpy.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    const { logoutSession } = await import('../../src/lib/logout');
-    await logoutSession();
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]![0]).toBe('/api/oauth/logout');
-    expect((fetchSpy.mock.calls[0]![1] as RequestInit).method).toBe('POST');
-  });
 });
 
-describe('useCurrentUser 走新 api（旗標開）', () => {
+describe('useCurrentUser 走新 api', () => {
   async function probe() {
     const { fetchCurrentUserViaNewApi } = await import('../../src/lib/auth/transport');
     const { getNewApiAuth } = await import('../../src/lib/auth');
@@ -200,7 +179,7 @@ describe('useCurrentUser 走新 api（旗標開）', () => {
   });
 });
 
-describe('useCurrentUser hook（旗標開）', () => {
+describe('useCurrentUser hook', () => {
   it('登入後 hook 取得 user（走新 api 的 userinfo，帶 DPoP，不打同源 cookie 端點）', async () => {
     const { auth } = await boot();
     await auth.getNewApiAuth()!.login(FAKE_EMAIL, FAKE_PASSWORD);
@@ -220,7 +199,7 @@ describe('useCurrentUser hook（旗標開）', () => {
   });
 });
 
-describe('LoginPage 走新 api 第一方登入（旗標開）', () => {
+describe('LoginPage 走新 api 第一方登入', () => {
   async function renderLogin(query = '') {
     const { default: LoginPage } = await import('../../src/pages/LoginPage');
     return render(
@@ -283,16 +262,5 @@ describe('LoginPage 走新 api 第一方登入（旗標開）', () => {
     await renderLogin();
     submit(FAKE_EMAIL, FAKE_PASSWORD);
     await waitFor(() => expect(screen.getByTestId('login-banner-error').textContent).toContain('網路連線失敗'));
-  });
-
-  it('旗標關閉：送出仍是同源 POST /api/oauth/login（email＋password，無 PKCE），不碰新 api', async () => {
-    await boot(null);
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    await renderLogin();
-    submit('u@x.com', 'pass1234');
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
-    const loginCall = fetchSpy.mock.calls.find((c) => c[0] === '/api/oauth/login')!;
-    expect(JSON.parse((loginCall[1] as RequestInit).body as string)).toEqual({ email: 'u@x.com', password: 'pass1234' });
-    expect(api.requests).toHaveLength(0);
   });
 });
