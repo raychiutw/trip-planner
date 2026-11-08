@@ -77,17 +77,22 @@ export interface ApiOptions {
   baseUrl?: string;
   /** 注入點：T18 的 `authClient.apiFetch` 可以直接接上。 */
   fetch?: (input: string, init?: RequestInit) => Promise<Response>;
+  /** true：結果多帶 `headers`（原始回應標頭，例如 429 的 `Retry-After`）。預設不帶，結果形狀不變。 */
+  includeHeaders?: boolean;
 }
 
-type Caller<M extends Method> = <P extends PathsWith<M>>(path: P, ...args: ArgsOf<OpOf<P, M>>) => Promise<ApiResult<OpOf<P, M>>>;
+/** `X` 是每個結果額外帶的欄位（預設沒有；`includeHeaders` 時是 `{ headers: Headers }`）。 */
+type Caller<M extends Method, X> = <P extends PathsWith<M>>(path: P, ...args: ArgsOf<OpOf<P, M>>) => Promise<ApiResult<OpOf<P, M>> & X>;
 
-export interface Api {
-  get: Caller<'get'>;
-  post: Caller<'post'>;
-  put: Caller<'put'>;
-  patch: Caller<'patch'>;
-  delete: Caller<'delete'>;
+export interface Api<X = unknown> {
+  get: Caller<'get', X>;
+  post: Caller<'post', X>;
+  put: Caller<'put', X>;
+  patch: Caller<'patch', X>;
+  delete: Caller<'delete', X>;
 }
+
+export type ApiWithHeaders = Api<{ headers: Headers }>;
 
 // ---- 執行期 ----
 
@@ -130,7 +135,9 @@ async function readBody(res: Response): Promise<unknown> {
   return text;
 }
 
-export function createApi(opts: ApiOptions = {}): Api {
+export function createApi(opts: ApiOptions & { includeHeaders: true }): ApiWithHeaders;
+export function createApi(opts?: ApiOptions): Api;
+export function createApi(opts: ApiOptions = {}): Api | ApiWithHeaders {
   const base = (opts.baseUrl ?? '').replace(/\/+$/, '');
   const doFetch = opts.fetch ?? ((input: string, init?: RequestInit) => globalThis.fetch(input, init));
 
@@ -150,9 +157,10 @@ export function createApi(opts: ApiOptions = {}): Api {
     const data = await readBody(res);
     // 瀏覽器的 redirect:'manual' 會給 opaqueredirect（status 0）：也是「伺服器回了導向」＝成功
     const success = res.type === 'opaqueredirect' || (res.status >= 200 && res.status < 400);
+    const extra = opts.includeHeaders ? { headers: res.headers } : {};
     return success
-      ? { ok: true as const, status: res.status, data }
-      : { ok: false as const, status: res.status, error: data };
+      ? { ok: true as const, status: res.status, data, ...extra }
+      : { ok: false as const, status: res.status, error: data, ...extra };
   };
 
   return {

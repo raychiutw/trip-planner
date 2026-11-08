@@ -10,7 +10,7 @@
  * 與 `createApiWithAuth`（SSE ticket 專用，直接走 auth client、不經 apiFetch）不同：那條不重試、不轉 ApiError。
  */
 import { apiFetch, apiFetchRaw } from '../apiClient';
-import { createApi, type Api, type ApiResult } from './client';
+import { createApi, type Api, type ApiResult, type ApiWithHeaders } from './client';
 
 /** 通用 client 的 init → apiFetch／apiFetchRaw 的參數（與手寫呼叫同形）。 */
 function toTransport(input: string, init?: RequestInit): { path: string; opts: RequestInit & { signal?: AbortSignal } } {
@@ -41,15 +41,31 @@ export const typedApi: Api = createApi({
 });
 
 /**
+ * 舊的 `apiFetchRaw` 呼叫端一律 `res.json()`，不看 Content-Type；通用 client 只在 Content-Type 含 json 時才解析。
+ * 為了遷移不改行為：內容能解析成 JSON 就補上 JSON 的 Content-Type（解析失敗、無內容、204／3xx 原樣）。
+ */
+async function jsonIfParsable(res: Response): Promise<Response> {
+  if (res.status === 204 || res.status === 205 || (res.status >= 300 && res.status < 400)) return res;
+  if ((res.headers.get('content-type') ?? '').toLowerCase().includes('json')) return res;
+  const text = await res.text();
+  const headers = new Headers(res.headers);
+  try {
+    if (text !== '') { JSON.parse(text); headers.set('Content-Type', 'application/json'); }
+  } catch { /* 不是 JSON：維持原 Content-Type，data 會是原文字串 */ }
+  return new Response(text, { status: res.status, statusText: res.statusText, headers });
+}
+
+/**
  * 與 `typedApi` 同一套契約型別，但傳輸走 `apiFetchRaw`：**非 2xx 不丟例外、沒有重試**，呼叫端自己看 `result.ok`／`result.status`。
- * 回傳是 `{ ok: true, status, data } | { ok: false, status, error }`；型別是契約裡各狀態碼的聯集
+ * 回傳是 `{ ok: true, status, data } | { ok: false, status, error }`，另帶 `headers`（原始回應標頭，例如 429 的 `Retry-After`）；型別是契約裡各狀態碼的聯集
  * （契約沒列的狀態碼，執行期仍會出現在 `status`／`error`，只是型別上看不到）。
  * `error`／`data` 是已解析的 JSON（解析失敗時是原文字串、無內容時 undefined）。網路錯誤仍丟 `ApiError`（同 `apiFetchRaw`）。
  */
-export const typedApiRaw: Api = createApi({
-  fetch: (input, init) => {
+export const typedApiRaw: ApiWithHeaders = createApi({
+  includeHeaders: true, // 呼叫端要讀 Retry-After 等標頭
+  fetch: async (input, init) => {
     const { path, opts } = toTransport(input, init);
-    return apiFetchRaw(path, opts);
+    return jsonIfParsable(await apiFetchRaw(path, opts));
   },
 });
 

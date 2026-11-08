@@ -89,3 +89,25 @@ describe('rawBody：字串原樣送出', () => {
     expect(new Headers(init.headers).get('Content-Type')).toBe('application/json');
   });
 });
+
+describe('typedApiRaw：帶回應標頭', () => {
+  it('result.headers 讀得到 Retry-After', async () => {
+    fetchMock.mockResolvedValue(json({ error: { code: 'X' } }, 429, { 'Retry-After': '900' }));
+    const r = await typedApiRaw.post('/api/oauth/forgot-password', { body: { email: 'a@b.c' } });
+    expect(r.headers.get('Retry-After')).toBe('900');
+  });
+});
+
+describe('typedApiRaw：不看 Content-Type 也解析 JSON（與舊的 res.json() 一致）', () => {
+  it('伺服器沒標 JSON 的 Content-Type，內容是 JSON 仍解析成物件', async () => {
+    fetchMock.mockResolvedValue(new Response('{"error":"expired"}', { status: 400 }));
+    const r = await typedApiRaw.post('/api/oauth/verify', { body: { token: 't' } });
+    expect(r).toMatchObject({ ok: false, status: 400, error: { error: 'expired' } });
+  });
+
+  it('不是 JSON 的內容維持原文字串', async () => {
+    fetchMock.mockResolvedValue(new Response('not-json', { status: 500 }));
+    const r = await typedApiRaw.post('/api/oauth/verify', { body: { token: 't' } });
+    expect(r).toMatchObject({ ok: false, status: 500, error: 'not-json' });
+  });
+});

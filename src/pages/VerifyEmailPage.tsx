@@ -25,7 +25,7 @@
  */
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiFetchRaw } from '../lib/apiClient';
+import { typedApiRaw } from '../lib/api/typed';
 
 type Status = 'idle' | 'verifying' | 'success' | 'error';
 type ErrorCode = 'missing_token' | 'expired' | 'used' | 'server_error' | 'network';
@@ -53,12 +53,10 @@ function VerifyEmailFlow({ token }: { token: string }) {
     setStatus('verifying');
     setErrorCode(null);
     try {
-      const res = await apiFetchRaw('/oauth/verify', {
-        method: 'POST',
-        body: JSON.stringify({ token }),
-        headers: { 'content-type': 'application/json' },
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const res = await typedApiRaw.post('/api/oauth/verify', { body: { token } });
+      // 200 回 { ok }、400 回扁平 { error }；內容不是物件（閘道 HTML）時當空物件
+      const raw = res.ok ? res.data : res.error;
+      const data = (raw && typeof raw === 'object' ? raw : {}) as { ok?: boolean; error?: string };
       if (res.ok && data.ok) {
         setStatus('success');
       } else {
