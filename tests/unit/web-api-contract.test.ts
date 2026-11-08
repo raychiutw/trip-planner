@@ -31,7 +31,8 @@ function listSources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = join(dir, e.name);
     if (e.isDirectory()) return p === join(ROOT, 'src/api') ? [] : listSources(p);
-    return /\.tsx?$/.test(e.name) && !e.name.includes('.test.') && p !== join(ROOT, 'src/lib/apiClient.ts') ? [p] : [];
+    // *.typecheck.ts 是故意寫錯的負向範例，不掃
+    return /\.tsx?$/.test(e.name) && !/\.(test|typecheck)\./.test(e.name) && p !== join(ROOT, 'src/lib/apiClient.ts') ? [p] : [];
   });
 }
 
