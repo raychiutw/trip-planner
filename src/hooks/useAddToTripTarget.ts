@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 
 type Day = { dayNum: number };
 type Result<T extends Day> =
@@ -15,8 +15,9 @@ export function useAddToTripTarget<T extends Day>(tripId: string, preferredDay?:
   useEffect(() => {
     if (!tripId) return;
     let cancelled = false;
-    apiFetch<T[]>(`/trips/${encodeURIComponent(tripId)}/days`)
-      .then((data) => {
+    typedApi.get('/api/trips/{id}/days', { path: { id: tripId } })
+      .then((res) => {
+        const data = unwrap(res) as unknown as T[];
         if (cancelled) return;
         if (!Array.isArray(data)) throw new Error('Invalid days response');
         setResult({ tripId, request, status: 'ready', days: data });

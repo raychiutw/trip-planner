@@ -9,8 +9,8 @@
  * （目的地退回 []、行程名稱就省略…），由 caller 依 status 決定。
  * 寫入（新增天、平移日期…）不在這裡；那是 tripMutations 的事。
  */
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { useEffect, useRef, useState } from 'react';
+import { typedApi, unwrap } from '../lib/api/typed';
 
 export type TripReadStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type TripRead<T> = { data: T | null; status: TripReadStatus };
@@ -23,14 +23,17 @@ export interface TripMeta {
 }
 
 /** 結果綁定它是為哪個 path 抓的，換 path 的當下才不會把上一個行程的資料當成這一個的。 */
-function useTripResource<T>(path: string | null, expectArray: boolean): TripRead<T> {
+function useTripResource<T>(path: string | null, expectArray: boolean, load: () => Promise<unknown>): TripRead<T> {
   const [result, setResult] = useState<{ path: string; data: T | null; ok: boolean } | null>(null);
+  // path 只當「這份資料是為誰抓的」的 key；實際請求走 load（typedApi），用 ref 讓 effect 不必依賴每次 render 新建的函式
+  const loadRef = useRef(load);
+  loadRef.current = load;
 
   useEffect(() => {
     // 停用（enabled=false／沒有 tripId）時清掉舊結果：否則同一個 path 再啟用時會先吐出舊資料（換帳號時是上一位的）。
     if (!path) { setResult(null); return; }
     let cancelled = false;
-    apiFetch<unknown>(path)
+    loadRef.current()
       .then((data) => {
         if (cancelled) return;
         if (expectArray && !Array.isArray(data)) throw new Error('Invalid response');
@@ -49,7 +52,11 @@ function useTripResource<T>(path: string | null, expectArray: boolean): TripRead
 
 /** 讀 `/trips/:id`。tripId 為空或 enabled=false → 不發請求（status 'idle'）。 */
 export function useTripMeta<T = TripMeta>(tripId: string | undefined, enabled = true): TripRead<T> {
-  return useTripResource<T>(tripId && enabled ? `/trips/${encodeURIComponent(tripId)}` : null, false);
+  return useTripResource<T>(
+    tripId && enabled ? `/trips/${encodeURIComponent(tripId)}` : null,
+    false,
+    () => typedApi.get('/api/trips/{id}', { path: { id: tripId! } }).then(unwrap),
+  );
 }
 
 /** 讀 `/trips/:id/days`（`all: true` → 附整天 timeline）。回應不是陣列視為 error。 */
@@ -60,7 +67,8 @@ export function useTripDays<T = { id: number; dayNum: number }>(
   const path = tripId && opts.enabled !== false
     ? `/trips/${encodeURIComponent(tripId)}/days${opts.all ? '?all=1' : ''}`
     : null;
-  return useTripResource<T[]>(path, true);
+  return useTripResource<T[]>(path, true, () =>
+    typedApi.get('/api/trips/{id}/days', { path: { id: tripId! }, ...(opts.all ? { query: { all: '1' } } : {}) }).then(unwrap));
 }
 
 /** 穩定的空陣列：每次 render 新建 [] 會讓依賴它的 useMemo 每次失效。凍結，避免某個 caller 就地 sort／push 後汙染所有頁面。 */

@@ -41,7 +41,7 @@ import { useTripMeta, useTripDays } from '../hooks/useTripRead';
 import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import { poiTypeToTone } from '../lib/timelineUtils';
 import { TRAVEL_MODE_LABEL, TRAVEL_MODE_ICON } from '../lib/travelMode';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { saveSegment } from '../lib/segmentMutations';
 import { setMaster, deleteEntry, updateEntry, updateEntryPoi, removeAlternate, reorderAlternates } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
@@ -1087,7 +1087,7 @@ function EditEntryPageContent() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`);
+        const data = unwrap(await typedApi.get('/api/trips/{id}/entries/{eid}', { path: { id: tripId, eid: String(entryId) } })) as unknown as EntryApi;
         if (cancelled) return;
         setEntry(data);
         if (data.master?.poiId != null) {
@@ -1147,9 +1147,9 @@ function EditEntryPageContent() {
         if (!day) return;
         // 2026-07-06 車程重算：存 dayNum 給 handleDeleteStop 做 day-scoped recompute
         entryDayNumRef.current = day.dayNum;
-        const dayData = await apiFetch<DayApi>(
-          `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
-        );
+        const dayData = unwrap(await typedApi.get('/api/trips/{id}/days/{num}', {
+          path: { id: tripId, num: String(day.dayNum) },
+        })) as unknown as DayApi;
         if (cancelled) return;
         const timeline = Array.isArray(dayData.timeline) ? dayData.timeline : [];
         const idx = timeline.findIndex((e) => e.id === entryId);
@@ -1491,16 +1491,16 @@ function EditEntryPageContent() {
     if (!tripId || !Number.isInteger(entryId)) return null;
     try {
       const [data, days] = await Promise.all([
-        apiFetch<EntryApi>(`/trips/${encodeURIComponent(tripId)}/entries/${entryId}`),
-        apiFetch<Array<{ id: number; dayNum: number }>>(`/trips/${encodeURIComponent(tripId)}/days`),
+        typedApi.get('/api/trips/{id}/entries/{eid}', { path: { id: tripId, eid: String(entryId) } }).then(unwrap) as unknown as Promise<EntryApi>,
+        typedApi.get('/api/trips/{id}/days', { path: { id: tripId } }).then(unwrap) as unknown as Promise<Array<{ id: number; dayNum: number }>>,
       ]);
       setEntry((prev) => prev ? { ...prev, ...data } : data);
       // 重抓 day 拿 master/alternates（_merge.ts 已 populate）
       const day = days.find((d) => d.id === data.dayId);
       if (!day) return null;
-      const dayData = await apiFetch<DayApi>(
-        `/trips/${encodeURIComponent(tripId)}/days/${day.dayNum}`,
-      );
+      const dayData = unwrap(await typedApi.get('/api/trips/{id}/days/{num}', {
+        path: { id: tripId, num: String(day.dayNum) },
+      })) as unknown as DayApi;
       const me = (dayData.timeline ?? []).find((e) => e.id === entryId);
       if (!me) return null;
       // POI card reflects the latest canonical master.

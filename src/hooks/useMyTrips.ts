@@ -15,7 +15,7 @@
  * 較新結果。讀取失敗保留已知資料，不能當成已確認的空清單。
  */
 import { useEffect, useSyncExternalStore } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { EVENT } from '../lib/events';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 
@@ -55,8 +55,9 @@ function refresh() {
   const request = ++requestId;
   state = { ...state, status: 'loading' };
   notify();
-  inflight = apiFetch<MyTrip[]>('/my-trips')
-    .then((data) => {
+  inflight = typedApi.get('/api/my-trips')
+    .then((res) => {
+      const data: unknown = unwrap(res);
       if (request !== requestId || owner !== ownerId) return;
       if (!Array.isArray(data)) throw new Error('Invalid trip list');
       state = { trips: data, status: 'ready' };

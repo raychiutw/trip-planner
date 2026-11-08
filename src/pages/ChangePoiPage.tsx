@@ -21,7 +21,7 @@ import { usePoiSearch } from '../hooks/usePoiSearch';
 import { useTripDestinations } from '../hooks/useTripRead';
 import { usePoiFavorites } from '../hooks/usePoiFavorites';
 import { usePoiSelection } from '../hooks/usePoiSelection';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { createEntry, addAlternate, replaceMasterPoi } from '../lib/entryMutations';
 import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { regionToApiParam } from '../lib/maps/region';
@@ -655,10 +655,9 @@ export default function ChangePoiPage() {
     if (mode === 'new') return;
     if (!tripId || !Number.isInteger(entryId)) return;
     let cancelled = false;
-    apiFetch<{ entryPoisVersion?: string | number | null }>(
-      `/trips/${encodeURIComponent(tripId)}/entries/${entryId}`,
-    )
-      .then((data) => {
+    typedApi.get('/api/trips/{id}/entries/{eid}', { path: { id: tripId, eid: String(entryId) } })
+      .then((res) => {
+        const data = unwrap(res) as unknown as { entryPoisVersion?: string | number | null };
         if (cancelled) return;
         if (data.entryPoisVersion != null) setEntryPoisVersion(String(data.entryPoisVersion));
       })
