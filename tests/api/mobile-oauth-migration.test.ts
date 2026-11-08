@@ -13,6 +13,10 @@ const ROOT = path.join(__dirname, '../..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const FORWARD = read('migrations/0097_mobile_oauth_callbacks.sql');
 const ROLLBACK = read('migrations/rollback/0097_mobile_oauth_callbacks_rollback.sql');
+// 主站 AASA 涵蓋的是「新」callback 路徑（#1482，與 api 的 MOBILE_PROD/UAT_REDIRECT 主站值一致）；
+// 上面 import 的是舊入口的舊別名主機常數（0097 登記用），其路徑 /oauth/callback 由舊別名主機自己的 AASA 服務，不需放進主站 AASA。
+const MAIN_SITE_PROD_REDIRECT = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback';
+const MAIN_SITE_UAT_REDIRECT = 'https://trip-planner-dby.pages.dev/mobile/uat/oauth/callback';
 const NEW_CLIENTS = ['tripline-mobile-uat', 'tripline-mobile-dev'];
 
 let db: D1Database;
@@ -108,8 +112,8 @@ describe('public/.well-known association files', () => {
   it('iOS 與 Android 都指向已核實的 app id，且路徑與實際註冊的 callback 一致（不是另寫一份常數）', () => {
     const detail = aasa.applinks.details[0];
     expect(detail.appID.endsWith('.com.raychiu.tripline')).toBe(true);
-    // callback 路徑與實際註冊的一致；另加公開分享連結 /s/*（iOS App 內開啟，owner 指示 2026-11-01）
-    expect(detail.paths).toEqual([new URL(MOBILE_PROD_REDIRECT).pathname, new URL(MOBILE_UAT_REDIRECT).pathname, '/s/*']);
+    // callback 路徑與新 redirect 一致；另加公開分享連結 /s/*（iOS App 內開啟，owner 指示 2026-11-01）
+    expect(detail.paths).toEqual([new URL(MAIN_SITE_PROD_REDIRECT).pathname, new URL(MAIN_SITE_UAT_REDIRECT).pathname, '/s/*']);
     // /s/* 必須對應站上真的有的分享路由（_routes.json 有路由它，不是指向不存在的路徑）
     expect(JSON.parse(read('public/_routes.json')).include).toContain('/s/*');
     expect(links[0].target.package_name).toBe('com.raychiu.tripline');
@@ -119,7 +123,7 @@ describe('public/.well-known association files', () => {
   it('webcredentials 列出與 applinks 相同的 app id（iOS 17.4+ 的 https callback 要 webcredentials 網域關聯；沒有它 ASWebAuthenticationSession 一出現就回 CANCELED）', () => {
     expect(aasa.webcredentials).toBeDefined();
     expect(aasa.webcredentials.apps).toEqual([aasa.applinks.details[0].appID]);
-    expect(aasa.applinks.details[0].paths).toEqual(expect.arrayContaining([new URL(MOBILE_PROD_REDIRECT).pathname]));
+    expect(aasa.applinks.details[0].paths).toEqual(expect.arrayContaining([new URL(MAIN_SITE_PROD_REDIRECT).pathname]));
   });
 
   it('extensionless 的 apple-app-site-association 以 application/json 提供（否則 iOS 不認）', () => {
