@@ -8,13 +8,6 @@
 export const FAKE_API_BASE = 'https://api.test';
 export const FAKE_EMAIL = 'ray@example.test';
 export const FAKE_PASSWORD = 'correct-horse-battery';
-/** 假 api 登記給 tripline-web 的回跳網址（精確比對，同後端 validateAuthorizeRequest）。 */
-export const FAKE_WEB_REDIRECT_URI = 'https://web.test/auth/callback';
-/**
- * 假 api 登記給 tripline-web 的全部回跳網址。第二個對應 api repo migration 0102 登記的正式網址，
- * 未登記的網址（例如 *.pages.dev 預覽網域）一律被拒，和後端一樣。
- */
-export const FAKE_WEB_REDIRECT_URIS = [FAKE_WEB_REDIRECT_URI, 'https://trip-planner-dby.pages.dev/auth/callback'];
 /** tripline-web 的 allowed_scopes（對應 api repo migration 0101 之後的值）；請求的 scope 必須是它的子集。 */
 export const FAKE_WEB_ALLOWED_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'trips:read', 'trips:write'];
 const DEFAULT_SCOPES = 'openid profile email';
@@ -192,7 +185,7 @@ export function createFakeOAuthApi() {
     }
 
     // 不需登入的公開端點（契約中沒有 security 的那批）
-    if (path === '/api/public-config') return json(200, { providers: { google: false } });
+    if (path === '/api/public-config') return json(200, { features: { passwordSignup: true } });
     if (path === '/api/oauth/signup' && method === 'POST') return json(201, { ok: true });
 
     // 資源端點與登出：Authorization: DPoP <token> + proof（含 ath）
@@ -233,32 +226,6 @@ export function createFakeOAuthApi() {
     isRefreshRevoked(refreshToken: string) {
       const r = refreshTokens.get(refreshToken);
       return r ? revokedFamilies.has(r.family) : true;
-    },
-    /**
-     * 模擬 GET /api/oauth/login/google 加上 Google 授權完成後的 callback：驗發起參數（契約來源：api repo
-     * src/routes/handlers/oauth/login/google.ts 與 callback/google.ts），通過就發第一方 code（綁 dpop_jkt、無 redirect_uri）
-     * 並回傳 302 的 Location（redirect_uri?code=&state=）；參數不合回 null。`deny` 模擬使用者在 Google 取消（error=access_denied）。
-     */
-    googleLogin(loginUrl: string, opts: { deny?: boolean; email?: string } = {}): string | null {
-      const u = new URL(loginUrl);
-      if (u.origin + u.pathname !== `${FAKE_API_BASE}/api/oauth/login/google`) return null;
-      const q = u.searchParams;
-      if (q.get('client_id') !== 'tripline-web' || !FAKE_WEB_REDIRECT_URIS.includes(q.get('redirect_uri') ?? '')) return null;
-      const scope = q.get('scope') ?? DEFAULT_SCOPES;
-      if (!scopeAllowed(scope)) return null;
-      const challenge = q.get('code_challenge');
-      if (q.get('code_challenge_method') !== 'S256' || !challenge || !B64URL_43.test(challenge)) return null;
-      const jkt = q.get('dpop_jkt');
-      if (jkt !== null && !B64URL_43.test(jkt)) return null;
-      const back = new URL(q.get('redirect_uri')!);
-      if (opts.deny) back.searchParams.set('error', 'access_denied');
-      else {
-        const code = randomToken();
-        codes.set(code, { challenge, jkt, email: opts.email ?? FAKE_EMAIL, scope, redirectUri: null, used: false });
-        back.searchParams.set('code', code);
-      }
-      if (q.get('state')) back.searchParams.set('state', q.get('state')!);
-      return back.toString();
     },
     tokenRequests() { return requests.filter((r) => new URL(r.url).pathname === '/api/oauth/token'); },
   };

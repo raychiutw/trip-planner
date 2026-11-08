@@ -14,7 +14,6 @@ vi.mock('../../src/lib/auth', async (importOriginal) => {
     isAuthenticated: () => true, restoreSession: async () => true,
     apiFetch: (input, init) => globalThis.fetch(String(input), init),
     login: async () => { session.loggedIn = true; }, refresh: async () => {}, logout: async () => {},
-    startGoogleLogin: async () => '', finishGoogleLogin: async () => ({ redirectAfterLogin: null }),
   };
   return { ...actual, getNewApiAuth: () => client, getNewApiBase: () => '' };
 });
@@ -137,7 +136,6 @@ describe('public share read contract', () => {
         return session.loggedIn ? json({ id: 'u1', email: 'test@example.com', emailVerified: true, displayName: 'Test', avatarUrl: null, createdAt: '' }) : json({}, 401);
       }
       if (path === `/api/share/${tokenA}`) return json(payload('沖繩五日'));
-      if (path === '/api/public-config') return json({ providers: { google: false } });
       if (path === `/api/share/${tokenA}/clone`) return json({ tripId: 'new-trip' });
       throw new Error(`Unexpected request: ${path}`);
     });

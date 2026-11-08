@@ -19,8 +19,6 @@ vi.mock('../src/lib/auth', async (importOriginal) => {
     login: async () => {},
     refresh: async () => {},
     logout: async () => {},
-    startGoogleLogin: async () => '/__passthrough-google',
-    finishGoogleLogin: async () => ({ redirectAfterLogin: null }),
   };
   return { ...actual, getNewApiAuth: () => passthrough, getNewApiBase: () => '' };
 });

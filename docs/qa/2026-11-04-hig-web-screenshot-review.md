@@ -8,9 +8,11 @@
 
 ### 做到哪
 
-- 目前 **80 個場景**（60 個頁面與狀態、20 個彈出層）× 手機寬與桌機寬 × 淺色與深色 = **316 張截圖**（`popup-trip-sheet` 只有桌機寬 2 張、`trip-add-custom-stop` 只有手機寬 2 張，其餘各 4 張）。
-- 路由表 54 條：已取證 47、已排除（純轉址）6、缺口 1，取證率 **47/48（97.9%）**。彈出層元件 22 個：已取證 19、缺口 3（皆為沒有入口的元件），取證率 **19/22（86.4%）**。逐項對照見文末「覆蓋率」。
-- 發現 **55 條**，編號 1～54、70～80；**沒用到的編號**：35～44、55～69、81～99。原因：#1565、#1566、#1567 各預先配了 26～44、45～69、70～99 三個區段以避免撞號，實際只用到 34、54、80 為止，其餘留空，不是遺漏。每條都有場景、條目、發現、證據強度、一手來源標註與截圖連結。
+**2026-11-08（#1643）**：`/auth/callback` 頁隨 Google 登入整個移除，`auth-callback` 場景、4 張截圖與發現 31（頁面已不存在）一併拿掉；下列「目前」數字已扣除，其餘各輪次的敘述保留當時原樣。
+
+- 目前 **79 個場景**（59 個頁面與狀態、20 個彈出層）× 手機寬與桌機寬 × 淺色與深色 = **312 張截圖**（`popup-trip-sheet` 只有桌機寬 2 張、`trip-add-custom-stop` 只有手機寬 2 張，其餘各 4 張）。
+- 路由表 53 條：已取證 46、已排除（純轉址）6、缺口 1，取證率 **46/47（97.9%）**。彈出層元件 22 個：已取證 19、缺口 3（皆為沒有入口的元件），取證率 **19/22（86.4%）**。逐項對照見文末「覆蓋率」。
+- 發現 **54 條**，編號 1～30、32～54、70～80；**沒用到的編號**：31～31、35～44、55～69、81～99。原因：#1565、#1566、#1567 各預先配了 26～44、45～69、70～99 三個區段以避免撞號，實際只用到 34、54、80 為止，其餘留空，不是遺漏；31 原是 `auth-callback` 的發現，該頁已於 2026-11-08 移除（#1643），編號不重用。每條都有場景、條目、發現、證據強度、一手來源標註與截圖連結。
 - 觸控目標（44px）有自動量測與棘輪；axe、320px 重排、200% 文字、鍵盤焦點有補掃（範圍見「補掃」節與下方「沒逐張看」）。
 
 ### 還沒做（缺口，照實列出）
@@ -98,7 +100,6 @@
 | 28 | `oauth-authorize-login` | A1 | 「忘記密碼？」是 `display:inline` 的 `<a>`，樣式裡的 `min-height: 44px` 對行內元素無效，實際點擊高度約一行字；觸控量測因規則「不量行內連結」而量不到（量測盲點，不是沒有問題） | 看圖加程式碼 | 有：HIG accessibility（App 數值）；web 套 44 是專案自訂標準 | `oauth-authorize-login` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-login.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-authorize-login.png) |
 | 29 | `oauth-consent-unknown-scope` | H、F | 未知範圍（如 `admin:all`）和已知範圍一樣打綠勾圖示，只在文字尾端多一個「⚠ 未知範圍 — 請勿授權」；程式碼加了 `.unknown`／`.tp-consent-scope-warning` 類別，但全 repo 沒有對應樣式，所以警告沒有任何視覺強調，勾號反而暗示可以放行 | 看圖加程式碼（grep） | 有：HIG dark-mode（App 規範，web 屬類推）；部分：HIG text-fields 有；passwords 專頁無一手來源 | `oauth-consent-unknown-scope` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-unknown-scope.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent-unknown-scope.png) |
 | 30 | `oauth-consent-error`、`oauth-authorize-error` | G6 | 錯誤態沒有任何按鈕或連結（Tab 鍵可聚焦元素數為 0），是死路，只靠文字叫使用者回 App 或重新進入；`oauth-consent-error` 還沒有品牌字樣 | 看圖加 a11y 收集（tabbed 0） | 有：HIG feedback（App 規範，web 屬類推）；web 見 WCAG 3.3.1、4.1.3 | `oauth-consent-error` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-error.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent-error.png)<br>`oauth-authorize-error` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-error.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-authorize-error.png) |
-| 31 | `auth-callback` | — | 只有一行純文字「登入中…」，沒有轉圈、品牌或進度；token 兌換沒有逾時，請求卡住時頁面永遠停在這一行且沒有離開路徑（程式碼只有成功與失敗兩條導向） | 看圖加程式碼 | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `auth-callback` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/auth-callback.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/auth-callback.png) |
 | 32 | `oauth-authorize`、`oauth-consent` | 版面 | 同一條授權流程的兩頁桌機寬版面不一致：authorize 靠頂端、有 TRIPLINE 字樣；consent 垂直置中、只有「授權請求」 | 看圖 | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `oauth-authorize` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-authorize.png)<br>`oauth-consent` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent.png) |
 | 33 | `verify-email`（桌機寬） | 版面 | 小卡置中，比其他認證頁窄且沒有 Tripline 標誌與宣傳面板，視覺上像另一套頁面 | 看圖 | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `verify-email` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/verify-email.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/verify-email.png) |
 | 34 | `login-rate-limited`（桌機寬） | 版面 | 與 `login` 不同，沒有右側宣傳面板；卡片被拉高、下半是空白 | 看圖 | 無一手來源（看圖、程式碼或專案規範判讀，沒有對應 HIG 條文） | `login-rate-limited` [手機淺](2026-11-04-hig-web-screenshots/mobile/light/login-rate-limited.png) [桌機淺](2026-11-04-hig-web-screenshots/desktop/light/login-rate-limited.png) |
@@ -235,7 +236,6 @@
 | `oauth-consent` | 未見明顯問題 | 「拒絕授權」（次要）與「同意授權」（主要）等寬並排，說明如何撤銷；手機寬看過，桌機寬未看 |
 | `oauth-consent-unknown-scope` | 疑慮 | 見發現 29 |
 | `oauth-consent-error` | 疑慮 | 見發現 30 |
-| `auth-callback` | 疑慮 | 見發現 31 |
 
 工具限制：焦點收集（`hig-a11y-collect`）對 `change-password*` 回報「輸入框沒有焦點樣式」，那是誤報：輸入框自己 `outline:none`，焦點畫在整列（`:focus-within`），上方 `too-short`／`same` 的圖可見外框；收集器只看被聚焦元素本身。
 
@@ -348,7 +348,7 @@ HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案
 
 資料來源：`2026-11-04-hig-page-inventory.md` 的路由表與彈出層表、`tests/e2e/hig-scene-fixtures.js` 的 `SCENES`，由指令產出對照；場景連結指向手機寬淺色截圖（沒有手機寬者用桌機寬淺色）。
 
-- 路由：54 條，已取證 47、已排除 6、缺口 1；扣除已排除後取證率 **47/48（97.9%）**。
+- 路由：53 條，已取證 46、已排除 6、缺口 1；扣除已排除後取證率 **46/47（97.9%）**。
 - 彈出層元件：22 個，已取證 19、缺口 3；取證率 **19/22（86.4%）**。
 - 合計 66/70（94.3%）；**「已取證」不等於每張圖都逐張看過**，也不代表該頁的所有狀態都取證，見上方缺口與沒看清單。
 - 每個場景都對應到至少一個清單項目。
@@ -390,7 +390,6 @@ HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案
 | `/developer/apps/new` | 已取證 | [`developer-apps-new`](2026-11-04-hig-web-screenshots/mobile/light/developer-apps-new.png) | — |
 | `/oauth/consent` | 已取證 | [`oauth-consent`](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent.png)、[`oauth-consent-unknown-scope`](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-unknown-scope.png)、[`oauth-consent-error`](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-error.png) | — |
 | `/oauth/authorize` | 已取證 | [`oauth-authorize`](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize.png)、[`oauth-authorize-scopes`](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-scopes.png)、[`oauth-authorize-login`](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-login.png)、[`oauth-authorize-login-error`](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-login-error.png)、[`oauth-authorize-error`](2026-11-04-hig-web-screenshots/mobile/light/oauth-authorize-error.png) | — |
-| `/auth/callback` | 已取證 | [`auth-callback`](2026-11-04-hig-web-screenshots/mobile/light/auth-callback.png) | — |
 | `/invite` | 已取證 | [`invite`](2026-11-04-hig-web-screenshots/mobile/light/invite.png)、[`invite-invalid`](2026-11-04-hig-web-screenshots/mobile/light/invite-invalid.png) | — |
 | `/trips` | 已取證 | [`trips-list`](2026-11-04-hig-web-screenshots/mobile/light/trips-list.png)、[`trips-list-empty`](2026-11-04-hig-web-screenshots/mobile/light/trips-list-empty.png)、[`trips-list-error`](2026-11-04-hig-web-screenshots/mobile/light/trips-list-error.png) | — |
 | `/trips/new` | 已取證 | [`trips-new`](2026-11-04-hig-web-screenshots/mobile/light/trips-new.png) | — |
@@ -460,7 +459,7 @@ HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案
 
 ## 場景索引
 
-場景總數：**80**（60 個頁面與狀態、20 個彈出層），截圖共 **316** 張。
+場景總數：**79**（59 個頁面與狀態、20 個彈出層），截圖共 **312** 張。
 
 | 場景 | 類型 | 截圖數 | 截圖（手淺／手深／桌淺／桌深） | 對應清單項目 |
 |---|---|---|---|---|
@@ -496,7 +495,6 @@ HIG 結論的依據：本輪沒有查 Apple 一手文件；A1（44px）是專案
 | `oauth-consent` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/oauth-consent.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/oauth-consent.png) | 路由 `/oauth/consent` |
 | `oauth-consent-unknown-scope` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-unknown-scope.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/oauth-consent-unknown-scope.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent-unknown-scope.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/oauth-consent-unknown-scope.png) | 路由 `/oauth/consent` |
 | `oauth-consent-error` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/oauth-consent-error.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/oauth-consent-error.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/oauth-consent-error.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/oauth-consent-error.png) | 路由 `/oauth/consent` |
-| `auth-callback` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/auth-callback.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/auth-callback.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/auth-callback.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/auth-callback.png) | 路由 `/auth/callback` |
 | `trip-detail` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/trip-detail.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/trip-detail.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/trip-detail.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/trip-detail.png) | 路由 `/trip/:tripId` |
 | `trip-map` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/trip-map.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/trip-map.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/trip-map.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/trip-map.png) | 路由 `map` |
 | `trip-notes` | 頁面／狀態 | 4 | [手淺](2026-11-04-hig-web-screenshots/mobile/light/trip-notes.png) [手深](2026-11-04-hig-web-screenshots/mobile/dark/trip-notes.png) [桌淺](2026-11-04-hig-web-screenshots/desktop/light/trip-notes.png) [桌深](2026-11-04-hig-web-screenshots/desktop/dark/trip-notes.png) | 路由 `notes` |

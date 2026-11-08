@@ -1,6 +1,6 @@
 # web 頁面完整清單與 mock 場景對照（HIG 取證用）
 
-**目前數字**（#1568 彙整，以 `SCENES` 與路由表為準）：80 個場景、316 張截圖；路由表 54 條：已取證 47、已排除 6、缺口 1；彈出層 22 個：已取證 19、缺口 3。逐項對照與覆蓋率見 review 報告文末「覆蓋率」。
+**目前數字**（#1568 彙整，以 `SCENES` 與路由表為準）：79 個場景、312 張截圖（2026-11-08 扣除隨 Google 登入移除的 `/auth/callback`／`auth-callback`，#1643）；路由表 53 條：已取證 46、已排除 6、缺口 1；彈出層 22 個：已取證 19、缺口 3。逐項對照與覆蓋率見 review 報告文末「覆蓋率」。
 
 來源：flutter#531、trip-planner#1564。日期：2026-11-04，依 `src/entries/main.tsx` 的路由表產生。
 
@@ -49,7 +49,6 @@
 | `/developer/apps/new` | DeveloperAppNewPage | 已取證 | 3 | developer-apps-new |
 | `/oauth/consent` | ConsentPage | 已取證 | 1 | oauth-consent、oauth-consent-unknown-scope、oauth-consent-error |
 | `/oauth/authorize` | OauthAuthorizePage | 已取證 | 0 | oauth-authorize、oauth-authorize-scopes、oauth-authorize-login、oauth-authorize-login-error、oauth-authorize-error（走埠 3001 的建置，憑證種進 IndexedDB） |
-| `/auth/callback` | AuthCallbackPage | 已取證 | 0 | auth-callback（種入 Google 登入暫存、token 端點不回應，畫面停在「登入中…」；成功與失敗是轉址，不是畫面） |
 | `/invite` | InvitePage | 已取證 | 1 | invite、invite-invalid |
 | `/trips` | TripsListPage | 已取證 | 21 | trips-list、trips-list-empty、trips-list-error |
 | `/trips/new` | NewTripPage | 已取證 | 2 | trips-new |

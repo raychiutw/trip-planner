@@ -456,7 +456,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 刪除前的影響預覽（確認對話框用；含無密碼帳號可用的 reauthProvider） */
+                /** @description 刪除前的影響預覽（確認對話框用；reauthProvider／reauthenticated 為已棄用的相容欄位，恆為 null／false） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -510,7 +510,7 @@ export interface paths {
                         "application/json": components["schemas"]["Account_DeleteResult"];
                     };
                 };
-                /** @description 沒帶二次確認：有密碼的帳號沒給 password，或無密碼帳號的 confirm 不是 "DELETE"（code: ACCOUNT_DELETE_CONFIRM_REQUIRED） */
+                /** @description 有密碼的帳號沒給 password（code: ACCOUNT_DELETE_CONFIRM_REQUIRED） */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -528,198 +528,8 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description token 屬於非第一方 client 或受限 token（PERM_DENIED）；或無密碼帳號沒有「verified、同帳號、同 grant、同 client、同 surface（web／mobile 不可互用）、未過期」的 challenge，含 web 只帶 confirm、非 web 非 mobile 的 client（ACCOUNT_DELETE_REAUTH_REQUIRED，fail-closed，資料未動） */
+                /** @description token 屬於非第一方 client 或受限 token（PERM_DENIED）；或帳號沒有密碼、沒有可用的重新驗證方式（ACCOUNT_DELETE_REAUTH_REQUIRED，fail-closed，資料未動） */
                 403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/account/delete-reauth": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 查 challenge 狀態 */
-        get: {
-            parameters: {
-                query: {
-                    /** @description POST 回的 challengeId */
-                    challenge_id: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description challenge 狀態（Cache-Control: no-store）；過期為 expired */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Account_DeleteReauthStatus"];
-                    };
-                };
-                /** @description 沒帶 challenge_id（code: DATA_VALIDATION） */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 不是 mobile／web（tripline-web）client 簽發、綁 grant 的 user token（PERM_DENIED） */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description challenge 不存在，或不屬於這個使用者／grant／client／surface；一律同一個回應（DATA_NOT_FOUND） */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** 建立帳號刪除的 Google 重新驗證 challenge */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description 已建立 challenge（5 分鐘有效，Cache-Control: no-store）。用瀏覽器開 authorizeUrl 完成 Google 驗證後，callback 會 302：mobile 回 mobile callback ?challenge_id=…&status=verified（失敗為 status=failed）；web（tripline-web）回固定網址 ${WEB_ORIGIN}/account?deleteReauth=done（驗證失敗、取消、過期一律 deleteReauth=failed；WEB_ORIGIN 缺省用 PUBLIC_ORIGIN）。同一路徑依呼叫者的 client 自動判斷 surface */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Account_DeleteReauthStarted"];
-                    };
-                };
-                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 不是「與環境相符的 mobile client」或「tripline-web（Origin 須在 ALLOWED_ORIGINS）」簽發、綁 grant 的 user token（PERM_DENIED）；或此帳號沒有 Google 身分（ACCOUNT_DELETE_REAUTH_REQUIRED） */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description mobile：MOBILE_OAUTH_CALLBACK_URL 未設定、無效，或與環境契約不符；web：WEB_ORIGIN／PUBLIC_ORIGIN 未設定或無效（非 https、帶 path／query／userinfo）（SERVER_MISCONFIG） */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        /** 取消 challenge */
-        delete: {
-            parameters: {
-                query: {
-                    /** @description POST 回的 challengeId */
-                    challenge_id: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description pending／started／verified 轉為 cancelled；cancelled 重複取消維持 cancelled；failed 冪等維持 failed */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Account_DeleteReauthCancelled"];
-                    };
-                };
-                /** @description 沒帶 challenge_id（code: DATA_VALIDATION） */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 未登入、token 無效或已過期（code: AUTH_REQUIRED） */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 不是 mobile／web client 的 token（PERM_DENIED）；或 challenge 已過期（ACCOUNT_DELETE_REAUTH_REQUIRED） */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description challenge 不存在，或不屬於這個使用者／grant／client／surface（DATA_NOT_FOUND） */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description challenge 已 used（已用來刪帳號），或取消時狀態剛被並行請求改變（DATA_CONFLICT） */
-                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -965,7 +775,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 此帳號沒有 local 密碼（只用 Google 登入）（CHANGE_PASSWORD_NO_PASSWORD） */
+                /** @description 此帳號沒有 local 密碼（沒有設定密碼）（CHANGE_PASSWORD_NO_PASSWORD） */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -6494,175 +6304,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/oauth/login/google": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Google 登入（導向 Google） */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description 帳號刪除的 Google 重新驗證：帶 purpose=account-delete 與 challenge，其餘參數不需要（見 /api/account/delete-reauth） */
-                    purpose?: "account-delete";
-                    /** @description purpose=account-delete 時必填：POST /api/account/delete-reauth 發出的 challengeId */
-                    challenge?: string;
-                    /** @description 一般登入必填 */
-                    client_id?: string;
-                    /** @description 一般登入必填 */
-                    redirect_uri?: string;
-                    /** @description 一般登入必填；S256 */
-                    code_challenge?: string;
-                    code_challenge_method?: string;
-                    state?: string;
-                    scope?: string;
-                    /** @description 43 字元 base64url；第一方 public client 可綁 DPoP */
-                    dpop_jkt?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description 導向 https://accounts.google.com/o/oauth2/v2/auth（query 含 response_type、client_id、redirect_uri、scope、state、nonce、code_challenge、code_challenge_method；purpose=account-delete 另帶 prompt=select_account、max_age=0、claims={"id_token":{"auth_time":{"essential":true}}}，state 5 分鐘有效）；web surface 的 challenge 已取消／過期／用過：Location 為 ${WEB_ORIGIN}/account?deleteReauth=failed（狀態不動）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...（無 JSON 內容） */
-                302: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description client／redirect_uri 有問題（不可導回 client），或 dpop_jkt 格式不正確（invalid_request） */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["OauthMisc_OAuthError"];
-                    };
-                };
-                /** @description purpose=account-delete：沒帶 challenge，或 challenge 不存在，或 mobile challenge 已過期／client 與環境不符／狀態不是 pending 或 started，或 web challenge 的 client 不是 tripline-web（ACCOUNT_DELETE_REAUTH_REQUIRED） */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 尚未設定 Google 登入（OAUTH_NOT_CONFIGURED） */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/oauth/callback/google": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Google 登入 callback */
-        get: {
-            parameters: {
-                query: {
-                    code?: string;
-                    state: string;
-                    error?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description 成功：Location 為 client 註冊的 redirect_uri?code=<我們的 code>&state=...；帳號刪除重新驗證（state 帶 reauth）：mobile surface：Location 為 mobile callback?challenge_id=…&status=verified，任何失敗為 status=failed；web surface：Location 為 ${WEB_ORIGIN}/account?deleteReauth=done，任何失敗（含取消、過期）為 deleteReauth=failed（固定網址，不收呼叫者參數；皆不發 code、不建 user）；使用者在 Google 取消：redirect_uri?error=access_denied&state=...（無 JSON 內容） */
-                302: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description state 無效、過期或已使用（OAUTH_INVALID_STATE），或 Google email 未驗證（OAUTH_EMAIL_UNVERIFIED） */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description Google id_token 驗證失敗或 nonce 不符（OAUTH_INVALID_ID_TOKEN） */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 帳號已停用（OAUTH_ACCOUNT_SUSPENDED）；帳號刪除重新驗證失敗且沒有可導回的 challenge（state 的 client 與 surface 不符）（ACCOUNT_DELETE_REAUTH_REQUIRED） */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description email 已註冊但未驗證（OAUTH_EMAIL_CONFLICT） */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 向 Google 換 token 失敗（OAUTH_TOKEN_EXCHANGE_FAILED） */
-                502: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-                /** @description 尚未設定 Google 登入（OAUTH_NOT_CONFIGURED） */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/places/autocomplete": {
         parameters: {
             query?: never;
@@ -8608,7 +8249,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description 防帳號列舉：不論 email 是否存在、已驗證、僅 Google 登入，回應一律相同 */
+                /** @description 防帳號列舉：不論 email 是否存在、已驗證，回應一律相同 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -8657,7 +8298,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description 防帳號列舉：不論 email 是否存在、是否為本地帳號（含僅 Google 登入），回應一律相同 */
+                /** @description 防帳號列舉：不論 email 是否存在、是否為本地帳號，回應一律相同 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -10642,15 +10283,15 @@ export interface components {
             revoked_client_id: string;
         };
         Account_DeletePreview: {
-            /** @description 有 local 密碼身分 → 刪除時必須帶 password；否則要走 Google 重新驗證 challenge */
+            /** @description 有 local 密碼身分 → 刪除時必須帶 password 確認；沒有密碼的帳號目前沒有可用的重新驗證方式，無法刪除（fail-closed） */
             hasPassword: boolean;
+            /** @description 已棄用的相容欄位（Google 重新驗證已移除），恆為 null；舊 client 仍會讀它 */
+            reauthProvider: unknown;
             /**
-             * @description 無密碼帳號可用的重新驗證 provider（目前只有 google）；有密碼或沒有 Google 身分時為 null（此時無法刪除，fail-closed）
-             * @enum {string|null}
+             * @description 已棄用的相容欄位（Google 重新驗證已移除），恆為 false；舊 client 仍會讀它
+             * @enum {boolean}
              */
-            reauthProvider: "google" | null;
-            /** @description web 呼叫者（tripline-web）：本 grant 有一個 verified、未過期、未使用的 web challenge 時為 true；其餘（含 mobile、有密碼帳號）恆為 false */
-            reauthenticated: boolean;
+            reauthenticated: false;
             tripsOwned: number;
             /** @description 這些行程上「不是自己」的 distinct 共編者人數 */
             collaboratorsAffected: number;
@@ -10665,61 +10306,8 @@ export interface components {
             };
         };
         Account_DeleteBody: {
-            /** @description 帳號有 local 密碼身分時必填 */
+            /** @description 帳號有 local 密碼身分時必填（沒有密碼的帳號無法刪除，回 403 ACCOUNT_DELETE_REAUTH_REQUIRED） */
             password?: string;
-            /**
-             * @description 無密碼帳號的確認字串。mobile 必填；web（tripline-web）不需要（Google 重新驗證即確認，帶了也接受）。只帶它不夠，還要 challengeId
-             * @enum {string}
-             */
-            confirm?: "DELETE";
-            /** @description 無密碼帳號必填：POST /api/account/delete-reauth 取得、且已 verified（同帳號、同 grant、同 client、同 surface〔web／mobile 不可互用〕、未過期）的 challenge；只能消耗一次。web 的完整 body 為 { "challengeId": "<id>" } */
-            challengeId?: string;
-        };
-        /**
-         * @example {
-         *       "challengeId": "ch_Zk3...（不透明字串）",
-         *       "authorizeUrl": "https://api.example.com/api/oauth/login/google?purpose=account-delete&challenge=ch_Zk3...",
-         *       "expiresIn": 300
-         *     }
-         */
-        Account_DeleteReauthStarted: {
-            challengeId: string;
-            /** @description 用瀏覽器開啟（導覽，不能帶 bearer）：/api/oauth/login/google?purpose=account-delete&challenge=<challengeId>；Google 驗證後 mobile 導回 mobile callback（?challenge_id=…&status=…），web 導回 ${WEB_ORIGIN}/account?deleteReauth=done|failed（固定網址，不收呼叫者傳入的網址） */
-            authorizeUrl: string;
-            /**
-             * @description challenge 與 Google 驗證的有效期（秒）；Google auth_time 也必須在這段時間內
-             * @enum {number}
-             */
-            expiresIn: 300;
-        };
-        /**
-         * @example {
-         *       "status": "verified"
-         *     }
-         */
-        Account_DeleteReauthStatus: {
-            /**
-             * @description pending 剛建立 → started 已開始 Google 驗證 → verified 驗證成功（可刪帳號）→ used 已消耗；failed／cancelled 為終態；過期一律 expired
-             * @enum {string}
-             */
-            status: "pending" | "started" | "verified" | "failed" | "cancelled" | "used" | "expired";
-            /**
-             * @description 只在 expired 時出現（0）
-             * @enum {number}
-             */
-            expiresIn?: 0;
-        };
-        /**
-         * @example {
-         *       "status": "cancelled"
-         *     }
-         */
-        Account_DeleteReauthCancelled: {
-            /**
-             * @description cancelled：已取消；failed：驗證早已失敗，取消視為冪等的收尾（維持 failed）
-             * @enum {string}
-             */
-            status: "cancelled" | "failed";
         };
         Account_NotificationPreferencesResponse: {
             preferences: components["schemas"]["Account_NotificationPreferences"];
@@ -11739,7 +11327,11 @@ export interface components {
         };
         Pois_PublicConfigResponse: {
             providers: {
-                google: boolean;
+                /**
+                 * @description 已棄用的相容欄位（Google 登入已移除），恆為 false；舊 web 登入頁仍會讀它
+                 * @enum {boolean}
+                 */
+                google: false;
             };
             features: {
                 passwordSignup: boolean;

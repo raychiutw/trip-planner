@@ -8,7 +8,7 @@ vi.mock('../../src/lib/apiClient', () => ({ apiFetch: (path: string) => apiFetch
 import { useAccountPreview } from '../../src/hooks/useAccountPreview';
 
 const preview = (tripsOwned: number, hasPassword = true) => ({
-  hasPassword, reauthProvider: hasPassword ? null : 'google', reauthenticated: false, tripsOwned, collaboratorsAffected: 0,
+  hasPassword, tripsOwned, collaboratorsAffected: 0,
 });
 function deferred<T>() {
   let resolve!: (v: T) => void; let reject!: (e: unknown) => void;
@@ -75,13 +75,5 @@ describe('useAccountPreview', () => {
     expect(got).toBeNull();
     expect(result.current.status).toBe('error');
     expect(result.current.preview?.tripsOwned).toBe(7);
-  });
-
-  it('patch()：就地修改已載入的預覽（刪除流程標記 reauthenticated=false）', async () => {
-    apiFetchMock.mockResolvedValue({ ...preview(1, false), reauthenticated: true });
-    const { result } = renderHook(() => useAccountPreview(true));
-    await waitFor(() => expect(result.current.status).toBe('ready'));
-    act(() => result.current.patch((p) => ({ ...p, reauthenticated: false })));
-    expect(result.current.preview?.reauthenticated).toBe(false);
   });
 });

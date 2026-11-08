@@ -5,8 +5,7 @@
  * 接收 external client 的 authorize request，驗 + 生成 authorization_code +
  * redirect 回 client redirect_uri (with code + state)。
  *
- * Public OIDC path 對齊 discovery doc。Internal Google login 在
- * `/api/oauth/login/google`（V2-P5 routing fix 之前舊位置 = `/api/oauth/authorize?provider=google`）。
+ * Public OIDC path 對齊 discovery doc。
  *
  * Flow:
  *   1. Parse query params (client_id / redirect_uri / response_type / scope /

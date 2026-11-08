@@ -145,10 +145,6 @@ describe('audit fix source locks — medium tier', () => {
 
 // ---- Medium+low audit fixes (batch 3) ----
 describe('audit fix source locks — batch 3', () => {
-  it('oauth google callback recovers from concurrent first-login UNIQUE race', () => {
-    expect(read('functions/api/oauth/callback/google.ts')).toMatch(/async function recoverIdentityRace\(/);
-  });
-
   // #1257：add-to-trip 的 append / insert-before 改由 entry intake 承載，
   // tests/api/entry-intake.integration.test.ts「insert-before 讓位」走行為驗證。
 

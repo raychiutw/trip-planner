@@ -21,7 +21,7 @@ vi.mock('react-router-dom', async () => {
 import ChangePasswordPage from '../../src/pages/ChangePasswordPage';
 
 const preview = (hasPassword: boolean) => ({
-  hasPassword, reauthProvider: hasPassword ? null : 'google', reauthenticated: false, tripsOwned: 0, collaboratorsAffected: 0,
+  hasPassword, tripsOwned: 0, collaboratorsAffected: 0,
 });
 const renderPage = () => render(<MemoryRouter initialEntries={['/account/password']}><ChangePasswordPage /></MemoryRouter>);
 

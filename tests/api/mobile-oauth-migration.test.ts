@@ -66,8 +66,8 @@ describe('0097 mobile OAuth callback migration', () => {
     // 各測試檔共用同一份 D1：先保存會被 rollback 波及的既有 token 列，測完原樣放回
     const shared = (await db.prepare("SELECT name, id, payload, expires_at FROM oauth_models WHERE json_extract(payload, '$.client_id') IN (?, ?) OR json_extract(payload, '$.clientId') IN (?, ?)")
       .bind(...NEW_CLIENTS, ...NEW_CLIENTS).all<{ name: string; id: string; payload: string; expires_at: number }>()).results ?? [];
-    // 真實 token 的 payload 是 snake_case（見 oauth/token.ts），刪帳號 challenge 是 camelCase：兩種形狀都要被 rollback 撤銷
-    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?), ('AccountDeleteChallenge', 't-chal', ?, ?)")
+    // 真實 token 的 payload 是 snake_case（見 oauth/token.ts），另一種舊資料列是 camelCase：兩種形狀都要被 rollback 撤銷
+    await db.prepare("INSERT INTO oauth_models (name, id, payload, expires_at) VALUES ('AccessToken', 't-dev', ?, ?), ('LegacyCamelCaseRow', 't-chal', ?, ?)")
       .bind(JSON.stringify({ client_id: 'tripline-mobile-dev', user_id: 'u', scopes: ['openid'], grantId: 'g' }), Number.MAX_SAFE_INTEGER,
         JSON.stringify({ clientId: 'tripline-mobile-uat', uid: 'u', grantId: 'g', status: 'pending' }), Number.MAX_SAFE_INTEGER).run();
     const controlRows = [

@@ -24,13 +24,6 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import AiDataConsentSettings from '../components/AiDataConsentSettings';
 import { writeAuthHint } from '../lib/authHint';
 
-/** 新 api 模式：重新驗證的 challenge id 在導去 Google 前存起來，回到 /account 後 DELETE 要帶它（跨頁面導向，只能放 sessionStorage）。 */
-const DELETE_CHALLENGE_KEY = 'tp-delete-challenge';
-const readDeleteChallenge = (): string | null => { try { return sessionStorage.getItem(DELETE_CHALLENGE_KEY); } catch { return null; } };
-const writeDeleteChallenge = (id: string | null) => {
-  try { if (id) sessionStorage.setItem(DELETE_CHALLENGE_KEY, id); else sessionStorage.removeItem(DELETE_CHALLENGE_KEY); } catch { /* 無痕或被禁用：之後會要求重新驗證 */ }
-};
-
 interface AccountStats {
   tripCount: number;
   totalDays: number;
@@ -287,6 +280,7 @@ interface SettingsRow {
 }
 
 const DELETE_PASSWORD_INVALID = '密碼不正確，帳號未刪除';
+const NO_PASSWORD_DELETE_BLOCKED = '此帳號沒有設定密碼，無法在此刪除帳號。請聯絡客服協助。';
 
 export default function AccountPage() {
   const auth = useRequireAuth();
@@ -306,7 +300,6 @@ export default function AccountPage() {
   const accountPreview = useAccountPreview(!!auth.user);
   // 只有「剛取到」的預覽才可用於刪除確認；重取中或重取失敗時為 null（確認鈕不可按）
   const deletePreview = accountPreview.status === 'ready' ? accountPreview.preview : null;
-  const patchPreview = accountPreview.patch;
   const reloadPreview = accountPreview.reload;
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -373,7 +366,7 @@ export default function AccountPage() {
   }, [draftName, reloadUser, user]);
 
   /**
-   * 只有有 local 密碼的帳號才顯示「變更密碼」（只用 Google 登入的沒有密碼可改）。
+   * 只有有 local 密碼的帳號才顯示「變更密碼」。
    * 預覽取失敗時入口位置改顯示一列錯誤與「重試」（見 previewFailed）。
    */
   const hasPassword = accountPreview.preview?.hasPassword === true;
@@ -407,56 +400,15 @@ export default function AccountPage() {
 
   const closeDeleteModal = useCallback(() => setShowDeleteModal(false), []);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const result = new URLSearchParams(window.location.search).get('deleteReauth');
-    if (result !== 'done' && result !== 'failed') return;
-    window.history.replaceState(window.history.state, '', '/account');
-    if (result === 'failed') writeDeleteChallenge(null);
-    void openDeleteModal().then(() => {
-      if (result === 'failed') setDeleteError('身分驗證未完成，帳號尚未刪除。請重新驗證。');
-    });
-  }, [openDeleteModal, user?.id]);
-
-  /** 二次確認是否已滿足：有密碼要打密碼；純 OAuth 要先完成 Google 重新驗證，再打 DELETE。 */
-  const canConfirmDelete = deletePreview
-    ? (deletePreview.hasPassword ? deleteInput.length > 0 :
-      deletePreview.reauthProvider === 'google' && deleteInput === 'DELETE')
-    : false;
+  /** 刪除只走密碼確認；沒有密碼身分的帳號 fail-closed，永遠不能確認（api 端同樣回 403）。 */
+  const canConfirmDelete = !!deletePreview && deletePreview.hasPassword && deleteInput.length > 0;
 
   const deleteAccount = useCallback(async () => {
-    if (!deletePreview || !canConfirmDelete || deleting) return;
-    if (!deletePreview.hasPassword && !deletePreview.reauthenticated) {
-      // 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
-      setDeleteError(null);
-      try {
-        const started = unwrap(await typedApi.post('/api/account/delete-reauth'));
-        if (!started.challengeId || !started.authorizeUrl) throw new Error('Invalid delete-reauth response');
-        writeDeleteChallenge(started.challengeId);
-        window.location.href = started.authorizeUrl;
-      } catch {
-        setDeleteError('無法開始身分驗證，帳號尚未刪除。請稍後再試。');
-      }
-      return;
-    }
-    let challengeId: string | null = null;
-    if (!deletePreview.hasPassword) {
-      challengeId = readDeleteChallenge();
-      if (!challengeId) {
-        setDeleteError('近期身分驗證已失效，請重新驗證。帳號尚未刪除。');
-        patchPreview((current) => ({ ...current, reauthenticated: false }));
-        return;
-      }
-    }
+    if (!deletePreview || !deletePreview.hasPassword || !canConfirmDelete || deleting) return;
     setDeleting(true);
     setDeleteError(null);
     try {
-      // 無密碼帳號走到這裡時 canConfirmDelete 已保證 deleteInput === 'DELETE'
-      await typedApi.delete('/api/account', {
-        body: deletePreview.hasPassword ? { password: deleteInput }
-          : challengeId ? { challengeId } : { confirm: 'DELETE' },
-      });
-      writeDeleteChallenge(null);
+      await typedApi.delete('/api/account', { body: { password: deleteInput } });
       // 帳號已不存在，不能留在帳號頁。用整頁導向而非 SPA navigate —— 要把
       // 記憶體中的 auth context / 快取一併清掉。
       window.location.href = '/';
@@ -464,19 +416,13 @@ export default function AccountPage() {
       setDeleting(false);
       if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_PASSWORD_INVALID') {
         setDeleteError(DELETE_PASSWORD_INVALID, 'password');
+      } else if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
+        setDeleteError(NO_PASSWORD_DELETE_BLOCKED);
       } else {
-        setDeleteError(
-          err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED'
-            ? '近期身分驗證已失效，請重新驗證。帳號尚未刪除。'
-            : '刪除失敗，請稍後再試',
-        );
-      }
-      if (err instanceof ApiError && err.code === 'ACCOUNT_DELETE_REAUTH_REQUIRED') {
-        writeDeleteChallenge(null);
-        patchPreview((current) => ({ ...current, reauthenticated: false }));
+        setDeleteError('刪除失敗，請稍後再試');
       }
     }
-  }, [deletePreview, canConfirmDelete, deleteInput, deleting, patchPreview]);
+  }, [deletePreview, canConfirmDelete, deleteInput, deleting]);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -702,35 +648,31 @@ export default function AccountPage() {
             ? `其中有共編者的行程也會刪除，${deletePreview.collaboratorsAffected} 位共編者將失去存取權，且不會另行通知。`
             : undefined
         }
-        confirmLabel={deletePreview && !deletePreview.hasPassword && !deletePreview.reauthenticated ? '重新驗證身分' : '永久刪除'}
+        confirmLabel="永久刪除"
         cancelLabel="取消"
         busy={deleting}
         confirmDisabled={!canConfirmDelete}
         onConfirm={deleteAccount}
         onCancel={closeDeleteModal}
       >
-        {deletePreview && (
+        {deletePreview && !deletePreview.hasPassword && (
+          <p className="tp-account-delete-error" role="alert">{NO_PASSWORD_DELETE_BLOCKED}</p>
+        )}
+        {deletePreview && deletePreview.hasPassword && (
           <div className="tp-account-delete-confirm">
-            <label className="tp-account-delete-label" htmlFor="tp-delete-confirm-input">
-              {deletePreview.hasPassword ? '請輸入密碼以確認' : '請輸入 DELETE 以確認'}
-            </label>
+            <label className="tp-account-delete-label" htmlFor="tp-delete-confirm-input">請輸入密碼以確認</label>
             <input
               id="tp-delete-confirm-input"
               className="tp-input"
               data-testid="delete-account-confirm-input"
-              type={deletePreview.hasPassword ? 'password' : 'text'}
-              autoComplete={deletePreview.hasPassword ? 'current-password' : 'off'}
+              type="password"
+              autoComplete="current-password"
               value={deleteInput}
               onChange={(e) => { setDeleteInput(e.target.value); if (deletePasswordInvalid) setDeleteError(null); }}
               aria-invalid={deletePasswordInvalid || undefined}
               aria-describedby={deletePasswordInvalid ? 'tp-delete-confirm-error' : undefined}
               disabled={deleting}
             />
-            {!deletePreview.hasPassword && !deletePreview.reauthenticated && (
-              <p className="tp-hint">{deletePreview.reauthProvider === 'google'
-                ? '接下來會使用 Google 重新驗證此帳號，返回後才能永久刪除。'
-                : '此帳號目前沒有可用的重新驗證方式，帳號尚未刪除。'}</p>
-            )}
             {deleteError && (
               <p className="tp-account-delete-error" id="tp-delete-confirm-error" role="alert">{deleteError}</p>
             )}
