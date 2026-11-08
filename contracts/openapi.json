@@ -6067,6 +6067,23 @@
           "completedAt"
         ]
       },
+      "Trips_AiAuthorizationStatus": {
+        "type": "object",
+        "properties": {
+          "ownerAuthorized": {
+            "type": "boolean",
+            "description": "行程擁有者是否已授權 Tripline AI（tp-request）"
+          },
+          "isOwner": {
+            "type": "boolean",
+            "description": "登入者是否就是行程擁有者"
+          }
+        },
+        "required": [
+          "ownerAuthorized",
+          "isOwner"
+        ]
+      },
       "Trips_HealthCheckTriggerResult": {
         "type": "object",
         "properties": {
@@ -6512,23 +6529,6 @@
           "ticket",
           "expires_in"
         ]
-      },
-      "Trips_AiAuthorizationStatus": {
-        "type": "object",
-        "properties": {
-          "ownerAuthorized": {
-            "type": "boolean",
-            "description": "行程擁有者是否已授權 Tripline AI（tp-request）"
-          },
-          "isOwner": {
-            "type": "boolean",
-            "description": "登入者是否就是行程擁有者"
-          }
-        },
-        "required": [
-          "ownerAuthorized",
-          "isOwner"
-        ]
       }
     },
     "parameters": {}
@@ -6569,11 +6569,20 @@
                             "ok",
                             "missing"
                           ]
+                        },
+                        "oauthSigningKey": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "missing",
+                            "invalid"
+                          ]
                         }
                       },
                       "required": [
                         "d1",
-                        "googleMapsKey"
+                        "googleMapsKey",
+                        "oauthSigningKey"
                       ]
                     },
                     "ts": {
@@ -6621,11 +6630,20 @@
                             "ok",
                             "missing"
                           ]
+                        },
+                        "oauthSigningKey": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "missing",
+                            "invalid"
+                          ]
                         }
                       },
                       "required": [
                         "d1",
-                        "googleMapsKey"
+                        "googleMapsKey",
+                        "oauthSigningKey"
                       ]
                     },
                     "ts": {
@@ -16284,6 +16302,17 @@
             "required": false,
             "description": "預設 50；due-refresh 上限 200、pending-place-id 上限 500",
             "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "游標：只回 id 大於該值的列（id 升冪）"
+            },
+            "required": false,
+            "description": "游標：只回 id 大於該值的列（id 升冪）",
+            "name": "after_id",
             "in": "query"
           }
         ],

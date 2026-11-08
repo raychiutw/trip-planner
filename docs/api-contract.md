@@ -29,3 +29,7 @@
 - 涵蓋不到：變數組成的路徑、非行內的 body、回應欄位、query 參數。
 - `KNOWN_GAPS` 是有理由的已知落差（目前只有旗標關閉時的舊入口帳密登入）；每筆都有「仍是落差」的反向檢查，過期會轉紅。
 - 更新快照：照上面「同步步驟」覆蓋 `contracts/openapi.json`；測試失敗代表 web 與新契約漂移，修 web 呼叫端，不要弱化測試。
+
+## 目前快照
+
+`contracts/openapi.json` 取自 production `GET https://trip-planner-api-production.lean-lean.workers.dev/openapi.json`（2026-11-08，117 條路徑）。更新指令：`curl -sS <上述網址> -o /tmp/o.json && node -e "const fs=require('fs');fs.writeFileSync('contracts/openapi.json',JSON.stringify(JSON.parse(fs.readFileSync('/tmp/o.json','utf8')),null,2)+'\\n')" && npm run gen:api`，再跑 `npm run check:api-contract` 與測試。
