@@ -146,12 +146,6 @@ const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
   'src/components/trip/CustomPoiForm.tsx': { max: 1, reason: '待遷移' },
   'src/components/trip/GooglePoiCard.tsx': { max: 1, reason: '待遷移' },
   'src/components/trip/TravelPillDialog.tsx': { max: 1, reason: '待遷移' },
-  'src/components/trip-notes/EmergencySection.tsx': { max: 6, reason: '待遷移' },
-  'src/components/trip-notes/FlightsSection.tsx': { max: 4, reason: '待遷移' },
-  'src/components/trip-notes/LodgingsSection.tsx': { max: 4, reason: '待遷移' },
-  'src/components/trip-notes/NoteAiExclusionsDialog.tsx': { max: 2, reason: '待遷移' },
-  'src/components/trip-notes/PretripSection.tsx': { max: 6, reason: '待遷移' },
-  'src/components/trip-notes/ReservationsSection.tsx': { max: 4, reason: '待遷移' },
   'src/components/trips/ImportTripButton.tsx': { max: 1, reason: '待遷移' },
   'src/hooks/useAccountPreview.ts': { max: 1, reason: '待遷移' },
   'src/hooks/useAddToTripTarget.ts': { max: 1, reason: '待遷移' },
@@ -159,7 +153,6 @@ const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
   'src/hooks/useChatPagination.ts': { max: 3, reason: '待遷移' },
   'src/hooks/useConversation.ts': { max: 5, reason: '待遷移' },
   'src/hooks/useMyTrips.ts': { max: 1, reason: '待遷移' },
-  'src/hooks/useNoteAiObserver.ts': { max: 2, reason: '待遷移' },
   'src/hooks/usePermissions.ts': { max: 2, reason: '待遷移' },
   'src/hooks/usePlacesAutocomplete.ts': { max: 1, reason: '待遷移' },
   'src/hooks/usePoiFavorites.ts': { max: 1, reason: '待遷移' },
@@ -199,7 +192,6 @@ const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
   'src/pages/SessionsPage.tsx': { max: 5, reason: '待遷移' },
   'src/pages/SignupPage.tsx': { max: 2, reason: '待遷移' },
   'src/pages/TripHealthCheckPage.tsx': { max: 5, reason: '待遷移' },
-  'src/pages/TripNotesPage.tsx': { max: 1, reason: '待遷移' },
   'src/pages/VerifyEmailPage.tsx': { max: 1, reason: '待遷移' },
 };
 

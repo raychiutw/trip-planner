@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 
 export type NoteAiDocType = 'lodging-tips' | 'tips' | 'emergency';
 
@@ -106,9 +106,9 @@ export default function NoteAiExclusionsDialog({
     setLoading(true);
     setError(null);
     void Promise.all(docTypes.map(async (docType) => {
-      const response = await apiFetch<{ items: Exclusion[] }>(
-        `/trips/${tripId}/notes/${docType}/exclusions`,
-      );
+      const response = unwrap(await typedApi.get('/api/trips/{id}/notes/{type}/exclusions', {
+        path: { id: tripId, type: docType },
+      })) as { items: Exclusion[] };
       return response.items ?? [];
     })).then((groups) => {
       if (!cancelled) setItems(groups.flat());
@@ -128,10 +128,9 @@ export default function NoteAiExclusionsDialog({
     setRestoringId(item.id);
     setError(null);
     try {
-      await apiFetch(
-        `/trips/${tripId}/notes/${item.docType}/exclusions/${item.id}`,
-        { method: 'DELETE' },
-      );
+      await typedApi.delete('/api/trips/{id}/notes/{type}/exclusions/{exclusionId}', {
+        path: { id: tripId, type: item.docType, exclusionId: String(item.id) },
+      });
       setItems((current) => current.filter((candidate) => candidate.id !== item.id));
       onRestored();
     } catch (reason) {

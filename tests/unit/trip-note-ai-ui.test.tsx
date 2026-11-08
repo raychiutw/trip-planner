@@ -324,12 +324,12 @@ describe('TripNotesPage AI state', () => {
     );
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
       '/trips/trip-a/notes/ai-state',
-      undefined,
+      { method: 'GET' },
     ));
     fireEvent.click(screen.getByRole('button', { name: '切換行程' }));
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
       '/trips/trip-b/notes/ai-state',
-      undefined,
+      { method: 'GET' },
     ));
 
     await act(async () => {
@@ -364,7 +364,7 @@ describe('TripNotesPage AI state', () => {
         <Routes><Route path="/trip/:tripId/notes" element={<TripNotesPage />} /></Routes></>;
     }
     render(<MemoryRouter initialEntries={['/trip/trip-a/notes']}><Harness /></MemoryRouter>);
-    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/trips/trip-a/notes', undefined));
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/trips/trip-a/notes', { method: 'GET' }));
     fireEvent.click(screen.getByRole('button', { name: '切換行程' }));
     expect(await screen.findByText('Current Hotel')).toBeInTheDocument();
     await act(async () => { oldNotes.resolve(NOTES); });
@@ -453,7 +453,7 @@ describe('TripNotesPage AI state', () => {
     fireEvent.click(screen.getByRole('button', { name: '切換行程' }));
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
       '/trips/trip-b/notes/ai-state',
-      undefined,
+      { method: 'GET' },
     ));
     expect(await screen.findByTestId('trip-notes-ai-btn-pretrip')).toBeEnabled();
 
@@ -489,7 +489,7 @@ describe('TripNotesPage AI state', () => {
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     fireEvent.click(screen.getByRole('button', { name: '到 B' }));
-    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/trips/trip-b/notes/ai-state', undefined));
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith('/trips/trip-b/notes/ai-state', { method: 'GET' }));
     fireEvent.click(screen.getByRole('button', { name: '回 A' }));
     await waitFor(() => expect(apiFetchMock.mock.calls.filter(([path]) => path === '/trips/trip-a/notes/ai-state')).toHaveLength(2));
     await act(async () => { oldPost.resolve({ jobId: 91, requestId: 92, status: 'pending', generation: 9, timeoutAt: '2026-07-28 05:10:00' }); });

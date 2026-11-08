@@ -55,3 +55,20 @@ describe('typedApi（旗標關閉：同源 /api）', () => {
     expect(unwrap(r)).toBeUndefined();
   });
 });
+
+describe('typedApi 傳給 apiFetch 的參數與手寫呼叫同形（遷移不改行為）', () => {
+  it('GET 不帶 redirect:manual、空 headers 與空 signal', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await typedApi.get('/api/account');
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.redirect).toBeUndefined();
+    expect(init.method).toBe('GET');
+  });
+
+  it('signal 原樣帶到 fetch', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    const ctrl = new AbortController();
+    await typedApi.get('/api/account', { signal: ctrl.signal });
+    expect(fetchMock.mock.calls[0]![1].signal).toBe(ctrl.signal);
+  });
+});

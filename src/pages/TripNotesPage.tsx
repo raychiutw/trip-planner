@@ -35,7 +35,7 @@ import EmergencySection from '../components/trip-notes/EmergencySection';
 import NoteAiExclusionsDialog, {
   type NoteAiDocType,
 } from '../components/trip-notes/NoteAiExclusionsDialog';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { showToast } from '../components/shared/Toast';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -377,7 +377,7 @@ export default function TripNotesPage() {
     if (showLoading) setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<NotesAggregator>(`/trips/${tripId}/notes`);
+      const res = unwrap(await typedApi.get('/api/trips/{id}/notes', { path: { id: tripId } })) as unknown as NotesAggregator;
       if (request !== notesRequestRef.current || currentTripIdRef.current !== tripId) return;
       setData(res);
     } catch (err) {
