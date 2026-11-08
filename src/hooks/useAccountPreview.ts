@@ -10,7 +10,7 @@
  * - 刪除確認要自己判斷預覽是否「剛取到」（status==='ready'）；`patch()` 就地改已載入的預覽。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { isAccountPreview, type AccountPreview } from '../types/account';
 
 export type AccountPreviewStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -28,7 +28,7 @@ export function useAccountPreview(autoLoad: boolean) {
     setState((s) => ({ status: 'loading', preview: s.preview }));
     const p = (async () => {
       try {
-        const data = await apiFetch<unknown>('/account');
+        const data = unwrap(await typedApi.get('/api/account')) as unknown;
         if (!isAccountPreview(data)) throw new Error('Invalid account preview');
         if (mounted.current) setState({ status: 'ready', preview: data });
         return data;

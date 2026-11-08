@@ -19,12 +19,15 @@ export const typedApi: Api = createApi({
     const headers = Object.fromEntries([...new Headers(init?.headers)].map(([k, v]) => [k === 'content-type' ? 'Content-Type' : k, v]));
     // redirect:'manual' 是通用 client 的預設，apiFetch 本來就沒設（跟隨導向）：這裡拿掉，行為與遷移前一致；
     // 沒有 header／signal 時也不帶空值，讓傳給 apiFetch 的參數與手寫呼叫同形
-    const { redirect: _redirect, headers: _headers, signal, ...rest } = init ?? {};
-    const data = await apiFetch<unknown>(input.replace(/^\/api/, ''), {
+    const { redirect: _redirect, headers: _headers, signal, method, ...rest } = init ?? {};
+    const opts: RequestInit & { signal?: AbortSignal } = {
       ...rest,
+      ...(method && method !== 'GET' ? { method } : {}), // GET 是 apiFetch 的預設
       ...(Object.keys(headers).length ? { headers } : {}),
       ...(signal ? { signal } : {}),
-    });
+    };
+    const path = input.replace(/^\/api/, '');
+    const data = await (Object.keys(opts).length ? apiFetch<unknown>(path, opts) : apiFetch<unknown>(path));
     // 成功一律合成 200／204：呼叫端靠 data 判斷，不依賴確切的 2xx 狀態碼
     return data === undefined
       ? new Response(null, { status: 204 })

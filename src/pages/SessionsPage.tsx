@@ -15,7 +15,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch, apiFetchRaw } from '../lib/apiClient';
+import { apiFetchRaw } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { clearApiCache } from '../lib/logout';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -230,7 +231,7 @@ export default function SessionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const json = await apiFetch<{ sessions: SessionRow[] }>('/account/sessions');
+      const json = unwrap(await typedApi.get('/api/account/sessions')) as unknown as { sessions: SessionRow[] };
       setSessions(json.sessions);
       setLoadError(false);
       if (retryRequested.current) {
@@ -255,7 +256,7 @@ export default function SessionsPage() {
   async function revokeOne(sid: string) {
     setRevokingSid(sid);
     try {
-      await apiFetch(`/account/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+      await typedApi.delete('/api/account/sessions/{sid}', { path: { sid } });
       setSessions((prev) => prev?.filter((s) => s.sid !== sid) ?? null);
       setError(null);
     } catch {
@@ -271,7 +272,7 @@ export default function SessionsPage() {
     setRevokeAllConfirmOpen(false);
     setRevokingAll(true);
     try {
-      await apiFetch('/account/sessions', { method: 'DELETE' });
+      await typedApi.delete('/api/account/sessions');
       // The server confirmed the revoke; remove only non-current rows locally.
       setSessions((prev) => prev?.filter((s) => s.is_current) ?? null);
       setError(null);

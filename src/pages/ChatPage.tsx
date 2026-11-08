@@ -27,7 +27,7 @@ import { useConversation } from '../hooks/useConversation';
 import { useTripSelection } from '../hooks/useMyTrips';
 import type { ChatMessage } from '../lib/conversation';
 import { parseUtcDate } from '../lib/parseUtcDate';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { LS_KEY_TRIP_PREF, LS_PREFIX } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
@@ -731,7 +731,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     setConsentBusy(true);
     setConsentError(null);
     try {
-      await apiFetch('/account/ai-authorization', { method: 'POST' });
+      await typedApi.post('/api/account/ai-authorization');
       setAiAuthorized(true);
       if (consentGateRef.current !== pending || currentTripIdRef.current !== pending.tripId) return;
       consentGateRef.current = null;
@@ -753,8 +753,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   // 也只是多點一次「授權並送出」（POST 冪等），不致卡死。
   useEffect(() => {
     let cancelled = false;
-    apiFetch<{ authorized: boolean }>('/account/ai-authorization')
-      .then((r) => { if (!cancelled) setAiAuthorized(r.authorized); })
+    typedApi.get('/api/account/ai-authorization')
+      .then((r) => { if (!cancelled) setAiAuthorized(unwrap(r).authorized); })
       .catch(() => { if (!cancelled) setAiAuthorized(false); });
     return () => { cancelled = true; };
   }, []);
@@ -762,8 +762,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   useEffect(() => {
     if (!activeTripId) return;
     let cancelled = false;
-    apiFetch<{ ownerAuthorized: boolean; isOwner: boolean }>(`/trips/${encodeURIComponent(activeTripId)}/ai-authorization`)
-      .then((r) => { if (!cancelled && typeof r?.ownerAuthorized === 'boolean') setTripAi({ tripId: activeTripId, ...r }); })
+    typedApi.get('/api/trips/{id}/ai-authorization', { path: { id: activeTripId } })
+      .then((res) => { const r = unwrap(res); if (!cancelled && typeof r?.ownerAuthorized === 'boolean') setTripAi({ tripId: activeTripId, ...r }); })
       .catch(() => { /* 查不到就不攔 */ });
     return () => { cancelled = true; };
   }, [activeTripId]);

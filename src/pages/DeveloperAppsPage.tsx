@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { ApiError } from '../lib/errors';
 import { EVENT } from '../lib/events';
 import { parseUtcDate } from '../lib/parseUtcDate';
@@ -160,7 +160,7 @@ export default function DeveloperAppsPage() {
     setError(null);
     setCopyState(null);
     try {
-      const json = await apiFetch<{ apps: ClientApp[] }>('/dev/apps');
+      const json = unwrap(await typedApi.get('/api/dev/apps')) as unknown as { apps: ClientApp[] };
       if (sequence === loadSequence.current) setApps(json.apps);
     } catch (err) {
       if (sequence === loadSequence.current) {

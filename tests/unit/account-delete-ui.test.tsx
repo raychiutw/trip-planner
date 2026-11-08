@@ -41,7 +41,7 @@ describe('帳號頁 — 確認流程必須誠實揭露影響', () => {
   it('開啟確認前先取 GET /api/account 預覽', () => {
     // 預覽由 useAccountPreview 取（GET /account）；頁面打開確認前一定先呼叫它的 reload
     expect(page).toMatch(/useAccountPreview/);
-    expect(readFileSync(resolve(ROOT, 'src/hooks/useAccountPreview.ts'), 'utf-8')).toMatch(/apiFetch<unknown>\(\s*['"`]\/account['"`]\s*\)/);
+    expect(readFileSync(resolve(ROOT, 'src/hooks/useAccountPreview.ts'), 'utf-8')).toMatch(/typedApi\.get\(\s*['"`]\/api\/account['"`]\s*\)/);
   });
 
   it('確認畫面顯示會被刪除的行程數', () => {

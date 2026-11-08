@@ -62,7 +62,9 @@ describe('typedApi 傳給 apiFetch 的參數與手寫呼叫同形（遷移不改
     await typedApi.get('/api/account');
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init.redirect).toBeUndefined();
-    expect(init.method).toBe('GET');
+    expect(init.method).toBeUndefined(); // GET 是預設，與手寫 apiFetch('/x') 同形
+    expect(init.headers).toEqual({});
+    expect(init.signal).toBeUndefined();
   });
 
   it('signal 原樣帶到 fetch', async () => {
