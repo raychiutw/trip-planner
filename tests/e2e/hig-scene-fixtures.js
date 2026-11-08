@@ -297,8 +297,8 @@ const SCENES = [
   { name: 'trip-add-stop', path: `/trip/${TRIP}/add-stop` },
   { name: 'trip-add-entry', path: `/trip/${TRIP}/add-entry` },
   // ── 認證流程的各狀態、邀請與清單的空／錯誤態（取證補強）──
-  { name: 'login-error', path: '/login', loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤', intended: '401 /api/oauth/login' },
-  { name: 'login-rate-limited', path: '/login', loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked', intended: '429 /api/oauth/login' },
+  { name: 'login-error', path: '/login', newApi: true, loggedIn: false, stub: stubLogin(401, 'LOGIN_INVALID'), act: submitLogin, proofText: '電子郵件或密碼錯誤', intended: '401 /api/oauth/login' },
+  { name: 'login-rate-limited', path: '/login', newApi: true, loggedIn: false, stub: stubLogin(429, 'LOGIN_RATE_LIMITED', { 'Retry-After': '900' }), act: submitLogin, proof: 'login-page-locked', intended: '429 /api/oauth/login' },
   { name: 'signup-check-email', path: '/signup/check-email?email=ray%40example.com', loggedIn: false, proofText: /ray@example\.com/ },
   { name: 'reset-password', path: '/auth/password/reset?token=demo-token', loggedIn: false, proofText: '設定新密碼' },
   { name: 'verify-email', path: '/auth/verify-email?token=demo-token', loggedIn: false, proofText: '點此完成驗證' },

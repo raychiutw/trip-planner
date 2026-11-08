@@ -715,6 +715,16 @@ async function setupApiMocks(page) {
     });
   });
 
+  // 帳號頁一進來就取 GET /api/account（變更密碼入口與刪除確認共用的預覽；真實契約欄位）
+  await page.route(/\/api\/account$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ hasPassword: true, reauthProvider: null, reauthenticated: false, tripsOwned: 2, collaboratorsAffected: 1 }),
+    });
+  });
+
   await page.route(/\/api\/account\/sessions(?:\/[^/]+)?$/, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
