@@ -21,3 +21,11 @@
 ## 為何不是「各自維護」
 
 兩邊各改會再次漂移（本檔曾落後 api 上千行）；api 的契約測試會驗證實際回應符合匯出的 schema，所以它才是會被執行驗證的那一份。
+
+## web 呼叫守衛（`tests/unit/web-api-contract.test.ts`）
+
+掃 `src` 內所有 `apiFetch`／`apiFetchRaw` 呼叫，驗證路徑＋method 都在 `contracts/openapi.json`，且行內 `JSON.stringify({...})` 的 body 涵蓋契約 requestBody 的必填欄位。api 改名／移除端點或新增必填欄位，同步契約檔後這支測試會指出 web 哪個檔案還在用舊的。
+
+- 涵蓋不到：變數組成的路徑、非行內的 body、回應欄位、query 參數。
+- `KNOWN_GAPS` 是有理由的已知落差（目前只有旗標關閉時的舊入口帳密登入）；每筆都有「仍是落差」的反向檢查，過期會轉紅。
+- 更新快照：照上面「同步步驟」覆蓋 `contracts/openapi.json`；測試失敗代表 web 與新契約漂移，修 web 呼叫端，不要弱化測試。
