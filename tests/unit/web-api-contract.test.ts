@@ -157,7 +157,7 @@ const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
   'src/pages/EditTripPage.tsx': { max: 6, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/pages/EmailVerifyPendingPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/pages/ForgotPasswordPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/LoginPage.tsx': { max: 2, reason: '待 refactor/web-remove-google-login 合併後再處理（該 PR 會動這支檔案）；另有 apiFetchRaw 判讀狀態碼' },
+  'src/pages/LoginPage.tsx': { max: 1, reason: '另有 apiFetchRaw 判讀狀態碼（Google 移除後剩 1 處）' },
   'src/pages/NewTripPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/pages/ResetPasswordPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/pages/SessionsPage.tsx': { max: 2, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
