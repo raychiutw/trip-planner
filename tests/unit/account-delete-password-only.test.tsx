@@ -84,10 +84,13 @@ describe('無密碼帳號：fail-closed', () => {
     show();
     fireEvent.click(await screen.findByTestId('account-row-delete-account'));
     expect(await screen.findByText('此帳號沒有設定密碼，無法在此刪除帳號。請聯絡客服協助。')).toBeVisible();
+    // 即使（錯誤地）有輸入欄、打了舊的確認字串，也不能放行
+    const input = screen.queryByTestId('delete-account-confirm-input');
+    if (input) fireEvent.change(input, { target: { value: 'DELETE' } });
     const confirm = screen.getByTestId('confirm-modal-confirm');
     expect(confirm).toBeDisabled();
     fireEvent.click(confirm);
-    expect(screen.queryByTestId('delete-account-confirm-input')).toBeNull();
+    expect(input, '無密碼帳號不提供輸入欄').toBeNull();
     noDelete();
     expect(hrefSet).toEqual([]);
   });
