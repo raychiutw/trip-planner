@@ -1,9 +1,11 @@
 /**
  * 跨 repo 契約守衛（trip-planner#1626 追加）：web SPA 實際呼叫的 api 端點與請求必填欄位，必須存在於 contracts/openapi.json。
  *
- * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）的字串／樣板路徑，
- *   1. 路徑（含 method，無 `method:` 視為 GET）必須在契約內；
- *   2. 若 body 是 `JSON.stringify({ ... })` 的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
+ * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）與 `typedApi.get/post/put/patch/delete` 的字串／樣板路徑，
+ *   1. 路徑（含 method；apiFetch 無 `method:` 視為 GET，typedApi 取自成員名）必須在契約內；
+ *   2. 若 body 是 `JSON.stringify({ ... })`（apiFetch）或 `body: { ... }`（typedApi）的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
+ * typedApi 另有編譯期檢查（路徑、body、回應型別），這裡是執行期的第二道（兩者等價或更強）。
+ * 最後一組是棘輪：頁面不得再直接用 apiFetch／apiFetchRaw，例外只能列在 DIRECT_ALLOWED（附原因、只能減不能增）。
  * 契約檔是 api repo 匯出的逐字複本（見 docs/api-contract.md）；api 改路徑／欄位後同步進來，web 若還在用舊的，這裡轉紅。
  * 換快照來源只要設環境變數 API_CONTRACT_FILE（預設 contracts/openapi.json）。
  *
@@ -33,10 +35,13 @@ function listSources(dir: string): string[] {
   });
 }
 
-/** 取 `JSON.stringify(` 後行內物件字面量的最上層 key；有 spread 或無法解析回 null。 */
-function bodyKeys(win: string): string[] | null {
-  const i = win.indexOf('JSON.stringify(');
-  if (i < 0 || win[i + 15] !== '{') return null;
+/** 取 `JSON.stringify(`（apiFetch）或 `body: `（typedApi）後行內物件字面量的最上層 key；有 spread 或無法解析回 null。 */
+function bodyKeys(win: string, typed: boolean): string[] | null {
+  const marker = typed ? /\bbody:\s*(?=\{)/ : /JSON\.stringify\((?=\{)/;
+  const mm = marker.exec(win);
+  if (!mm) return null;
+  const open = mm.index + mm[0].length;
+  const i = open - 15; // 沿用下方 i + 15 為 '{'、i + 16 為內容起點的算法
   let depth = 0;
   let end = i + 15;
   for (; end < win.length; end++) {
@@ -62,18 +67,19 @@ function bodyKeys(win: string): string[] | null {
   return keys;
 }
 
-interface Call { file: string; method: string; path: string; keys: string[] | null }
-const CALL = /apiFetch(?:Raw)?(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\1).)*)\1/g;
+interface Call { file: string; method: string; path: string; keys: string[] | null; typed: boolean }
+const CALL = /(?:apiFetch(?:Raw)?|typedApi\.(get|post|put|patch|delete))(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\2).)*)\2/g;
 const calls: Call[] = listSources(join(ROOT, 'src')).flatMap((file) => {
   const text = readFileSync(file, 'utf8');
   return [...text.matchAll(CALL)].map((m) => {
     const rest = text.slice(m.index! + m[0].length);
-    const next = rest.search(/apiFetch/);
+    const next = rest.search(/apiFetch|typedApi/);
     const win = rest.slice(0, Math.min(next > 0 ? next : 600, 600));
     // 樣板的 ${...} 視為路徑參數；結尾緊貼的 ${...}（如 `?query` 後綴）不算一段
-    let path = m[2]!.split('?')[0]!.replace(/\$\{[^}]*\}/g, '{}').replace(/([^/])\{\}$/, '$1');
+    const typed = m[1] !== undefined;
+    let path = m[3]!.split('?')[0]!.replace(/\$\{[^}]*\}/g, '{}').replace(/([^/])\{\}$/, '$1');
     if (!path.startsWith('/api/')) path = '/api' + path;
-    return { file: file.replace(ROOT + '/', ''), method: win.match(/method:\s*'(\w+)'/)?.[1] ?? 'GET', path, keys: bodyKeys(win) };
+    return { file: file.replace(ROOT + '/', ''), method: m[1]?.toUpperCase() ?? win.match(/method:\s*'(\w+)'/)?.[1] ?? 'GET', path, keys: bodyKeys(win, typed), typed };
   });
 });
 
@@ -95,7 +101,7 @@ function requiredOf(op: Op): string[] | null {
 
 describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
   it('掃得到足夠的呼叫（掃描器失效時不會假綠）', () => {
-    expect(calls.length).toBeGreaterThan(100);
+    expect(calls.length, 'apiFetch + typedApi 合計').toBeGreaterThan(100);
     expect(Object.keys(spec.paths).length).toBeGreaterThan(100);
   });
 
@@ -127,5 +133,102 @@ describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
       const lacking = (requiredOf(spec.paths[path]![method.toLowerCase()]!) ?? []).filter((k) => !c!.keys!.includes(k));
       expect(lacking.length, `${key} 已無落差`).toBeGreaterThan(0);
     }
+  });
+});
+
+// ---- 棘輪：頁面不得再直接用 apiFetch／apiFetchRaw（#1481） ----
+// 例外只能在這裡列：key 是檔案、max 是目前還在的直接呼叫數（只能減不能增）、reason 說明為何不能轉 typedApi。
+// 遷移掉一處就要把 max 調低（降到 0 就刪掉該列），否則「白名單過期」那一條會轉紅。
+const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
+  'src/components/AiAuthorizeCard.tsx': { max: 2, reason: '待遷移' },
+  'src/components/shared/ErrorPlaceholder.tsx': { max: 2, reason: '待遷移' },
+  'src/components/trip/CollabPanel.tsx': { max: 4, reason: '待遷移' },
+  'src/components/trip/CustomPoiForm.tsx': { max: 1, reason: '待遷移' },
+  'src/components/trip/GooglePoiCard.tsx': { max: 1, reason: '待遷移' },
+  'src/components/trip/TravelPillDialog.tsx': { max: 1, reason: '待遷移' },
+  'src/components/trip-notes/EmergencySection.tsx': { max: 6, reason: '待遷移' },
+  'src/components/trip-notes/FlightsSection.tsx': { max: 4, reason: '待遷移' },
+  'src/components/trip-notes/LodgingsSection.tsx': { max: 4, reason: '待遷移' },
+  'src/components/trip-notes/NoteAiExclusionsDialog.tsx': { max: 2, reason: '待遷移' },
+  'src/components/trip-notes/PretripSection.tsx': { max: 6, reason: '待遷移' },
+  'src/components/trip-notes/ReservationsSection.tsx': { max: 4, reason: '待遷移' },
+  'src/components/trips/ImportTripButton.tsx': { max: 1, reason: '待遷移' },
+  'src/hooks/useAccountPreview.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useAddToTripTarget.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useAiDataConsent.ts': { max: 4, reason: '待遷移' },
+  'src/hooks/useChatPagination.ts': { max: 3, reason: '待遷移' },
+  'src/hooks/useConversation.ts': { max: 5, reason: '待遷移' },
+  'src/hooks/useMyTrips.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useNoteAiObserver.ts': { max: 2, reason: '待遷移' },
+  'src/hooks/usePermissions.ts': { max: 2, reason: '待遷移' },
+  'src/hooks/usePlacesAutocomplete.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/usePoiFavorites.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/usePoiSearch.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useRoute.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useTrip.ts': { max: 3, reason: '待遷移' },
+  'src/hooks/useTripRead.ts': { max: 1, reason: '待遷移' },
+  'src/hooks/useTripSegments.ts': { max: 1, reason: '待遷移' },
+  'src/lib/entryMutations.ts': { max: 1, reason: '待遷移' },
+  'src/lib/segmentMutations.ts': { max: 1, reason: '待遷移' },
+  'src/lib/shareApi.ts': { max: 7, reason: '待遷移' },
+  'src/lib/travelRecompute.ts': { max: 1, reason: '待遷移' },
+  'src/lib/tripExport.ts': { max: 4, reason: '待遷移' },
+  'src/lib/tripMutations.ts': { max: 1, reason: '待遷移' },
+  'src/lib/tripPrintData.ts': { max: 4, reason: '待遷移' },
+  'src/pages/AccountPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/AddCustomStopPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/AddPoiFavoriteToTripPage.tsx': { max: 3, reason: '待遷移' },
+  'src/pages/AddStopPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/ChangePoiPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/ChatPage.tsx': { max: 3, reason: '待遷移' },
+  'src/pages/CollabPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/ConnectedAppsPage.tsx': { max: 2, reason: '待遷移' },
+  'src/pages/DeveloperAppNewPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/DeveloperAppsPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/EditEntryPage.tsx': { max: 5, reason: '待遷移' },
+  'src/pages/EditTripPage.tsx': { max: 6, reason: '待遷移' },
+  'src/pages/EmailVerifyPendingPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/EntryActionPage.tsx': { max: 2, reason: '待遷移' },
+  'src/pages/ExplorePage.tsx': { max: 7, reason: '待遷移' },
+  'src/pages/ForgotPasswordPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/InvitePage.tsx': { max: 2, reason: '待遷移' },
+  'src/pages/LoginPage.tsx': { max: 2, reason: '待遷移' },
+  'src/pages/NewTripPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/PoiFavoritesPage.tsx': { max: 3, reason: '待遷移' },
+  'src/pages/ResetPasswordPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/SessionsPage.tsx': { max: 5, reason: '待遷移' },
+  'src/pages/SignupPage.tsx': { max: 2, reason: '待遷移' },
+  'src/pages/TripHealthCheckPage.tsx': { max: 5, reason: '待遷移' },
+  'src/pages/TripNotesPage.tsx': { max: 1, reason: '待遷移' },
+  'src/pages/VerifyEmailPage.tsx': { max: 1, reason: '待遷移' },
+};
+
+const directCounts = (() => {
+  const counts: Record<string, number> = {};
+  for (const file of listSources(join(ROOT, 'src'))) {
+    const rel = file.replace(ROOT + '/', '');
+    if (rel.startsWith('src/lib/api/') || rel.startsWith('src/lib/auth/')) continue; // typed.ts 是 typedApi 的傳輸層；auth/ 是另一個 client
+    const n = [...readFileSync(file, 'utf8').matchAll(/(?<![.\w])apiFetch(?:Raw)?(?:<[^(]*?>)?\(/g)].length;
+    if (n) counts[rel] = n;
+  }
+  return counts;
+})();
+
+describe('頁面／元件不得直接用 apiFetch（棘輪）', () => {
+  it('沒列在 DIRECT_ALLOWED 的檔案不得有直接呼叫', () => {
+    const offenders = Object.entries(directCounts).filter(([f]) => !DIRECT_ALLOWED[f]).map(([f, n]) => `${f}：${n} 處`);
+    expect(offenders, '請改用 typedApi（src/lib/api/typed.ts）；確實不能轉才列進 DIRECT_ALLOWED 並寫原因').toEqual([]);
+  });
+
+  it('白名單只減不增，且不過期', () => {
+    const bad = Object.entries(DIRECT_ALLOWED).flatMap(([f, { max }]) => {
+      const n = directCounts[f] ?? 0;
+      return n > max ? [`${f} 直接呼叫增加：${n} > ${max}`] : n < max ? [`${f} 已減少到 ${n}，請把 max 調成 ${n}（0 就刪掉該列）`] : [];
+    });
+    expect(bad).toEqual([]);
+  });
+
+  it('掃到足夠的 typedApi 呼叫（遷移後掃描器失效不會假綠）', () => {
+    expect(calls.filter((c) => c.typed).length).toBeGreaterThan(3);
   });
 });
