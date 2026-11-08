@@ -19,7 +19,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import type { CollabRole } from '../types/api';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import OperationShell from '../components/shell/OperationShell';
@@ -115,10 +115,11 @@ export default function CollabPage() {
     let cancelled = false;
     setTripResult(null);
     // /my-trips contains both the trip's display name and this user's authoritative role.
-    apiFetch<TripMeta[]>('/my-trips')
-      .then((trips) => {
+    typedApi.get('/api/my-trips')
+      .then((res) => {
+        const trips: unknown = unwrap(res);
         if (cancelled) return;
-        const trip = Array.isArray(trips) ? trips.find((item) => item.tripId === tripId) : undefined;
+        const trip = Array.isArray(trips) ? (trips as TripMeta[]).find((item) => item.tripId === tripId) : undefined;
         setTripResult((trip?.role === 'owner' || trip?.role === 'member' || trip?.role === 'viewer') && (trip.title || trip.name)
           ? { tripId, trip }
           : { tripId, error: '無法確認此行程或你的權限，請返回行程清單後重試。' });

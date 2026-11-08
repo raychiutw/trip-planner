@@ -55,3 +55,44 @@ describe('typedApi（旗標關閉：同源 /api）', () => {
     expect(unwrap(r)).toBeUndefined();
   });
 });
+
+describe('typedApi 傳給 apiFetch 的參數與手寫呼叫同形（遷移不改行為）', () => {
+  it('GET 不帶 redirect:manual、空 headers 與空 signal', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    await typedApi.get('/api/account');
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.redirect).toBeUndefined();
+    expect(init.method).toBeUndefined(); // GET 是預設，與手寫 apiFetch('/x') 同形
+    expect(init.headers).toEqual({});
+    expect(init.signal).toBeUndefined();
+  });
+
+  it('signal 原樣帶到 fetch', async () => {
+    fetchMock.mockResolvedValue(json({ ok: true }));
+    const ctrl = new AbortController();
+    await typedApi.get('/api/account', { signal: ctrl.signal });
+    expect(fetchMock.mock.calls[0]![1].signal).toBe(ctrl.signal);
+  });
+});
+
+describe('typedApi 沿用 apiFetch 的 429 重試（遷移不改行為）', () => {
+  it('GET 遇 429：依 Retry-After 等候後重試一次，回第二次的結果', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock
+        .mockResolvedValueOnce(json({ error: { code: 'SYS_RATE_LIMIT' } }, 429, { 'Retry-After': '2' }))
+        .mockResolvedValueOnce(json({ authorized: true }));
+      const p = typedApi.get('/api/account/ai-authorization');
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(unwrap(await p)).toEqual({ authorized: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('POST 遇 429 不重試（非冪等），直接丟 ApiError', async () => {
+    fetchMock.mockResolvedValue(json({ error: { code: 'SYS_RATE_LIMIT' } }, 429, { 'Retry-After': '2' }));
+    const err = await typedApi.post('/api/account/ai-authorization').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

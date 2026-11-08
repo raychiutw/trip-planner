@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { mapRow } from '../lib/mapRow';
 import { ApiError } from '../lib/errors';
 import { showErrorToast } from '../components/shared/Toast';
@@ -74,7 +74,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
       const isCurrent = () => scopeRef.current === scope && scope.reads.get(dayNum) === read;
 
       try {
-        const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${dayNum}`);
+        const raw = unwrap(await typedApi.get('/api/trips/{id}/days/{num}', { path: { id: tripId, num: String(dayNum) } })) as unknown as Record<string, unknown>;
         if (!isCurrent()) return null;
         const day = mapDayResponse(raw);
         // v2.33.39 round 4: 之前直接 allDaysRef.current[dayNum] = day mutate ref
@@ -130,14 +130,15 @@ export function useTrip(tripId: string | null): UseTripReturn {
 
     const controller = new AbortController();
     let cancelled = false;
+    const id = tripId; // 上面已排除空值；closure 內 TS 不保留 narrowing
 
     async function load() {
       try {
         // Fetch meta + all days (batch endpoint) in parallel — 2 calls total, not N+1
         const [rawMeta, rawDays] = await Promise.all([
-          apiFetch<Record<string, unknown>>(`/trips/${tripId}`, { signal: controller.signal }),
-          apiFetch<Record<string, unknown>[]>(`/trips/${tripId}/days?all=1`, { signal: controller.signal }),
-        ]);
+          typedApi.get('/api/trips/{id}', { path: { id }, signal: controller.signal }),
+          typedApi.get('/api/trips/{id}/days', { path: { id }, query: { all: '1' }, signal: controller.signal }),
+        ]).then(([m, d]) => [unwrap(m), unwrap(d)] as unknown as [Record<string, unknown>, Record<string, unknown>[]]);
 
         if (cancelled) return;
 

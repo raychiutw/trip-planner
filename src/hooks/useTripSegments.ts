@@ -13,7 +13,7 @@
  * 可選的 auto 參數讓時間軸以已確認的 segment read 判斷真實缺口。
  */
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { TripSegmentsContext } from '../contexts/TripSegmentsContext';
 import { EVENT } from '../lib/events';
 import { getAutoRecomputeStatus, requestTravelRecompute } from '../lib/travelRecompute';
@@ -75,7 +75,7 @@ export function useTripSegments(tripId: string | null | undefined, auto?: AutoRe
       const requestGeneration = generation;
       setLoading(true);
       try {
-        const data = await apiFetch<TripSegment[]>(`/trips/${encodeURIComponent(tripId)}/segments`);
+        const data = unwrap(await typedApi.get('/api/trips/{id}/segments', { path: { id: tripId } })) as unknown as TripSegment[];
         if (cancelled || requestGeneration !== generation) return;
         setSegments(Array.isArray(data) ? data : []);
         setLoadedTripId(tripId);

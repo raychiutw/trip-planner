@@ -21,7 +21,7 @@ const SRC = readFileSync(
 
 describe('v2.31.16 EntryActionPage stopCount', () => {
   it('fetch 路徑用 /days?all=1（拿 timeline）', () => {
-    expect(SRC).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
+    expect(SRC).toMatch(/\/api\/trips\/\{id\}\/days'[^)]*query:\s*\{\s*all:\s*'1'/);
   });
 
   it('stopCount 從 timeline.length 算（不再用 entryCount）', () => {

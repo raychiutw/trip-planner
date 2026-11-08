@@ -14,7 +14,7 @@ import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
 import { TripSelect } from '../TripSelect';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 import { showToast } from '../shared/Toast';
 
 export type EmergencyKind = 'personal' | 'embassy' | 'police' | 'medical' | 'insurance' | 'hotel' | 'other';
@@ -350,7 +350,7 @@ export default function EmergencySection({
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const created = await apiFetch<TripEmergencyContact>(`/trips/${tripId}/notes/emergency`, { method: 'POST', body: JSON.stringify({}) });
+      const created = await unwrap(await typedApi.post('/api/trips/{id}/notes/emergency', { path: { id: tripId }, body: {} })) as TripEmergencyContact;
       onChange([...items, created]);
       setEditingId(created.id);
     } catch (err) {
@@ -370,13 +370,12 @@ export default function EmergencySection({
     setBusy(true);
     setError(null);
     try {
-      const updated = await apiFetch<TripEmergencyContact>(
-        `/trips/${tripId}/notes/emergency/${contactId}/maintenance`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ managedBy: 'human', expectedVersion: contact.version }),
-        },
-      );
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/{section}/{rowId}/maintenance', {
+          path: { id: tripId, section: 'emergency', rowId: String(contactId) },
+          body: { managedBy: 'human', expectedVersion: contact.version },
+        }),
+      ) as TripEmergencyContact;
       onChange(items.map((item) => (item.id === contactId ? updated : item)));
       setEditingId(contactId);
       showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
@@ -395,10 +394,12 @@ export default function EmergencySection({
     setError(null);
     try {
       const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-      const updated = await apiFetch<TripEmergencyContact>(`/trips/${tripId}/notes/emergency/${contactId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ [snakeField]: value, expectedVersion: contact.version }),
-      });
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/emergency/{rowId}', {
+          path: { id: tripId, rowId: String(contactId) },
+          body: { [snakeField]: value, expectedVersion: contact.version },
+        }),
+      ) as TripEmergencyContact;
       onChange(items.map((c) => (c.id === contactId ? updated : c)));
       if (contact.managedBy === 'ai' && updated.managedBy === 'human') {
         showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
@@ -411,10 +412,7 @@ export default function EmergencySection({
   const handleDelete = useCallback(async (contactId: number) => {
     setError(null);
     try {
-      const result = await apiFetch<{ excluded?: boolean }>(
-        `/trips/${tripId}/notes/emergency/${contactId}`,
-        { method: 'DELETE' },
-      );
+      const result = await unwrap(await typedApi.delete('/api/trips/{id}/notes/emergency/{rowId}', { path: { id: tripId, rowId: String(contactId) } })) as { excluded?: boolean };
       onChange(items.filter((c) => c.id !== contactId));
       setPendingDeleteId(null);
       if (editingId === contactId) setEditingId(null);
@@ -432,13 +430,12 @@ export default function EmergencySection({
     if (!contact || contact.origin !== 'ai' || contact.managedBy !== 'human') return;
     setError(null);
     try {
-      const updated = await apiFetch<TripEmergencyContact>(
-        `/trips/${tripId}/notes/emergency/${contactId}/maintenance`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ managedBy: 'ai', expectedVersion: contact.version }),
-        },
-      );
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/{section}/{rowId}/maintenance', {
+          path: { id: tripId, section: 'emergency', rowId: String(contactId) },
+          body: { managedBy: 'ai', expectedVersion: contact.version },
+        }),
+      ) as TripEmergencyContact;
       onChange(items.map((item) => (item.id === contactId ? updated : item)));
       showToast('已交還 AI 維護，下次重新生成可更新此項目', 'success', 4000);
     } catch (err) {
@@ -455,9 +452,9 @@ export default function EmergencySection({
     const reordered = arrayMove(items, oldIndex, newIndex);
     onChange(reordered);
     try {
-      await apiFetch(`/trips/${tripId}/notes/emergency/reorder`, {
-        method: 'PATCH',
-        body: JSON.stringify({ items: reordered.map((c, i) => ({ id: c.id, sortOrder: i })) }),
+      await typedApi.patch('/api/trips/{id}/notes/emergency/reorder', {
+        path: { id: tripId },
+        body: { items: reordered.map((c, i) => ({ id: c.id, sortOrder: i })) },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '排序失敗');

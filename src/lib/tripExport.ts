@@ -7,7 +7,7 @@
  * the import feature (PR3) — segments are serialized by POSITIONAL entry index
  * (entry id is auto-increment and changes on import).
  */
-import { apiFetch } from './apiClient';
+import { typedApi, unwrap } from './api/typed';
 import { ApiError } from './errors';
 import type { Trip } from '../types/trip';
 
@@ -120,7 +120,7 @@ export function buildTripExportJson(input: {
 }
 
 async function fetchExportData(tripId: string) {
-  const id = encodeURIComponent(tripId);
+  const path = { id: tripId };
   // meta + days are the core structure — if either fails the export is meaningless,
   // so they stay fatal (Promise.all rejects). segments + notes: 只有 404 視為「沒有資料」，
   // 網路錯誤／5xx 一律讓匯出失敗（#1440），否則匯出檔會靜默少掉資料、再匯入就永久遺失。
@@ -129,10 +129,10 @@ async function fetchExportData(tripId: string) {
     throw e;
   };
   const [meta, days, segments, notes] = await Promise.all([
-    apiFetch<Record<string, unknown>>(`/trips/${id}`),
-    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/days?all=1`),
-    apiFetch<Array<Record<string, unknown>>>(`/trips/${id}/segments`).catch(only404([])),
-    apiFetch<Record<string, unknown>>(`/trips/${id}/notes`).catch(only404(EMPTY_NOTES)),
+    typedApi.get('/api/trips/{id}', { path }).then(unwrap) as unknown as Promise<Record<string, unknown>>,
+    typedApi.get('/api/trips/{id}/days', { path, query: { all: '1' } }).then(unwrap) as unknown as Promise<Array<Record<string, unknown>>>,
+    (typedApi.get('/api/trips/{id}/segments', { path }).then(unwrap) as unknown as Promise<Array<Record<string, unknown>>>).catch(only404([])),
+    (typedApi.get('/api/trips/{id}/notes', { path }).then(unwrap) as unknown as Promise<Record<string, unknown>>).catch(only404(EMPTY_NOTES)),
   ]);
   return { meta, days: asArr(days), segments: asArr(segments), notes: notes ?? EMPTY_NOTES };
 }

@@ -8,7 +8,7 @@
  * Design: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260530-101432.md
  * Mockup: docs/design-sessions/2026-05-30-trip-print-document.html (Variant A)
  */
-import { apiFetch } from './apiClient';
+import { typedApi, unwrap } from './api/typed';
 import { toTimelineEntry } from './mapDay';
 import { travelMethodLabel } from './travelMode';
 
@@ -236,12 +236,12 @@ export function mapRawToPrintData(meta: Raw, daysRaw: unknown, notesRaw: Raw | n
  * request cannot be mistaken for an empty section in a complete export.
  */
 export async function loadTripPrintData(tripId: string): Promise<TripPrintData> {
-  const id = encodeURIComponent(tripId);
-  const [meta, daysRaw, notesRaw] = await Promise.all([
-    apiFetch<Raw>(`/trips/${id}`),
-    apiFetch<Raw[]>(`/trips/${id}/days?all=1`),
-    apiFetch<Raw>(`/trips/${id}/notes`),
-  ]);
+  const path = { id: tripId };
+  const [meta, daysRaw, notesRaw] = (await Promise.all([
+    typedApi.get('/api/trips/{id}', { path }),
+    typedApi.get('/api/trips/{id}/days', { path, query: { all: '1' } }),
+    typedApi.get('/api/trips/{id}/notes', { path }),
+  ])).map(unwrap) as unknown as [Raw, Raw[], Raw];
   requireCompletePrintData(daysRaw, notesRaw);
   return mapRawToPrintData(meta, daysRaw, notesRaw);
 }
@@ -258,7 +258,7 @@ export interface SharePrintData {
  * throws on 404 (invalid / revoked / expired token) — caller shows a not-found state.
  */
 export async function loadSharePrintData(token: string): Promise<SharePrintData> {
-  const res = await apiFetch<{ meta: Raw; days: unknown; notes: Raw }>(`/share/${encodeURIComponent(token)}`);
+  const res = unwrap(await typedApi.get('/api/share/{token}', { path: { token } })) as unknown as { meta: Raw; days: unknown; notes: Raw };
   requireCompletePrintData(res.days, res.notes);
   return {
     data: mapRawToPrintData(res.meta, res.days, res.notes),

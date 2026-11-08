@@ -37,7 +37,7 @@ import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { copyEntry, moveEntry } from '../lib/entryMutations';
 import { recomputeFailedMessage } from '../lib/travelRecompute';
 import { dayColor } from '../lib/dayPalette';
@@ -282,8 +282,8 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
       try {
         const [daysData, entryData] = await Promise.all([
           // v2.31.16: ?all=1 才會回 timeline，否則沒法算 entryCount。
-          apiFetch<DaysApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days?all=1`),
-          apiFetch<EntryApiRow>(`/trips/${encodeURIComponent(tripId)}/entries/${entryIdNum}`),
+          typedApi.get('/api/trips/{id}/days', { path: { id: tripId }, query: { all: '1' } }).then(unwrap) as unknown as Promise<DaysApiRow[]>,
+          typedApi.get('/api/trips/{id}/entries/{eid}', { path: { id: tripId, eid: String(entryIdNum) } }).then(unwrap) as unknown as Promise<EntryApiRow>,
         ]);
         if (cancelled) return;
 

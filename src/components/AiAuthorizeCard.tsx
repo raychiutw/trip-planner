@@ -10,7 +10,7 @@
  * 讀取失敗當未授權處理（顯授權鈕、不卡建立流程）。
  */
 import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { useAiDataConsent } from '../hooks/useAiDataConsent';
 import { ConsentSections, ConsentStatusBanner, CONSENT_STYLES } from './AiDataConsentSheet';
 
@@ -56,9 +56,9 @@ export default function AiAuthorizeCard() {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch<{ authorized: boolean }>('/account/ai-authorization')
+    typedApi.get('/api/account/ai-authorization')
       .then((r) => {
-        if (!cancelled) setAuthorized(r.authorized);
+        if (!cancelled) setAuthorized(unwrap(r).authorized);
       })
       .catch(() => {
         // 讀狀態失敗 → 當未授權（顯授權鈕），不卡建立行程流程。
@@ -75,7 +75,7 @@ export default function AiAuthorizeCard() {
     try {
       // 先資料同意（隱私前提）：失敗時操作授權尚未送出，狀態與訊息才一致
       if (needData) await dataConsent.accept();
-      const r = await apiFetch<{ authorized: boolean }>('/account/ai-authorization', { method: 'POST' });
+      const r = unwrap(await typedApi.post('/api/account/ai-authorization'));
       if (mountedRef.current) setAuthorized(r.authorized);
     } catch {
       if (mountedRef.current) setError('授權失敗，請稍後再試。');

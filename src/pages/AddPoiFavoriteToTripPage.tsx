@@ -26,7 +26,7 @@ import { TripTimePicker } from '../components/TripTimePicker';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useAddToTripTarget } from '../hooks/useAddToTripTarget';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { createEntry, addFavoriteToTrip } from '../lib/entryMutations';
 import type { ErrorCodeType } from '../types/api';
 import { ApiError } from '../lib/errors';
@@ -277,8 +277,9 @@ export default function AddPoiFavoriteToTripPage() {
         return;
       }
       let cancelled = false;
-      apiFetch<TripBrief[] | { trips?: TripBrief[] }>('/my-trips')
-        .then((tripsResp) => {
+      typedApi.get('/api/my-trips')
+        .then((res) => {
+          const tripsResp = unwrap(res) as unknown as TripBrief[] | { trips?: TripBrief[] };
           if (cancelled) return;
           setFavorite(directPoi);
           const tripsList = Array.isArray(tripsResp) ? tripsResp : tripsResp.trips ?? [];
@@ -298,10 +299,12 @@ export default function AddPoiFavoriteToTripPage() {
     }
     let cancelled = false;
     Promise.all([
-      apiFetch<PoiFavorite[]>('/poi-favorites'),
-      apiFetch<TripBrief[] | { trips?: TripBrief[] }>('/my-trips'),
+      typedApi.get('/api/poi-favorites'),
+      typedApi.get('/api/my-trips'),
     ])
-      .then(([favoritesList, tripsResp]) => {
+      .then(([favoritesRes, tripsRes]) => {
+        const favoritesList = unwrap(favoritesRes) as unknown as PoiFavorite[];
+        const tripsResp = unwrap(tripsRes) as unknown as TripBrief[] | { trips?: TripBrief[] };
         if (cancelled) return;
         const found = favoritesList.find((s) => s.id === favoriteId) ?? null;
         if (!found) {

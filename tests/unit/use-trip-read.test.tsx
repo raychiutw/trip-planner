@@ -147,7 +147,7 @@ describe('結構：頁面不再自己裸讀 /trips/:id 與 /days', () => {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) walk(p, out);
-      else if (/\.(ts|tsx)$/.test(name)) out.push(p);
+      else if (/\.(ts|tsx)$/.test(name) && !name.includes('.typecheck.')) out.push(p); // typecheck 檔是故意寫錯的負向範例
     }
     return out;
   }
@@ -155,11 +155,17 @@ describe('結構：頁面不再自己裸讀 /trips/:id 與 /days', () => {
   //  - hooks/useAddToTripTarget.ts：自帶 retry／選天狀態
   //  - pages/EntryActionPage.tsx：與 entry 端點同一個 Promise.all 載入
   //  - pages/EditEntryPage.tsx：refreshEntryPois 的命令式重抓（非 mount 讀取）
-  const ALLOW = ['src/hooks/useAddToTripTarget.ts', 'src/pages/EntryActionPage.tsx'];
+  //  - hooks/useTrip.ts、lib/tripPrintData.ts、lib/tripExport.ts：遷移到 typedApi 前，BARE 只認「encodeURIComponent 包住」的寫法而沒掃到它們；
+  //    typedApi 的寫法統一後才現形，語意各自獨立（useTrip 是 timeline 切天、其餘是匯出／列印的整包載入），先列入允許清單
+  const ALLOW = [
+    'src/hooks/useAddToTripTarget.ts', 'src/pages/EntryActionPage.tsx',
+    'src/hooks/useTrip.ts', 'src/lib/tripPrintData.ts', 'src/lib/tripExport.ts',
+  ];
   // EditEntryPage 不整檔豁免，只允許那一處命令式重抓（再多一個 mount 讀取就會超過 1）。
   const EXACT: Record<string, number> = { 'src/pages/EditEntryPage.tsx': 1 };
   // `<.*?>` 才吃得到巢狀泛型（apiFetch<Array<{ ... }>>(...)）。
-  const BARE = /apiFetch(<.*?>)?\(\s*`\/trips\/\$\{encodeURIComponent\([a-zA-Z]+\)\}(\/days(\?all=1)?)?`\s*[,)]/g;
+  // 遷移到 typedApi 後讀取寫成 typedApi.get('/api/trips/{id}'|'/api/trips/{id}/days')，兩種寫法都算。
+  const BARE = /apiFetch(<.*?>)?\(\s*`\/trips\/\$\{encodeURIComponent\([a-zA-Z]+\)\}(\/days(\?all=1)?)?`\s*[,)]|typedApi\.get\(\s*'\/api\/trips\/\{id\}(\/days)?'/g;
   const count = (p: string) => (readFileSync(join(ROOT, p), 'utf8').match(BARE) ?? []).length;
 
   it('新增的讀取請走 useTripMeta／useTripDays（或明確加入允許清單並寫理由）', () => {

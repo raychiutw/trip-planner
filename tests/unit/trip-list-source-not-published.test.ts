@@ -33,7 +33,7 @@ describe('useMyTrips — 側邊欄「我的行程」', () => {
   const SRC = read('src/hooks/useMyTrips.ts');
 
   it('打 /my-trips，不打公開清單', () => {
-    expect(SRC, '應改用權限來源 /my-trips').toMatch(/apiFetch<[\s\S]*?>\('\/my-trips'\)/);
+    expect(SRC, '應改用權限來源 /my-trips').toMatch(/typedApi\.get\('\/api\/my-trips'\)/);
   });
 
   it('不再依賴 /trips?all=1（一般使用者拿不到 ops scope，會靜默降級成公開清單）', () => {

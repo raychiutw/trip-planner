@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 import { showToast } from '../shared/Toast';
 
 export interface TripPretripNote {
@@ -255,7 +255,7 @@ export default function PretripSection({
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const created = await apiFetch<TripPretripNote>(`/trips/${tripId}/notes/pretrip`, { method: 'POST', body: JSON.stringify({}) });
+      const created = await unwrap(await typedApi.post('/api/trips/{id}/notes/pretrip', { path: { id: tripId }, body: {} })) as TripPretripNote;
       onChange([...items, created]);
       setEditingId(created.id);
     } catch (err) {
@@ -275,13 +275,12 @@ export default function PretripSection({
     setBusy(true);
     setError(null);
     try {
-      const updated = await apiFetch<TripPretripNote>(
-        `/trips/${tripId}/notes/pretrip/${noteId}/maintenance`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ managedBy: 'human', expectedVersion: note.version }),
-        },
-      );
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/{section}/{rowId}/maintenance', {
+          path: { id: tripId, section: 'pretrip', rowId: String(noteId) },
+          body: { managedBy: 'human', expectedVersion: note.version },
+        }),
+      ) as TripPretripNote;
       onChange(items.map((item) => (item.id === noteId ? updated : item)));
       setEditingId(noteId);
       showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
@@ -300,10 +299,12 @@ export default function PretripSection({
     setError(null);
     try {
       const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-      const updated = await apiFetch<TripPretripNote>(`/trips/${tripId}/notes/pretrip/${noteId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ [snakeField]: value, expectedVersion: note.version }),
-      });
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/pretrip/{rowId}', {
+          path: { id: tripId, rowId: String(noteId) },
+          body: { [snakeField]: value, expectedVersion: note.version },
+        }),
+      ) as TripPretripNote;
       onChange(items.map((n) => (n.id === noteId ? updated : n)));
       if (note.managedBy === 'ai' && updated.managedBy === 'human') {
         showToast('已改為人工維護，重新生成不會覆蓋此項目', 'info', 4000);
@@ -316,10 +317,7 @@ export default function PretripSection({
   const handleDelete = useCallback(async (noteId: number) => {
     setError(null);
     try {
-      const result = await apiFetch<{ excluded?: boolean }>(
-        `/trips/${tripId}/notes/pretrip/${noteId}`,
-        { method: 'DELETE' },
-      );
+      const result = await unwrap(await typedApi.delete('/api/trips/{id}/notes/pretrip/{rowId}', { path: { id: tripId, rowId: String(noteId) } })) as { excluded?: boolean };
       onChange(items.filter((n) => n.id !== noteId));
       setPendingDeleteId(null);
       if (editingId === noteId) setEditingId(null);
@@ -337,13 +335,12 @@ export default function PretripSection({
     if (!note || note.origin !== 'ai' || note.managedBy !== 'human') return;
     setError(null);
     try {
-      const updated = await apiFetch<TripPretripNote>(
-        `/trips/${tripId}/notes/pretrip/${noteId}/maintenance`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ managedBy: 'ai', expectedVersion: note.version }),
-        },
-      );
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/{section}/{rowId}/maintenance', {
+          path: { id: tripId, section: 'pretrip', rowId: String(noteId) },
+          body: { managedBy: 'ai', expectedVersion: note.version },
+        }),
+      ) as TripPretripNote;
       onChange(items.map((item) => (item.id === noteId ? updated : item)));
       showToast('已交還 AI 維護，下次重新生成可更新此項目', 'success', 4000);
     } catch (err) {
@@ -360,9 +357,9 @@ export default function PretripSection({
     const reordered = arrayMove(items, oldIndex, newIndex);
     onChange(reordered);
     try {
-      await apiFetch(`/trips/${tripId}/notes/pretrip/reorder`, {
-        method: 'PATCH',
-        body: JSON.stringify({ items: reordered.map((n, i) => ({ id: n.id, sortOrder: i })) }),
+      await typedApi.patch('/api/trips/{id}/notes/pretrip/reorder', {
+        path: { id: tripId },
+        body: { items: reordered.map((n, i) => ({ id: n.id, sortOrder: i })) },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '排序失敗');

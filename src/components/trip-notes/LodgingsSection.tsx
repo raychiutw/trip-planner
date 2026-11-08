@@ -15,7 +15,7 @@ import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
 import NoteDateTimeField from './NoteDateTimeField';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 
 export interface TripLodging {
   id: number;
@@ -279,10 +279,7 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const created = await apiFetch<TripLodging>(`/trips/${tripId}/notes/lodgings`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      const created = await unwrap(await typedApi.post('/api/trips/{id}/notes/lodgings', { path: { id: tripId }, body: {} })) as TripLodging;
       onChange([...items, created]);
       setEditingId(created.id);
     } catch (err) {
@@ -300,10 +297,12 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
     setError(null);
     try {
       const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-      const updated = await apiFetch<TripLodging>(`/trips/${tripId}/notes/lodgings/${lodgingId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ [snakeField]: value, expectedVersion: lodging.version }),
-      });
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/lodgings/{rowId}', {
+          path: { id: tripId, rowId: String(lodgingId) },
+          body: { [snakeField]: value, expectedVersion: lodging.version },
+        }),
+      ) as TripLodging;
       onChange(items.map((l) => (l.id === lodgingId ? updated : l)));
     } catch (err) {
       setError(err instanceof Error ? err.message : '住宿儲存失敗');
@@ -313,7 +312,7 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
   const handleDelete = useCallback(async (lodgingId: number) => {
     setError(null);
     try {
-      await apiFetch(`/trips/${tripId}/notes/lodgings/${lodgingId}`, { method: 'DELETE' });
+      await typedApi.delete('/api/trips/{id}/notes/lodgings/{rowId}', { path: { id: tripId, rowId: String(lodgingId) } });
       onChange(items.filter((l) => l.id !== lodgingId));
       setPendingDeleteId(null);
       if (editingId === lodgingId) setEditingId(null);
@@ -331,11 +330,9 @@ export default function LodgingsSection({ tripId, items, onChange }: LodgingsSec
     const reordered = arrayMove(items, oldIndex, newIndex);
     onChange(reordered);
     try {
-      await apiFetch(`/trips/${tripId}/notes/lodgings/reorder`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          items: reordered.map((l, i) => ({ id: l.id, sortOrder: i })),
-        }),
+      await typedApi.patch('/api/trips/{id}/notes/lodgings/reorder', {
+        path: { id: tripId },
+        body: { items: reordered.map((l, i) => ({ id: l.id, sortOrder: i })) },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '排序儲存失敗');

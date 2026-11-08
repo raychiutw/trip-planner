@@ -22,7 +22,7 @@ import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { ApiError } from '../lib/errors';
 import { routes } from '../lib/routes';
 import { EVENT } from '../lib/events';
@@ -235,15 +235,15 @@ export default function DeveloperAppNewPage() {
     }
     setSubmitting(true);
     try {
-      const result = await apiFetch<NewAppResult>('/dev/apps', {
-        method: 'POST',
-        body: JSON.stringify({
+      const result = unwrap(await typedApi.post('/api/dev/apps', {
+        body: {
           app_name: form.app_name.trim(),
           client_type: form.client_type,
           redirect_uris,
-          allowed_scopes: Array.from(form.scopes),
-        }),
-      });
+          // 表單的 scope 來自 SCOPE_OPTIONS 固定清單；契約的型別是 enum，這裡只斷言為該 enum
+          allowed_scopes: Array.from(form.scopes) as Array<'email' | 'openid' | 'profile' | 'offline_access'>,
+        },
+      })) as unknown as NewAppResult;
       setSecretResult(result);
     } catch (err) {
       if (err instanceof ApiError) {

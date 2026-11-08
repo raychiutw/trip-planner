@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -161,7 +161,7 @@ export default function ConnectedAppsPage() {
   async function load() {
     setError(null);
     try {
-      const json = await apiFetch<{ apps: ConnectedApp[] }>('/account/connected-apps');
+      const json = unwrap(await typedApi.get('/api/account/connected-apps')) as unknown as { apps: ConnectedApp[] };
       setApps(json.apps);
     } catch (err) {
       setError(err instanceof Error ? '無法載入已連結應用，請重新整理頁面。' : '網路連線失敗，請重新整理頁面。');
@@ -176,9 +176,9 @@ export default function ConnectedAppsPage() {
     setRevokeError(null);
     setRevokeBusy(true);
     try {
-      const result = await apiFetch<{ ok: boolean; revoked_client_id: string }>(
-        `/account/connected-apps/${encodeURIComponent(clientId)}`, { method: 'DELETE' },
-      );
+      const result = unwrap(await typedApi.delete('/api/account/connected-apps/{client_id}', {
+        path: { client_id: clientId },
+      })) as { ok: boolean; revoked_client_id: string };
       if (result.ok !== true || result.revoked_client_id !== clientId) {
         throw new Error('Revoke not confirmed by server');
       }

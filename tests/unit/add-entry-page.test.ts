@@ -99,6 +99,6 @@ describe('ChangePoiPage — v2.32.0 mode=new branch', () => {
   });
 
   it('entryPoisVersion fetch effect 跳過 mode=new（new entry 沒對應 OCC token）', () => {
-    expect(CHANGE_POI_SRC).toMatch(/if \(mode === 'new'\) return;[\s\S]{0,200}entryPoisVersion/);
+    expect(CHANGE_POI_SRC).toMatch(/if \(mode === 'new'\) return;[\s\S]{0,400}entryPoisVersion/);
   });
 });

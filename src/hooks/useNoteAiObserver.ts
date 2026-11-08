@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { showToast } from '../components/shared/Toast';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import type { NoteAiDocType } from '../components/trip-notes/NoteAiExclusionsDialog';
 
 export type NoteAiStatus = 'idle' | 'pending' | 'processing' | 'completed' | 'failed' | 'timedOut';
@@ -88,7 +88,7 @@ export function useNoteAiObserver(tripId: string | undefined, onCompleted: () =>
     inFlightRef.current = true;
     const token = ++requestRef.current;
     try {
-      const response = await apiFetch<{ jobs?: Partial<NoteAiJob>[] }>(`/trips/${tripId}/notes/ai-state`);
+      const response = unwrap(await typedApi.get('/api/trips/{id}/notes/ai-state', { path: { id: tripId } })) as { jobs?: Partial<NoteAiJob>[] };
       if (token !== requestRef.current || currentTripRef.current !== tripId) return;
       if (!Array.isArray(response.jobs) || response.jobs.length !== TYPES.length
         || new Set(response.jobs.map((job) => job.docType)).size !== TYPES.length
@@ -147,10 +147,9 @@ export function useNoteAiObserver(tripId: string | undefined, onCompleted: () =>
     const tripEpoch = tripEpochRef.current;
     setSnapshot((current) => ({ ...current, posting: [...postingRef.current] }));
     try {
-      const response = await apiFetch<Pick<NoteAiJob, 'jobId' | 'requestId' | 'status' | 'generation' | 'timeoutAt'>>(
-        `/trips/${tripId}/notes/${docType}/generate`,
-        { method: 'POST', body: JSON.stringify({}) },
-      );
+      const response = unwrap(await typedApi.post('/api/trips/{id}/notes/{type}/generate', {
+        path: { id: tripId, type: docType }, // 契約此端點沒有 requestBody：不再送空物件 `{}`
+      })) as Pick<NoteAiJob, 'jobId' | 'requestId' | 'status' | 'generation' | 'timeoutAt'>;
       if (currentTripRef.current !== tripId || tripEpochRef.current !== tripEpoch) return;
       const jobs = {
         ...jobsRef.current,

@@ -26,7 +26,7 @@ import Icon from '../shared/Icon';
 import AlertPanel from '../shared/AlertPanel';
 import ConfirmModal from '../shared/ConfirmModal';
 import NoteDateTimeField from './NoteDateTimeField';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 
 export interface TripFlight {
   id: number;
@@ -383,10 +383,7 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
     if (busy) return;
     setBusy(true); setError(null);
     try {
-      const created = await apiFetch<TripFlight>(`/trips/${tripId}/notes/flights`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      const created = await unwrap(await typedApi.post('/api/trips/{id}/notes/flights', { path: { id: tripId }, body: {} })) as TripFlight;
       onChange([...items, created]);
       setEditingId(created.id);
     } catch (err) {
@@ -404,10 +401,12 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
     setError(null);
     try {
       const snakeField = (field as string).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());
-      const updated = await apiFetch<TripFlight>(`/trips/${tripId}/notes/flights/${flightId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ [snakeField]: value, expectedVersion: flight.version }),
-      });
+      const updated = await unwrap(
+        await typedApi.patch('/api/trips/{id}/notes/flights/{rowId}', {
+          path: { id: tripId, rowId: String(flightId) },
+          body: { [snakeField]: value, expectedVersion: flight.version },
+        }),
+      ) as TripFlight;
       onChange(items.map((f) => (f.id === flightId ? updated : f)));
     } catch (err) {
       setError(err instanceof Error ? err.message : '航班儲存失敗');
@@ -417,7 +416,7 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
   const handleDelete = useCallback(async (flightId: number) => {
     setError(null);
     try {
-      await apiFetch(`/trips/${tripId}/notes/flights/${flightId}`, { method: 'DELETE' });
+      await typedApi.delete('/api/trips/{id}/notes/flights/{rowId}', { path: { id: tripId, rowId: String(flightId) } });
       onChange(items.filter((f) => f.id !== flightId));
       setPendingDeleteId(null);
       if (editingId === flightId) setEditingId(null);
@@ -436,11 +435,9 @@ export default function FlightsSection({ tripId, items, onChange }: FlightsSecti
     // Optimistic update
     onChange(reordered);
     try {
-      await apiFetch(`/trips/${tripId}/notes/flights/reorder`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          items: reordered.map((f, i) => ({ id: f.id, sortOrder: i })),
-        }),
+      await typedApi.patch('/api/trips/{id}/notes/flights/reorder', {
+        path: { id: tripId },
+        body: { items: reordered.map((f, i) => ({ id: f.id, sortOrder: i })) },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '排序儲存失敗');

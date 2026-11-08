@@ -4,7 +4,7 @@
  * 所有畫面必須與沒有這個功能時完全相同。
  */
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 
 export interface ConsentSection { heading: string; items: string[] }
 export interface ConsentText { version: string; title: string; intro: string; sections: ConsentSection[]; withdrawal: string[] }
@@ -27,8 +27,8 @@ export function useAiDataConsent() {
 
   useEffect(() => {
     let cancelled = false;
-    apiFetch<unknown>('/account/ai-data-consent')
-      .then((r) => { if (!cancelled && isConsent(r)) setConsent(r); })
+    typedApi.get('/api/account/ai-data-consent')
+      .then((r) => { if (!cancelled && isConsent(unwrap(r))) setConsent(unwrap(r)); })
       .catch(() => { /* 讀不到＝不強制 */ });
     return () => { cancelled = true; };
   }, []);
@@ -39,14 +39,14 @@ export function useAiDataConsent() {
   const accept = useCallback(async () => {
     if (!consent) return;
     try {
-      apply(await apiFetch<unknown>('/account/ai-data-consent', { method: 'POST', body: JSON.stringify({ version: consent.currentVersion }) }));
+      apply(unwrap(await typedApi.post('/api/account/ai-data-consent', { body: { version: consent.currentVersion } })));
     } catch (e) {
-      if ((e as { code?: string }).code === 'AI_CONSENT_VERSION_MISMATCH') apply(await apiFetch<unknown>('/account/ai-data-consent').catch(() => null));
+      if ((e as { code?: string }).code === 'AI_CONSENT_VERSION_MISMATCH') apply(await typedApi.get('/api/account/ai-data-consent').then(unwrap).catch(() => null));
       throw e;
     }
   }, [consent]);
 
-  const withdraw = useCallback(async () => { apply(await apiFetch<unknown>('/account/ai-data-consent', { method: 'DELETE' })); }, []);
+  const withdraw = useCallback(async () => { apply(unwrap(await typedApi.delete('/api/account/ai-data-consent'))); }, []);
 
   return { consent, needsConsent: !!consent?.enforced && consent.status !== 'valid', accept, withdraw };
 }

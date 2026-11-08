@@ -13,7 +13,7 @@
  *   - Unmount cleanup avoids setState-after-unmount warnings
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 
 export interface PlacePrediction {
   placeId: string;
@@ -152,15 +152,12 @@ export function usePlacesAutocomplete(
       debounceRef.current = setTimeout(() => {
         const ctrl = new AbortController();
         abortRef.current = ctrl;
-        const body: Record<string, unknown> = { q, sessionToken };
-        if (region) body.regionCode = region;
-
-        apiFetch<{ predictions: PlacePrediction[] }>('/places/autocomplete', {
-          method: 'POST',
-          body: JSON.stringify(body),
+        typedApi.post('/api/places/autocomplete', {
+          body: { q, sessionToken, ...(region ? { regionCode: region } : {}) },
           signal: ctrl.signal,
         })
-          .then((json) => {
+          .then((res) => {
+            const json = unwrap(res) as unknown as { predictions: PlacePrediction[] };
             if (!mountedRef.current) return;
             const list = Array.isArray(json.predictions) ? json.predictions : [];
             cacheSet(cacheKey(q, region), list);

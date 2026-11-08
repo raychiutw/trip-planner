@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
@@ -353,7 +353,7 @@ export default function PoiFavoritesPage() {
   const loadFavorites = useCallback(async () => {
     setStatus('loading');
     try {
-      const rows = await apiFetch<PoiFavoriteRow[]>('/poi-favorites');
+      const rows = unwrap(await typedApi.get('/api/poi-favorites')) as unknown as PoiFavoriteRow[];
       setFavorites(rows);
       setStatus('data');
     } catch (err) {
@@ -369,7 +369,7 @@ export default function PoiFavoritesPage() {
   // 只在資料回來時換 rows；失敗往上拋 → AppShell PTR 顯示「更新失敗，請再下拉重試」。
   // 首載的 loading/error 態仍走 loadFavorites。
   const softRefetch = useCallback(async () => {
-    const rows = await apiFetch<PoiFavoriteRow[]>('/poi-favorites');
+    const rows = unwrap(await typedApi.get('/api/poi-favorites')) as unknown as PoiFavoriteRow[];
     setFavorites(rows);
     setStatus('data');
   }, []);
@@ -452,7 +452,7 @@ export default function PoiFavoritesPage() {
     try {
       const results = await Promise.all(
         ids.map((id) =>
-          apiFetch(`/poi-favorites/${id}`, { method: 'DELETE' })
+          typedApi.delete('/api/poi-favorites/{id}', { path: { id: String(id) } })
             .then(() => ({ id, ok: true as const }))
             .catch((err: unknown) => ({ id, ok: false as const, err })),
         ),
