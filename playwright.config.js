@@ -21,7 +21,7 @@ export default defineConfig({
     { name: 'mobile-safari', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
   ],
   // HIG 取證 specs 需要第二份新 api 旗標建置，另由 playwright.hig.config.js 執行（CI 有獨立步驟），這裡排除以免每次 e2e 多建一份。
-  testIgnore: HIG_SPECS,
+  testIgnore: [HIG_SPECS, /new-api-e2e\.spec\.js$/], // 新 api 模式 e2e 另有 playwright.newapi.config.js
   webServer: {
     command: 'npm run build && npx vite preview --port 3000',
     port: 3000,
