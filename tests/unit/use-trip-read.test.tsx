@@ -147,7 +147,7 @@ describe('結構：頁面不再自己裸讀 /trips/:id 與 /days', () => {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) walk(p, out);
-      else if (/\.(ts|tsx)$/.test(name)) out.push(p);
+      else if (/\.(ts|tsx)$/.test(name) && !name.includes('.typecheck.')) out.push(p); // typecheck 檔是故意寫錯的負向範例
     }
     return out;
   }
