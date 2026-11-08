@@ -134,13 +134,11 @@ test.describe('AccountPage — Section 2', () => {
     await expect(page.getByText('確認登出？')).toBeVisible();
   });
 
-  test('登出 confirm → POST /api/oauth/logout + navigate /login', async ({ page }) => {
+  // 撤銷 token 與清除憑證由真 auth client 負責，見 new-api-e2e.spec.js 的「登出」；這裡的建置是穿透 auth，只驗導頁
+  test('登出 confirm → navigate /login', async ({ page }) => {
     await page.goto('/account');
     await page.getByTestId('account-row-logout').click();
-    await Promise.all([
-      page.waitForRequest((req) => req.url().endsWith('/api/oauth/logout') && req.method() === 'POST'),
-      page.getByTestId('confirm-modal-confirm').click(),
-    ]);
+    await page.getByTestId('confirm-modal-confirm').click();
     await expect(page).toHaveURL(/\/login$/);
   });
 
