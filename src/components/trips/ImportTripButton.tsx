@@ -10,7 +10,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../shared/Icon';
-import { apiFetch } from '../../lib/apiClient';
+import { typedApi, unwrap } from '../../lib/api/typed';
 import { ApiError } from '../../lib/errors';
 import { showToast } from '../../lib/toastBus';
 
@@ -44,7 +44,8 @@ export default function ImportTripButton() {
         showToast('不支援的匯出格式（需 schemaVersion 1）', 'error', 3000);
         return;
       }
-      const res = await apiFetch<{ tripId: string }>('/trips/import', { method: 'POST', body: text });
+      // rawBody：檔案原文原樣送出，不重新序列化（保留使用者檔案的位元組）
+      const res = unwrap(await typedApi.post('/api/trips/import', { rawBody: text }));
       showToast('匯入成功', 'success', 2500);
       navigate(`/trips?selected=${encodeURIComponent(res.tripId)}`);
     } catch (err) {

@@ -141,19 +141,19 @@ describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
 // 例外只能在這裡列：key 是檔案、max 是目前還在的直接呼叫數（只能減不能增）、reason 說明為何不能轉 typedApi。
 // 遷移掉一處就要把 max 調低（降到 0 就刪掉該列），否則「白名單過期」那一條會轉紅。
 const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
-  'src/components/trip/CollabPanel.tsx': { max: 4, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trips/ImportTripButton.tsx': { max: 1, reason: 'body 是使用者檔案的原始文字（text），typedApi 會重新 JSON.stringify 物件，改變送出的位元組' },
-  'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
-  'src/lib/segmentMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑由呼叫端組成（動態）' },
-  'src/lib/travelRecompute.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/lib/tripMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
+  // 14 個 helper 共用一個 `call(path, init)`，路徑由 helper 參數組成、body 是呼叫端傳入的自由物件。改走 typedApiRaw 需讓 body 符合契約型別，
+  // 目前 tsc 會擋下 9 處不符（entryPoisVersion 契約是 string 而呼叫端傳 number、add-to-trip 的 startTime／endTime 契約必填而 UI 可省略、
+  // source 契約是列舉而呼叫端傳任意 string 等）：每一處都要決定「改 UI 還是改契約」，屬行為／契約決策，不在純遷移範圍（見 PR 說明）。路徑仍由本檔的樣板比對守住。
+  'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：動態路徑、自由形狀 body 與契約型別不符（9 處），遷移前須先決定 UI／契約誰改' },
 };
 
 const directCounts = (() => {
   const counts: Record<string, number> = {};
   for (const file of listSources(join(ROOT, 'src'))) {
     const rel = file.replace(ROOT + '/', '');
-    if (rel.startsWith('src/lib/api/') || rel.startsWith('src/lib/auth/')) continue; // typed.ts 是 typedApi 的傳輸層；auth/ 是另一個 client
+    // typed.ts 是 typedApi／typedApiRaw 的傳輸層；auth/ 是認證層自己的 client（DPoP 簽章、token 輪替、PKCE，其 apiFetch 是另一個函式，
+    // 不經 lib/apiClient，也不能經過它——否則認證會依賴自己），不屬於「頁面直接用 lib/apiClient」的範圍
+    if (rel.startsWith('src/lib/api/') || rel.startsWith('src/lib/auth/')) continue;
     const n = [...readFileSync(file, 'utf8').matchAll(/(?<![.\w])apiFetch(?:Raw)?(?:<[^(]*?>)?\(/g)].length;
     if (n) counts[rel] = n;
   }
