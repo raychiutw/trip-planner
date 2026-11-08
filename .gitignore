@@ -98,11 +98,7 @@ why-is-node-running
 why-is-node-running.cmd
 day3.json
 *.exe
-.claude/skills/gstack/browse/dist/
-.claude/skills/gstack/bin/gstack-global-discover.exe
-.claude/skills/gstack/
 .gstack/
-.claude/skills/gstack-upgrade/
 
 # Project Codex skills are versioned; other .codex runtime files stay ignored.
 !.codex/skills/
