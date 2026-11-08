@@ -109,9 +109,8 @@ export const RAIL_ROW_STYLES = `
   resize: vertical;
   min-height: 88px;
   color: var(--color-foreground);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
-.tp-rail-note-input:focus { outline: none; }
+.tp-rail-note-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-rail-note-actions {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
   flex-wrap: wrap;

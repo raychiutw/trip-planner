@@ -111,7 +111,8 @@ const SCOPED_STYLES = `
   width: 100%;
   background: var(--color-background); color: var(--color-foreground);
 }
-.tp-travel-detail input:focus { outline: none; border-color: var(--color-accent); }
+.tp-travel-detail input:focus { border-color: var(--color-accent); }
+.tp-travel-detail input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-travel-hint { font-size: var(--font-size-caption); color: var(--color-muted); }
 .tp-travel-compute { font-size: var(--font-size-footnote); color: var(--color-foreground); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tp-travel-compute-val { font-weight: 700; }

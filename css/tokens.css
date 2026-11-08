@@ -405,8 +405,9 @@ body.dark {
     .tp-input-long:focus {
         border-color: var(--color-accent);
         background-color: var(--color-background);
-        box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
+    /* 焦點外框統一用 :focus-visible 畫 2px 全域 focus ring（#1595／#1628 範本）；舊 accent-subtle 外圈對比僅 1.11:1 已移除 */
+    .tp-input-long:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
     textarea.tp-input-long { min-height: 72px; resize: vertical; line-height: 1.5; }
     select.tp-input-long {
         cursor: pointer;
@@ -432,8 +433,9 @@ body.dark {
     }
     .tp-input-short:focus-within {
         border-color: var(--color-accent);
-        box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
+    /* 內層 input/select 無框（outline:none），外框畫在 label 容器；:has 限定欄位本身聚焦 */
+    .tp-input-short:has(input:focus-visible, select:focus-visible) { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
     .tp-input-short > .label,
     .tp-input-short > span,
     .tp-input-short > label {
@@ -486,8 +488,9 @@ body.dark {
     input.tp-input-short:focus,
     select.tp-input-short:focus {
         border-color: var(--color-accent);
-        box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
+    input.tp-input-short:focus-visible,
+    select.tp-input-short:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
     /* v2.33.12: 全域 input / textarea / select baseline — 確保任何新加 input
      * 自動套 Terracotta 樣式（避免散落各 page 各自 scope CSS 導致遺漏 → 出現
@@ -528,8 +531,18 @@ body.dark {
     ):focus {
         border-color: var(--color-accent);
         background-color: var(--color-background);
-        box-shadow: 0 0 0 3px var(--color-accent-subtle);
     }
+    /* 全域 baseline 的焦點外框。注意 :where() 只把括號內降為 0，`:focus-visible` 本身仍計 (0,1,0)，
+     * 贏過上面 specificity 0 的 `outline: none`；頁面自訂的 `outline: none`（如 .explore-search input，
+     * 外框畫在容器）是 (0,1,1) 以上，仍會蓋過這條，不會與容器外框疊兩圈。 */
+    :where(
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"])
+              :not([type="range"]):not([type="color"]):not([type="button"])
+              :not([type="submit"]):not([type="reset"]):not([type="hidden"])
+              :not([type="image"]),
+        textarea,
+        select
+    ):focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
     /* Checkbox / radio baseline — accent-color 對齊 Terracotta */
     :where(input[type="checkbox"], input[type="radio"]) {
@@ -1511,6 +1524,9 @@ body.dark .tp-toast { background: var(--color-secondary); }
 .tp-form-row > input:focus,
 .tp-form-row > textarea:focus {
   border-color: var(--color-accent);
+}
+.tp-form-row > input:focus-visible,
+.tp-form-row > textarea:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--color-background);
@@ -2145,7 +2161,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-background); color: var(--color-foreground);
 }
-.tp-titlebar-trip-search:focus-visible { outline: none; border-color: var(--color-accent); }
+.tp-titlebar-trip-search:focus-visible { border-color: var(--color-accent); outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-titlebar-trip-empty {
   padding: 12px 10px; font-size: var(--font-size-footnote); color: var(--color-muted); text-align: center;
 }
