@@ -51,7 +51,7 @@ describe('NewTripPage — wiring smoke (v2.33.48 round 7c)', () => {
   });
 
   it('POST /trips 是 create-trip endpoint', () => {
-    expect(SRC).toMatch(/apiFetchRaw\(['"]\/trips['"]\s*,\s*\{[\s\S]*?method:\s*['"]POST['"]/);
+    expect(SRC).toMatch(/typedApiRaw\.post\(['"]\/api\/trips['"]/);
   });
 
   it('TripDatePicker 用 select mode', () => {

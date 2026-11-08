@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
-import { apiFetchRaw } from '../lib/apiClient';
+import { typedApiRaw } from '../lib/api/typed';
 import InlineError from '../components/shared/InlineError';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 
@@ -161,25 +161,21 @@ export default function SignupPage() {
     let completed = false;
 
     try {
-      const res = await apiFetchRaw('/oauth/signup', {
-        method: 'POST',
-        body: JSON.stringify({
+      const res = await typedApiRaw.post('/api/oauth/signup', {
+        body: {
           email: email.trim(),
           password,
           displayName: displayName.trim() || undefined,
           privacyConsent,
           // V2 共編：若 URL 帶 ?invitation=xxx，server 會嘗試 accept invitation
           ...(invitationToken ? { invitationToken } : {}),
-        }),
+        },
       });
 
       if (res.ok) {
-        const json = (await res.json()) as SignupOk;
+        const json = res.data as SignupOk;
         // Sending the email is best-effort; a slow mail service must not hold navigation.
-        void apiFetchRaw('/oauth/send-verification', {
-          method: 'POST',
-          body: JSON.stringify({ email: json.email }),
-        }).catch(() => {});
+        void typedApiRaw.post('/api/oauth/send-verification', { body: { email: json.email } }).catch(() => {});
         // V2 共編：若 signup 同時 accept 了 invitation → 直接帶到該 trip
         if (json.joinedTrip?.id) {
           completed = true;
@@ -198,7 +194,7 @@ export default function SignupPage() {
         return;
       }
 
-      const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      const errJson = res.error as ApiError | undefined;
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'SIGNUP_INVALID_EMAIL':

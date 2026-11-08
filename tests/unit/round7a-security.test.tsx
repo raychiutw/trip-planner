@@ -21,7 +21,7 @@ const LOGIN_SRC = readFileSync(path.resolve(__dirname, '../../src/pages/LoginPag
 describe('v2.33.46 round 7a — SessionsPage logout CSRF fix', () => {
   it('logout 改 POST button (拔 GET <a href>)', () => {
     expect(SESSIONS_SRC).not.toMatch(/<a\s+href="\/api\/oauth\/logout"/);
-    expect(SESSIONS_SRC).toMatch(/apiFetchRaw\(['"]\/oauth\/logout['"]\s*,\s*\{\s*method:\s*['"]POST['"]/);
+    expect(SESSIONS_SRC).toMatch(/typedApiRaw\.post\(['"]\/api\/oauth\/logout['"]/);
   });
 
   it('button onClick navigate to /login replace', () => {

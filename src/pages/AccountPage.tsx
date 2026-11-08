@@ -10,7 +10,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
-import { apiFetch } from '../lib/apiClient';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
@@ -376,8 +375,8 @@ export default function AccountPage() {
   useEffect(() => {
     if (!auth.user) return;
     let cancelled = false;
-    apiFetch<AccountStats>('/account/stats')
-      .then((data) => { if (!cancelled) setStats(data); })
+    typedApi.get('/api/account/stats').then(unwrap)
+      .then((data) => { if (!cancelled) setStats(data as AccountStats); })
       // v2.33.47 round 7b: 不直接 surface raw error.message (可能 leak backend
       // detail / SQL fragment)。改 ApiError 與 network error 分開 generic 文案。
       .catch((e) => {

@@ -161,7 +161,7 @@ describe('v2.33.59 Step 6 — verify endpoint POST + landing page', () => {
 
   it('SPA page VerifyEmailPage.tsx 存在', () => {
     expect(VERIFY_PAGE_SRC).toMatch(/export default function VerifyEmailPage/);
-    expect(VERIFY_PAGE_SRC).toContain("method: 'POST'");
+    expect(VERIFY_PAGE_SRC).toMatch(/typedApiRaw\.post\(['"]\/api\/oauth\/verify['"]/);
   });
 
   it('v2.33.114: VerifyEmailPage 拔 useEffect auto-POST，require user gesture', () => {

@@ -15,8 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { apiFetchRaw } from '../lib/apiClient';
-import { typedApi, unwrap } from '../lib/api/typed';
+import { typedApi, typedApiRaw, unwrap } from '../lib/api/typed';
 import { clearApiCache } from '../lib/logout';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import AppShell from '../components/shell/AppShell';
@@ -292,7 +291,7 @@ export default function SessionsPage() {
     setRetryAction(null);
     const failed = (message: string) => { setError(message); setRetryAction(() => () => void logoutAccount()); };
     try {
-      const response = await apiFetchRaw('/oauth/logout', { method: 'POST' });
+      const response = await typedApiRaw.post('/api/oauth/logout');
       if (!response.ok) throw new Error('Logout failed');
       writeAuthHint(false);
       void clearApiCache();
@@ -300,7 +299,7 @@ export default function SessionsPage() {
     } catch {
       // The server may have revoked the session even if its response was lost.
       try {
-        const status = await apiFetchRaw('/oauth/userinfo');
+        const status = await typedApiRaw.get('/api/oauth/userinfo');
         if (status.status === 401) {
           writeAuthHint(false);
           navigate('/login', { replace: true });
