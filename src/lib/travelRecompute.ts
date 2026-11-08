@@ -41,7 +41,7 @@
  * Google quota。auto 因 in-flight 被跳過時同樣記 signature — 該 in-flight
  * 請求就是本次缺口的嘗試（perf review：防 refetch race 的一次性 duplicate）。
  */
-import { apiFetchRaw } from './apiClient';
+import { typedApiRaw } from './api/typed';
 import { EVENT } from './events';
 import { rateLimitMessage } from './errors';
 
@@ -152,19 +152,18 @@ export function requestTravelRecompute(
   // error handler 重新標 failed。
   autoFailedScopes.delete(key);
 
-  const query = day != null ? `?day=${day}` : '';
   const p = (async (): Promise<RecomputeTravelResult> => {
-    const res = await apiFetchRaw(
-      `/trips/${encodeURIComponent(tripId)}/recompute-travel${query}`,
-      { method: 'POST', credentials: 'same-origin' },
-    );
+    const res = await typedApiRaw.post('/api/trips/{id}/recompute-travel', {
+      path: { id: tripId },
+      ...(day != null ? { query: { day: String(day) } } : {}),
+    });
     if (!res.ok) {
-      const seconds = Number(res.headers?.get('Retry-After'));
+      const seconds = Number(res.headers.get('Retry-After'));
       lastRateLimit = res.status === 429 ? { retryAfter: Number.isInteger(seconds) && seconds > 0 ? seconds : undefined } : null;
       throw Object.assign(new Error(`recompute-travel ${res.status}`), { status: res.status });
     }
     lastRateLimit = null;
-    const data = await res.json().catch(() => ({})) as RecomputeTravelResult;
+    const data = (res.data && typeof res.data === 'object' ? res.data : {}) as RecomputeTravelResult;
     window.dispatchEvent(new CustomEvent(EVENT.segmentUpdated, { detail: { tripId } }));
     return data;
   })();

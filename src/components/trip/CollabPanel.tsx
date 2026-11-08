@@ -14,7 +14,7 @@
  *   5. CSS class prefix 改 .tp-collab-panel(原 .tp-collab-sheet)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { apiFetchRaw } from '../../lib/apiClient';
+import { apiErrorMessage, typedApiRaw } from '../../lib/api/typed';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { CollabRole } from '../../types/api';
 import Icon from '../shared/Icon';
@@ -24,6 +24,14 @@ import ErrorBanner from '../shared/ErrorBanner';
 
 type AddRole = 'member' | 'viewer';
 type EditableRole = 'member' | 'viewer'; // 可由 owner 切換的 role
+
+/** 後端錯誤可能是 `{ error: '字串' }` 或 `{ error: { message | detail } }`；都不是時用 fallback。 */
+function permissionErrorMessage(error: unknown, fallback: string): string {
+  const errObj = (error as { error?: unknown } | null | undefined)?.error;
+  if (typeof errObj === 'string') return errObj;
+  const o = errObj as { message?: string; detail?: string } | null | undefined;
+  return o?.message ?? o?.detail ?? fallback;
+}
 
 const SCOPED_STYLES = `
 .tp-collab-panel {
@@ -381,12 +389,9 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
     setAddError('');
     setAdding(true);
     try {
-      const r = await apiFetchRaw('/permissions', {
-        method: 'POST',
-        body: JSON.stringify({ email: trimmed, tripId, role: addRole }),
-      });
+      const r = await typedApiRaw.post('/api/permissions', { body: { email: trimmed, tripId, role: addRole } });
       if (r.status === 201) {
-        const data = await r.json().catch(() => null) as { status?: string } | null;
+        const data = r.data as { status?: string } | null | undefined;
         const successMsg = data?.status === 'invitation_sent'
           ? `邀請信已寄至 ${trimmed}`
           : `已新增 ${trimmed}`;
@@ -397,16 +402,10 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
         return;
       }
       if (r.status === 409) {
-        const data = await r.json().catch(() => null);
-        const msg = data?.error?.message ?? '此電子郵件已有權限或待回覆邀請';
-        throw new Error(msg);
+        throw new Error(apiErrorMessage(r.error, '此電子郵件已有權限或待回覆邀請'));
       }
       if (r.status === 403) throw new Error('僅行程擁有者或管理者可操作');
-      const data = await r.json().catch(() => null);
-      const errObj = data?.error;
-      const errMsg = typeof errObj === 'string' ? errObj
-        : errObj?.message ?? errObj?.detail ?? '新增失敗';
-      throw new Error(errMsg);
+      throw new Error(permissionErrorMessage(r.error, '新增失敗'));
     } catch (err) {
       setAddError(`新增未完成：${(err as Error).message}。電子郵件已保留，請重試。`);
     } finally {
@@ -419,17 +418,8 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
     setRoleError('');
     setChangingRoleId(id);
     try {
-      const r = await apiFetchRaw(`/permissions/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (!r.ok) {
-        const data = await r.json().catch(() => null);
-        const errObj = data?.error;
-        const errMsg = typeof errObj === 'string' ? errObj
-          : errObj?.message ?? errObj?.detail ?? '修改角色失敗';
-        throw new Error(errMsg);
-      }
+      const r = await typedApiRaw.patch('/api/permissions/{id}', { path: { id: String(id) }, body: { role: newRole } });
+      if (!r.ok) throw new Error(permissionErrorMessage(r.error, '修改角色失敗'));
       const labelMap: Record<EditableRole, string> = { member: '共編成員', viewer: '檢視成員' };
       showToast(`已改為${labelMap[newRole]}`, 'success');
       loadPermissions(tripId);
@@ -446,14 +436,8 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
     setRemoveError('');
     setRemovingId(id);
     try {
-      const r = await apiFetchRaw(`/permissions/${id}`, { method: 'DELETE' });
-      if (!r.ok) {
-        const data = await r.json().catch(() => null);
-        const errObj = data?.error;
-        const errMsg = typeof errObj === 'string' ? errObj
-          : errObj?.message ?? errObj?.detail ?? '移除失敗';
-        throw new Error(errMsg);
-      }
+      const r = await typedApiRaw.delete('/api/permissions/{id}', { path: { id: String(id) } });
+      if (!r.ok) throw new Error(permissionErrorMessage(r.error, '移除失敗'));
       showToast(`已移除 ${permEmail}`, 'success');
       loadPermissions(tripId);
       setRemoveTarget(null);
@@ -470,15 +454,8 @@ export default function CollabPanel({ tripId }: CollabPanelProps) {
     setRevokeError('');
     setRevokingEmail(invitedEmail);
     try {
-      const r = await apiFetchRaw('/invitations/revoke', {
-        method: 'POST',
-        body: JSON.stringify({ tripId, email: invitedEmail }),
-      });
-      if (!r.ok) {
-        const data = await r.json().catch(() => null);
-        const errMsg = data?.error?.message ?? '撤銷失敗';
-        throw new Error(errMsg);
-      }
+      const r = await typedApiRaw.post('/api/invitations/revoke', { body: { tripId, email: invitedEmail } });
+      if (!r.ok) throw new Error(apiErrorMessage(r.error, '撤銷失敗'));
       showToast(`已撤銷對 ${invitedEmail} 的邀請`, 'success');
       loadPermissions(tripId);
       setRevokeTarget(null);
