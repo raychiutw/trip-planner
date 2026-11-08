@@ -34,7 +34,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import { routes } from '../lib/routes';
-import { apiFetchRaw } from '../lib/apiClient';
+import { apiErrorMessage, jsonData, typedApiRaw } from '../lib/api/typed';
 import { EVENT } from '../lib/events';
 import { deleteDay } from '../lib/tripMutations';
 import OperationShell from '../components/shell/OperationShell';
@@ -741,9 +741,9 @@ export default function EditTripPage() {
   const refetchDays = useCallback(async () => {
     if (!tripId) return false;
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`);
+      const res = await typedApiRaw.get('/api/trips/{id}/days', { path: { id: tripId }, query: { all: '1' } });
       if (!res.ok) throw new Error(`days fetch failed: ${res.status}`);
-      const data = (await res.json()) as DaySummaryRow[];
+      const data = jsonData(res) as DaySummaryRow[];
       setDays(
         data.map((d) => ({
           id: d.id,
@@ -773,9 +773,9 @@ export default function EditTripPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`);
+        const res = await typedApiRaw.get('/api/trips/{id}', { path: { id: tripId } });
         if (!res.ok) throw new Error(`load failed: ${res.status}`);
-        const data = (await res.json()) as TripApi;
+        const data = jsonData(res) as TripApi;
         if (cancelled) return;
         setOriginal(data);
         // v2.31.13: backend trip_destinations 表沒 place_id 欄位（client-side 用
@@ -819,21 +819,8 @@ export default function EditTripPage() {
     if (!tripId || daysMutating) return;
     setDaysMutating(true);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ position }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = '新增天數失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
-      }
+      const res = await typedApiRaw.post('/api/trips/{id}/days', { path: { id: tripId }, body: { position } });
+      if (!res.ok) throw new Error(apiErrorMessage(res.error, '新增天數失敗，請稍後再試。'));
       const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(refreshed ? (position === 'start' ? '已在最前加入一天' : '已在最後加入一天') : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
@@ -850,21 +837,8 @@ export default function EditTripPage() {
     if (!tripId || daysMutating) return;
     setDaysMutating(true);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ position: 'insert', date }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = '加回天數失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
-      }
+      const res = await typedApiRaw.post('/api/trips/{id}/days', { path: { id: tripId }, body: { position: 'insert', date } });
+      if (!res.ok) throw new Error(apiErrorMessage(res.error, '加回天數失敗，請稍後再試。'));
       const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(refreshed ? `已加回 ${formatShortDate(date)}` : '天數已更新，但無法重新讀取日期；請重試讀取。', refreshed ? 'success' : 'info');
@@ -898,21 +872,8 @@ export default function EditTripPage() {
     if (!tripId || daysMutating || !shiftNewDate) return;
     setDaysMutating(true);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/shift`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate: shiftNewDate }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = '平移失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
-      }
+      const res = await typedApiRaw.post('/api/trips/{id}/days/shift', { path: { id: tripId }, body: { startDate: shiftNewDate } });
+      if (!res.ok) throw new Error(apiErrorMessage(res.error, '平移失敗，請稍後再試。'));
       const refreshed = await refetchDays();
       window.dispatchEvent(new CustomEvent(EVENT.tripUpdated, { detail: { tripId } }));
       showToast(refreshed ? `出發日期已變更為 ${formatShortDate(shiftNewDate)}` : '日期變更已送出，但無法重新讀取；請重試讀取。', refreshed ? 'success' : 'info');
@@ -1049,20 +1010,8 @@ export default function EditTripPage() {
     }
 
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, {
-        method: 'PUT',
-        credentials: 'same-origin',
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let message = '儲存變更失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { code?: string; message?: string } };
-          if (data?.error?.message) message = data.error.message;
-        } catch { /* not JSON */ }
-        throw new Error(message);
-      }
+      const res = await typedApiRaw.put('/api/trips/{id}', { path: { id: tripId }, body });
+      if (!res.ok) throw new Error(apiErrorMessage(res.error, '儲存變更失敗，請稍後再試。'));
       // v2.33.108: auto-save 後不再 navigate（user 仍在 edit page）。
       // 廣播更新事件給 listening pages (ActiveTrip / TripsList) + reset original
       // 讓 dirty 重置，避免下次 effect 又觸發。

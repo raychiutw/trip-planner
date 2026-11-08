@@ -14,9 +14,8 @@ describe('EditTripPage — v2.33.8 Day 1 起始日期平移', () => {
   it('handleConfirmShift callback 呼叫 POST /days/shift', () => {
     expect(SRC).toMatch(/handleConfirmShift = useCallback/);
     expect(SRC).toMatch(
-      /apiFetchRaw\(`\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\/shift`,[\s\S]{0,250}method: 'POST'/,
+      /typedApiRaw\.post\('\/api\/trips\/\{id\}\/days\/shift', \{[^\n]*body: \{ startDate: shiftNewDate \}/,
     );
-    expect(SRC).toMatch(/JSON\.stringify\(\{ startDate: shiftNewDate \}\)/);
   });
 
   it('v2.33.13: shift button — 精簡單行「出發日期：M/D（週幾）」+ chev，無 icon', () => {

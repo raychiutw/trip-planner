@@ -29,7 +29,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import OperationShell from '../components/shell/OperationShell';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { parseUtcDate } from '../lib/parseUtcDate';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -513,9 +513,9 @@ export default function TripHealthCheckPage() {
 
   const fetchReport = useCallback(async (signal?: AbortSignal): Promise<HealthReport | null> => {
     if (!tripId) return null;
-    const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, { signal });
+    const res = await typedApiRaw.get('/api/trips/{id}/health-check', { path: { id: tripId }, ...(signal ? { signal } : {}) });
     if (!res.ok) throw new Error(`load failed: ${res.status}`);
-    const data = await res.json() as { report: HealthReport | null };
+    const data = jsonData(res) as { report: HealthReport | null };
     return data.report;
   }, [tripId]);
 
@@ -572,9 +572,9 @@ export default function TripHealthCheckPage() {
     const ctrl = new AbortController();
     (async () => {
       try {
-        const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/ai-authorization`, { signal: ctrl.signal });
+        const r = await typedApiRaw.get('/api/trips/{id}/ai-authorization', { path: { id: tripId }, signal: ctrl.signal });
         if (!r.ok) return; // 查不到就不攔，後端為最終關卡
-        const d = await r.json() as { ownerAuthorized?: unknown; isOwner?: unknown };
+        const d = jsonData(r) as { ownerAuthorized?: unknown; isOwner?: unknown };
         if (!ctrl.signal.aborted && d.ownerAuthorized === false && d.isOwner === false) setOwnerMustAuthorizeTrip(tripId);
       } catch { /* 同上 */ }
     })();
@@ -590,18 +590,18 @@ export default function TripHealthCheckPage() {
     (async () => {
       try {
         const [tripRes, daysRes] = await Promise.all([
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { signal: ctrl.signal }),
-          apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days?all=1`, { signal: ctrl.signal }),
+          typedApiRaw.get('/api/trips/{id}', { path: { id: tripId }, signal: ctrl.signal }),
+          typedApiRaw.get('/api/trips/{id}/days', { path: { id: tripId }, query: { all: '1' }, signal: ctrl.signal }),
         ]);
         if (cancelled) return;
         if (tripRes.ok) {
-          const tripData = await tripRes.json() as TripSummary;
+          const tripData = jsonData(tripRes) as TripSummary;
           setTrip({ id: tripData.id, title: tripData.title });
         }
         if (daysRes.ok) {
           // v2.31.58 empty trip guard：?all=1 endpoint 回每天 timeline array，
           // 累加跨天 entry 數判斷 trip 是否完全空白。
-          const daysData = await daysRes.json() as Array<{ timeline?: unknown[] }>;
+          const daysData = jsonData(daysRes) as Array<{ timeline?: unknown[] }>;
           const totalEntries = Array.isArray(daysData)
             ? daysData.reduce((sum, d) => sum + (Array.isArray(d.timeline) ? d.timeline.length : 0), 0)
             : 0;
@@ -638,24 +638,19 @@ export default function TripHealthCheckPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/health-check`, {
-        method: 'POST',
-      });
+      const res = await typedApiRaw.post('/api/trips/{id}/health-check', { path: { id: tripId } });
       if (currentTripRef.current !== tripId || tripEpochRef.current !== tripEpoch) return;
       if (!res.ok) {
         // v2.31.58：backend TRIP_EMPTY guard 拒絕（race window：frontend fetch
         // 完 trip empty 後 user 加 entry，但 button 還沒 re-enable 就點到，
         // 反之亦然）→ 顯示 backend 中文 message + 同步 entryCount = 0
         // 讓 button 立即 disabled。
-        try {
-          const errData = await res.json() as { error?: { code?: string; message?: string } };
-          if (errData.error?.code === 'TRIP_EMPTY') {
-            setEntryCount(0);
-            setError(errData.error.message ?? '此行程尚無景點，請先加入景點再執行健檢');
-            return;
-          }
-        } catch {
-          /* ignore parse error, fall through to generic message */
+        // 錯誤內容不是 JSON 物件（閘道 HTML）時當沒有 code，往下走通用訊息
+        const errData = (res.error && typeof res.error === 'object' ? res.error : {}) as { error?: { code?: string; message?: string } };
+        if (errData.error?.code === 'TRIP_EMPTY') {
+          setEntryCount(0);
+          setError(errData.error.message ?? '此行程尚無景點，請先加入景點再執行健檢');
+          return;
         }
         if (res.status === 403) {
           setError('沒有權限執行此行程的 AI 健檢');
@@ -663,7 +658,7 @@ export default function TripHealthCheckPage() {
         }
         throw new Error(`start failed: ${res.status}`);
       }
-      const data = await res.json() as { report: HealthReport };
+      const data = jsonData(res) as unknown as { report: HealthReport };
       if (currentTripRef.current !== tripId || tripEpochRef.current !== tripEpoch) return;
       if (data.report.tripId !== tripId) throw new Error('Wrong trip report');
       const previous = reportRef.current;

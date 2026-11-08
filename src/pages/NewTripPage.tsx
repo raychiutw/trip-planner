@@ -38,7 +38,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { typedApiRaw } from '../lib/api/typed';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { EVENT } from '../lib/events';
 import { lsGet, lsSet } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
@@ -578,7 +578,7 @@ export default function NewTripPage() {
         if (errMsg) message = errMsg;
         throw new Error(message);
       }
-      const data = res.data as { tripId: string };
+      const data = jsonData(res) as { tripId: string };
       // 廣播 tp-trip-created event 讓 TripsListPage refresh list
       window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: data.tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(data.tripId)}`);

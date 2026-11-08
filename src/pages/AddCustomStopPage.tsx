@@ -20,7 +20,7 @@ import { useBlocker, useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useTripMeta, useTripDays, NO_DESTINATIONS } from '../hooks/useTripRead';
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { createEntry } from '../lib/entryMutations';
 import { formatDateLabel } from '../lib/mapDay';
 import AppShell from '../components/shell/AppShell';
@@ -414,11 +414,11 @@ export default function AddCustomStopPage() {
       setAddressError(false);
       const closingToken = typeahead.pickSuggestion(placeId);
       try {
-        const qs = new URLSearchParams({ placeId });
-        if (closingToken) qs.set('sessionToken', closingToken);
-        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
+        const res = await typedApiRaw.get('/api/places/resolve', {
+          query: { placeId, ...(closingToken ? { sessionToken: closingToken } : {}) },
+        });
         if (!res.ok) throw new Error('resolve failed');
-        const data = (await res.json()) as { lat: number; lng: number };
+        const data = jsonData(res) as { lat: number; lng: number };
         if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
         setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
       } catch {

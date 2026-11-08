@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
-import { typedApiRaw } from '../lib/api/typed';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import InlineError from '../components/shared/InlineError';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 
@@ -173,7 +173,7 @@ export default function SignupPage() {
       });
 
       if (res.ok) {
-        const json = res.data as SignupOk;
+        const json = jsonData(res) as SignupOk;
         // Sending the email is best-effort; a slow mail service must not hold navigation.
         void typedApiRaw.post('/api/oauth/send-verification', { body: { email: json.email } }).catch(() => {});
         // V2 共編：若 signup 同時 accept 了 invitation → 直接帶到該 trip

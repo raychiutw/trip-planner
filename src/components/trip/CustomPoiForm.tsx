@@ -18,7 +18,7 @@ import { LocationPickerMap } from './LocationPickerMap';
 import { CategoryPicker } from './CategoryPicker';
 import { usePlacesAutocomplete } from '../../hooks/usePlacesAutocomplete';
 import { useTypeaheadKeyboard } from '../../hooks/useTypeaheadKeyboard';
-import { apiFetchRaw } from '../../lib/apiClient';
+import { jsonData, typedApiRaw } from '../../lib/api/typed';
 import { isValidCoord } from '../../lib/locationPicker';
 import type { PoiType } from '../../lib/poiCategory';
 
@@ -337,11 +337,11 @@ export function CustomPoiForm({
       setAddressError(false);
       const closingToken = typeahead.pickSuggestion(placeId);
       try {
-        const qs = new URLSearchParams({ placeId });
-        if (closingToken) qs.set('sessionToken', closingToken);
-        const res = await apiFetchRaw(`/places/resolve?${qs.toString()}`);
+        const res = await typedApiRaw.get('/api/places/resolve', {
+          query: { placeId, ...(closingToken ? { sessionToken: closingToken } : {}) },
+        });
         if (!res.ok) throw new Error('resolve failed');
-        const data = (await res.json()) as { lat: number; lng: number };
+        const data = jsonData(res) as { lat: number; lng: number };
         if (!isValidCoord({ lat: data.lat, lng: data.lng })) throw new Error('invalid coordinate');
         setFlyToSignal({ coord: { lat: data.lat, lng: data.lng }, zoom: 15 });
       } catch {

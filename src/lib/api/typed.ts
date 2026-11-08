@@ -69,6 +69,22 @@ export const typedApiRaw: ApiWithHeaders = createApi({
   },
 });
 
+/** `typedApiRaw` 失敗結果的 `error.message`（`{ error: { message } }`）；不是這個形狀（閘道 HTML、空內容）時回 fallback。 */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { error?: { message?: unknown } } | null | undefined)?.error?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
+
+/**
+ * 取 `typedApiRaw` 成功回應的 JSON data，與舊的 `await res.json()` 同樣嚴格：
+ * 內容不是 JSON（無內容、閘道 HTML 的 200）就丟 SyntaxError，不讓字串／undefined 悄悄流進後面的欄位存取。
+ */
+export function jsonData<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> extends { data: infer D } ? D : never {
+  const data = (result as unknown as { data?: unknown }).data;
+  if (!result.ok || data === null || typeof data !== 'object') throw new SyntaxError('回應不是 JSON');
+  return data as never;
+}
+
 /** 取成功回應的 data。非 2xx 在 `typedApi` 內已丟 `ApiError`，這裡的 throw 只是讓型別收斂。 */
 export function unwrap<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> extends { data: infer D } ? D : never {
   if (!result.ok) throw new Error('typedApi 非 2xx 應已丟 ApiError');

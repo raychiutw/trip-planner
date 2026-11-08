@@ -19,7 +19,7 @@
 import { useEffect, useState } from 'react';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 // v2.33.39 round 4: 走 apiFetchRaw 對齊 sibling hook + 補 polyline shape 驗證。
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 
 export interface RouteResult {
   /** [lat, lng] points for polyline */
@@ -137,11 +137,11 @@ export function useRoute(
       }
 
       try {
-        const res = await apiFetchRaw(
-          `/route?from=${from.lng},${from.lat}&to=${to.lng},${to.lat}`,
-        );
+        const res = await typedApiRaw.get('/api/route', {
+          query: { from: `${from.lng},${from.lat}`, to: `${to.lng},${to.lat}` },
+        });
         if (!res.ok) throw new Error(`status ${res.status}`);
-        const raw = (await res.json()) as Record<string, unknown>;
+        const raw = jsonData(res) as Record<string, unknown>;
         // v2.33.39 round 4: validate polyline shape — backend / proxy 可能回
         // 任意物件，下游 cache 100 個 entry，poisoned data 會 replay。
         const polylineRaw = raw.polyline;

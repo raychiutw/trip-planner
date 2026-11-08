@@ -4,7 +4,7 @@
  * 另測 `rawBody`：原樣送出字串（不重新序列化），給 ImportTripButton 這類「body 是檔案原文」的呼叫。
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { typedApiRaw } from '../../src/lib/api/typed';
+import { jsonData, typedApiRaw } from '../../src/lib/api/typed';
 import { ApiError } from '../../src/lib/errors';
 
 const fetchMock = vi.fn();
@@ -109,5 +109,24 @@ describe('typedApiRaw：不看 Content-Type 也解析 JSON（與舊的 res.json(
     fetchMock.mockResolvedValue(new Response('not-json', { status: 500 }));
     const r = await typedApiRaw.post('/api/oauth/verify', { body: { token: 't' } });
     expect(r).toMatchObject({ ok: false, status: 500, error: 'not-json' });
+  });
+});
+
+describe('jsonData：與舊的 res.json() 同樣嚴格', () => {
+  it('JSON 物件原樣回', async () => {
+    fetchMock.mockResolvedValue(json({ tripId: 't1' }, 201));
+    expect(jsonData(await typedApiRaw.post('/api/trips/import', { rawBody: '{}' }))).toEqual({ tripId: 't1' });
+  });
+
+  it('2xx 但內容不是 JSON（閘道 HTML）丟 SyntaxError', async () => {
+    fetchMock.mockResolvedValue(new Response('<html>block</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }));
+    const r = await typedApiRaw.post('/api/trips/import', { rawBody: '{}' });
+    expect(() => jsonData(r)).toThrow(SyntaxError);
+  });
+
+  it('2xx 沒有內容（204）也丟 SyntaxError', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    const r = await typedApiRaw.post('/api/oauth/logout');
+    expect(() => jsonData(r)).toThrow(SyntaxError);
   });
 });

@@ -142,19 +142,11 @@ describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
 // 遷移掉一處就要把 max 調低（降到 0 就刪掉該列），否則「白名單過期」那一條會轉紅。
 const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
   'src/components/trip/CollabPanel.tsx': { max: 4, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trip/CustomPoiForm.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trip/TravelPillDialog.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/components/trips/ImportTripButton.tsx': { max: 1, reason: 'body 是使用者檔案的原始文字（text），typedApi 會重新 JSON.stringify 物件，改變送出的位元組' },
-  'src/hooks/usePermissions.ts': { max: 2, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/hooks/usePoiSearch.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/hooks/useRoute.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
   'src/lib/segmentMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑由呼叫端組成（動態）' },
   'src/lib/travelRecompute.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
   'src/lib/tripMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
-  'src/pages/AddCustomStopPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/EditTripPage.tsx': { max: 6, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/TripHealthCheckPage.tsx': { max: 5, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
 };
 
 const directCounts = (() => {

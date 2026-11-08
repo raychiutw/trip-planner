@@ -30,13 +30,13 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
 
   it('refetchDays callback fetch /trips/:id/days?all=1', () => {
     expect(EDIT_TRIP_SRC).toMatch(/refetchDays.*useCallback/);
-    expect(EDIT_TRIP_SRC).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
+    expect(EDIT_TRIP_SRC).toMatch(/typedApiRaw\.get\('\/api\/trips\/\{id\}\/days', \{[^\n]*query: \{ all: '1' \}/);
   });
 
   it('handleAddDay POST /days with body { position }', () => {
     expect(EDIT_TRIP_SRC).toMatch(/handleAddDay = useCallback\(async \(position: 'start' \| 'end'\)/);
     expect(EDIT_TRIP_SRC).toMatch(
-      /apiFetchRaw\(`\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days`,[\s\S]{0,200}method: 'POST'[\s\S]{0,200}position/,
+      /typedApiRaw\.post\('\/api\/trips\/\{id\}\/days', \{[^\n]*body: \{ position \}/,
     );
   });
 
@@ -73,7 +73,7 @@ describe('EditTripPage — v2.33.0 行程天數 section', () => {
     expect(EDIT_TRIP_SRC).toMatch(/function chineseDayOfWeek/);
     // handleRestoreDay 呼叫 POST position: 'insert', date
     expect(EDIT_TRIP_SRC).toMatch(/handleRestoreDay = useCallback/);
-    expect(EDIT_TRIP_SRC).toMatch(/JSON\.stringify\(\{ position: 'insert', date \}\)/);
+    expect(EDIT_TRIP_SRC).toMatch(/body: \{ position: 'insert', date \}/);
     // gap placeholder render with testid
     expect(EDIT_TRIP_SRC).toMatch(/data-testid=\{`edit-trip-day-gap-\$\{gapDate\}`\}/);
     expect(EDIT_TRIP_SRC).toMatch(/className="tp-edit-day-gap"/);

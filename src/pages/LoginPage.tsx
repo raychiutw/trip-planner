@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
-import { typedApiRaw } from '../lib/api/typed';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { AuthError, getNewApiAuth } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
@@ -300,7 +300,7 @@ export default function LoginPage() {
           try {
             const acceptRes = await typedApiRaw.post('/api/invitations/accept', { body: { token: invitationToken } });
             if (acceptRes.ok) {
-              const data = acceptRes.data as { tripId: string };
+              const data = jsonData(acceptRes) as { tripId: string };
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }
