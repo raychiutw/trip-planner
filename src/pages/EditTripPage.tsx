@@ -346,7 +346,8 @@ const SCOPED_STYLES = `
   font-style: italic;
 }
 .tp-edit-day-remove {
-  width: 36px; height: 36px;
+  /* #1636：觸控目標下限 44（DESIGN.md／Apple HIG） */
+  width: 44px; height: 44px;
   display: grid; place-items: center;
   border: 1px solid var(--color-border);
   background: var(--color-background);
