@@ -1927,7 +1927,8 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * 但一 hover 就被這條的 --color-accent 蓋掉，掉到 light 3.27:1 / dark 3.82:1 —— 真違規。
  * 所以這條要跟 .tp-titlebar-action:hover 一起改。改後 light 5.81:1 / dark 5.11:1，
  * icon-only 變體同樣受益（只是 hover 時的棕色略深，與 labeled 變體的 base 色更一致）。 */
-.tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent-text-on-tonal); }
+.tp-titlebar-back:hover:not(:disabled) { background: var(--color-hover); color: var(--color-accent-text-on-tonal); }
+.tp-titlebar-back:disabled { opacity: 0.5; cursor: not-allowed; }
 .tp-titlebar-back:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
@@ -2018,6 +2019,58 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-action.is-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+/* #1559：表單頁主要動作手機也顯示文字（建立／完成／儲存）。放在 ≤760px 規則之後，同 specificity 以順序覆蓋。 */
+@media (max-width: 760px) {
+  .tp-titlebar-action--labeled {
+    width: auto;
+    min-width: var(--spacing-tap-min);
+    padding: 0 14px;
+  }
+  .tp-titlebar-action--labeled .tp-titlebar-action-label { display: inline; }
+}
+.tp-titlebar-action-spinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: tp-spin 800ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-titlebar-action-spinner { animation-duration: 2400ms; }
+}
+
+/* #1559：標題列下方的 sticky 摘要列（計數／行程摘要／自動儲存狀態）與 role="alert" 錯誤橫幅。
+ * 摘要列貼在標題列下緣（top = 標題列高度），錯誤橫幅緊接其後、隨內容捲動。 */
+.tp-form-summary {
+  position: sticky;
+  top: calc(var(--titlebar-h) + env(safe-area-inset-top, 0px));
+  z-index: 9;
+  padding: 8px 16px;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-form-summary b, .tp-form-summary strong { color: var(--color-foreground); font-weight: 700; }
+.tp-form-error-banner {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive);
+  font-size: var(--font-size-footnote);
+  line-height: 1.4;
+}
+@media (min-width: 1024px) {
+  .tp-form-summary { padding-left: 32px; padding-right: 32px; }
+  .tp-form-error-banner { margin-left: 32px; margin-right: 32px; }
 }
 
 /* Icon-only TitleBar button — for menu triggers (e.g. OverflowMenu ⋯).

@@ -51,6 +51,7 @@ import {
   type RegionOption,
 } from '../lib/poiSearchHelpers';
 import OperationShell from '../components/shell/OperationShell';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripTimePicker } from '../components/TripTimePicker';
@@ -560,7 +561,7 @@ const SCOPED_STYLES = `
   }
 }
 
-/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用 */
+/* 計數在標題列下方的 .tp-form-summary 摘要列（#1559；底部列已退役） */
 .tp-add-stop-counter {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);
@@ -573,31 +574,6 @@ const SCOPED_STYLES = `
 .tp-add-stop-counter strong {
   color: var(--color-foreground);
   font-weight: 700;
-}
-.tp-add-stop-actions { display: inline-flex; gap: 8px; }
-.tp-add-stop-btn {
-  font: inherit; font-weight: 700; font-size: var(--font-size-footnote);
-  padding: 10px 18px; min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（取消/完成） */
-  border-radius: var(--radius-full);
-  cursor: pointer;
-}
-.tp-add-stop-btn-cancel {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
-}
-.tp-add-stop-btn-cancel:hover { background: var(--color-hover); }
-.tp-add-stop-btn-confirm {
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
-  border: 1px solid var(--color-accent-fill);
-}
-.tp-add-stop-btn-confirm:hover { filter: brightness(0.95); }
-.tp-add-stop-btn-confirm:disabled {
-  background: var(--color-secondary);
-  color: var(--color-muted);
-  border-color: var(--color-border);
-  cursor: not-allowed;
 }
 `;
 
@@ -904,6 +880,29 @@ export default function AddStopPage() {
         title="加入景點"
         back={handleBack}
         scopedStyles={SCOPED_STYLES}
+        busy={submitting}
+        errorMessage={submitError}
+        errorTestId="add-stop-error"
+        primaryAction={
+          <TitleBarPrimaryAction
+            label="完成"
+            busyLabel="加入中⋯"
+            busy={submitting}
+            disabled={!confirmEnabled}
+            onClick={() => void handleConfirm()}
+            testId="add-stop-confirm"
+          />
+        }
+        summary={
+          <span className="tp-add-stop-counter" data-testid="add-stop-counter">
+            {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
+                簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
+            {hasDay
+              ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
+              : <>請先選擇加入哪天</>
+            }
+          </span>
+        }
       >
             <div className="tp-add-stop-page-day-meta">{dayLabel}</div>
 
@@ -1296,38 +1295,6 @@ export default function AddStopPage() {
                   />
                 </form>
               )}
-            </div>
-
-            <div className="tp-page-bottom-bar">
-              <span className="tp-add-stop-counter" data-testid="add-stop-counter">
-                {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
-                    簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
-                {hasDay
-                  ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
-                  : <>請先選擇加入哪天</>
-                }
-                {submitError && <span role="alert" style={{ color: 'var(--color-destructive)', marginLeft: 8 }}>{submitError}</span>}
-              </span>
-              <div className="tp-add-stop-actions">
-                <button
-                  type="button"
-                  className="tp-add-stop-btn tp-add-stop-btn-cancel"
-                  onClick={handleBack}
-                  disabled={submitting}
-                  data-testid="add-stop-cancel"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  className="tp-add-stop-btn tp-add-stop-btn-confirm"
-                  onClick={() => void handleConfirm()}
-                  disabled={!confirmEnabled}
-                  data-testid="add-stop-confirm"
-                >
-                  {submitting ? '加入中⋯' : '加入景點'}
-                </button>
-              </div>
             </div>
       </OperationShell>
     </>

@@ -50,7 +50,7 @@ test.describe('QA Flow 1 — 新增行程', () => {
     await pickDate(page, 'new-trip-start-input', '2026-08-01');
     await pickDate(page, 'new-trip-end-input', '2026-08-05');
 
-    // v2.33.120: titlebar action 拔掉，改用 bottom bar submit button
+    // #1559：「建立」在標題列右側（底部列已退役）
     const submitBtn = page.getByTestId('new-trip-submit');
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
@@ -94,8 +94,8 @@ test.describe('QA Flow 2 — 新增景點 (custom tab wedge guard)', () => {
     // CI 無 Google Maps browser key → map fail-load → customCoord 永遠 null →
     // 完成 disabled，不會 fire POST entries。確認 guard 阻擋。
     // rev2「6 條全接」：桌機 add-stop 改右欄 stack panel（無 titlebar confirm）→
-    // 驗 bottom bar 完成鈕 disabled（stack 模式唯一 confirm 入口）。
-    const bottomConfirm = page.getByTestId('add-stop-confirm');
+    // 驗標題列右側完成鈕 disabled（#1559：stack 模式唯一 confirm 入口）。
+    const bottomConfirm = page.getByTestId('add-stop-confirm'); // #1559：已在標題列，變數名沿用
     await expect(bottomConfirm).toBeDisabled();
 
     // 確認沒 POST 漏出去
@@ -211,14 +211,14 @@ test.describe('QA Flow 5 — 編輯行程 (v2.33.108 auto-save)', () => {
     expect(body.description).toContain('QA spec');
   });
 
-  test('返回 button → navigate back (v2.33.108: 無 ConfirmModal — auto-save 已 commit)', async ({ page }) => {
+  test('完成 button → navigate back (v2.33.108: 無 ConfirmModal — auto-save 已 commit；#1559 搬到標題列右側)', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/edit');
     await expect(page.getByTestId('edit-trip-page')).toBeVisible();
 
-    // 「返回」button (rename from「取消」)
-    const back = page.getByTestId('edit-trip-back');
-    await expect(back).toBeVisible();
-    await back.click();
+    // 「完成」button（等同返回；auto-save 已 commit）
+    const done = page.getByTestId('edit-trip-done');
+    await expect(done).toBeVisible();
+    await done.click();
     // navigate occurs，URL 離開 /edit
     await expect(page).not.toHaveURL(/\/edit$/);
   });

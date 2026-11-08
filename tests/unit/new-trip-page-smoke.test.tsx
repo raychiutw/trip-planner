@@ -82,11 +82,13 @@ describe('NewTripPage — wiring smoke (v2.33.48 round 7c)', () => {
     expect(SRC).toMatch(/<AppShell/);
   });
 
-  it('v2.33.120: titlebar action 拔除，主 CTA 只在 bottom bar (new-trip-submit)', () => {
-    // 重複 CTA UX 修正：原本 titlebar 右上 + bottom bar 兩個「建立行程」button，
-    // 視覺干擾。bottom bar 為 form context 內主 CTA。
-    expect(SRC).not.toMatch(/TitleBarPrimaryAction/);
-    expect(SRC).toMatch(/data-testid="new-trip-submit"/);
+  it('#1559: 主要動作「建立」在標題列（TitleBarPrimaryAction），底部列與取消鈕退役', () => {
+    // v2.33.120 曾把 titlebar action 拔掉、主 CTA 留在底部列；#1559 owner 定案相反：
+    // 表單頁主要動作一律放標題列，返回即取消。
+    expect(SRC).toMatch(/<TitleBarPrimaryAction/);
+    expect(SRC).toMatch(/data-testid="new-trip-submit"|testId="new-trip-submit"/);
+    expect(SRC).not.toMatch(/tp-page-bottom-bar/);
+    expect(SRC).not.toMatch(/new-trip-cancel/);
   });
 
   it('v2.31.36 migration 0068 dropped fields not present in write payload', () => {
@@ -105,9 +107,9 @@ describe('NewTripPage — wiring smoke (v2.33.48 round 7c)', () => {
     // 填了東西又按取消/返回 → 先確認再捨棄，避免丟輸入。
     expect(SRC).toMatch(/const dirty =/);
     expect(SRC).toMatch(/handleBackGuarded/);
-    // TitleBar back 與 bottom bar 取消都走 guarded handler，不直接 handleBack
+    // 取消鈕已退役（#1559，返回即取消）：TitleBar back 走 guarded handler，不可直接用 handleBack
     expect(SRC).toMatch(/back=\{handleBackGuarded\}/);
-    expect(SRC).toMatch(/onClick=\{handleBackGuarded\}/);
+    expect(SRC).not.toMatch(/back=\{handleBack\}/);
     expect(SRC).toMatch(/<ConfirmModal/);
     expect(SRC).toMatch(/beforeunload/);
   });

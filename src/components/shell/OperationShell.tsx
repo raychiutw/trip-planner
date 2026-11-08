@@ -9,7 +9,8 @@
  *   - 手機（!inStack）：整頁 `<AppShell>` 包同一 panel（drill-down 全頁下鑽）。
  *
  * children / shellClassName / scopedStyles 兩形態共用；只有外層（bare vs AppShell）不同。
- * 完成鈕一律由 children 內的 `.tp-page-bottom-bar` 提供（header 不放 action）。
+ * 表單頁的主要動作走 `primaryAction`（標題列右側，#1559 取代舊 `.tp-page-bottom-bar`）；
+ * `summary` 為標題列下方 sticky 摘要列、`errorMessage` 為標題列正下方 role="alert" 橫幅。
  * `closeStack` 由 TripStackLayout 於桌機+手機兩支都注入（回行程詳情）。
  */
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
@@ -17,6 +18,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import AppShell from './AppShell';
 import DesktopSidebarConnected from './DesktopSidebarConnected';
 import StackPanelHeader from './StackPanelHeader';
+import { FormErrorBanner, FormSummaryBar } from './FormHeaderExtras';
 import { useSheetStack } from '../../contexts/SheetStackContext';
 import { isAnySheetOpen } from '../../hooks/useSheetBehavior';
 
@@ -49,6 +51,15 @@ export interface OperationShellProps {
    * 不要改」）。桌機（inStack）不吃此 prop —— 桌機底部 nav 一律由 TripStackLayout 提供。
    */
   bottomNav?: ReactNode;
+  /** #1559 表單頁主要動作（TitleBarPrimaryAction），放標題列右側。 */
+  primaryAction?: ReactNode;
+  /** 送出中：標題列返回與 ✕ 停用。 */
+  busy?: boolean;
+  /** 標題列下方 sticky 摘要列（計數／自動儲存狀態）。 */
+  summary?: ReactNode;
+  /** 標題列正下方 role="alert" 錯誤橫幅（主要動作維持可點以便重試）。 */
+  errorMessage?: string | null;
+  errorTestId?: string;
   children: ReactNode;
 }
 
@@ -61,6 +72,11 @@ export default function OperationShell({
   confirmBeforeBack,
   scopedStyles,
   bottomNav,
+  primaryAction,
+  busy,
+  summary,
+  errorMessage,
+  errorTestId,
   children,
 }: OperationShellProps) {
   const { inStack, closeStack } = useSheetStack();
@@ -135,7 +151,9 @@ export default function OperationShell({
   const panel = (
     <div className={shellClassName} data-testid={testId} ref={panelRef} tabIndex={-1}>
       {scopedStyles && <style>{scopedStyles}</style>}
-      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={close ?? closeStack} headingLevel={inStack ? 2 : 1} />
+      <StackPanelHeader title={title} onBack={showBack ? handleBack : undefined} onClose={close ?? closeStack} headingLevel={inStack ? 2 : 1} primaryAction={primaryAction} busy={busy} />
+      {summary != null && <FormSummaryBar>{summary}</FormSummaryBar>}
+      {errorMessage && <FormErrorBanner message={errorMessage} testId={errorTestId} />}
       {children}
     </div>
   );
