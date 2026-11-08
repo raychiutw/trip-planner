@@ -322,10 +322,9 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-callout);
   color: var(--color-foreground);
 }
-.tp-add-stop-search-input:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-add-stop-search-input:focus { border-color: var(--color-accent); }
+/* 焦點外框統一用 :focus-visible 畫 2px 全域 focus ring（#1595／#1628 範本）；舊的 accent-subtle 外圈對比僅 1.11:1，已移除 */
+.tp-add-stop-search-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 .tp-add-stop-grid {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -532,10 +531,9 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-form-field textarea { min-height: 88px; resize: vertical; }
 .tp-add-stop-form-field input:focus,
-.tp-add-stop-form-field textarea:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-add-stop-form-field textarea:focus { border-color: var(--color-accent); }
+.tp-add-stop-form-field input:focus-visible,
+.tp-add-stop-form-field textarea:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-add-stop-form-select,
 .tp-add-stop-form-placeholder {
   display: flex;

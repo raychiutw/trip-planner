@@ -115,7 +115,9 @@ const SCOPED_STYLES = `
   padding: 8px 16px; min-height: 48px;
 }
 .explore-field-error { padding: 0 16px; } /* 與膠囊搜尋欄的內縮對齊 */
+/* input 自己沒有框（outline:none），外框畫在膠囊容器；用 :has 限定 input 聚焦，免得內部按鈕聚焦時與它自己的 focus ring 疊兩圈（比照 #1595） */
 .explore-search:focus-within { border-color: var(--color-accent); }
+.explore-search:has(input:focus-visible) { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .explore-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .explore-search input {
   flex: 1; min-width: 0; border: none; background: transparent;

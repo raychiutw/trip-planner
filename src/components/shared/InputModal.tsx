@@ -61,11 +61,8 @@ const SCOPED_STYLES = `
   margin-bottom: 20px;
   box-sizing: border-box;
 }
-.tp-input-field:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-bg);
-}
+.tp-input-field:focus { border-color: var(--color-accent); }
+.tp-input-field:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 .tp-input-actions {
   display: flex; gap: 8px; justify-content: flex-end;

@@ -201,10 +201,8 @@ const SCOPED_STYLES = `
 body.dark .tp-entry-action-time-select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
 }
-.tp-entry-action-time-select:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+.tp-entry-action-time-select:focus { border-color: var(--color-accent); }
+.tp-entry-action-time-select:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-entry-action-error {
   margin: 16px 0 0;
   padding: 10px 12px;

@@ -37,10 +37,12 @@ export const TRIP_DATE_PICKER_STYLES = `
 }
 .tp-date-trigger:focus-visible,
 .tp-date-trigger.is-open {
-  outline: none;
   border-color: var(--color-accent);
+}
+.tp-date-trigger.is-open {
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
+.tp-date-trigger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-date-trigger:disabled {
   opacity: 0.55;
   cursor: not-allowed;

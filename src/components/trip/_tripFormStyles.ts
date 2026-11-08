@@ -142,11 +142,14 @@ body.dark .tp-edit-row select {
 .tp-edit-row input[type="text"]:focus,
 .tp-edit-row textarea:focus,
 .tp-edit-row select:focus {
-  outline: none;
   border-color: var(--color-accent);
   background: var(--color-background);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
+.tp-new-form-row input:focus-visible,
+.tp-new-form-row textarea:focus-visible,
+.tp-edit-row input[type="text"]:focus-visible,
+.tp-edit-row textarea:focus-visible,
+.tp-edit-row select:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* ===== Sortable destinations list ===== */
 .tp-new-dest-rows,

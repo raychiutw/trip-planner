@@ -441,10 +441,8 @@ body.dark .tp-chat-load-error-retry { color: var(--color-background); }
 @media (max-width: 760px) {
   .tp-chat-input { font-size: var(--font-size-body); }
 }
-.tp-chat-input:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-chat-input:focus { border-color: var(--color-accent); }
+.tp-chat-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
 .tp-chat-send {
   position: relative;

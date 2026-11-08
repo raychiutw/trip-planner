@@ -115,7 +115,9 @@ const SCOPED_STYLES = `
   border: 1px solid var(--color-border); border-radius: var(--radius-full);
   padding: 8px 16px; min-height: 44px;
 }
+/* input 自己沒有框（outline:none），外框畫在膠囊容器；用 :has 限定 input 聚焦，免得內部按鈕聚焦時與它自己的 focus ring 疊兩圈（比照 #1595） */
 .favorites-search:focus-within { border-color: var(--color-accent); }
+.favorites-search:has(input:focus-visible) { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .favorites-search .search-icon { width: 18px; height: 18px; color: var(--color-muted); flex-shrink: 0; }
 .favorites-search input {
   flex: 1; border: none; background: transparent;

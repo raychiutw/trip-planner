@@ -231,10 +231,8 @@ const SCOPED_STYLES = `
   caret-color: var(--color-foreground);
   outline: none;
 }
-.tp-change-poi-search input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-change-poi-search input:focus { border-color: var(--color-accent); }
+.tp-change-poi-search input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-change-poi-search input::placeholder {
   color: var(--color-muted);
   -webkit-text-fill-color: var(--color-muted);
