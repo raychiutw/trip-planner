@@ -96,14 +96,15 @@ describe('ChangePoiPage mode=new — search result editable category override', 
     expect(CHANGE_POI).toMatch(/setSearchCatOverride\(null\)/);
   });
 
-  it('chip uses dropUp + a selection-scoped key (fixed bottom bar: picker must open upward, remount per pick)', () => {
-    // picker 在 fixed bottom bar 下方無空間 → dropUp 向上彈出；key 綁選取身分 → 換選取 remount 關掉殘留 picker。
-    expect(CHANGE_POI).toMatch(/dropUp/);
+  it('chip 在內容區分類欄位列（不再 dropUp）、key 綁選取身分（換選取 remount 關掉殘留 picker）', () => {
+    // #1559：底部列退役，chip 搬到「已選景點」卡片下的欄位列 → picker 向下彈出，不需 dropUp。
+    expect(CHANGE_POI).not.toMatch(/dropUp/);
+    expect(CHANGE_POI).toMatch(/className="tp-change-poi-cat-field"/);
     expect(CHANGE_POI).toMatch(/key=\{`\$\{selected\.name\}-\$\{selected\.lat\}-\$\{selected\.lng\}`\}/);
   });
 
-  it('scopes a flex-wrap override onto the shared bottom bar (3 non-shrinking items must wrap on mobile)', () => {
-    expect(CHANGE_POI).toMatch(/\.tp-page-bottom-bar\s*\{[^}]*flex-wrap:\s*wrap/);
+  it('不再覆寫共用底部列（底部列已對表單頁退役）', () => {
+    expect(CHANGE_POI).not.toMatch(/\.tp-page-bottom-bar/);
   });
 });
 

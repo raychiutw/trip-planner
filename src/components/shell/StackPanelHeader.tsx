@@ -21,6 +21,10 @@ export interface StackPanelHeaderProps {
    * 手機整頁下鑽（沒有別的 h1）傳 1，頁面才有恰好一個 h1（#1445 F11）。
    */
   headingLevel?: 1 | 2;
+  /** 右側主要動作 slot（#1559：表單頁的建立／完成／儲存），放在 ✕ 之前。 */
+  primaryAction?: ReactNode;
+  /** 送出中：返回與 ✕ 一併停用，避免中途離開。 */
+  busy?: boolean;
 }
 
 export const STACK_PANEL_HEADER_STYLES = `
@@ -48,7 +52,8 @@ export const STACK_PANEL_HEADER_STYLES = `
   background: transparent; color: var(--color-foreground);
   transition: background 150ms var(--transition-timing-function-apple);
 }
-.tp-stack-head-btn:hover { background: var(--color-hover); }
+.tp-stack-head-btn:hover:not(:disabled) { background: var(--color-hover); }
+.tp-stack-head-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .tp-stack-head-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-stack-head-btn .svg-icon { width: 20px; height: 20px; }
 .tp-stack-head-title {
@@ -60,7 +65,7 @@ export const STACK_PANEL_HEADER_STYLES = `
 .tp-stack-head-spacer { width: var(--spacing-tap-min); flex-shrink: 0; }
 `;
 
-export default function StackPanelHeader({ title, onBack, onClose, headingLevel = 2 }: StackPanelHeaderProps) {
+export default function StackPanelHeader({ title, onBack, onClose, headingLevel = 2, primaryAction, busy = false }: StackPanelHeaderProps) {
   return (
     <>
       <style>{STACK_PANEL_HEADER_STYLES}</style>
@@ -71,6 +76,7 @@ export default function StackPanelHeader({ title, onBack, onClose, headingLevel 
             className="tp-stack-head-btn"
             aria-label="返回上一層"
             onClick={onBack}
+            disabled={busy}
             data-testid="stack-panel-back"
           >
             <Icon name="arrow-left" />
@@ -79,15 +85,17 @@ export default function StackPanelHeader({ title, onBack, onClose, headingLevel 
           <span className="tp-stack-head-spacer" aria-hidden="true" />
         )}
         {title ? (
-          <span className="tp-stack-head-title" role="heading" aria-level={headingLevel}>{title}</span>
+          <span className="tp-stack-head-title" role="heading" aria-level={headingLevel} title={typeof title === 'string' ? title : undefined}>{title}</span>
         ) : (
           <span style={{ flex: 1 }} aria-hidden="true" />
         )}
+        {primaryAction}
         <button
           type="button"
           className="tp-stack-head-btn"
           aria-label="關閉"
           onClick={onClose}
+          disabled={busy}
           data-testid="stack-panel-close"
         >
           <Icon name="x-mark" />

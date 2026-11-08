@@ -48,6 +48,7 @@ import {
   type DayOption,
 } from '../lib/entryAction';
 import OperationShell from '../components/shell/OperationShell';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TripSelect } from '../components/TripSelect';
@@ -201,10 +202,8 @@ const SCOPED_STYLES = `
 body.dark .tp-entry-action-time-select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFBF5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
 }
-.tp-entry-action-time-select:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+.tp-entry-action-time-select:focus { border-color: var(--color-accent); }
+.tp-entry-action-time-select:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-entry-action-error {
   margin: 16px 0 0;
   padding: 10px 12px;
@@ -228,31 +227,6 @@ body.dark .tp-entry-action-time-select {
   text-align: center;
   color: var(--color-muted);
   font-size: var(--font-size-footnote);
-}
-
-/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,EntryAction 用 --end variant。 */
-.tp-entry-action-btn {
-  padding: 12px 20px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-foreground);
-  font: inherit; font-weight: 600;
-  font-size: var(--font-size-callout);
-  cursor: pointer;
-  min-height: var(--spacing-tap-min);
-}
-.tp-entry-action-btn:hover:not(:disabled) { background: var(--color-hover); }
-.tp-entry-action-btn-primary {
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent-fill);
-}
-.tp-entry-action-btn-primary:hover:not(:disabled) {
-  filter: brightness(0.95);
-}
-.tp-entry-action-btn:disabled {
-  opacity: 0.5; cursor: not-allowed;
 }
 `;
 
@@ -412,6 +386,19 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         title={heading}
         back={handleBack}
         scopedStyles={SCOPED_STYLES}
+        busy={submitting}
+        errorMessage={submitError}
+        errorTestId="entry-action-error"
+        primaryAction={!loading && !loadError ? (
+          <TitleBarPrimaryAction
+            label={retryRecompute.current ? '重試更新交通' : ctaLabel}
+            busyLabel="處理中⋯"
+            busy={submitting}
+            disabled={!canConfirm}
+            onClick={handleConfirm}
+            testId="entry-action-confirm"
+          />
+        ) : undefined}
       >
             <div className="tp-entry-action-content">
               {loading && (
@@ -494,39 +481,9 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
                       <label data-testid="entry-action-custom-end">離開 <TripTimePicker value={customEnd} onChange={setCustomEnd} ariaLabel="離開時間" disabled={submitting || !!retryRecompute.current} /></label>
                     </div>
                   )}
-
-                  {submitError && (
-                    <div className="tp-entry-action-error" role="alert">
-                      <Icon name="warning" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
                 </>
               )}
             </div>
-
-            {!loading && !loadError && (
-              <div className="tp-page-bottom-bar tp-page-bottom-bar--end">
-                <button
-                  type="button"
-                  className="tp-entry-action-btn"
-                  onClick={handleBack}
-                  disabled={submitting}
-                  data-testid="entry-action-cancel"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  className="tp-entry-action-btn tp-entry-action-btn-primary"
-                  onClick={handleConfirm}
-                  disabled={!canConfirm}
-                  data-testid="entry-action-confirm"
-                >
-                  {submitting ? '處理中⋯' : retryRecompute.current ? '重試更新交通' : ctaLabel}
-                </button>
-              </div>
-            )}
       </OperationShell>
     </>
   );

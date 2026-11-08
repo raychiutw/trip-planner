@@ -27,7 +27,7 @@
  *   - 從 props 收 ownerEmail 改成 useCurrentUser
  *   - 從 props 收 onClose/onCreated 改成 useNavigate + dispatch tp-trip-created
  *   - 取消走 useNavigateBack(routes.trips()) explicit URL，建立後 navigate(`/trips?selected=:id`)
- *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
+ *   - 「建立」 primary action 在 TitleBar 右側（桌機與手機都顯示文字，#1559）
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,8 +45,9 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
+import { FormErrorBanner, FormSummaryBar } from '../components/shell/FormHeaderExtras';
 import ConfirmModal from '../components/shared/ConfirmModal';
-import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ToastContainer from '../components/shared/Toast';
 import { TripDatePicker } from '../components/TripDatePicker';
@@ -87,7 +88,7 @@ function pushRecentDest(name: string) {
  * SCOPED_STYLES for NewTripPage-specific rules:
  *   - .tp-new-page-shell — page background + scroll
  *   - .tp-new-page-form — content max-width form container
- *   - .tp-page-bottom-bar — sticky bottom actions row
+ *   - .tp-form-summary — 標題列下方 sticky 摘要列
  *   - All other form-row / dest-row / segment / btn styles 走 _tripFormStyles.ts
  *     共用 (.tp-new-* prefix 仍 work — comma-selector 含)
  *   - NewTripPage-only: flex-stepper / month carousel / quota / chip-groups
@@ -292,19 +293,6 @@ const SCOPED_STYLES = `
 }
 .tp-new-flex-month .m { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }
-
-/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用。
- * NewTripPage 用 --end variant 把 actions 推到右側 (無 counter)。 */
-.tp-new-page-bottom-summary {
-  flex: 1;
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tp-new-page-bottom-summary b { color: var(--color-foreground); font-weight: 700; }
 `;
 
 const MONTHS_AHEAD = 6;
@@ -616,8 +604,8 @@ export default function NewTripPage() {
       ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
       : '請先選擇目的地';
 
-  // v2.33.120: titlebar action 拔掉 — 與下方 sticky bottom bar 的「建立行程」button 重複。
-  // 保留 bottom bar 為主 CTA（form context 內，視覺平衡更穩）。
+  // #1559：主要動作「建立」放標題列右側（取代已退役的底部列）；摘要在標題列下方 sticky 摘要列，
+  // 錯誤是標題列正下方的 role="alert" 橫幅，「建立」維持可點以便重試。
   return (
     <>
       <ToastContainer />
@@ -631,7 +619,20 @@ export default function NewTripPage() {
               title="新增行程"
               back={handleBackGuarded}
               backLabel="返回前頁"
+              backDisabled={submitting}
+              actions={
+                <TitleBarPrimaryAction
+                  label="建立"
+                  busyLabel="建立中⋯"
+                  busy={submitting}
+                  disabled={!canSubmit}
+                  onClick={() => formRef.current?.requestSubmit()}
+                  testId="new-trip-submit"
+                />
+              }
             />
+            <FormSummaryBar><b>{summaryText}</b></FormSummaryBar>
+            {error && <FormErrorBanner message={error} testId="new-trip-error" />}
 
             <form ref={formRef} id="new-trip-form" onSubmit={handleSubmit} className="tp-new-page-form">
 
@@ -902,30 +903,7 @@ export default function NewTripPage() {
               {/* v2.31.36 (migration 0068): self-drive form removed — dead columns dropped。
                   UI 收集但 backend 沒讀取使用。日後若要重啟，先實作 segment 計算 read path 再加回 UI。 */}
 
-              {error && <InlineError message={error} testId="new-trip-error" />}
             </form>
-
-            <div className="tp-page-bottom-bar tp-page-bottom-bar--end">
-              <div className="tp-new-page-bottom-summary"><b>{summaryText}</b></div>
-              <button
-                type="button"
-                className="tp-new-modal-btn"
-                onClick={handleBackGuarded}
-                disabled={submitting}
-                data-testid="new-trip-cancel"
-              >
-                取消
-              </button>
-              <button
-                type="submit"
-                form="new-trip-form"
-                className="tp-new-modal-btn tp-new-modal-btn-primary"
-                disabled={!canSubmit}
-                data-testid="new-trip-submit"
-              >
-                {submitting ? '建立中⋯' : '建立行程'}
-              </button>
-            </div>
           </div>
         }
         bottomNav={<GlobalBottomNav authed={user !== null} />}

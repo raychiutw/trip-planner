@@ -134,10 +134,9 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 .tp-custom-poi-form-field input:focus,
-.tp-custom-poi-form-field textarea:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-custom-poi-form-field textarea:focus { border-color: var(--color-accent); }
+.tp-custom-poi-form-field input:focus-visible,
+.tp-custom-poi-form-field textarea:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-custom-poi-form-row-error {
   color: var(--color-destructive);
   font-size: var(--font-size-caption2);

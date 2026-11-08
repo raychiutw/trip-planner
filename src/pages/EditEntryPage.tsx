@@ -201,10 +201,8 @@ const SCOPED_STYLES = `
   transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
 }
 .tp-edit-entry-desc-input:hover { border-color: var(--color-accent); }
-.tp-edit-entry-desc-input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+.tp-edit-entry-desc-input:focus { border-color: var(--color-accent); }
+.tp-edit-entry-desc-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-edit-entry-desc-input::placeholder { color: var(--color-muted); }
 
 /* Mode segmented */
@@ -306,8 +304,8 @@ const SCOPED_STYLES = `
   width: 90px;
   outline: none;
   text-align: center;
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
+.tp-edit-entry-transit input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-edit-entry-transit-unit {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);
@@ -379,7 +377,7 @@ const SCOPED_STYLES = `
 .tp-poi-note-input {
   width: 100%;
   font: inherit;
-  font-size: var(--font-size-footnote);
+  font-size: var(--font-size-body);
   line-height: 1.5;
   background: var(--color-background);
   border: 1.5px solid var(--color-accent);
@@ -389,8 +387,8 @@ const SCOPED_STYLES = `
   min-height: 62px;
   color: var(--color-foreground);
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
+.tp-poi-note-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-poi-note-bar {
   display: flex; align-items: center; gap: 8px;
   /* ≤640px alternate 窄欄下「完成」+ kbd 提示需可換行，避免 horizontal overflow

@@ -36,6 +36,8 @@ export interface paths {
                                 d1: "ok" | "fail";
                                 /** @enum {string} */
                                 googleMapsKey: "ok" | "missing";
+                                /** @enum {string} */
+                                oauthSigningKey: "ok" | "missing" | "invalid";
                             };
                             /** Format: date-time */
                             ts: string;
@@ -56,6 +58,8 @@ export interface paths {
                                 d1: "ok" | "fail";
                                 /** @enum {string} */
                                 googleMapsKey: "ok" | "missing";
+                                /** @enum {string} */
+                                oauthSigningKey: "ok" | "missing" | "invalid";
                             };
                             /** Format: date-time */
                             ts: string;
@@ -8277,6 +8281,8 @@ export interface paths {
                 query?: {
                     /** @description 預設 50；due-refresh 上限 200、pending-place-id 上限 500 */
                     limit?: number | null;
+                    /** @description 游標：只回 id 大於該值的列（id 升冪） */
+                    after_id?: number | null;
                 };
                 header?: never;
                 path?: never;
@@ -12197,6 +12203,12 @@ export interface components {
             createdAt: string;
             completedAt: string | null;
         } | null;
+        Trips_AiAuthorizationStatus: {
+            /** @description 行程擁有者是否已授權 Tripline AI（tp-request） */
+            ownerAuthorized: boolean;
+            /** @description 登入者是否就是行程擁有者 */
+            isOwner: boolean;
+        };
         Trips_HealthCheckTriggerResult: {
             report: components["schemas"]["Trips_HealthReport"];
         };
@@ -12318,12 +12330,6 @@ export interface components {
             ticket: string;
             /** @example 30 */
             expires_in: number;
-        };
-        Trips_AiAuthorizationStatus: {
-            /** @description 行程擁有者是否已授權 Tripline AI（tp-request） */
-            ownerAuthorized: boolean;
-            /** @description 登入者是否就是行程擁有者 */
-            isOwner: boolean;
         };
     };
     responses: never;

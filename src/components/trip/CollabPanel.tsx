@@ -247,10 +247,8 @@ const SCOPED_STYLES = `
   min-height: var(--spacing-tap-min);
   transition: border-color 120ms, box-shadow 120ms;
 }
-.tp-collab-add-input:focus {
-  outline: none; border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
+.tp-collab-add-input:focus { border-color: var(--color-accent); }
+.tp-collab-add-input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-collab-add-input::placeholder { color: var(--color-muted); }
 
 .tp-collab-add-btn {

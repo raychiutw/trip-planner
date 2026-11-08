@@ -36,9 +36,11 @@ export interface TitleBarProps {
   backLabelVisible?: boolean;
   /** rev2：手機統一 header 右上帳號圓圈（<AccountCircle/>）。桌機由 CSS 隱藏。 */
   account?: ReactNode;
+  /** 送出中：返回鈕停用，避免表單送出途中離開（#1559）。 */
+  backDisabled?: boolean;
 }
 
-export default function TitleBar({ id, className, title, back, actions, backLabel = '返回', backLabelVisible = false, account }: TitleBarProps) {
+export default function TitleBar({ id, className, title, back, actions, backLabel = '返回', backLabelVisible = false, account, backDisabled = false }: TitleBarProps) {
   const headerClass = className ? `tp-titlebar ${className}` : 'tp-titlebar';
   return (
     <header id={id} className={headerClass} data-titlebar="true" data-testid="titlebar">
@@ -47,6 +49,7 @@ export default function TitleBar({ id, className, title, back, actions, backLabe
           type="button"
           className={backLabelVisible ? 'tp-titlebar-back tp-titlebar-back--labeled' : 'tp-titlebar-back'}
           onClick={back}
+          disabled={backDisabled}
           aria-label={backLabel}
         >
           <Icon name={backLabelVisible ? 'chevron-left' : 'arrow-left'} />

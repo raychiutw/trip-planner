@@ -38,10 +38,12 @@ export const TRIP_TIME_PICKER_STYLES = `
 }
 .tp-time-trigger:focus-visible,
 .tp-time-trigger[data-open] {
-  outline: none;
   border-color: var(--color-accent);
+}
+.tp-time-trigger[data-open] {
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
+.tp-time-trigger:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-time-trigger:disabled {
   opacity: 0.55;
   cursor: not-allowed;

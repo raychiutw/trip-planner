@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStackSearchParams } from '../hooks/useStackSearchParams';
 import OperationShell from '../components/shell/OperationShell';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import { showToast } from '../components/shared/Toast';
 import { useNavigateBack } from '../hooks/useNavigateBack';
@@ -231,10 +232,8 @@ const SCOPED_STYLES = `
   caret-color: var(--color-foreground);
   outline: none;
 }
-.tp-change-poi-search input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
-}
+.tp-change-poi-search input:focus { border-color: var(--color-accent); }
+.tp-change-poi-search input:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 .tp-change-poi-search input::placeholder {
   color: var(--color-muted);
   -webkit-text-fill-color: var(--color-muted);
@@ -454,66 +453,45 @@ const SCOPED_STYLES = `
 .tp-change-poi-counter strong {
   color: var(--color-foreground);
 }
-/* v2.50.0: mode=new 搜尋結果分類 chip — bottom bar 獨立 flex item。
-   共用 .tp-page-bottom-bar（css/tokens.css）是 gap:12px、無 flex-wrap、space-between，
-   多一個 chip 在窄螢幕會擠/溢出 → 本頁 scoped override 加 flex-wrap（對齊 EditTripPage 作法），
-   讓 chip + 動作按鈕在窄螢幕換行。 */
-.tp-page-bottom-bar {
-  flex-wrap: wrap;
-}
-.tp-change-poi-cat {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-}
-.tp-change-poi-actions {
+/* #1559：mode=new 的「已選景點」卡片與其下的分類欄位列（原本是 fixed 底部列的 chip，已退役）。 */
+.tp-change-poi-selected {
   display: flex;
+  align-items: baseline;
   gap: 8px;
-  flex: 1;
-  min-width: 0;
-  justify-content: flex-end;
-}
-.tp-change-poi-btn {
-  min-height: var(--spacing-tap-min); /* G-H6b：44pt HIG 觸控區（取消/確認主動作） */
-  padding: 8px 16px;
-  border-radius: var(--radius-full);
-  font: inherit;
-  font-size: var(--font-size-footnote);
-  font-weight: 700;
-  cursor: pointer;
-}
-.tp-change-poi-btn-cancel {
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-foreground);
-}
-.tp-change-poi-btn-confirm {
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-accent-fill);
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
-  min-width: 112px;
+  background: var(--color-secondary);
+  min-width: 0;
 }
-.tp-change-poi-btn-confirm:disabled {
-  /* §9.4：原 opacity:0.5 讓實心 accent 鈕變淡 peach + 白字半透明 → 白字對比不足難辨。
-   * 改顯式 disabled 樣式：淡 tan 底 + muted 深字，對比足、狀態明確（非透明化）。 */
-  background: var(--color-accent-bg);
-  border-color: var(--color-accent-bg);
+.tp-change-poi-selected-label {
+  flex-shrink: 0;
+  font-size: var(--font-size-footnote);
   color: var(--color-muted);
-  cursor: not-allowed;
 }
-.tp-change-poi-error {
-  color: var(--color-destructive);
-  margin-left: 8px;
+.tp-change-poi-selected-name {
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-change-poi-cat-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  min-height: var(--spacing-tap-min);
+}
+.tp-change-poi-cat-field-label {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
 }
 @media (max-width: 760px) {
   .tp-change-poi-grid {
     grid-template-columns: 1fr;
-  }
-  .tp-change-poi-actions {
-    width: 100%;
-  }
-  .tp-change-poi-btn {
-    flex: 1;
   }
 }
 `;
@@ -871,6 +849,28 @@ export default function ChangePoiPage() {
       title={pageTitle}
       back={goBack}
       scopedStyles={SCOPED_STYLES}
+      busy={submitting}
+      errorMessage={error}
+      errorTestId="change-poi-error"
+      primaryAction={
+        <TitleBarPrimaryAction
+          label={submitLabel}
+          busyLabel="處理中⋯"
+          busy={submitting}
+          disabled={submitDisabled}
+          onClick={() => void handleSubmit()}
+          testId="change-poi-submit"
+        />
+      }
+      summary={
+        <span className="tp-change-poi-counter" data-testid="change-poi-counter">
+          {tab === 'custom' ? (
+            <>已選 <strong>{customTitle.trim() && customCoord ? 1 : 0}</strong> 個{customTitle.trim() ? ` · ${customTitle.trim()}` : ''}</>
+          ) : (
+            <>已選 <strong>{selected ? 1 : 0}</strong> 個{selected ? ` · ${selected.name}` : ''}</>
+          )}
+        </span>
+      }
     >
 
       <div className="tp-change-poi-tabs" role="tablist" aria-label="景點來源">
@@ -907,6 +907,27 @@ export default function ChangePoiPage() {
       </div>
 
       <main className="tp-change-poi-body">
+        {/* #1559：mode=new 選了搜尋結果 → 「已選景點」卡片 + 其下的分類欄位列（原本在 fixed 底部列、picker 得向上彈出，
+            現在是內容區欄位，picker 向下彈出）。key 綁選取身分 → 換選取時 remount、關掉殘留展開的 picker。
+            favorite 來源重用既有 POI（自帶 type）故不顯示。 */}
+        {tab === 'search' && mode === 'new' && selected?.source === 'search' && (
+          <>
+            <div className="tp-change-poi-selected" data-testid="change-poi-selected-card">
+              <span className="tp-change-poi-selected-label">已選景點</span>
+              <span className="tp-change-poi-selected-name">{selected.name}</span>
+            </div>
+            <div className="tp-change-poi-cat-field" data-testid="change-poi-category-field">
+              <span className="tp-change-poi-cat-field-label">分類</span>
+              <EditableCategoryChip
+                key={`${selected.name}-${selected.lat}-${selected.lng}`}
+                value={searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category)}
+                autoValue={mapGooglePrimaryTypeToPoiType(selected.category)}
+                onChange={setSearchCatOverride}
+                testIdPrefix="change-poi-cat"
+              />
+            </div>
+          </>
+        )}
         {tab === 'search' && (
           <>
             <div className="tp-change-poi-region-row">
@@ -1165,54 +1186,6 @@ export default function ChangePoiPage() {
           />
         )}
       </main>
-
-      <div className="tp-page-bottom-bar">
-        <span className="tp-change-poi-counter" data-testid="change-poi-counter">
-          {tab === 'custom' ? (
-            <>已選 <strong>{customTitle.trim() && customCoord ? 1 : 0}</strong> 個{customTitle.trim() ? ` · ${customTitle.trim()}` : ''}</>
-          ) : (
-            <>已選 <strong>{selected ? 1 : 0}</strong> 個{selected ? ` · ${selected.name}` : ''}</>
-          )}
-          {error && <span className="tp-change-poi-error" role="alert">{error}</span>}
-        </span>
-        {/* v2.50.0: 新增景點（mode=new）選了搜尋結果 → 可當場改分類，預設帶 auto-derive。
-            獨立 flex item（bottom bar 加 .tp-page-bottom-bar flex-wrap override 讓窄螢幕可換行）。
-            chip 在 fixed bottom bar → dropUp 讓 picker 向上彈出（否則被 viewport 底切掉、下排
-            分類點不到）。key 綁選取身分 → 換選取時 remount、關掉殘留展開的 picker。
-            favorite 來源重用既有 POI（自帶 type）故不顯示。 */}
-        {mode === 'new' && selected?.source === 'search' && (
-          <span className="tp-change-poi-cat">
-            <EditableCategoryChip
-              key={`${selected.name}-${selected.lat}-${selected.lng}`}
-              value={searchCatOverride ?? mapGooglePrimaryTypeToPoiType(selected.category)}
-              autoValue={mapGooglePrimaryTypeToPoiType(selected.category)}
-              onChange={setSearchCatOverride}
-              dropUp
-              testIdPrefix="change-poi-cat"
-            />
-          </span>
-        )}
-        <div className="tp-change-poi-actions">
-          <button
-            type="button"
-            className="tp-change-poi-btn tp-change-poi-btn-cancel"
-            onClick={goBack}
-            disabled={submitting}
-            data-testid="change-poi-cancel"
-          >
-            取消
-          </button>
-          <button
-            type="button"
-            className="tp-change-poi-btn tp-change-poi-btn-confirm"
-            disabled={submitDisabled}
-            onClick={() => void handleSubmit()}
-            data-testid="change-poi-submit"
-          >
-            {submitting ? '處理中⋯' : submitLabel}
-          </button>
-        </div>
-      </div>
     </OperationShell>
   );
 

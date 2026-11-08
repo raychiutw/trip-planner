@@ -253,3 +253,21 @@ for (const [name, vp, vpName] of [['trip-detail', MOBILE, '手機'], ['trip-deta
     expect(after.maxBottom, `欄位下緣不超出視窗（離線前 ${before.maxBottom}）`).toBeLessThanOrEqual(after.inner + 1);
   });
 }
+
+// #1636：EditTripPage 每個「移除 Day」鈕觸控目標 ≥44。直接量元素（不看視窗內），
+// 因為棘輪只算視窗內元素，第一屏之外的鈕曾因此漏掉。
+for (const [vpName, vp] of [['手機', MOBILE], ['桌機', DESKTOP]]) {
+  test(`每個「移除 Day」鈕觸控目標 ≥44：trip-edit · ${vpName}`, async ({ page }) => {
+    await open(page, 'trip-edit', vp);
+    const btns = page.locator('[data-testid^="edit-trip-day-remove-"]');
+    const n = await btns.count();
+    expect(n, '找不到任何「移除 Day」鈕').toBeGreaterThan(1);
+    const small = [];
+    for (let i = 0; i < n; i++) {
+      const b = await btns.nth(i).boundingBox();
+      expect(b, `第 ${i + 1} 顆鈕沒有版面`).not.toBeNull();
+      if (Math.min(b.width, b.height) < 44) small.push(`Day ${i + 1}：${Math.round(b.width)}x${Math.round(b.height)}`);
+    }
+    expect(small, '低於 44 的「移除 Day」鈕').toEqual([]);
+  });
+}

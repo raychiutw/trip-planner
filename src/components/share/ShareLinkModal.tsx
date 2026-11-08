@@ -88,7 +88,7 @@ const STYLE = `
 .tp-sharemodal-seclabel{font-size:0.75rem;font-weight:700;color:var(--color-muted);letter-spacing:.04em;margin:13px 0 8px;}
 .tp-sharemodal-createbox{background:var(--color-secondary);border:1px solid var(--color-border);border-radius:12px;padding:14px;}
 .tp-sharemodal-createbox .tp-sharemodal-seclabel:first-child{margin-top:0;}
-.tp-sharemodal-input{width:100%;font-size:0.8125rem;font-family:inherit;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-background);color:var(--color-foreground);}
+.tp-sharemodal-input{width:100%;font-size:var(--font-size-body);font-family:inherit;border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-background);color:var(--color-foreground);}
 .tp-sharemodal-pills{display:flex;flex-wrap:wrap;gap:7px;}
 .tp-sharemodal-pill{font-size:0.8125rem;font-weight:600;padding:6px 12px;border-radius:9999px;border:1px solid var(--color-border);background:var(--color-background);color:var(--color-muted);cursor:pointer;font-family:inherit;}
 .tp-sharemodal-pill.on{background:var(--color-accent-fill);border-color:var(--color-accent-fill);color:var(--color-accent-foreground);}
