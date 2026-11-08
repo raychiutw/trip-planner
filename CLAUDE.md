@@ -4,12 +4,12 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. 無全域 admin — owner/permissi
 
 ## Pipeline
 
-**Matt Pocock 工作流是預設**（owner 2026-07-25）。gstack 只補 matt 沒有的環節 —— 發版、瀏覽器 QA、安全稽核、回顧。
+**Matt Pocock 工作流是唯一流程**（owner 2026-07-25 定為預設，2026-11-08 移除 gstack）。matt 沒有的環節（發版、瀏覽器 QA）由 `gh`、repo 測試與人工完成。
 
 主線（idea → ship）：
 
 ```
-grill-with-docs → [多 session? → to-spec → to-tickets →] implement → /ship → /land-and-deploy → /canary
+grill-with-docs → [多 session? → to-spec → to-tickets →] implement → /pr → owner merge
                                                           ↑ 內部驅動 tdd，收尾跑 code-review
 ```
 
@@ -18,8 +18,8 @@ grill-with-docs → [多 session? → to-spec → to-tickets →] implement → 
 - **多 session 的 build** → `/to-spec` → `/to-tickets`（tracer-bullet 票 + blocking edges）→ 每票 `/implement`，**每票之間清 context**
 - **單 session 就做得完** → 直接 `/implement`
 - **收尾**：`/implement` 內部驅動 `/tdd` 逐 seam 紅綠，commit 前跑 `/code-review`（Standards + Spec 雙軸）；整份 spec 一次做完可用 `/implement-spec`（並行 subagent + 整合分支）
-- **PR 與回顧**：開 PR 時 `/pr` 規範 PR 內文形狀（我可自主呼叫；與 `/ship` 的 PR 內文並用時，以 `/ship` 的稽核欄位為準）；build 結束後 `/retro` 回頭檢視環境該怎麼改（只能 owner 打）
-- **出貨**：matt 沒有發版流程 → `/ship`（bump VERSION + CHANGELOG + PR）→ `/land-and-deploy` → `/canary`
+- **PR 與回顧**：開 PR 時 `/pr` 規範 PR 內文形狀（我可自主呼叫）；build 結束後 `/retro` 回頭檢視環境該怎麼改（只能 owner 打）
+- **出貨**：PR 內自行 bump VERSION + 更新 CHANGELOG → `/pr` 開 PR → CI 綠、owner 明確同意後 merge commit → Cloudflare Pages 自動部署，部署後用 `gh`／`curl` 驗 health
 
 Context 衛生：步驟 1–3 保持在**同一個不中斷的 context window**，`/to-tickets` 前不要 compact/clear。接近 smart zone（~120k tokens）就 `/handoff` 換新 session，別在退化的狀態硬撐。
 
@@ -44,10 +44,10 @@ On-ramps（匯入主線）：
 ## Hard Rules
 
 - **Code change → 走 matt 主線**（`/implement`，或先 `/grill-with-docs` 磨清楚）。`/tp-team` 不再支援，請勿呼叫。行程資料用 `tp-*` data skills 直接打 API，不走 code pipeline。
-- Feature branch + PR via `/ship`. Never push master directly.
+- Feature branch + PR via `/pr`. Never push master directly.
 - `tp-*` skills hit API, not local files。skill 與本機 agent（api-server、排程、`scripts/`）已搬到 `trip-planner-agent` repo，本 repo 不再有。
 - Agent tool only for worktree isolation（Workflow tool 內部的 `agent()` 不受此限）。
-- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
+- 瀏覽器驗證：用 Playwright（repo 既有 e2e），不用 `mcp__claude-in-chrome__*`。
 - **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/prototype` 的 UI branch 產生可比較 prototype → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak / 內部 refactor（無 UX 變化）例外。
 
 ## Layout
@@ -76,12 +76,12 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 
 | 情境 | 用 | 備註 |
 |---|---|---|
-| 磨想法 / 挑戰決策 | `/grill-with-docs` | 取代 `/office-hours`；留痕到 GLOSSARY.md + ADR |
+| 磨想法 / 挑戰決策 | `/grill-with-docs` | 留痕到 GLOSSARY.md + ADR |
 | 收斂成規格 → 拆票 | `/to-spec` → `/to-tickets` | |
 | 實作 | `/implement` | 內部跑 `/tdd`，收尾跑 `/code-review` |
 | 測試先行 | `/tdd` | 可自主呼叫 |
-| Code review | `/code-review` | 取代 `/review`；Standards + Spec 雙軸 |
-| Bug / 效能退化 | `/diagnosing-bugs` | 取代 `/investigate`；先建會變紅的指令 |
+| Code review | `/code-review` | Standards + Spec 雙軸 |
+| Bug / 效能退化 | `/diagnosing-bugs` | 先建會變紅的指令 |
 | 詞彙 / ADR | `/domain-modeling` | GLOSSARY.md 的維護者 |
 | Module 介面 / seam | `/codebase-design` | |
 | 設計問題要跑起來 | `/prototype` | throwaway，留答案刪 code |
@@ -89,18 +89,10 @@ Match → invoke `Skill` first。**matt 優先；同一件事 matt 有就用 mat
 | Codebase 保養 | `/improve-codebase-architecture` | 產 deepening opportunities |
 | 跨 session | `/handoff` | 對話快滿或要分岔時 |
 
-**matt 沒有、繼續用 gstack 的**：
+**其他**：
 
 | 情境 | 用 |
 |---|---|
-| 發版 | `/ship` → `/land-and-deploy` → `/canary` |
-| 瀏覽器行為 QA | `/qa` |
-| 視覺保真稽核 | `/design-review`（`/qa` 驗行為不驗視覺，兩者不可互相取代） |
-| 無頭瀏覽器 | `/browse` |
-| 安全稽核 | `/cso --diff` |
-| 週回顧 | `/retro` |
-| Post-ship 文件同步 | `/document-release` |
-| Plan 階段架構審查 | `/plan-eng-review` |
 | 已變更程式碼的簡化 | `/simplify` |
 | 專案自訂 commit 前檢查 | `/tp-code-verify` |
 

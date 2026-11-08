@@ -54,7 +54,6 @@ Official upstream references:
 When multiple skill frameworks could apply and the user has not named one, use this priority:
 
 1. Matt Pocock engineering skills in `~/.agents/skills/`
-2. gstack
 
 Do not stack duplicate workflows. Use a lower-priority framework only when the
 Matt Pocock skills do not cover the task or the user explicitly requests it.
@@ -70,7 +69,7 @@ Matt Pocock skills do not cover the task or the user explicitly requests it.
 - Feature branch + GitHub PR. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation.
-- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
+- Browser verification: use the repo Playwright e2e; never `mcp__claude-in-chrome__*`.
 
 ## Naming history
 
@@ -117,9 +116,6 @@ Match → invoke the Matt Pocock `Skill` first.
 - Code review → `/code-review`
 - User-facing verification / durable issue filing → repository tests or browser + normal `gh`
 
-gstack remains available only for gaps the Matt Pocock workflow does not cover;
-it must not replace or duplicate an applicable Matt Pocock workflow unless the
-user explicitly asks.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `docs/agents/`.
 Prod: https://trip-planner-dby.pages.dev/
