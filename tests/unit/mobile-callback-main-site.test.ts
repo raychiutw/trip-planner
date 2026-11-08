@@ -99,7 +99,7 @@ describe('grep 守門：不得新增對舊 mobile-callback 主機的引用', () 
     'wrangler.toml',
   ];
   it('src／functions／public／scripts／wrangler.toml／tests 內，舊主機只出現在待清理清單', () => {
-    const out = execFileSync('git', ['grep', '-l', 'mobile-callback\\.trip-planner-dby\\.pages\\.dev', '--', 'src', 'functions', 'public', 'scripts', 'wrangler.toml', 'tests'], { cwd: root, encoding: 'utf-8' }).split('\n').filter(Boolean);
+    const out = execFileSync('git', ['grep', '--untracked', '-l', 'mobile-callback\\.trip-planner-dby\\.pages\\.dev', '--', 'src', 'functions', 'public', 'scripts', 'wrangler.toml', 'tests'], { cwd: root, encoding: 'utf-8' }).split('\n').filter(Boolean);
     const unexpected = out.filter((f) => f !== 'tests/unit/mobile-callback-main-site.test.ts' && !PENDING_CLEANUP.includes(f));
     expect(unexpected).toEqual([]);
   });
