@@ -27,16 +27,16 @@ web 與 api（Pages Functions）現在是同一個 Pages 專案、同一個網�
 
 **「完整安全性」的範圍**是四類：供應鏈與 CI/CD、執行期防護、認證與 token、稽核與偵測；細項留給 spec。
 
-## 實作狀態（2026-11-02 接受時）
+## 實作狀態（2026-11-02 接受時；2026-11-08 切換後更新）
 
 **已完成**：三個專案已拆開，各有 CI。api 在 Cloudflare Worker（Hono 重寫，契約由 OpenAPI 產生），認證是 bearer：web 與行動端是 OAuth public client（PKCE，access token 15 分鐘、refresh token 輪替並有 family revoke），另加了本 ADR 當時沒寫的 **DPoP**（token 可綁定金鑰）；SSE 用一次性 ticket；api→agent 用 HMAC 簽章（trigger／mail／mint 各一把 key）。agent 在 `trip-planner-agent`，web repo 已移除 agent 檔案。api 與舊入口**共用同一個 production D1**，migration 只加不刪。新 api 已在 production 運作，行動端（Flutter）的授權與換 token 往返已用真瀏覽器驗證（web 補了 `/oauth/authorize` 頁）。
 
 **與本文決策不同、或尚未完成的部分**（接受時如實記錄，不是已解決）：
 
-- **web 的程式碼已只走新 api，但切換日期待定。** 登入旗標（`VITE_NEW_API_AUTH`）已從程式移除，登入、登出與所有 `/api` 請求一律是新認證（PKCE＋DPoP、access token 只存記憶體、refresh 輪替、SSE ticket），`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。production 實際切換發生在**部署含此變更的 web 版本那天**（日期待定），當天所有人需重新登入一次。因為旗標已不存在，**回切不再是改設定**，而是重新部署前一版 web（Cloudflare Pages 的前一個 production deployment，或 revert 該 PR 後重建）；App 的 base URL 另行指回舊入口。本 ADR 的狀態、T21（#1483）的其餘驗收（真實 Google 登入測試、T20 callback 搬遷等）由 owner 確認，不在程式變更內。
+- **web 已於 2026-11-08 切換到新 api（PR #1644，4c46b95f）。** 登入旗標（`VITE_NEW_API_AUTH`）已從程式移除，正式網域 `trip-planner-dby.pages.dev` 的登入、登出與所有 `/api` 請求一律是新認證（PKCE＋DPoP、access token 只存記憶體、refresh 輪替、SSE ticket），`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production；owner 於切換後實際登入驗證成功，當天所有人重新登入一次。因為旗標已不存在，**回切不是改設定**，而是 Cloudflare Pages 回滾到前一個 production deployment（`0f57c080` 那版建置）或 revert #1644 後重新部署；App 的 base URL 另行指回舊入口。**回切從未實際演練**，owner 於 2026-11-08 決議維持新版、不做演練並關閉 T21（#1483）。T20（mobile callback 搬到 web 主站路徑，#1482）尚未做，需實機驗證。
 - **沒有 WAF。** 不買自訂網域，api 在 `workers.dev`，沒有 zone，Cloudflare 的 WAF 規則無處可掛（T11 的這一項延後）；應用層 rate limit、稽核與告警已做。要補 WAF 得先有 api 的正式網域。
-- **新 api 的刪帳號對 web 的無密碼帳號尚無路徑。** 舊入口靠瀏覽器 cookie 做重新驗證，新 api 沒有 cookie；production 目前沒有無密碼帳號，但在補設計前這是缺口。
-- **舊入口目前不只是備援，網站與 agent 還在實際使用它**（agent 的排程腳本呼叫的就是舊入口），所以下方的「舊入口是旁路」殘留風險現在是**生效中**，不是未來才會發生。
+- **Google 登入已於 2026-11-08 整個移除**（api #63 已部署 production；web 的移除另案進行）。production 實測 48 個帳號全有密碼、0 個有 Google 身分，所以帳號刪除只走密碼確認；沒有可用重新驗證方式的帳號一律被拒絕（fail-closed），不是免驗證。原先「新 api 的刪帳號對 web 的無密碼帳號尚無路徑」的缺口因此不再適用（取代 ADR-0009 的 Google 重新驗證）。
+- **舊入口（Pages Functions）已沒有 web 流量，但程式與共用的 production D1 仍在。** 2026-11-02 接受時 agent 的排程腳本呼叫的是舊入口；**切換後是否仍有呼叫者未重新核對**，所以下方「舊入口是旁路」的殘留風險仍視為生效中，直到舊入口刪除（#1627，破壞性步驟須先問 owner）。
 
 ## Considered Options
 
