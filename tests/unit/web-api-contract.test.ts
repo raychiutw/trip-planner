@@ -1,9 +1,9 @@
 /**
  * 跨 repo 契約守衛（trip-planner#1626 追加）：web SPA 實際呼叫的 api 端點與請求必填欄位，必須存在於 contracts/openapi.json。
  *
- * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）與 `typedApi.get/post/put/patch/delete` 的字串／樣板路徑，
+ * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）與 `typedApi`／`typedApiRaw` 的 `.get/post/put/patch/delete` 的字串／樣板路徑，
  *   1. 路徑（含 method；apiFetch 無 `method:` 視為 GET，typedApi 取自成員名）必須在契約內；
- *   2. 若 body 是 `JSON.stringify({ ... })`（apiFetch）或 `body: { ... }`（typedApi）的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
+ *   2. 若 body 是 `JSON.stringify({ ... })`（apiFetch）或 `body: { ... }`（typedApi／typedApiRaw；`rawBody` 是原文字串，不檢查欄位）的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
  * typedApi 另有編譯期檢查（路徑、body、回應型別），這裡是執行期的第二道（兩者等價或更強）。
  * 最後一組是棘輪：頁面不得再直接用 apiFetch／apiFetchRaw，例外只能列在 DIRECT_ALLOWED（附原因、只能減不能增）。
  * 契約檔是 api repo 匯出的逐字複本（見 docs/api-contract.md）；api 改路徑／欄位後同步進來，web 若還在用舊的，這裡轉紅。
@@ -69,7 +69,7 @@ function bodyKeys(win: string, typed: boolean): string[] | null {
 }
 
 interface Call { file: string; method: string; path: string; keys: string[] | null; typed: boolean }
-const CALL = /(?:apiFetch(?:Raw)?|typedApi\.(get|post|put|patch|delete))(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\2).)*)\2/g;
+const CALL = /(?:apiFetch(?:Raw)?|typedApi(?:Raw)?\.(get|post|put|patch|delete))(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\2).)*)\2/g;
 const calls: Call[] = listSources(join(ROOT, 'src')).flatMap((file) => {
   const text = readFileSync(file, 'utf8');
   return [...text.matchAll(CALL)].map((m) => {

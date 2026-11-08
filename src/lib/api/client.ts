@@ -34,9 +34,15 @@ type PathPart<Op> = [PathParamsOf<Op>] extends [never] ? { path?: never } : { pa
 type QueryPart<Op> = [QueryOf<Op>] extends [never]
   ? { query?: never }
   : {} extends QueryOf<Op> ? { query?: QueryOf<Op> } : { query: QueryOf<Op> };
+/**
+ * `rawBody`：呼叫端已經有 JSON 原文（例如使用者上傳的檔案內容）時原樣送出，不重新序列化；
+ * 路徑、method 仍由契約檢查，Content-Type 照契約（application/json）。與 `body` 二擇一；只有契約有 JSON requestBody 的端點才能用。
+ */
 type BodyPart<Op> = [JsonBodyOf<Op>] extends [never]
-  ? { body?: never }
-  : BodyRequired<Op> extends true ? { body: JsonBodyOf<Op> } : { body?: JsonBodyOf<Op> };
+  ? { body?: never; rawBody?: never }
+  : BodyRequired<Op> extends true
+    ? { body: JsonBodyOf<Op>; rawBody?: never } | { body?: never; rawBody: string }
+    : { body?: JsonBodyOf<Op>; rawBody?: never } | { body?: never; rawBody?: string };
 
 export type RequestOptions<Op> = PathPart<Op> & QueryPart<Op> & BodyPart<Op> & {
   signal?: AbortSignal;
@@ -89,6 +95,7 @@ interface RuntimeOptions {
   path?: Record<string, unknown>;
   query?: Record<string, unknown>;
   body?: unknown;
+  rawBody?: string;
   signal?: AbortSignal;
   headers?: HeadersInit;
 }
@@ -132,7 +139,10 @@ export function createApi(opts: ApiOptions = {}): Api {
     const headers = new Headers(options.headers);
     const init: RequestInit = { method: method.toUpperCase(), headers, redirect: 'manual' };
     if (options.signal) init.signal = options.signal;
-    if (options.body !== undefined) {
+    if (options.rawBody !== undefined) {
+      headers.set('Content-Type', 'application/json');
+      init.body = options.rawBody;
+    } else if (options.body !== undefined) {
       headers.set('Content-Type', 'application/json');
       init.body = JSON.stringify(options.body);
     }
