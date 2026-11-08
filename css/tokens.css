@@ -272,6 +272,20 @@ body:not(.dark) { color-scheme: light; }
     --day-text-10: #0B7C56;  /* emerald 5.05 / 5.21 */
 }
 
+/* 聊天「協作者」：比照 App（chat_screen.dart 的 collaboratorAccent = systemIndigo）。
+ * 名字由 ChatPage 的 CSS-in-JS 字串引用，Tailwind 掃不到，所以放 plain :root（理由見上方 --day-text-*）。
+ *   --color-collaborator       氣泡淡染的基色（Apple systemIndigo，淺 #5856D6／深 #5E5CE6）
+ *   --color-collaborator-text  標籤文字用：對聊天底色 淺 5.93:1／深 5.51:1（systemIndigo 本色深色只有 2.75:1）
+ *   --collab-bubble-mix        淡染比例，App 為淺 10%／深 18%，疊在 --color-tertiary 上 */
+:root {
+    --color-collaborator: #5856D6;
+    --color-collaborator-text: #4F4DC9;
+    --collab-bubble-mix: 10%;
+    /* 聊天 AI 氣泡底：淺色用比聊天底（--color-secondary）更亮的 --color-background，才和自己的 accent 淡染氣泡
+     * （--color-accent-bg，與 --color-tertiary 只差 ≈5/765）分得開；深色用 --color-tertiary（比聊天底亮一階）。 */
+    --color-chat-ai-bubble: var(--color-background);
+}
+
 /* ===== Sheet animation tokens ===== */
 :root {
     --ease-spring: cubic-bezier(0.32, 1.28, 0.60, 1.00);
@@ -1066,6 +1080,11 @@ body.dark {
         --color-accent-3-deep: #E0BC90;
         --color-accent-3-subtle: #2A2418;
         --color-accent-3-bg: #3A3020;
+        /* 聊天協作者（見 plain :root 的說明）：深色基色用 App 的 systemIndigo dark，標籤字提亮到 5.51:1。 */
+        --color-collaborator: #5E5CE6;
+        --color-collaborator-text: #9A98FF;
+        --collab-bubble-mix: 18%;
+        --color-chat-ai-bubble: var(--color-tertiary);
         /* 中性深底 — iOS HIG dark grays（owner 2026-07-19「全黑太多、tab 也黑，參考 HIG」）。
          * 舊 base #121214 幾乎純黑、secondary #1C1C1E 只亮一階 → nav 玻璃（secondary 62%）
          * 疊近黑底也糊成黑。改：整條灰階往上抬一階 iOS system gray（base 脫離近黑、elevated
