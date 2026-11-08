@@ -111,7 +111,7 @@ describe('POI selection page source states', () => {
   it('AddStop clears multi-selection when the source or search query changes', async () => {
     apiFetch.mockImplementation(async (url) => url === '/poi-favorites' ? [favorite] : []);
     mount('/trip/t1/add-stop?day=1');
-    expect(screen.getByTestId('add-stop-confirm')).toHaveTextContent('加入景點');
+    expect(screen.getByTestId('add-stop-confirm')).toHaveTextContent('完成');
     fireEvent.input(screen.getByTestId('add-stop-search-input'), { target: { value: '東京' } });
     const card = await screen.findByTestId('add-stop-search-card-place-1');
     fireEvent.click(card);

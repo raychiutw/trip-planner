@@ -9,9 +9,10 @@ import Icon from '../shared/Icon';
  * aria-label conventions.
  *
  * Visual: rounded-rect (radius-md), accent filled。
- * **桌機 icon + 可見文字 label，手機（≤760px）才 icon-only** —— W3（owner 2026-07-24）推翻了
- * v2.31.90 的「全 viewport icon-only」，理由是 HIG header 慣例要求動作鈕帶文字。
- * 規則在 `css/tokens.css` 的 `.tp-titlebar-action-label`；hover tooltip (title attr) 兩邊都保留。
+ * **桌機與手機都顯示文字 label**（#1559 owner 簽核：建立／完成／儲存這類關鍵動作 icon-only 辨識度太低）。
+ * 一般 chrome action（探索、選單）仍是 ≤760px icon-only（W3 規則）；本元件靠
+ * `.tp-titlebar-action--labeled` 在 `css/tokens.css` 把 label 還原。hover tooltip (title attr) 保留。
+ * 送出中：換 busy label、前置 spinner、`aria-busy` 並 disabled。
  * See DESIGN.md "Page Titlebar > Action button"。（mockup 流程已於 2026-07-23 退役，S23 不再是 SoT。）
  */
 export interface TitleBarPrimaryActionProps {
@@ -40,14 +41,15 @@ export default function TitleBarPrimaryAction({
   return (
     <button
       type="button"
-      className="tp-titlebar-action is-primary"
+      className="tp-titlebar-action tp-titlebar-action--labeled is-primary"
       onClick={onClick}
       disabled={disabled || busy}
+      aria-busy={busy || undefined}
       aria-label={displayLabel}
       title={displayLabel}
       data-testid={testId}
     >
-      <Icon name={icon} />
+      {busy ? <span className="tp-titlebar-action-spinner" aria-hidden="true" /> : <Icon name={icon} />}
       <span className="tp-titlebar-action-label">{displayLabel}</span>
     </button>
   );

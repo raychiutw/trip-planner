@@ -54,7 +54,7 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(queryByTestId('titlebar')).toBeNull();
   });
 
-  it('inStack=true：title 顯示、焦點移入面板（完成鈕唯一入口是 children bottom-bar，header 無 action slot）', () => {
+  it('inStack=true：title 顯示、焦點移入面板（完成鈕走 header 的 primaryAction slot，#1559）', () => {
     const { getByTestId, getByText } = renderStack(
       <OperationShell
         shellClassName="tp-op-x"
@@ -177,7 +177,7 @@ describe('OperationShell — 雙形態外殼', () => {
     expect(getByTestId('app-shell')).toBeTruthy();
     expect(getByTestId('stack-panel-header')).toBeTruthy();
     expect(getByText('面板內容')).toBeTruthy();
-    // 手機全頁也無 TitleBar（完成由 children bottom-bar 提供，header 無 action slot）
+    // 手機全頁也無 TitleBar（header 一律是 StackPanelHeader，完成鈕走它的 primaryAction slot）
     expect(queryByTestId('titlebar')).toBeNull();
   });
 
@@ -295,5 +295,40 @@ describe('OperationShell — #1166 定案：不接 sheet 引擎，鎖住自有�
     renderStack(<OperationShell title="編輯景點"><div>內容</div></OperationShell>);
     expect(document.body.style.position, 'body 被 lock 了 —— 面板不該鎖 body').not.toBe('fixed');
     expect(document.body.style.overflow).not.toBe('hidden');
+  });
+});
+
+describe('OperationShell 表單頁 slot（#1559）', () => {
+  it('primaryAction 進 header；summary、errorMessage 依序緊貼 header 之後、先於 children', () => {
+    const { getByTestId, getByRole } = renderStack(
+      <OperationShell
+        shellClassName="tp-op-x"
+        testId="op-x-page"
+        title="加入景點"
+        back={() => {}}
+        primaryAction={<button type="button" data-testid="op-primary">完成</button>}
+        summary="已選 1 個"
+        errorMessage="送出失敗"
+      >
+        <div data-testid="op-body">面板內容</div>
+      </OperationShell>,
+    );
+    const head = getByTestId('stack-panel-header');
+    expect(head.contains(getByTestId('op-primary'))).toBe(true);
+    const summary = getByTestId('form-summary');
+    expect(summary).toHaveTextContent('已選 1 個');
+    expect(head.nextElementSibling).toBe(summary);
+    expect(summary.nextElementSibling).toBe(getByRole('alert'));
+    expect(getByRole('alert').nextElementSibling).toBe(getByTestId('op-body'));
+  });
+
+  it('沒傳 summary / errorMessage 時不渲染空殼', () => {
+    const { queryByTestId, queryByRole } = renderStack(
+      <OperationShell shellClassName="tp-op-x" testId="op-x-page" title="x" back={() => {}}>
+        <div>內容</div>
+      </OperationShell>,
+    );
+    expect(queryByTestId('form-summary')).toBeNull();
+    expect(queryByRole('alert')).toBeNull();
   });
 });

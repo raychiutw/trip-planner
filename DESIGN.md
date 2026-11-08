@@ -344,7 +344,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 > **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
 - **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 —— **4-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**帳號移出 tab slot**：手機 header 右上 `person.crop.circle` 圓圈 → 開有自己 Navigation Stack 的 **Account sheet**（關閉回原頁原狀態、deep-link 相容）；桌機 sidebar 左下 account chip → 同 Account sheet／popover。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
   - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
-- **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕一律走 children 內 `.tp-page-bottom-bar`。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
+- **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕走標題列右側：`StackPanelHeader` 有右側 primary action slot（`primaryAction`，放在 `✕` 之前），見「Form Pages > 表單頁主要動作」。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（vibrancy：品牌 → 4-tab 主導覽 → 我的行程清單 → 帳號 chip 左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
 - **表單頁桌機滿寬（rev2 §10.4）:** account 設定分區桌機 2-col grid（`.tp-account-groups` @≥1024，hero 收窄置中）；new-trip 桌機加寬（線性表單不 full-bleed）。
@@ -438,7 +438,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
   - 左側: 36×36 chevron-left back button + `aria-label`（或 §10.5 的 labeled 返回）
   - 中間: page identity (「共編設定」/「探索」)
   - 右側: optional primary confirm action (「儲存」/「完成」)
-  - ⚠️ **操作面板（編輯行程 / 加景點 / 換景點…）已不走這套** —— 它們改用 `StackPanelHeader`（`‹` 前一層 / `✕` 整個關閉，兩者皆有 44 CSS px hit area、無右側 confirm slot、完成鈕走 children 內 `.tp-page-bottom-bar`），見上「Operation stacking / Operation drill-down」段。此處「第二層 = form 全頁」的舊描述僅適用**未納入 `TripStackLayout` group 的獨立子頁**；納入 group 的操作以 Operation stacking 段為準（2026-07-23 標註分界）。
+  - ⚠️ **操作面板（編輯行程 / 加景點 / 換景點…）已不走這套** —— 它們改用 `StackPanelHeader`（`‹` 前一層 / `✕` 整個關閉，兩者皆有 44 CSS px hit area、右側為 primary action slot（完成鈕，#1559）），見上「Operation stacking / Operation drill-down」段。此處「第二層 = form 全頁」的舊描述僅適用**未納入 `TripStackLayout` group 的獨立子頁**；納入 group 的操作以 Operation stacking 段為準（2026-07-23 標註分界）。
 
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
@@ -549,7 +549,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - Shell: AppShell (sidebar desktop / bottom nav compact)
 - Titlebar: sticky `<TitleBar>` + 返回 + 單行標題 + 右側 primary action
 - Content: form-first single-column, `max-width: 1040px`
-- 取消/送出 actions: TitleBar primary action + bottom sticky bar (取消 / 確認) 對稱
+- 取消/送出 actions: TitleBar 右側 primary action；返回即取消，不設底部列（見下「表單頁主要動作」）
 - Mobile: full-width, page bg (不是 backdrop overlay)
 - Desktop: content max 1040px 置中
 
@@ -557,6 +557,26 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - Modal backdrop / portal 浮層
 - 大型 split hero / 形象圖
 - Loading 蓋住 page (改用 `<PageErrorState>` 或 inline skeleton)
+
+### 表單頁主要動作（owner 2026-11-08 定案，#1559；取代舊「完成鈕走底部列」「標題列加底部列對稱」兩種說法）
+
+**單一規則：所有表單頁（新增／編輯／選擇／確認類全頁）的主要動作（完成／儲存／建立／送出／確認）一律放標題列右側（`TitleBar` 用 `TitleBarPrimaryAction`；操作頁用 `OperationShell` 的 `primaryAction`，由 `StackPanelHeader` 的右側 primary action slot 渲染）；左側為返回（＝取消，含未儲存守門）。`.tp-page-bottom-bar` 對表單頁退役，不再新增使用。**
+
+- 左側：44×44 返回鈕。返回即取消；有未儲存內容時走既有「捨棄未儲存？」守門，不另放「取消」鈕。
+- 中間：單行標題，過長以 ellipsis 截斷（`min-width:0` + `text-overflow:ellipsis`），完整文字放 `title` attribute。
+- 右側：恰好一顆主要動作（`.tp-titlebar-action.is-primary`），高度 44，寬度至少 44。**表單頁手機也顯示文字 label**（建立／完成／儲存），靠 `.tp-titlebar-action--labeled` 蓋過 ≤760px icon-only 規則；只有非表單頁的 chrome action（探索、選單）維持 icon-only。操作頁的 `✕`（整個關閉）留在主要動作右邊。
+- 狀態：
+  - 停用（必填未齊）：`disabled` + opacity 0.5（沿用 `.tp-titlebar-action.is-primary:disabled`），不隱藏；停用原因由內容區欄位／摘要列說明。
+  - 送出中：label 換成 busy label（「建立中⋯」），前置 spinner，`disabled`、`aria-busy="true"`；返回鈕（操作頁連 `✕`）同時停用避免中途離開（`TitleBar` 的 `backDisabled`、`StackPanelHeader` / `OperationShell` 的 `busy`）。
+  - 錯誤：不放在標題列。錯誤訊息是標題列正下方的 `role="alert"` 橫幅（`FormErrorBanner`，`.tp-form-error-banner`；`OperationShell` 的 `errorMessage`），出現時先 `scrollIntoView`；主要動作回復可點以便重試。
+- 次要資訊與次要動作搬回內容區：
+  - 計數／摘要（已選 N 個、行程摘要、自動儲存狀態）→ 標題列下方的 sticky 摘要列 `.tp-form-summary`（`FormSummaryBar`；`OperationShell` 的 `summary`）。
+  - 與表單欄位同性質的控制（發布狀態、分類）→ 內容區內的欄位列或卡片（EditTripPage 的發布狀態在表單頂端卡片；ChangePoiPage 的分類 chip 在「已選景點」卡片下的欄位列，picker 向下彈出，不再需要 dropUp）。
+  - 破壞性動作（刪除）→ 內容區最底部的 danger zone（沿用 `EditEntryPage` 的 `.tp-edit-entry-danger`），仍以確認對話框二次確認；不放標題列。
+- auto-save 頁（EditTripPage）：沒有「儲存」，右側放「完成」（等同返回），摘要列顯示「已自動儲存」（儲存中 → 「儲存中⋯」、有未存變更 → 「變更將自動儲存」）。
+- 鍵盤（手機）：標題列 sticky 於頂端，鍵盤彈出時位置不變，主要動作隨時可點（不再有底部列被鍵盤頂起或遮住的問題）。
+- 安全區域：標題列頂端 `padding-top: env(safe-area-inset-top)`；不再為底部列預留高度。
+- 例外：`DeveloperAppNewPage` 尚未搬（#1559 範圍是 NewTrip／EditTrip／AddStop／ChangePoi／EntryAction 五頁），暫時仍用 `.tp-page-bottom-bar`（兩者並用）；它搬完後刪除 `.tp-page-bottom-bar` 的 CSS 與 AppShell 內的對應覆寫。非表單頁（列表、詳情、對話框內的確認）不適用本規則，對話框維持 dialog 內部按鈕列。
 
 **EditEntryPage（編輯景點）欄位順序（v2.55.x）**
 - 由上而下：**起訖時間**（最上）→ **說明**（全寬 textarea，緊接時間下方）→ POI 正選卡（分類 / per-POI 備註 / 置換）→ 備選清單 → 從上一站移動方式 → 刪除停留點（danger）。

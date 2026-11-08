@@ -38,7 +38,7 @@ import { apiFetchRaw } from '../lib/apiClient';
 import { EVENT } from '../lib/events';
 import { deleteDay } from '../lib/tripMutations';
 import OperationShell from '../components/shell/OperationShell';
-import InlineError from '../components/shared/InlineError';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -256,9 +256,17 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 
-/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用 */
-/* EditTripPage 額外加 flex-wrap (publish segment + cancel + save 多元素) */
-.tp-page-bottom-bar { flex-wrap: wrap; }
+/* 發布狀態是欄位性質 → 內容區頂端卡片（#1559；原本在已退役的底部列） */
+.tp-edit-publish-card {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
+  margin-bottom: 16px;
+}
+.tp-edit-publish-card-text { display: flex; flex-direction: column; min-width: 0; }
+.tp-edit-publish-card-text small { color: var(--color-muted); font-size: var(--font-size-footnote); }
 
 .tp-edit-actions-publish {
   display: inline-flex;
@@ -288,7 +296,6 @@ const SCOPED_STYLES = `
 .tp-edit-actions-publish button.is-active.is-published .dot { background: var(--color-success, #2e8540); }
 .tp-edit-actions-publish button.is-active.is-draft .dot { background: var(--color-line-strong); }
 
-.tp-edit-actions-btns { display: inline-flex; gap: 8px; }
 
 /* loading shimmer for initial fetch */
 .tp-edit-loading {
@@ -1126,10 +1133,55 @@ export default function EditTripPage() {
         testId="edit-trip-page"
         title="編輯行程"
         back={handleBack}
+        busy={submitting}
+        errorMessage={error}
+        errorTestId="edit-trip-error"
+        primaryAction={!loading ? (
+          <TitleBarPrimaryAction
+            label="完成"
+            busyLabel="儲存中⋯"
+            busy={submitting}
+            onClick={handleBack}
+            testId="edit-trip-done"
+          />
+        ) : undefined}
+        summary={submitting ? '儲存中⋯' : isDirty ? '變更將自動儲存' : '已自動儲存'}
       >
             <style>{TRIP_FORM_STYLES}</style>
             <style>{SCOPED_STYLES}</style>
             <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
+              {!loading && (
+                <div className="tp-edit-publish-card" data-testid="edit-trip-publish-card">
+                  <div className="tp-edit-publish-card-text">
+                    <b>發布狀態</b>
+                    <small>上線後旅伴可見</small>
+                  </div>
+                  <div className="tp-edit-actions-publish" role="radiogroup" aria-label="發布狀態">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={published === 0}
+                      className={`is-draft ${published === 0 ? 'is-active' : ''}`}
+                      onClick={() => setPublished(0)}
+                      data-testid="edit-trip-published-draft"
+                    >
+                      <span className="dot"></span>
+                      <span>草稿</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={published === 1}
+                      className={`is-published ${published === 1 ? 'is-active' : ''}`}
+                      onClick={() => setPublished(1)}
+                      data-testid="edit-trip-published-on"
+                    >
+                      <span className="dot"></span>
+                      <span>上線</span>
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="tp-edit-page-sub">修改目的地 + 行程天數。</p>
 
               {loading ? (
@@ -1411,50 +1463,9 @@ export default function EditTripPage() {
                       — dead columns dropped。UI 收集了但 backend 沒讀取使用（recompute 用 Haversine gate）。
                       若日後需要重啟此功能，先設計 segment computation read path 再加回 UI。 */}
 
-                  {error && <InlineError message={error} testId="edit-trip-error" />}
                 </>
               )}
             </form>
-
-            {!loading && (
-              <div className="tp-page-bottom-bar">
-                <div className="tp-edit-actions-publish" role="radiogroup" aria-label="發布狀態">
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={published === 0}
-                    className={`is-draft ${published === 0 ? 'is-active' : ''}`}
-                    onClick={() => setPublished(0)}
-                    data-testid="edit-trip-published-draft"
-                  >
-                    <span className="dot"></span>
-                    <span>草稿</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={published === 1}
-                    className={`is-published ${published === 1 ? 'is-active' : ''}`}
-                    onClick={() => setPublished(1)}
-                    data-testid="edit-trip-published-on"
-                  >
-                    <span className="dot"></span>
-                    <span>上線</span>
-                  </button>
-                </div>
-                {/* v2.33.108: 移除「儲存變更」button — auto-save 已 wire。剩「返回」（已 auto-saved 無需 cancel 語意）。 */}
-                <div className="tp-edit-actions-btns">
-                  <button
-                    type="button"
-                    className="tp-edit-btn"
-                    onClick={handleBack}
-                    data-testid="edit-trip-back"
-                  >
-                    返回
-                  </button>
-                </div>
-              </div>
-            )}
       </OperationShell>
       {/* v2.33.0: destructive confirm 移除 day with entries / 最後一天 fallback。 */}
       <ConfirmModal
