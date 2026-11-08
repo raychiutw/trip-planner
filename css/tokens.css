@@ -2054,6 +2054,10 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   background: var(--color-background);
   border-bottom: 1px solid var(--color-border);
   min-width: 0;
+}
+/* 省略號放內層：外層若 overflow:hidden，在 grid 版面的頁面殼（EditTripPage）裡列高會被壓掉 padding。 */
+.tp-form-summary-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -300,7 +300,7 @@ describe('OperationShell — #1166 定案：不接 sheet 引擎，鎖住自有�
 
 describe('OperationShell 表單頁 slot（#1559）', () => {
   it('primaryAction 進 header；summary、errorMessage 依序緊貼 header 之後、先於 children', () => {
-    const { getByTestId, getByRole, getByText } = renderStack(
+    const { getByTestId, getByRole } = renderStack(
       <OperationShell
         shellClassName="tp-op-x"
         testId="op-x-page"
@@ -315,7 +315,8 @@ describe('OperationShell 表單頁 slot（#1559）', () => {
     );
     const head = getByTestId('stack-panel-header');
     expect(head.contains(getByTestId('op-primary'))).toBe(true);
-    const summary = getByText('已選 1 個');
+    const summary = getByTestId('form-summary');
+    expect(summary).toHaveTextContent('已選 1 個');
     expect(head.nextElementSibling).toBe(summary);
     expect(summary.nextElementSibling).toBe(getByRole('alert'));
     expect(getByRole('alert').nextElementSibling).toBe(getByTestId('op-body'));

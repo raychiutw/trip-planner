@@ -7,7 +7,11 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export function FormSummaryBar({ children }: { children: ReactNode }) {
-  return <div className="tp-form-summary" data-testid="form-summary">{children}</div>;
+  return (
+    <div className="tp-form-summary" data-testid="form-summary">
+      <div className="tp-form-summary-text">{children}</div>
+    </div>
+  );
 }
 
 export function FormErrorBanner({ message, testId }: { message: string; testId?: string }) {

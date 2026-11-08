@@ -263,6 +263,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-secondary);
+  margin-bottom: 16px;
 }
 .tp-edit-publish-card-text { display: flex; flex-direction: column; min-width: 0; }
 .tp-edit-publish-card-text small { color: var(--color-muted); font-size: var(--font-size-footnote); }
