@@ -81,9 +81,18 @@ describe('ci.yml — HIG 取證步驟與 Playwright config 分工', () => {
 
   it('預設 config 排除 HIG specs 且只啟動一台 server（不為 HIG 多建一份新 api 旗標建置）', () => {
     const cfg = read('playwright.config.js');
-    expect(cfg).toMatch(/testIgnore:\s*HIG_SPECS/);
+    expect(cfg).toMatch(/testIgnore:\s*\[?\s*HIG_SPECS/);
     expect(cfg).not.toMatch(/VITE_NEW_API_AUTH/);
     expect(cfg).not.toMatch(/port:\s*3001/);
+  });
+
+  it('新 api 模式 e2e：CI 有獨立步驟、預設 config 排除它、它自己的 config 建旗標開啟的 dist 並啟動假 api', () => {
+    expect(CI_YML).toMatch(/npx playwright test -c playwright\.newapi\.config\.js/);
+    expect(read('playwright.config.js')).toMatch(/new-api-e2e\\\.spec\\\.js/);
+    const cfg = read('playwright.newapi.config.js');
+    expect(cfg).toMatch(/VITE_NEW_API_AUTH=1/);
+    expect(cfg).toMatch(/fake-new-api\.cjs/);
+    expect(cfg).toMatch(/--outDir dist-newapi-e2e/);
   });
 
   it('兩台 HIG server 的建置指令只定義在 playwright.hig-servers.js，兩個 HIG config 共用', () => {

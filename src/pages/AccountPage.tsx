@@ -11,6 +11,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { typedApi, unwrap } from '../lib/api/typed';
 import { isNewApiAuthEnabled } from '../lib/auth';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
@@ -356,11 +357,7 @@ export default function AccountPage() {
     }
     setSavingName(true);
     try {
-      const saved: CurrentUser = await apiFetch('/account/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ displayName: trimmed.length === 0 ? null : trimmed }),
-        headers: { 'content-type': 'application/json' },
-      });
+      const saved = unwrap(await typedApi.patch('/api/account/profile', { body: { displayName: trimmed.length === 0 ? null : trimmed } }));
       setConfirmedName({ value: saved.displayName, userAtSave: user });
       reloadUser();
       setEditingName(false);
@@ -442,7 +439,7 @@ export default function AccountPage() {
       // 新 api 沒有 cookie：先以 bearer 建立 challenge，再把瀏覽器導去 api 回傳的 Google 驗證網址（導覽請求帶不了 bearer，靠 challenge id 識別）
       setDeleteError(null);
       try {
-        const started = await apiFetch<{ challengeId?: string; authorizeUrl?: string }>('/account/delete-reauth', { method: 'POST' });
+        const started = unwrap(await typedApi.post('/api/account/delete-reauth'));
         if (!started.challengeId || !started.authorizeUrl) throw new Error('Invalid delete-reauth response');
         writeDeleteChallenge(started.challengeId);
         window.location.href = started.authorizeUrl;
@@ -463,13 +460,10 @@ export default function AccountPage() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await apiFetch('/account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          deletePreview.hasPassword ? { password: deleteInput }
-            : challengeId ? { challengeId } : { confirm: deleteInput },
-        ),
+      // 無密碼帳號走到這裡時 canConfirmDelete 已保證 deleteInput === 'DELETE'
+      await typedApi.delete('/api/account', {
+        body: deletePreview.hasPassword ? { password: deleteInput }
+          : challengeId ? { challengeId } : { confirm: 'DELETE' },
       });
       writeDeleteChallenge(null);
       // 帳號已不存在，不能留在帳號頁。用整頁導向而非 SPA navigate —— 要把

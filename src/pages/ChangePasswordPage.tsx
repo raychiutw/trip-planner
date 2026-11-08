@@ -10,7 +10,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
-import { apiFetch } from '../lib/apiClient';
+import { typedApi } from '../lib/api/typed';
 import { ApiError, formatWait } from '../lib/errors';
 import { isNewApiAuthEnabled } from '../lib/auth';
 import { useAccountPreview } from '../hooks/useAccountPreview';
@@ -88,10 +88,7 @@ export default function ChangePasswordPage() {
     if (localError) { setShowLocal(true); return; }
     setBusy(true);
     try {
-      await apiFetch('/account/password', {
-        method: 'POST',
-        body: JSON.stringify({ current_password: current, new_password: next }),
-      });
+      await typedApi.post('/api/account/password', { body: { current_password: current, new_password: next } });
       showToast('密碼已更新，其他裝置已登出', 'success');
       navigate('/account');
     } catch (err) {

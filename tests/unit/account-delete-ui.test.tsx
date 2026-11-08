@@ -39,7 +39,9 @@ describe('帳號頁 — 刪除入口', () => {
 
 describe('帳號頁 — 確認流程必須誠實揭露影響', () => {
   it('開啟確認前先取 GET /api/account 預覽', () => {
-    expect(page).toMatch(/apiFetch[^\n]*['"`]\/account['"`]|apiFetch\(\s*['"`]\/account['"`]/);
+    // 預覽由 useAccountPreview 取（GET /account）；頁面打開確認前一定先呼叫它的 reload
+    expect(page).toMatch(/useAccountPreview/);
+    expect(readFileSync(resolve(ROOT, 'src/hooks/useAccountPreview.ts'), 'utf-8')).toMatch(/apiFetch<unknown>\(\s*['"`]\/account['"`]\s*\)/);
   });
 
   it('確認畫面顯示會被刪除的行程數', () => {
@@ -74,7 +76,7 @@ describe('帳號頁 — 隱私權政策入口', () => {
 
 describe('帳號頁 — 刪除送出', () => {
   it('用 DELETE 打 /account', () => {
-    expect(page).toMatch(/method:\s*['"]DELETE['"]/);
+    expect(page).toMatch(/typedApi\.delete\(\s*['"]\/api\/account['"]/);
   });
 
   it('成功後導離帳號頁（帳號已不存在，不能留在原頁）', () => {

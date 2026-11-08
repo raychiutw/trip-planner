@@ -16,6 +16,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
+import { getNewApiAuth } from '../lib/auth';
+import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
 import { normalizeEmail } from '../server/email-utils';
 
@@ -219,7 +221,16 @@ export default function InvitePage() {
             {user && normalizeEmail(user.email) !== normalizeEmail(currentState.data.invitedEmail) && (
               <div className="tp-invite-error" role="alert" data-testid="invite-mismatch">
                 此邀請不屬於你的帳號（邀請寄給 {currentState.data.invitedEmail}，你登入的是 {user.email}）。
-                <a href={`/api/oauth/logout?redirect_after=${encodeURIComponent(`/login?invitation=${encodeURIComponent(token)}`)}`} data-testid="invite-switch-account">切換帳號並繼續邀請</a>
+                <a
+                  href={`/api/oauth/logout?redirect_after=${encodeURIComponent(`/login?invitation=${encodeURIComponent(token)}`)}`}
+                  onClick={(e) => {
+                    // 新 api 沒有 cookie，登出是受保護的 POST，導覽帶不了 bearer：先撤銷 token 再去登入頁（旗標關閉維持舊入口的導覽）
+                    if (!getNewApiAuth()) return;
+                    e.preventDefault();
+                    void logoutSession().finally(() => globalThis.location.assign(`/login?invitation=${encodeURIComponent(token)}`));
+                  }}
+                  data-testid="invite-switch-account"
+                >切換帳號並繼續邀請</a>
               </div>
             )}
 
