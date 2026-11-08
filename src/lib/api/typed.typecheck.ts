@@ -57,9 +57,11 @@ export async function typedApiUsage(): Promise<void> {
   // @ts-expect-error 該端點契約沒有 requestBody
   await typedApiRaw.get('/api/account/ai-authorization', { rawBody: '{}' });
   // @ts-expect-error body 與 rawBody 不能並用
-  await typedApiRaw.post('/api/trips/import', { body: {}, rawBody: '{}' });
+  await typedApiRaw.post('/api/poi-favorites', { body: { poiId: 1 }, rawBody: '{"poiId":1}' });
   // @ts-expect-error rawBody 必須是字串
   await typedApiRaw.post('/api/trips/import', { rawBody: { schemaVersion: 1 } });
+  // 正向對照：body 與 rawBody 各自單獨用都合法（上面「不能並用」的錯誤只能來自並用本身）
+  await typedApiRaw.post('/api/poi-favorites', { rawBody: '{"poiId":1}' });
   // @ts-expect-error 必填 body 的端點不能兩者都不給
   await typedApiRaw.post('/api/trips/import');
 }
