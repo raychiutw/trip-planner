@@ -44,3 +44,20 @@ repository 的 mobile client seed 只有 `http://127.0.0.1:8765` loopback。它�
 - migration 0097 是 additive：**先套 production 與 staging D1，再 merge**。程式比 migration 先上線時是 fail-closed（web 登入不受影響，mobile authorize 回錯誤，不會 500）。rollback 分不出「0097 新增」與「營運端原有」，同 client_id 的列與該 callback URI 一律移除，執行前要先確認。
 - 上線證據清單（缺一不可）：真實 Google 往返（見 [ADR-0009](0009-account-deletion-requires-fresh-google-reauth.md)）、callback 主機與 association 檔部署、Flutter 實機的 callback／背景恢復／cold start／取消、受控刪帳號 smoke。
 - 相關：[ADR-0002](0002-self-hosted-v2-oauth.md)。
+
+## 更新（2026-11-08，#1482）：callback 搬到 web 主站，過渡期新舊並存
+
+只記事實；**以下尚未經 iOS／Android 實機驗證**（Universal Link／App Link 的擁有權、cold start、背景恢復、取消都沒驗過）。
+
+- **新增主站路徑**（owner 決議：callback 放 web 主站 `https://trip-planner-dby.pages.dev`，與 issuer〔新 api 的 workers.dev 主機〕刻意不同主機；路徑避開 SPA 既有的 `/auth/callback`、`/oauth/authorize`）：
+
+  | 環境 | 新 redirect |
+  |---|---|
+  | production | `https://trip-planner-dby.pages.dev/mobile/oauth/callback` |
+  | UAT | `https://trip-planner-dby.pages.dev/mobile/uat/oauth/callback` |
+
+- **過渡期新舊並存**：已發佈的 App 仍用上表的舊 callback，所以 api 每個環境同時接受「舊＋新」兩個精確 redirect（api repo 的 `mobileOAuthContract` 回傳允許集合，`authorize`／`consent`／`token` 改為「在該環境集合內」的精確比對；不開 wildcard、不跨環境、dev 不變）。client 註冊以 additive migration 只追加新值。**舊 callback 與舊主機的移除是另案**，不在此決定。
+- **關聯檔**：本 repo `public/.well-known/apple-app-site-association` 的 `applinks` paths 改為 `/mobile/oauth/callback`、`/mobile/uat/oauth/callback`、`/s/*`；`assetlinks.json` 內容不變（Android 的 SHA-256 指紋本來就以主機為單位）。舊主機（`mobile-callback` 分支別名）上的檔案由該分支承載，本次不動。`_headers` 對兩個關聯檔強制 `Content-Type: application/json`（既有）。
+- **落地頁**：新路徑沒有專屬頁面，行為與舊別名等價——舊別名服務的是整份 SPA build（沒有專屬 callback 頁，也沒有「App 未安裝」備援），新路徑落到 Pages 的 SPA fallback，再由 SPA 的 `path="*"` 導向 `/trips`。App 已安裝時由 OS 攔截 https callback，不會載入頁面。`tests/unit/mobile-callback-main-site.test.ts` 守住「兩個路徑不被 Functions 路由、`_redirects`／`404.html` 或任何 SPA `<Route>` 吃掉」。
+- **grep 守門**：同一個測試禁止原始碼新增對舊 `mobile-callback` 主機的引用；既有引用列為待清理清單（`functions/api/_mobileOAuth.ts`、`wrangler.toml`、`tests/unit/oauth-authorize-page.test.tsx`）。
+- **仍待做**：Flutter 的 entitlements／intent-filter／`--dart-define`、實機驗證、web 先部署並確認 AASA 可達、api migration 套用與部署。
