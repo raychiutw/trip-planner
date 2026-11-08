@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- **新 api 模式的 e2e（`playwright.newapi.config.js`，CI 有獨立步驟）**：對本機有狀態的假 api（驗 PKCE、DPoP 簽章與 htu／ath／jkt、refresh 輪替與重放撤銷、SSE 一次性 ticket、跨埠 CORS）跑真瀏覽器，涵蓋登入回跳（帳密、Google、state 不符）、重新整理仍登入、401 自動 refresh、重放撤銷、登出後舊憑證失效、SSE ticket、變更密碼與帳號刪除的 fresh-auth。不連外網、不用真實帳號。
+- `typedApi`（`src/lib/api/typed.ts`）：契約型別的 typed client，傳輸與錯誤語意沿用 `apiFetch`；變更密碼、刪除帳號、更新顯示名稱三處已改用。
+
+### Fixed
+- **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。旗標預設仍關閉，production 行為不變。
+
 ## [2.57.133] - 2026-11-08
 
 ### Fixed
