@@ -13,6 +13,7 @@ class RequestEvents {
   closed = false;
   constructor(public url: string) { RequestEvents.instances.push(this); }
   close() { this.closed = true; }
+  addEventListener() { /* ticket 連線註冊 reconnect 事件；這裡不模擬 */ }
   emit(data: unknown) { if (!this.closed) this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) })); }
 }
 const initialRow = { id: 42, tripId: 't1', message: '第一天加水族館', reply: null as string | null,
