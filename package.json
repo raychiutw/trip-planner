@@ -49,7 +49,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.2.7",
     "globals": "^17.12.0",
-    "jsdom": "^30.1.3",
+    "jsdom": "^31.0.0",
     "miniflare": "^4.20260730.0",
     "openapi-typescript": "7.13.0",
     "sharp": "^0.35.5",

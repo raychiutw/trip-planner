@@ -124,6 +124,8 @@ describe('EmailVerifyPendingPage', () => {
     const page = renderAt('email=u@x.com');
     expect(vi.getTimerCount()).toBeGreaterThan(0);
     page.unmount();
+    // jsdom 31 下 React scheduler 會留下 0ms 排程（非頁面計時器），先沖掉再數；1s interval 不會被沖掉
+    act(() => { vi.advanceTimersByTime(0); });
     expect(vi.getTimerCount()).toBe(0);
     expect(removeListener).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
     removeListener.mockRestore();

@@ -13,6 +13,14 @@ import type { MapPin } from '../../src/hooks/useMapData';
 
 beforeEach(setupGoogleMapsMock);
 
+// jsdom 31 的 CSSStyleDeclaration 會把 hex 正規化成 rgb()，期望值走同一條正規化路徑
+const norm = (c: string) => {
+  const e = document.createElement('div');
+  e.style.color = c;
+  if (!e.style.color) throw new Error(`norm: 無法解析顏色 ${c}`); // 防空字串讓 toContain 恆真
+  return e.style.color;
+};
+
 const SAMPLE: MapPin = {
   id: 1, index: 3, title: 'X', type: 'attraction',
   lat: 26.21, lng: 127.72, sortOrder: 1,
@@ -23,11 +31,11 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
     const style = markerStyle(SAMPLE, false, false);
     const el = markerContent(style);
     const textShadow = el.style.textShadow;
-    expect(textShadow).toContain(style.fill);
+    expect(textShadow).toContain(norm(style.fill));
     // v2.31.84：halo width 1px → 2px
     expect(textShadow).toContain('2px');
     // 出現次數 ≥4（4 corner + 4 edge）
-    const occurrences = textShadow.split(style.fill).length - 1;
+    const occurrences = textShadow.split(norm(style.fill)).length - 1;
     expect(occurrences).toBeGreaterThanOrEqual(4);
   });
 
@@ -37,7 +45,7 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
     const bs = el.style.boxShadow;
     // v2.31.79 inner fill ring 保留
     expect(bs).toContain('1.5px');
-    expect(bs).toContain(style.fill);
+    expect(bs).toContain(norm(style.fill));
     // v2.31.84 加 outer 3px drop shadow（rgba black 0.18）做 elevation 分離
     expect(bs).toContain('3px');
     expect(bs.toLowerCase()).toMatch(/rgba\(0,\s*0,\s*0,\s*0\.18\)/);
@@ -47,8 +55,8 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
     const style = markerStyle(SAMPLE, true, false);
     const el = markerContent(style);
     expect(style.fill).toBe('#8A6038');
-    expect(el.style.textShadow).toContain(style.fill);
-    expect(el.style.boxShadow).toContain(style.fill);
+    expect(el.style.textShadow).toContain(norm(style.fill));
+    expect(el.style.boxShadow).toContain(norm(style.fill));
     // v2.31.93：focused marker box-shadow 改用「outer accent ring + 加深 drop shadow」
     // 取代 idle 的 0.18 black drop shadow，user 反映 focused stop 被相鄰 marker 蓋住。
     // 條件：accent rgba ring (138,96,56,0.35) + 深 drop shadow (42,31,24,0.35)。
@@ -61,8 +69,8 @@ describe('v2.31.84: marker label halo 2px + box-shadow drop shadow elevation', (
   it('past marker：halo + drop shadow 都還在（mute 不消失）', () => {
     const style = markerStyle(SAMPLE, false, true);
     const el = markerContent(style);
-    expect(el.style.textShadow).toContain(style.fill);
-    expect(el.style.boxShadow).toContain(style.fill);
+    expect(el.style.textShadow).toContain(norm(style.fill));
+    expect(el.style.boxShadow).toContain(norm(style.fill));
     expect(el.style.boxShadow.toLowerCase()).toMatch(/rgba\(0,\s*0,\s*0,\s*0\.18\)/);
   });
 
