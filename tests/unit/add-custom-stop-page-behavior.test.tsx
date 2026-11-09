@@ -117,8 +117,11 @@ describe('AddCustomStopPage public form', () => {
     const address = screen.getByRole('combobox', { name: '地址或地標' });
     fireEvent.change(address, { target: { value: '東京塔-1326' } });
     const option = await screen.findByRole('option', { name: /東京塔/ });
-    fireEvent.keyDown(address, { key: 'ArrowDown' });
-    await waitFor(() => expect(option).toHaveAttribute('aria-selected', 'true'));
+    // 按鍵放進重試：Headless UI 在 option 註冊完成前會吞掉 ArrowDown，光等不會重送
+    await waitFor(() => {
+      fireEvent.keyDown(address, { key: 'ArrowDown' });
+      expect(option).toHaveAttribute('aria-selected', 'true');
+    });
     fireEvent.keyDown(address, { key: 'Enter' });
     await screen.findByText(/無法取得此地址的位置/);
     expect(screen.getByRole('button', { name: '完成' })).toBeDisabled();
@@ -143,8 +146,11 @@ describe('AddCustomStopPage public form', () => {
     expectClean(address);
     fireEvent.change(address, { target: { value: '東京塔-1326' } });
     const option = await screen.findByRole('option', { name: /東京塔/ });
-    fireEvent.keyDown(address, { key: 'ArrowDown' });
-    await waitFor(() => expect(option).toHaveAttribute('aria-selected', 'true'));
+    // 按鍵放進重試：Headless UI 在 option 註冊完成前會吞掉 ArrowDown，光等不會重送
+    await waitFor(() => {
+      fireEvent.keyDown(address, { key: 'ArrowDown' });
+      expect(option).toHaveAttribute('aria-selected', 'true');
+    });
     fireEvent.keyDown(address, { key: 'Enter' });
     await screen.findByText(/無法取得此地址的位置/);
     expectLinked(address, /無法取得此地址的位置/);
