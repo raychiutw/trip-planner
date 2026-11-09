@@ -56,8 +56,13 @@ test.describe('NewTripPage', () => {
 
   test('標題列捲動後仍在視窗頂端（sticky），主要動作隨時可點', async ({ page }) => {
     await fillNewTrip(page);
-    await page.mouse.wheel(0, 2000);
-    await page.evaluate(() => document.querySelectorAll('*').forEach((el) => { if (el.scrollHeight > el.clientHeight + 50) el.scrollTop = el.scrollHeight; }));
+    // 不用 mouse.wheel：mobile WebKit 不支援（會直接丟錯），改以程式捲動；並確認真的捲動過，避免 sticky 斷言在沒捲動時恆真。
+    const scrolled = await page.evaluate(() => {
+      let n = 0;
+      document.querySelectorAll('*').forEach((el) => { if (el.scrollHeight > el.clientHeight + 50) { el.scrollTop = el.scrollHeight; if (el.scrollTop > 0) n++; } });
+      return n + window.scrollY;
+    });
+    expect(scrolled, '頁面應有可捲動內容且已捲動').toBeGreaterThan(0);
     const btn = header(page).getByTestId('new-trip-submit');
     await expect(btn).toBeEnabled();
     const box = await btn.boundingBox();

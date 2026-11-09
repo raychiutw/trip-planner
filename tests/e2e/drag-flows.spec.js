@@ -16,6 +16,7 @@
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
+const { openByActivation } = require('./open-by-activation');
 
 const TRIP_ID = 'okinawa-trip-2026-Ray';
 
@@ -116,7 +117,7 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
 });
 
 test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
-  test('menu step reorder saves the new order and returns focus to the moved entry', async ({ page }) => {
+  test('menu step reorder saves the new order and returns focus to the moved entry', async ({ page, browserName }) => {
     let savedOrder;
     await page.route('**/api/trips/*/entries/batch', async (route) => {
       savedOrder = route.request().postDataJSON().updates.map((entry) => entry.id);
@@ -124,8 +125,9 @@ test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
     });
     await page.goto(`/trips?selected=${TRIP_ID}`);
     const rail = page.locator('.tp-rail').filter({ has: page.getByTestId('timeline-rail-row-101') });
-    await rail.getByTestId('timeline-rail-menu-101').click();
-    await rail.getByTestId('timeline-rail-move-down-101').click();
+    // webkit 點按鈕／選單項不取得焦點（popover 關閉時不還焦），改鍵盤啟動；chromium 維持 click
+    await openByActivation(rail.getByTestId('timeline-rail-menu-101'), page, browserName);
+    await openByActivation(rail.getByTestId('timeline-rail-move-down-101'), page, browserName);
     await expect.poll(() => savedOrder?.slice(0, 2)).toEqual([102, 101]);
     await expect(rail.locator('[data-testid^="timeline-rail-row-"]').first()).toHaveAttribute('data-testid', 'timeline-rail-row-102');
     await expect(rail.getByTestId('timeline-rail-menu-101')).toBeFocused();

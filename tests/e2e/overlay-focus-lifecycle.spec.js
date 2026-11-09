@@ -1,9 +1,10 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+const { openByActivation } = require('./open-by-activation');
 const { setupApiMocks } = require('./api-mocks');
 
 for (const width of [390, 1280]) {
-  test(`account sheet returns focus to its opener after closing at ${width}px`, async ({ page }) => {
+  test(`account sheet returns focus to its opener after closing at ${width}px`, async ({ page, browserName }) => {
     await page.setViewportSize({ width, height: 844 });
     await setupApiMocks(page);
     await page.goto('/trips');
@@ -11,7 +12,7 @@ for (const width of [390, 1280]) {
       .or(page.getByTestId('sidebar-account-card')).filter({ visible: true });
     await expect(trigger).toHaveCount(1);
     await trigger.focus();
-    await trigger.click();
+    await openByActivation(trigger, page, browserName);
     const sheet = page.getByRole('dialog', { name: '帳號' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByTestId('account-page')).toBeVisible();
@@ -21,15 +22,15 @@ for (const width of [390, 1280]) {
   });
 }
 
-test('nested confirmation Escape returns focus through the account sheet stack', async ({ page }) => {
+test('nested confirmation Escape returns focus through the account sheet stack', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setupApiMocks(page);
   await page.goto('/trips');
   const opener = page.getByTestId('titlebar-account');
-  await opener.click();
+  await openByActivation(opener, page, browserName);
   const sheet = page.getByRole('dialog', { name: '帳號' });
   const logout = sheet.getByTestId('account-row-logout');
-  await logout.click();
+  await openByActivation(logout, page, browserName);
   const confirm = page.getByRole('alertdialog', { name: '確認登出？' });
   await expect(confirm).toBeVisible();
   await page.keyboard.press('Escape');

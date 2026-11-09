@@ -1,7 +1,7 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
 
-test('privacy deep link keeps the long text readable and contact links in keyboard order', async ({ page }) => {
+test('privacy deep link keeps the long text readable and contact links in keyboard order', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 160, height: 640 }); // 320px mobile viewport at 200% zoom
   await page.goto('/privacy#delete-account');
   const policy = page.getByTestId('privacy-page');
@@ -13,10 +13,12 @@ test('privacy deep link keeps the long text readable and contact links in keyboa
   const contacts = policy.getByRole('link', { name: 'lean.lean@gmail.com' });
   await expect(contacts).toHaveCount(2);
   await page.getByRole('button', { name: '返回' }).focus();
-  await page.keyboard.press('Tab');
+  // Safari 預設 Tab 只走表單控制項、略過連結（要 Option+Tab 才會停在連結）；對 webkit 用 Safari 真實的連結巡覽鍵，順序斷言不變。
+  const nextStop = browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+  await page.keyboard.press(nextStop);
   await expect(contacts.first()).toBeFocused();
   await expect(contacts.first()).toHaveAttribute('href', /^mailto:/);
-  await page.keyboard.press('Tab');
+  await page.keyboard.press(nextStop);
   await expect(contacts.last()).toBeFocused();
 });
 

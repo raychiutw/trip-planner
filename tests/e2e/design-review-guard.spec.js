@@ -12,6 +12,7 @@
  */
 import { test, expect } from '@playwright/test';
 const { setupApiMocks } = require('./api-mocks');
+const { openByActivation } = require('./open-by-activation');
 const axePath = require.resolve('axe-core');
 
 const TRIP_ID = 'okinawa-trip-2026-Ray';
@@ -435,13 +436,13 @@ test.describe('設計審查守門（#1445）', () => {
 
         if (theme === 'light' && (width === 390 || width === 1440)) {
           for (const c of ESC_CASES) {
-            test(`Esc 關閉並還焦：${c.name}`, async ({ page }) => {
+            test(`Esc 關閉並還焦：${c.name}`, async ({ page, browserName }) => {
               await page.goto(`/trips?selected=${TRIP_ID}`);
               await page.waitForLoadState('networkidle');
               const trigger = c.trigger(page);
               await trigger.scrollIntoViewIfNeeded();
-              // 用 DOM click 開啟（195 寬以外的寬度標題按鈕都點得到；與滑鼠點擊等價，焦點會留在觸發按鈕上）
-              await trigger.click();
+              // chromium 用 DOM click 開啟（焦點會留在觸發按鈕上）；webkit 改鍵盤啟動，見 open-by-activation.js
+              await openByActivation(trigger, page, browserName);
               const overlay = c.overlay(page);
               await expect(overlay, `${c.name} 開啟後應可見`).toBeVisible();
               await page.keyboard.press('Escape');
