@@ -36,6 +36,11 @@ export default defineConfig({
     // 防 global.fetch / vi.spyOn 等 cross-test leak。
     clearMocks: true,
     restoreMocks: true,
+    // CI 上機器吃緊造成的間歇失敗：同 sha 手動重跑就綠的案例近 14 天至少 10 筆。
+    // retry 後通過的 case 由 tests/flaky-reporter.mjs 以 GitHub 警告註解標出，不會被默默吞掉；
+    // 本機維持 0，開發時看到的就是真實結果。
+    retry: process.env.CI ? 2 : 0,
+    ...(process.env.CI ? { reporters: ['default', './tests/flaky-reporter.mjs'] } : {}),
     // Windows + jsdom tests can over-saturate process startup and hit Vitest's
     // per-test timeout even when each file passes alone. Keep Linux/macOS CI at
     // default parallelism, but cap local Windows workers for deterministic runs.
@@ -54,6 +59,14 @@ export default defineConfig({
           environment: 'jsdom',
           // v2.33.65: renamed from setup-jest-dom.js
           setupFiles: ['./tests/setup-dom.js', './tests/setup-auth-passthrough.ts'],
+          /*
+           * 與 unit-node 同理（說明見下方）：此 project 原本吃 vitest 預設 5s，
+           * entry-visible-synchronization 的真實拖曳 case 在 CI 吃緊時 5000ms 逾時
+           * （近 14 天 5 次，另一次 10527ms）。純 render 測試是毫秒級，提高上限沒有成本，
+           * 只有「真的卡死」才會從 5s 變成 30s 才報。
+           */
+          testTimeout: 30000,
+          hookTimeout: 60000,
         },
       },
       {

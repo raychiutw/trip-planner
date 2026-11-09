@@ -3,6 +3,11 @@
  * 供 @testing-library/react 元件測試使用。
  */
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/react';
+
+// waitFor / findBy* 預設逾時 1000ms，CI 吃緊時 effect／Headless UI 註冊拖過 1 秒就間歇失敗。
+// 只影響「等得到」的案例（成功就立刻返回）；刻意等不到的負向斷言請個別傳 { timeout }。
+configure({ asyncUtilTimeout: 5000 });
 
 // Node.js 25 內建 localStorage accessor；讀取它會噴 `--localstorage-file`
 // warning。用 descriptor 偵測後直接覆蓋，避免觸發 getter。
