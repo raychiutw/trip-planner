@@ -1,9 +1,10 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
+import { swRuntimeCaching } from './scripts/sw-api-cache.mjs';
 import { mockApiPlugin } from './scripts/vite-mock-api';
 // 版本 / commit 單一來源 —— vitest.config.js 也 import 同一份，見該檔註解。
 import { appVersion, commitSha, versionDefine } from './scripts/app-version.mjs';
@@ -39,7 +40,10 @@ const authPassthrough = (): Plugin => ({
   },
 });
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+// loadEnv 會合併 process.env 與 .env.<mode>；CI／本機皆適用
+const apiBase = loadEnv(mode, process.cwd(), 'VITE_').VITE_API_BASE_URL;
+return {
   // 注入給前端顯示（帳號頁版本頁尾）。與 sentryRelease 同源，見上方註解。
   define: versionDefine,
   plugins: [
@@ -62,58 +66,8 @@ export default defineConfig({
         // 關閉 navigation fallback — 避免 SW 攔截導航請求導致有網路時行為異常
         // SW 只做 precache 靜態資源 + runtime cache API，不干預頁面導航
         navigateFallback: null,
-        runtimeCaching: [
-          {
-            // Production API — 只快取公開行程端點，排除 /api/permissions、/api/requests 等需認證的端點
-            // v2.33.62 round 14c: 加 cacheWillUpdate 防 cross-user PII leak —
-            // 只 cache 真正 anonymous + public response (request 沒帶 Cookie +
-            // response Cache-Control 不含 private/no-store)。已 authenticated 走
-            // network 但不寫入共用 SW cache，避免登出後下個 user 讀到上個 user PII。
-            urlPattern: /^https:\/\/trip-planner-dby\.pages\.dev\/api\/trips\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              networkTimeoutSeconds: 5,
-              cacheableResponse: { statuses: [0, 200] },
-              fetchOptions: { cache: 'no-cache' },
-              plugins: [
-                {
-                  cacheWillUpdate: async ({ request, response }) => {
-                    if (request.headers.get('Cookie')) return null;
-                    const cc = response.headers.get('Cache-Control') ?? '';
-                    if (cc.includes('private') || cc.includes('no-store')) return null;
-                    return response;
-                  },
-                },
-              ],
-            },
-            method: 'GET',
-          },
-          {
-            // Dev proxy (localhost /api/trips/*) — 同上，只快取公開行程端點
-            urlPattern: /^http:\/\/localhost:\d+\/api\/trips\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache-dev',
-              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              networkTimeoutSeconds: 5,
-              cacheableResponse: { statuses: [0, 200] },
-              fetchOptions: { cache: 'no-cache' },
-              plugins: [
-                {
-                  cacheWillUpdate: async ({ request, response }) => {
-                    if (request.headers.get('Cookie')) return null;
-                    const cc = response.headers.get('Cache-Control') ?? '';
-                    if (cc.includes('private') || cc.includes('no-store')) return null;
-                    return response;
-                  },
-                },
-              ],
-            },
-            method: 'GET',
-          },
-        ],
+        // 公開行程離線快取規則：見 scripts/sw-api-cache.mjs（網址取自 VITE_API_BASE_URL）
+        runtimeCaching: swRuntimeCaching(apiBase),
       },
       manifest: false, // manifest.json already exists in public/
     }),
@@ -171,4 +125,5 @@ export default defineConfig({
       ignored: ['**/.wrangler/**'],
     },
   },
+};
 });
