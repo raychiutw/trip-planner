@@ -7,8 +7,8 @@
 
  * ⚠️ 舊入口與新 api 各有一份，文字與版本號必須一致（web／Flutter 只顯示 server 回的內容）；改文案時兩個 repo 同步修改。
  *
- * - 責任人、聯絡信箱、處理方條款連結三處是**待填占位符**（{{...}}）。只要還有占位符，isConsentTextComplete() 就是 false，
- *   此時無法記錄同意（POST 回 AI_CONSENT_NOT_READY），使用者會被擋在 AI 外面。owner 填妥後以 PR 取代占位符。
+ * - 責任人、聯絡信箱、處理方條款連結已由 owner 提供並填入（2026-11-09，與新 api 相同）。若日後再出現占位符（{{...}}），
+ *   isConsentTextComplete() 會是 false，此時無法記錄同意（POST 回 AI_CONSENT_NOT_READY），AI 入口會被擋住，所以不可漏填。
  */
 
 export interface ConsentSection {
@@ -50,7 +50,7 @@ export const CONSENT_TEXTS: Record<string, ConsentText> = {
       {
         heading: '處理方',
         items: [
-          'Anthropic（Claude）。資料的保存期間與是否用於模型訓練，依處理方條款，詳見連結：{{TERMS_URL}}',
+          'Anthropic（Claude）。資料的保存期間與是否用於模型訓練，依處理方條款，詳見連結：https://www.anthropic.com/legal/commercial-terms',
           '另外使用 Google Maps 查詢景點資料；查詢內容只有景點名稱或地點識別碼，不包含個人資料。',
         ],
       },
@@ -68,7 +68,7 @@ export const CONSENT_TEXTS: Record<string, ConsentText> = {
       },
       {
         heading: '責任人與聯絡方式',
-        items: ['責任人：{{RESPONSIBLE_PARTY}}；聯絡信箱：{{CONTACT_EMAIL}}'],
+        items: ['責任人：邱淞瑋；聯絡信箱：lean.lean@gmail.com'],
       },
     ],
     withdrawal: [

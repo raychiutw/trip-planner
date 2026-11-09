@@ -1,6 +1,6 @@
 /**
- * 真實文案（尚有待填占位符）：旗標開了也不強制，三個入口行為與現在完全相同。
- * 不 mock 文案——這份檔案守的就是「文案沒填妥就不能強制」。
+ * 真實文案必須已填妥（不得殘留 {{...}} 占位符）；若有占位符，使用者無法同意、AI 入口一律被擋（fail closed）。
+ * 不 mock 文案——占位符以就地加一段「待填」章節模擬，測完還原。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
@@ -12,6 +12,10 @@ import { isConsentTextComplete } from '../../functions/api/_aiDataConsent';
 
 const OWNER = 'aici-owner@test.com';
 const TRIP = 'aici-trip';
+const PLACEHOLDER_TEXT = '責任人：{{RESPONSIBLE_PARTY}}；聯絡信箱：{{CONTACT_EMAIL}}；條款：{{TERMS_URL}}';
+const realSections = CONSENT_TEXTS[CURRENT_CONSENT_VERSION]!.sections;
+const withPlaceholders = () => { CONSENT_TEXTS[CURRENT_CONSENT_VERSION]!.sections = [...realSections, { heading: '待填', items: [PLACEHOLDER_TEXT] }]; };
+const restoreReal = () => { CONSENT_TEXTS[CURRENT_CONSENT_VERSION]!.sections = realSections; };
 let db: D1Database;
 let api: Api;
 let cookie: string;
@@ -36,10 +40,10 @@ afterAll(async () => {
 const textOf = () => JSON.stringify(CONSENT_TEXTS[CURRENT_CONSENT_VERSION]);
 
 describe('文案', () => {
-  it('目前版本是 ai-data-v1；還有恰好三個待填占位符，所以 isConsentTextComplete() 為 false', () => {
+  it('目前版本是 ai-data-v1，且已無任何待填占位符（isConsentTextComplete() 為 true）', () => {
     expect(CURRENT_CONSENT_VERSION).toBe('ai-data-v1');
-    expect([...new Set(textOf().match(/\{\{[A-Z_]+\}\}/g))].sort()).toEqual(['{{CONTACT_EMAIL}}', '{{RESPONSIBLE_PARTY}}', '{{TERMS_URL}}']);
-    expect(isConsentTextComplete()).toBe(false);
+    expect(textOf().match(/\{\{[A-Z_]+\}\}/g)).toBeNull();
+    expect(isConsentTextComplete()).toBe(true);
   });
   it('isConsentTextComplete 只要任何一個占位符還在就是 false；全部填妥才 true', () => {
     const full = { version: 'x', title: 't', intro: 'i', sections: [{ heading: 'h', items: ['a'] }], withdrawal: ['w'] };
@@ -66,6 +70,8 @@ describe('文案', () => {
 });
 
 describe('文案未填妥：POST 不得記錄同意', () => {
+  beforeAll(withPlaceholders);
+  afterAll(restoreReal);
   it('POST → 409 AI_CONSENT_NOT_READY（帶 currentVersion），不寫入事件；GET 與 DELETE 不受影響', async () => {
     const res = await api.request('POST', '/api/account/ai-data-consent', { cookie, json: { version: 'ai-data-v1' } });
     expect(res.status).toBe(409);
@@ -83,6 +89,8 @@ describe('文案未填妥：POST 不得記錄同意', () => {
 });
 
 describe('文案未完成：一律強制，所以 AI 被擋（fail closed）——上線前必須先填妥占位符', () => {
+  beforeAll(withPlaceholders);
+  afterAll(restoreReal);
   it('GET 狀態：enforced=true', async () => {
     const res = await api.get('/api/account/ai-data-consent', { cookie });
     expect(res.status).toBe(200);
