@@ -19,9 +19,6 @@ const exists = (p: string) => existsSync(path.resolve(__dirname, '../..', p));
 
 const VITEST_CONFIG = read('vitest.config.js');
 const PLAYWRIGHT_CONFIG = read('playwright.config.js');
-const MAPS_LOCK_TEST = read('tests/unit/maps-lock.test.ts');
-const OAUTH_ADAPTER_TEST = read('tests/unit/oauth-d1-adapter.test.ts');
-const SESSION_TEST = read('tests/unit/session-module.test.ts');
 const TIMELINE_RAIL_TEST = read('tests/unit/timeline-rail-stale-travel.test.tsx');
 const TRIP_TYPES = read('src/types/trip.ts');
 
@@ -48,19 +45,6 @@ describe('v2.33.65 #2 — playwright CI retries + workers', () => {
   });
 });
 
-describe('v2.33.65 #3 — fake timer afterEach restore (3 files)', () => {
-  it('maps-lock.test.ts afterEach vi.useRealTimers', () => {
-    expect(MAPS_LOCK_TEST).toMatch(/afterEach\(\(\) => \{\s*vi\.useRealTimers\(\)/);
-  });
-
-  it('oauth-d1-adapter.test.ts afterEach vi.useRealTimers', () => {
-    expect(OAUTH_ADAPTER_TEST).toMatch(/afterEach\(\(\) => \{\s*vi\.useRealTimers\(\)/);
-  });
-
-  it('session-module.test.ts afterEach vi.useRealTimers', () => {
-    expect(SESSION_TEST).toMatch(/afterEach\(\(\) => \{\s*vi\.useRealTimers\(\)/);
-  });
-});
 
 describe('v2.33.65 #4 — setTimeout(0) anti-pattern guard (timeline-rail-stale-travel)', () => {
   // v2.55.x 車程 pill 改被動 status chip 後，本檔手動重算 button 的 async 測試已移除，

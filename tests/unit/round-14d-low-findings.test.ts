@@ -16,36 +16,11 @@ import path from 'node:path';
 const read = (p: string) => readFileSync(path.resolve(__dirname, '../..', p), 'utf-8');
 const exists = (p: string) => existsSync(path.resolve(__dirname, '../..', p));
 
-const PERMISSIONS = read('functions/api/permissions.ts');
-const ADAPTER = read('src/server/oauth-d1-adapter.ts');
-const SESSION = read('src/server/session.ts');
 const MANIFEST = JSON.parse(read('public/manifest.json'));
 const TOKENS_CSS = read('css/tokens.css');
 
-describe('v2.33.63 #1 — INVITATION_TTL drift fix', () => {
-  it('invitationExpiresAt() 不寫死 7', () => {
-    expect(PERMISSIONS).not.toMatch(/invitationExpiresAt\(7\)/);
-    expect(PERMISSIONS).toMatch(/invitationExpiresAt\(\)/);
-  });
-});
 
-describe('v2.33.63 #2 — D1Adapter payload size cap', () => {
-  it('upsert 加 16KB size cap', () => {
-    expect(ADAPTER).toMatch(/serialised\.length > 16 \* 1024/);
-    expect(ADAPTER).toMatch(/oauth_models payload too large/);
-  });
-});
 
-describe('v2.33.63 #3 — session CryptoKey cache', () => {
-  it('KEY_CACHE Map<secret, CryptoKey> 加入', () => {
-    expect(SESSION).toMatch(/const KEY_CACHE = new Map<string, CryptoKey>/);
-  });
-
-  it('importHmacKey 先查 cache', () => {
-    expect(SESSION).toMatch(/KEY_CACHE\.get\(secret\)/);
-    expect(SESSION).toMatch(/KEY_CACHE\.set\(secret, key\)/);
-  });
-});
 
 describe('v2.33.63 #5 — manifest maskable icons', () => {
   it('manifest 含 4 icons (2 any + 2 maskable)', () => {

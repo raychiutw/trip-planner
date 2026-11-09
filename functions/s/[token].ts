@@ -10,8 +10,7 @@
  * 無效/已關閉/已過期 → 直接回原始 shell（通用 OG），由 React 顯示「連結已失效」；任何
  * 錯誤都 fall through 回 shell，絕不讓 /s/:token 整頁壞掉。
  */
-import type { Env } from '../api/_types';
-import { resolveActiveShare } from '../api/_share';
+import { resolveActiveShare, type Env } from '../_shared/share';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { token } = context.params as { token: string };

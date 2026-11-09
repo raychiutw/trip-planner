@@ -8,48 +8,13 @@
 // 刻意不開 react-hooks v7 的 React Compiler 系列（immutability / purity /
 // set-state-in-effect…）與任何 style 規則，避免一次掃出大量無關 noise。
 //
-// 範圍只含 src/（前端 React）。functions/ 是 Pages Functions（後端無 React）、
+// 範圍只含 src/（前端 React）。functions/（僅剩 OG meta）、
 // tests/ 另計。CommonJS 專案故用 .mjs 以乾淨 import ESM plugin。
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default [
-  // #1259 entry intake 守門：functions/ 內只有 _entryWrite.ts 可以 INSERT trip_entries。
-  // 用 lint 而非 readFileSync 測試（spec 橫切規則：不新增讀原始碼的測試）。
-  {
-    files: ['functions/**/*.ts'],
-    ignores: ['functions/api/_entryWrite.ts'],
-    languageOptions: { parser: tseslint.parser, ecmaVersion: 2023, sourceType: 'module' },
-    plugins: { '@typescript-eslint': tseslint.plugin },
-    linterOptions: { reportUnusedDisableDirectives: 'off' },
-    rules: {
-      'no-restricted-syntax': ['error',
-        { selector: 'TemplateElement[value.raw=/INSERT\\s+INTO\\s+trip_entries\\b/i]', message: '建立 entry 只能走 entry intake（functions/api/_entryWrite.ts createEntry / createEntriesBatch）。' },
-        { selector: 'Literal[value=/INSERT\\s+INTO\\s+trip_entries\\b/i]', message: '建立 entry 只能走 entry intake（functions/api/_entryWrite.ts createEntry / createEntriesBatch）。' },
-      ],
-    },
-  },
-  // trip_entry_pois 的 INSERT 只准在：entry intake（建立時的正選/備選）、multi-POI module
-  // （_entry_pois：換正選/加備選）、trip-pois（加備選端點）、整日重寫的 alternates 還原。
-  {
-    files: ['functions/**/*.ts'],
-    ignores: [
-      'functions/api/_entryWrite.ts',
-      'functions/api/_entry_pois.ts',
-      'functions/api/trips/[[]id[]]/entries/[[]eid[]]/trip-pois.ts',
-      'functions/api/trips/[[]id[]]/days/[[]num[]].ts',
-    ],
-    languageOptions: { parser: tseslint.parser, ecmaVersion: 2023, sourceType: 'module' },
-    plugins: { '@typescript-eslint': tseslint.plugin },
-    linterOptions: { reportUnusedDisableDirectives: 'off' },
-    rules: {
-      'no-restricted-syntax': ['error',
-        { selector: 'TemplateElement[value.raw=/INSERT\\s+(OR\\s+IGNORE\\s+)?INTO\\s+trip_entry_pois\\b/i]', message: '正選／備選寫入只能走 entry intake、_entry_pois 或 trip-pois。' },
-        { selector: 'Literal[value=/INSERT\\s+(OR\\s+IGNORE\\s+)?INTO\\s+trip_entry_pois\\b/i]', message: '正選／備選寫入只能走 entry intake、_entry_pois 或 trip-pois。' },
-      ],
-    },
-  },
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {

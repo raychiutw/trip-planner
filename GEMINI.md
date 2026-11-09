@@ -16,7 +16,7 @@
 
 ## 給 AI agent 的最低限度 onboarding
 
-- **Tech**：React 19 + Vite + Cloudflare Pages Functions + D1 SQLite。**不是** vanilla JS、**不是** markdown source。
+- **Tech**：React 19 + Vite + Cloudflare Pages（靜態 SPA + OG meta Functions；API 在 trip-planner-api）。**不是** vanilla JS、**不是** markdown source。
 - **資料**：行程在 D1 `trips` / `trip_days` / `trip_entries` 表，POI 走 `pois` master + `trip_entry_pois` junction (v2.27.0 多 POI per entry)。`trip_pois` 已 DROP (v2.29.0 migration 0062)。`data/dist/` 已不存在。
 - **Skills**：程式變更依 `AGENTS.md` 的 Matt Pocock 工作流；`/tp-create`、`/tp-edit`、`/tp-check` 等行程資料技能直接走 API，skill 定義同步放在 `.codex/skills/` 與 `.claude/skills/`。
 - **語言**：所有溝通與 commit message 用繁體中文（台灣）。

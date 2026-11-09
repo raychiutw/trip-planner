@@ -88,21 +88,18 @@ secret（`SESSION_SECRET`、`OAUTH_SIGNING_PRIVATE_KEY`）一律用本機自己�
 
 ```bash
 npm run typecheck          # TypeScript 零錯誤
-npm run typecheck:functions  # Pages Functions 型別檢查
+npm run typecheck:functions  # Pages Functions（OG meta）型別檢查
 npm test                   # vitest unit + integration（實測耗時見下方說明，數量看它自己的輸出）
-npm run test:api           # Pages Functions integration（miniflare + 真 D1）
 npm run test:e2e           # Playwright（要先開 dev server）
-npm run test:all           # = npm test + npm run test:api
 ```
 
-**`npm test` 不便宜，別當成隨手跑一次沒成本。** 本機實測約 **80–90 秒**（2026-07-25 快照，Apple Silicon）。原因是 `--maxWorkers=2` 限流 —— 每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會撞 timeout。這是權宜之計，根本解（共用一份已 migrate 的 D1 快照）記在 [`TODOS.md`](TODOS.md) 的「測試套件 — D1 建置成本迫使 unit 限流 2 worker」。
+**`npm test` 不便宜，別當成隨手跑一次沒成本。** 本機實測約 **80–90 秒**（2026-07-25 快照，Apple Silicon）。原因是 `--maxWorkers=2` 限流，那是拆分前為了 Miniflare D1 建置成本留下的限流（舊入口與其 D1 測試已於 #1627 刪除，是否可放寬另評估）。
 
 測試數量刻意不寫死在這裡 —— 它每週都在變，寫下來就會腐爛。要知道規模直接看 `npm test` 的輸出。
 
 ### 測試分層
 
 - **unit** (`tests/unit/`) — 純邏輯 / lib / hooks / 元件 render
-- **api** (`tests/api/`) — Pages Functions endpoint，跑在 miniflare 上
 - **e2e** (`tests/e2e/`) — Playwright，完整使用者流程
 
 ### 什麼情況要加測試
@@ -178,12 +175,11 @@ src/
 ├── lib/                  apiClient / mapRow / scrollSpy ...
 └── types/
 
-functions/api/            Cloudflare Pages Functions（TS）
+functions/s、functions/trip  Pages Functions（僅 OG meta，TS）
 migrations/               D1 schema（0001 ~ 00NN，idempotent）
 css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme）
-tests/                    unit / api / e2e
+tests/                    unit / e2e
 scripts/                  init-local-db, dump-d1, daily-check, poi-enrich-batch ...
-src/server/               jwt / oauth-d1-adapter / password / email / session / invitation-token / hkdf / email-utils / maps/google-client / oauth-server/ / oauth-client/ (v2.23.0+ Google Maps + V2 OAuth)
 ```
 
 ## 常見任務速查
