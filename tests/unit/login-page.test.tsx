@@ -209,7 +209,8 @@ describe('LoginPage lockout', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(screen.queryByTestId('login-page-locked')).toBeTruthy());
-    expect(document.activeElement).toBe(screen.getByRole('heading', { name: '登入嘗試太多次' }));
+    // 對焦在 effect 裡，element 出現不保證已對焦完，要等
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: '登入嘗試太多次' })));
     expect(screen.getByTestId('login-locked-countdown').textContent).toBe('30:00');
     expect(screen.getByTestId('login-locked-reset')).toBeTruthy();
   });

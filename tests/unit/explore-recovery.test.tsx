@@ -41,6 +41,19 @@ function search(q: string) {
   fireEvent.click(screen.getByTestId('explore-search-submit'));
 }
 
+/**
+ * 觸發「哨兵進入視野」並重試到 check 成立。`observe` 指向最後建出的 observer，但
+ * ExplorePage 的 effect 會在 nextPageToken 等變動後重建它；`findByText` 看到 DOM 時
+ * effect 可能還沒 flush，第一次呼叫落在舊 closure（nextPageToken 為 null）上會無作用。
+ * loadMorePendingRef 擋重入，所以重複呼叫是安全的。
+ */
+async function loadMoreUntil(check: () => void) {
+  await waitFor(async () => {
+    await act(async () => { observe?.([{ isIntersecting: true }]); });
+    check();
+  });
+}
+
 describe('Explore search recovery', () => {
   it('keeps the visible query results when a new search fails', async () => {
     let secondCalls = 0;
@@ -86,8 +99,8 @@ describe('Explore search recovery', () => {
     await open();
     search('first');
     await screen.findByText('first');
-    await act(async () => { observe?.([{ isIntersecting: true }]); });
-    const retry = await screen.findByRole('button', { name: /重試載入更多/ });
+    await loadMoreUntil(() => { screen.getByRole('button', { name: /重試載入更多/ }); });
+    const retry = screen.getByRole('button', { name: /重試載入更多/ });
     expect(screen.getByText('first')).toBeTruthy();
     expect(pageCalls).toBe(1);
     fireEvent.click(retry);
@@ -108,8 +121,7 @@ describe('Explore search recovery', () => {
     await open();
     search('first');
     await screen.findByText('first');
-    await act(async () => { observe?.([{ isIntersecting: true }]); });
-    await waitFor(() => expect(finishPage).toBeTypeOf('function'));
+    await loadMoreUntil(() => expect(finishPage).toBeTypeOf('function'));
     search('second');
     await screen.findByText('second');
     await act(async () => { finishPage({ results: [poi('stale')] }); });
@@ -130,8 +142,7 @@ describe('Explore search recovery', () => {
     await open();
     search('first');
     await screen.findByText('first');
-    await act(async () => { observe?.([{ isIntersecting: true }]); });
-    await screen.findByText('載入更多…');
+    await loadMoreUntil(() => { screen.getByText('載入更多…'); });
     search('second');
     await waitFor(() => expect(screen.getByTestId('explore-search-submit').textContent).toBe('搜尋'));
     expect(screen.getByText('first')).toBeTruthy();
@@ -149,8 +160,7 @@ describe('Explore search recovery', () => {
     search('first');
     await screen.findByText('first');
     fireEvent.change(screen.getByTestId('explore-search-input'), { target: { value: 'unsent' } });
-    await act(async () => { observe?.([{ isIntersecting: true }]); });
-    await screen.findByText('second');
+    await loadMoreUntil(() => { screen.getByText('second'); });
     expect(apiFetchMock.mock.calls.map((c) => c[0])).toContain('/poi-search?q=first&limit=20&pageToken=next');
     expect(screen.getAllByText('first')).toHaveLength(1);
   });
