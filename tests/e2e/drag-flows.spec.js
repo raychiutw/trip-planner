@@ -124,8 +124,12 @@ test.describe('Drag flows — Section 8.3 keyboard a11y', () => {
     });
     await page.goto(`/trips?selected=${TRIP_ID}`);
     const rail = page.locator('.tp-rail').filter({ has: page.getByTestId('timeline-rail-row-101') });
-    await rail.getByTestId('timeline-rail-menu-101').click();
-    await rail.getByTestId('timeline-rail-move-down-101').click();
+    // 鍵盤開啟選單：Safari 點按鈕不取得焦點，「還焦到被移動的項目」只對鍵盤路徑成立
+    await rail.getByTestId('timeline-rail-menu-101').focus();
+    await page.keyboard.press('Enter');
+    // 選項同樣用鍵盤啟動：Safari 點選單項不會讓它取得焦點，原生 popover 關閉時就不會把焦點還給觸發鈕
+    await rail.getByTestId('timeline-rail-move-down-101').focus();
+    await page.keyboard.press('Enter');
     await expect.poll(() => savedOrder?.slice(0, 2)).toEqual([102, 101]);
     await expect(rail.locator('[data-testid^="timeline-rail-row-"]').first()).toHaveAttribute('data-testid', 'timeline-rail-row-102');
     await expect(rail.getByTestId('timeline-rail-menu-101')).toBeFocused();

@@ -440,8 +440,10 @@ test.describe('設計審查守門（#1445）', () => {
               await page.waitForLoadState('networkidle');
               const trigger = c.trigger(page);
               await trigger.scrollIntoViewIfNeeded();
-              // 用 DOM click 開啟（195 寬以外的寬度標題按鈕都點得到；與滑鼠點擊等價，焦點會留在觸發按鈕上）
-              await trigger.click();
+              // 鍵盤開啟（focus + Enter）：還焦是鍵盤無障礙行為，且 Safari 點按鈕不會讓按鈕取得焦點（activeElement 變 body），
+              // 滑鼠點擊在 webkit 沒有「開啟前焦點」可還；鍵盤路徑在三個引擎語意一致。
+              await trigger.focus();
+              await page.keyboard.press('Enter');
               const overlay = c.overlay(page);
               await expect(overlay, `${c.name} 開啟後應可見`).toBeVisible();
               await page.keyboard.press('Escape');
