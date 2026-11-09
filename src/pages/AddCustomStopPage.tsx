@@ -461,7 +461,7 @@ export default function AddCustomStopPage() {
         note: noteParts.length > 0 ? noteParts.join(' · ') : undefined,
         lat: pickedCoord.lat,
         lng: pickedCoord.lng,
-        source: 'custom',
+        source: 'custom' as const,
       };
       const r = await createEntry(tripId, dayNum, body);
       if (!r.ok) throw new Error(`儲存失敗 (${r.status})`);

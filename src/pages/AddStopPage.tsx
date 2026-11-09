@@ -739,12 +739,12 @@ export default function AddStopPage() {
       note?: string;
       lat?: number;
       lng?: number;
-      source?: string;
+      source?: 'google' | 'favorite' | 'custom';
       // #1598：Google place_id，後端只在 POI 尚無時填入
       place_id?: string;
       // Auto-category: Google primaryType → whitelist poi_type，後端 entries.ts 只認
       // 這個 snake_case key（缺則 fallback 'attraction'）。
-      poi_type?: string;
+      poi_type?: PoiType;
     };
 
     // custom-tab 前置驗證（early return，尚未 flip submitting）

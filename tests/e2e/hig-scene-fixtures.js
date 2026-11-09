@@ -84,6 +84,14 @@ const stubFavoriteConflict = async (page) => {
 const submitFavoriteToTrip = async (page) => {
   await page.getByTestId('favorites-add-to-trip-trip').locator('button').first().click();
   await page.getByRole('option').first().click();
+  // 收藏快速路徑的後端要求 startTime／endTime 必填，沒填時送出鈕停用
+  for (const field of ['start', 'end']) {
+    const trigger = page.getByTestId(`favorites-add-to-trip-${field}`).locator('button').first();
+    await trigger.click();
+    await page.locator('[data-h="10"]').click();
+    await trigger.click();
+    await page.locator('[data-m="00"]').click();
+  }
   const submit = page.getByTestId('favorites-add-to-trip-submit');
   await expect(submit).toBeEnabled();
   await Promise.all([page.waitForResponse(/\/add-to-trip$/), submit.click()]);

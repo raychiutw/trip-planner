@@ -65,6 +65,7 @@ describe('add-to-trip target day', () => {
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-trip', /T1/);
     pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('載入失敗'));
     expect(screen.queryByText('該行程沒有天數')).toBeNull();
     expect((screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement).disabled).toBe(true);
@@ -95,6 +96,9 @@ describe('add-to-trip target day', () => {
     await waitFor(() => expect(screen.getByText(/Day 2/)).toBeTruthy());
     resolveOld(day1);
     await waitFor(() => expect(screen.queryByText(/Day 1/)).toBeNull());
+    // 收藏快速路徑時間必填
+    pickTime('favorites-add-to-trip-start', '12:00');
+    pickTime('favorites-add-to-trip-end', '13:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const call = apiFetchMock.mock.calls.find(([path]) => path === '/poi-favorites/5/add-to-trip');

@@ -69,11 +69,7 @@ beforeEach(() => {
   mockPoiSearch.results = [];
   mockPoiSearch.lastOptions = null;
   (apiFetch as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-  (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ok: true,
-    status: 201,
-    text: () => Promise.resolve(''),
-  } as unknown as Response);
+  (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('', { status: 201 })));
 });
 
 describe('ChangePoiPage — alternate mode', () => {
@@ -220,11 +216,7 @@ describe('ChangePoiPage — entryPoisVersion OCC token', () => {
       }
       return Promise.resolve([]);
     });
-    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 409,
-      text: () => Promise.resolve('{"error":{"code":"DUPLICATE_POI","message":"此景點已存在於這個停留點"}}'),
-    } as unknown as Response);
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('{"error":{"code":"DUPLICATE_POI","message":"此景點已存在於這個停留點"}}', { status: 409 })));
     mockPoiSearch.results = [{
       place_id: 'ChIJ-dup',
       name: 'Dup',
@@ -254,11 +246,7 @@ describe('ChangePoiPage — entryPoisVersion OCC token', () => {
       }
       return Promise.resolve([]);
     });
-    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false,
-      status: 409,
-      text: () => Promise.resolve('{"error":"STALE_ENTRY"}'),
-    } as unknown as Response);
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('{"error":"STALE_ENTRY"}', { status: 409 })));
     mockPoiSearch.results = [{
       place_id: 'ChIJ-stale',
       name: 'Stale',

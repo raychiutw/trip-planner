@@ -696,7 +696,7 @@ export default function ChangePoiPage() {
       try {
         // v2.32.0: mode=new 走 POST /entries（建立新 entry + master），不需 OCC
         if (mode === 'new') {
-        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom', poi_type: customCategory };
+        const body = { name: title, lat: customCoord.lat, lng: customCoord.lng, source: 'custom' as const, poi_type: customCategory };
           const r = await createEntry(tripId, newDayNum, body);
           if (!r.ok) throw new Error(`新增景點失敗 (${r.status}): ${r.message.slice(0, 200)}`);
           reportTravelResult(r.recompute);
@@ -745,12 +745,12 @@ export default function ChangePoiPage() {
       if (mode === 'new') {
         const fromFav = selected.source === 'favorite' && selected.poiId;
         const body = fromFav
-          ? { name: selected.name, poiId: selected.poiId, source: 'favorite' }
+          ? { name: selected.name, poiId: selected.poiId, source: 'favorite' as const }
           : {
               name: selected.name,
               lat: selected.lat,
               lng: selected.lng,
-              source: 'google',
+              source: 'google' as const,
               place_id: selected.placeId,
               note: selected.address ?? undefined,
               // v2.50.0: 使用者當場覆寫的分類優先，否則沿用 Google primaryType auto-derive。

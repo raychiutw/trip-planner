@@ -209,9 +209,7 @@ function setupApiMocks() {
     if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
     return Promise.resolve(null);
   });
-  (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ok: true, status: 200, text: () => Promise.resolve(''),
-  } as unknown as Response);
+  (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('', { status: 200 })));
 }
 
 function renderPage() {
@@ -565,9 +563,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     setupAltsMocks(); // 先設 alts（含 apiFetchRaw resolved 預設）
     // 再覆蓋 apiFetchRaw：備註 PATCH 走可控閘門，其餘照常 resolved
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      const okResp = { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) };
-      if (url.includes('/pois/100')) return patchGate.then(() => okResp);
-      return Promise.resolve(okResp);
+      const okResp = () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (url.includes('/pois/100')) return patchGate.then(okResp);
+      return Promise.resolve(okResp());
     });
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
@@ -599,7 +597,7 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
         attempts++;
         if (attempts === 1) return Promise.reject(new TypeError('Failed to fetch'));
       }
-      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+      return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
@@ -619,8 +617,8 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     const gate = new Promise<void>((resolve) => { resolvePatch = resolve; });
     setupAltsMocks();
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      const response = { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) };
-      return url.includes('/pois/100') ? gate.then(() => response) : Promise.resolve(response);
+      const response = () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return url.includes('/pois/100') ? gate.then(response) : Promise.resolve(response());
     });
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
@@ -642,8 +640,8 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     setupAltsMocks();
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => Promise.resolve(
       url.includes('/pois/100')
-        ? { ok: false, status: 503, text: () => Promise.resolve('無法儲存') }
-        : { ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) },
+        ? new Response('無法儲存', { status: 503 })
+        : new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     ));
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-alternates')).toBeTruthy());
@@ -731,9 +729,7 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
 
   it('root tab 導覽在未保存時被擋住，明確放棄後才切換', async () => {
     navigationMode.real = true;
-    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: false, status: 503, text: () => Promise.resolve('暫時無法儲存'),
-    });
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('暫時無法儲存', { status: 503 })));
     const router = createMemoryRouter([
       { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
       { path: '/map', element: <div>地圖頁</div> },
@@ -773,9 +769,7 @@ function setupAltsMocks(dayDataOverride?: typeof DAY_DATA_WITH_ALTS) {
     if (url.includes('/alternates/reorder')) return Promise.resolve({ order: [] });
     return Promise.resolve(null);
   });
-  (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ok: true, status: 200, text: () => Promise.resolve(''),
-  } as unknown as Response);
+  (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('', { status: 200 })));
 }
 
 describe('EditEntryPage — v2.27.0 alternates section', () => {
@@ -1140,9 +1134,7 @@ describe('EditEntryPage — v2.28.1 跨區警告', () => {
       if (url.match(/\/trips\/[^/]+$/)) return Promise.resolve(TRIP_META);
       return Promise.resolve(null);
     });
-    (apiFetchRaw as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true, status: 200, text: () => Promise.resolve(''),
-    } as unknown as Response);
+    (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve(new Response('', { status: 200 })));
   }
 
   it('Tap 設為正選（跨區 alternate, > 50km）→ confirm modal 顯跨區警告', async () => {

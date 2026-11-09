@@ -143,12 +143,55 @@ describe('AddPoiFavoriteToTripPage — form fields (4 純時間驅動)', () => {
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
     await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
     pickTime('favorites-add-to-trip-start', '10:00');
+    pickTime('favorites-add-to-trip-end', '11:00');
     fireEvent.click(screen.getByTestId('favorites-add-to-trip-submit'));
     await waitFor(() => {
       const calls = apiFetchMock.mock.calls;
       const submitCall = calls.find(([path]) => typeof path === 'string' && path.includes('/add-to-trip'));
       expect(submitCall![0]).toBe('/poi-favorites/5/add-to-trip');
     });
+  });
+});
+
+describe('AddPoiFavoriteToTripPage — 收藏快速路徑的時間必填（後端 startTime／endTime 缺了回 400）', () => {
+  async function pickTripAndDay() {
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-trip', /沖繩 7 日/);
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
+  }
+  const submitCalls = () => apiFetchMock.mock.calls.filter(([path]) => typeof path === 'string' && path.includes('/add-to-trip'));
+
+  it('兩個時間都空 → 送出鈕停用、顯示必填提示、點了也不打 API', async () => {
+    await pickTripAndDay();
+    const submit = screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+    expect(screen.getByTestId('favorites-add-to-trip-time-required').textContent).toBe('請選擇開始與結束時間');
+    fireEvent.click(submit);
+    fireEvent.submit(submit.closest('form')!);
+    expect(submitCalls()).toHaveLength(0);
+  });
+
+  it('只填開始時間 → 仍停用且不打 API', async () => {
+    await pickTripAndDay();
+    pickTime('favorites-add-to-trip-start', '10:00');
+    expect((screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.submit(screen.getByTestId('favorites-add-to-trip-submit').closest('form')!);
+    expect(submitCalls()).toHaveLength(0);
+  });
+
+  it('兩個都填 → 啟用、提示消失', async () => {
+    await pickTripAndDay();
+    pickTime('favorites-add-to-trip-start', '10:00');
+    pickTime('favorites-add-to-trip-end', '11:00');
+    expect((screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId('favorites-add-to-trip-time-required')).toBeNull();
+  });
+
+  it('不再宣稱「可空 — 自動推算」（後端沒有推算）', async () => {
+    await pickTripAndDay();
+    expect(document.body.textContent).not.toContain('可空');
   });
 });
 
@@ -240,5 +283,15 @@ describe('AddPoiFavoriteToTripPage — direct mode（無 favoriteId）', () => {
       const body = JSON.parse((submitCall![1] as RequestInit).body as string);
       expect(body.time).toBeUndefined();
     });
+  });
+
+  it('direct mode 時間可省：送出鈕不因空時間停用、不顯示必填提示', async () => {
+    renderDirect();
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-trip')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-trip', /沖繩 7 日/);
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-day')).toBeTruthy());
+    await pickFromTripSelect('favorites-add-to-trip-day', /Day 1/);
+    expect((screen.getByTestId('favorites-add-to-trip-submit') as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId('favorites-add-to-trip-time-required')).toBeNull();
   });
 });
