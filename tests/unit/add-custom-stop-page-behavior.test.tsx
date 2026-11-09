@@ -65,6 +65,22 @@ beforeEach(() => {
   window.scrollTo = vi.fn();
 });
 
+/**
+ * 重送 ArrowDown 直到 option 被選取。Headless UI 在 option 註冊完成前會吞掉按鍵，光等不會重送。
+ * 有界迴圈而不是把 fireEvent 放進 waitFor：waitFor 以 MutationObserver 重跑回呼，
+ * 若每次按鍵都改 DOM，會形成微任務迴圈餓死逾時計時器，壞掉時整個 worker 卡死而不是報錯。
+ */
+async function arrowDownUntilSelected(address: HTMLElement, option: HTMLElement) {
+  for (let i = 0; i < 10; i++) {
+    fireEvent.keyDown(address, { key: 'ArrowDown' });
+    try {
+      await waitFor(() => expect(option).toHaveAttribute('aria-selected', 'true'), { timeout: 300 });
+      return;
+    } catch { /* 按鍵可能被吞掉，重送 */ }
+  }
+  expect(option).toHaveAttribute('aria-selected', 'true');
+}
+
 describe('AddCustomStopPage public form', () => {
   it('cannot submit a viewport default, validates duration, then sends only the dragged coordinate', async () => {
     openPage();
@@ -117,11 +133,7 @@ describe('AddCustomStopPage public form', () => {
     const address = screen.getByRole('combobox', { name: '地址或地標' });
     fireEvent.change(address, { target: { value: '東京塔-1326' } });
     const option = await screen.findByRole('option', { name: /東京塔/ });
-    // 按鍵放進重試：Headless UI 在 option 註冊完成前會吞掉 ArrowDown，光等不會重送
-    await waitFor(() => {
-      fireEvent.keyDown(address, { key: 'ArrowDown' });
-      expect(option).toHaveAttribute('aria-selected', 'true');
-    });
+    await arrowDownUntilSelected(address, option);
     fireEvent.keyDown(address, { key: 'Enter' });
     await screen.findByText(/無法取得此地址的位置/);
     expect(screen.getByRole('button', { name: '完成' })).toBeDisabled();
@@ -146,11 +158,7 @@ describe('AddCustomStopPage public form', () => {
     expectClean(address);
     fireEvent.change(address, { target: { value: '東京塔-1326' } });
     const option = await screen.findByRole('option', { name: /東京塔/ });
-    // 按鍵放進重試：Headless UI 在 option 註冊完成前會吞掉 ArrowDown，光等不會重送
-    await waitFor(() => {
-      fireEvent.keyDown(address, { key: 'ArrowDown' });
-      expect(option).toHaveAttribute('aria-selected', 'true');
-    });
+    await arrowDownUntilSelected(address, option);
     fireEvent.keyDown(address, { key: 'Enter' });
     await screen.findByText(/無法取得此地址的位置/);
     expectLinked(address, /無法取得此地址的位置/);
