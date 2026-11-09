@@ -97,32 +97,9 @@ describe('AiDataConsentSheet（就地同意 A）', () => {
     expect((screen.getByTestId('ai-data-consent-accept') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId('ai-data-consent-error').textContent).toBe('同意失敗');
   });
-  it('owner-missing：沒有「同意」動作，只有「知道了」', () => {
-    render(<AiDataConsentSheet {...base} mode="owner-missing" />);
-    expect(screen.getByText('暫時無法使用 AI 助理')).toBeTruthy();
-    expect(screen.queryByTestId('ai-data-consent-accept')).toBeNull();
-    fireEvent.click(screen.getByTestId('ai-data-consent-decline'));
-    expect(base.onDecline).toHaveBeenCalled();
-  });
-  const NOTICE = '我想用 Tripline 的 AI 排行程，請到 帳號設定 → AI 與資料 同意一下，謝謝！';
-  it('owner-missing：「複製這句話」把通知文字寫進剪貼簿並提示已複製，「知道了」仍可關閉', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<AiDataConsentSheet {...base} mode="owner-missing" />);
-    expect(screen.getByText(NOTICE)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '複製這句話' }));
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(NOTICE));
-    expect((await screen.findByRole('status')).textContent).toContain('已複製');
-    fireEvent.click(screen.getByRole('button', { name: '知道了' }));
-    expect(base.onDecline).toHaveBeenCalled();
-  });
-  it('owner-missing：剪貼簿寫入失敗時選取文字並提示手動複製', async () => {
-    const writeText = vi.fn().mockRejectedValue(new Error('denied'));
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<AiDataConsentSheet {...base} mode="owner-missing" />);
-    fireEvent.click(screen.getByRole('button', { name: '複製這句話' }));
-    expect((await screen.findByRole('status')).textContent).toContain('請長按');
-    expect(window.getSelection()?.toString()).toBe(NOTICE);
+  it('同意鈕文字就是「同意」（右上角不擠）', () => {
+    render(<AiDataConsentSheet {...base} />);
+    expect(screen.getByTestId('ai-data-consent-accept').textContent).toBe('同意');
   });
   it('open=false 不渲染', () => {
     render(<AiDataConsentSheet {...base} open={false} />);

@@ -64,6 +64,7 @@ npm run dev        # vite 5173 + wrangler 8788
 ```
 
 Mock auth: copy `.dev.vars.example` → `.dev.vars` (NOT `.env.local`), set all three of `ENVIRONMENT=development` + `ALLOW_DEV_MOCK=1` + `DEV_MOCK_EMAIL` (SEC-6 fail-closed guard; 缺一 → `/api/*` 全 500). See `.dev.vars.example`.
+本機連新 api 會被 CORS 白名單擋：用 `DEV_API_PROXY_TARGET` 的 vite 代理或本機跑新 api，見 CONTRIBUTING.md「本機開發連新 api」（不得放寬 production 白名單）。
 Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT

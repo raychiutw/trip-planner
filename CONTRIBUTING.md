@@ -55,6 +55,31 @@ DEV_MOCK_EMAIL=you@example.com
 拒絕 `DEV_MOCK_EMAIL` 生效 (v2.33.60+ 此 var 在 wrangler.toml [env.production.vars]
 強制聲明)。
 
+### 本機開發連新 api（CORS）
+
+web 的所有 API 請求與認證都送到 `VITE_API_BASE_URL`（新 api，跨網域）。新 api 的 CORS 是白名單制：
+請求帶 `Origin` 但不在 `ALLOWED_ORIGINS` → 403（preflight 也一樣）；沒有 `Origin` 才放行。
+production 只放 `https://trip-planner-dby.pages.dev`，staging 沒設，所以 `http://localhost:5173` 直連一律被擋。
+**不要為了本機開發放寬 production 的 `ALLOWED_ORIGINS`，也不要加 `*`。**
+
+**做法 A：vite 代理（公開唯讀端點，已驗證）** — 瀏覽器同源打 `/api`，由 vite 轉送並移除 `Origin`，不需 CORS：
+
+```bash
+# .env.local（範本見 .env.local.example）
+VITE_API_BASE_URL=http://localhost:5173
+DEV_API_PROXY_TARGET=https://trip-planner-api.lean-lean.workers.dev   # staging；不設則是 http://localhost:8788
+npm run dev:vite
+```
+
+限制：DPoP 的 `htu` 綁 api 自己的網址，經代理的登入（`/api/oauth/*`）**未驗證、不保證可用**；寫入請改做法 B。
+代理指向 production 時只打公開唯讀端點。
+
+**做法 B：本機跑新 api（登入／寫入，未在本 repo 驗證）** — 在 `trip-planner-api` repo：
+`.dev.vars` 設 `ALLOWED_ORIGINS=http://localhost:5173`、`PUBLIC_ORIGIN=http://localhost:8787`，
+secret（`SESSION_SECRET`、`OAUTH_SIGNING_PRIVATE_KEY`）一律用本機自己產生的測試值，不複製任何環境的真實值；
+`wrangler dev` 起在 8787，web 的 `.env.local` 設 `VITE_API_BASE_URL=http://localhost:8787`（不設 `DEV_API_PROXY_TARGET`）。
+新 api 的 `validate-redirect-uris` 允許 `http://localhost` 的 redirect URI，但 `tripline-web` client 要在本機 D1 登記 `http://localhost:5173/...`。
+
 ## 每次改 code 前
 
 **先讀 [AGENTS.md](AGENTS.md)。** 本專案以 Matt Pocock 官方技能鏈為預設：依工作規模走 `/grill-with-docs → /to-spec → /to-tickets → /implement → /code-review`，再套用 Tripline 的 feature branch、驗證與 PR 規則；小型且已定案的單一 session 變更可直接進 `/implement`。

@@ -11,6 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `typedApi`（`src/lib/api/typed.ts`）：契約型別的 typed client，傳輸與錯誤語意沿用 `apiFetch`；變更密碼、刪除帳號、更新顯示名稱三處已改用。
 
 ### Fixed
+- **共編者可直接使用 AI 聊天，同意鈕改為「同意」**：AI 資料同意只在行程擁有者自己送出時檢查，旅伴（共編者）不需同意、擁有者未同意也能用（入口閘門與 mint 同步放寬，ADR-0012 修訂，同意文案同步）；移除「暫時無法使用 AI 助理」畫面；同意鈕「同意並繼續」縮短為「同意」，右上角不再擠。
 - **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。
 
 ### Removed
