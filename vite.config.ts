@@ -6,6 +6,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
 import { swRuntimeCaching } from './scripts/sw-api-cache.mjs';
 import { mockApiPlugin } from './scripts/vite-mock-api';
+import { devApiProxy } from './scripts/dev-proxy.mjs';
 // 版本 / commit 單一來源 —— vitest.config.js 也 import 同一份，見該檔註解。
 import { appVersion, commitSha, versionDefine } from './scripts/app-version.mjs';
 
@@ -114,12 +115,8 @@ return {
   // v2.33.60 round 14: 拔 optimizeDeps['leaflet'] — v2.23.0 已切 Google Maps，
   // leaflet 不在 package.json，留著會 trigger Vite dev startup warning。
   server: {
-    proxy: process.env.MOCK_API ? {} : {
-      '/api': {
-        target: 'http://localhost:8788',
-        changeOrigin: true,
-      },
-    },
+    // 目標可用 DEV_API_PROXY_TARGET 改（見 CONTRIBUTING.md「本機開發」）
+    proxy: process.env.MOCK_API ? {} : devApiProxy({ ...loadEnv(mode, process.cwd(), 'DEV_'), ...process.env }),
     watch: {
       // Exclude wrangler state — its SQLite WAL writes trigger spurious HMR reloads
       ignored: ['**/.wrangler/**'],
