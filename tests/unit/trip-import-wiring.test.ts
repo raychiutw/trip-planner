@@ -41,7 +41,7 @@ describe('ImportTripButton — frontend', () => {
     expect(BTN).toMatch(/type="file"/);
     expect(BTN).toMatch(/schemaVersion\b/);
     expect(BTN).toMatch(/512 \* 1024/);
-    expect(BTN).toMatch(/apiFetch[^\n]*'\/trips\/import'[^\n]*method: 'POST'/s);
+    expect(BTN).toMatch(/typedApi\.post\('\/api\/trips\/import', \{ rawBody: text \}/);
     expect(BTN).toMatch(/navigate\(`\/trips\?selected=/);
   });
   it('is rendered on the trips list titlebar', () => {

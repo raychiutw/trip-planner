@@ -1,9 +1,9 @@
 /**
  * 跨 repo 契約守衛（trip-planner#1626 追加）：web SPA 實際呼叫的 api 端點與請求必填欄位，必須存在於 contracts/openapi.json。
  *
- * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）與 `typedApi.get/post/put/patch/delete` 的字串／樣板路徑，
+ * 以原始碼為準，不是手列清單：掃 src 內所有 `apiFetch` / `apiFetchRaw`（含 `auth.apiFetch`）與 `typedApi`／`typedApiRaw` 的 `.get/post/put/patch/delete` 的字串／樣板路徑，
  *   1. 路徑（含 method；apiFetch 無 `method:` 視為 GET，typedApi 取自成員名）必須在契約內；
- *   2. 若 body 是 `JSON.stringify({ ... })`（apiFetch）或 `body: { ... }`（typedApi）的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
+ *   2. 若 body 是 `JSON.stringify({ ... })`（apiFetch）或 `body: { ... }`（typedApi／typedApiRaw；`rawBody` 是原文字串，不檢查欄位）的行內物件字面量（無 spread），契約 requestBody 的 required 欄位必須都在其中。
  * typedApi 另有編譯期檢查（路徑、body、回應型別），這裡是執行期的第二道（兩者等價或更強）。
  * 最後一組是棘輪：頁面不得再直接用 apiFetch／apiFetchRaw，例外只能列在 DIRECT_ALLOWED（附原因、只能減不能增）。
  * 契約檔是 api repo 匯出的逐字複本（見 docs/api-contract.md）；api 改路徑／欄位後同步進來，web 若還在用舊的，這裡轉紅。
@@ -69,7 +69,7 @@ function bodyKeys(win: string, typed: boolean): string[] | null {
 }
 
 interface Call { file: string; method: string; path: string; keys: string[] | null; typed: boolean }
-const CALL = /(?:apiFetch(?:Raw)?|typedApi\.(get|post|put|patch|delete))(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\2).)*)\2/g;
+const CALL = /(?:apiFetch(?:Raw)?|typedApi(?:Raw)?\.(get|post|put|patch|delete))(?:<[^(]*?>)?\(\s*([`'"])((?:(?!\2).)*)\2/g;
 const calls: Call[] = listSources(join(ROOT, 'src')).flatMap((file) => {
   const text = readFileSync(file, 'utf8');
   return [...text.matchAll(CALL)].map((m) => {
@@ -141,36 +141,19 @@ describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
 // 例外只能在這裡列：key 是檔案、max 是目前還在的直接呼叫數（只能減不能增）、reason 說明為何不能轉 typedApi。
 // 遷移掉一處就要把 max 調低（降到 0 就刪掉該列），否則「白名單過期」那一條會轉紅。
 const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
-  'src/components/trip/CollabPanel.tsx': { max: 4, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trip/CustomPoiForm.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trip/TravelPillDialog.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/components/trips/ImportTripButton.tsx': { max: 1, reason: 'body 是使用者檔案的原始文字（text），typedApi 會重新 JSON.stringify 物件，改變送出的位元組' },
-  'src/hooks/usePermissions.ts': { max: 2, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/hooks/usePoiSearch.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/hooks/useRoute.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
-  'src/lib/segmentMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑由呼叫端組成（動態）' },
-  'src/lib/travelRecompute.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/lib/tripMutations.ts': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流；且路徑／init 由呼叫端組成（動態）' },
-  'src/pages/AccountPage.tsx': { max: 1, reason: '待 refactor/web-remove-google-login 合併後再處理（該 PR 會動這支檔案）' },
-  'src/pages/AddCustomStopPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/EditTripPage.tsx': { max: 6, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/EmailVerifyPendingPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/ForgotPasswordPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/LoginPage.tsx': { max: 1, reason: '另有 apiFetchRaw 判讀狀態碼（Google 移除後剩 1 處）' },
-  'src/pages/NewTripPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/ResetPasswordPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/SessionsPage.tsx': { max: 2, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/SignupPage.tsx': { max: 2, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/TripHealthCheckPage.tsx': { max: 5, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
-  'src/pages/VerifyEmailPage.tsx': { max: 1, reason: 'apiFetchRaw：呼叫端自行判讀 HTTP 狀態碼／Response，非 2xx 不丟例外、無重試；typedApi 一律丟 ApiError，換過去會改變錯誤分流' },
+  // 14 個 helper 共用一個 `call(path, init)`，路徑由 helper 參數組成、body 是呼叫端傳入的自由物件。改走 typedApiRaw 需讓 body 符合契約型別，
+  // 目前 tsc 會擋下 9 處不符（entryPoisVersion 契約是 string 而呼叫端傳 number、add-to-trip 的 startTime／endTime 契約必填而 UI 可省略、
+  // source 契約是列舉而呼叫端傳任意 string 等）：每一處都要決定「改 UI 還是改契約」，屬行為／契約決策，不在純遷移範圍（見 PR 說明）。路徑仍由本檔的樣板比對守住。
+  'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：動態路徑、自由形狀 body 與契約型別不符（9 處），遷移前須先決定 UI／契約誰改' },
 };
 
 const directCounts = (() => {
   const counts: Record<string, number> = {};
   for (const file of listSources(join(ROOT, 'src'))) {
     const rel = file.replace(ROOT + '/', '');
-    if (rel.startsWith('src/lib/api/') || rel.startsWith('src/lib/auth/')) continue; // typed.ts 是 typedApi 的傳輸層；auth/ 是另一個 client
+    // typed.ts 是 typedApi／typedApiRaw 的傳輸層；auth/ 是認證層自己的 client（DPoP 簽章、token 輪替、PKCE，其 apiFetch 是另一個函式，
+    // 不經 lib/apiClient，也不能經過它——否則認證會依賴自己），不屬於「頁面直接用 lib/apiClient」的範圍
+    if (rel.startsWith('src/lib/api/') || rel.startsWith('src/lib/auth/')) continue;
     const n = [...readFileSync(file, 'utf8').matchAll(/(?<![.\w])apiFetch(?:Raw)?(?:<[^(]*?>)?\(/g)].length;
     if (n) counts[rel] = n;
   }

@@ -52,37 +52,51 @@ export class ApiError extends Error {
     return ApiError.parseResponse(res, Number.isInteger(seconds) && seconds > 0 ? seconds : undefined);
   }
 
+  /** 從 `typedApiRaw` 的失敗結果建立（內容已解析過）；規則與 `fromResponse` 完全相同。 */
+  static fromResult(result: { status: number; error?: unknown; headers: Headers }): ApiError {
+    const seconds = Number(result.headers.get('Retry-After'));
+    return ApiError.fromParsed(result.status, result.error, Number.isInteger(seconds) && seconds > 0 ? seconds : undefined);
+  }
+
   private static async parseResponse(res: Response, retryAfter?: number): Promise<ApiError> {
+    let body: unknown;
     try {
-      const body = await res.json() as Record<string, unknown>;
-
-      // 新格式：{ error: { code, message, detail } }
-      // v2.33.33: 後端的人話 message 可能在 `message` 也可能在 `detail` 欄位。
-      // 兩個都嘗試 — `detail` 優先 (legacy)，`message` fallback (新後端 _errors.ts pattern)。
-      if (body.error && typeof body.error === 'object') {
-        const err = body.error as Record<string, unknown>;
-        if (err.code && typeof err.code === 'string') {
-          const detail = (err.detail as string | undefined) ?? (err.message as string | undefined);
-          return new ApiError(
-            err.code as ErrorCodeType,
-            res.status,
-            detail,
-            body, // payload preserves full body for structured 409 etc.
-            retryAfter,
-          );
-        }
-      }
-
-      // 舊格式：{ error: "string message" }
-      if (typeof body.error === 'string') {
-        const code = sniffErrorCode(res.status, body.error);
-        return new ApiError(code, res.status, body.error, body, retryAfter);
-      }
-
-      return new ApiError(statusToCode(res.status), res.status, undefined, body, retryAfter);
+      body = await res.json();
     } catch {
       return new ApiError(statusToCode(res.status), res.status, undefined, undefined, retryAfter);
     }
+    return ApiError.fromParsed(res.status, body, retryAfter);
+  }
+
+  private static fromParsed(status: number, parsed: unknown, retryAfter?: number): ApiError {
+    // 不是 JSON 物件（無內容、閘道 HTML）等同解析失敗
+    if (!parsed || typeof parsed !== 'object') return new ApiError(statusToCode(status), status, undefined, undefined, retryAfter);
+    const body = parsed as Record<string, unknown>;
+
+    // 新格式：{ error: { code, message, detail } }
+    // v2.33.33: 後端的人話 message 可能在 `message` 也可能在 `detail` 欄位。
+    // 兩個都嘗試 — `detail` 優先 (legacy)，`message` fallback (新後端 _errors.ts pattern)。
+    if (body.error && typeof body.error === 'object') {
+      const err = body.error as Record<string, unknown>;
+      if (err.code && typeof err.code === 'string') {
+        const detail = (err.detail as string | undefined) ?? (err.message as string | undefined);
+        return new ApiError(
+          err.code as ErrorCodeType,
+          status,
+          detail,
+          body, // payload preserves full body for structured 409 etc.
+          retryAfter,
+        );
+      }
+    }
+
+    // 舊格式：{ error: "string message" }
+    if (typeof body.error === 'string') {
+      const code = sniffErrorCode(status, body.error);
+      return new ApiError(code, status, body.error, body, retryAfter);
+    }
+
+    return new ApiError(statusToCode(status), status, undefined, body, retryAfter);
   }
 
   /** 從 fetch 失敗（TypeError / AbortError）產生 */

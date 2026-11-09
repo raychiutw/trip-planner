@@ -38,7 +38,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { routes } from '../lib/routes';
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { EVENT } from '../lib/events';
 import { lsGet, lsSet } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
@@ -557,10 +557,8 @@ export default function NewTripPage() {
       day_quota: selectedPois.length >= 2 ? destDays[poi.place_id] ?? null : null,
     }));
     try {
-      const res = await apiFetchRaw('/trips', {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: JSON.stringify({
+      const res = await typedApiRaw.post('/api/trips', {
+        body: {
           name: tripName,
           startDate: dates.start,
           endDate: dates.end,
@@ -571,19 +569,16 @@ export default function NewTripPage() {
           // 的公開清單（未登入可讀）。使用者不會預期「建立」等於「發佈」。
           destinations: destinationsPayload,
           // v2.31.36 (migration 0068): self_drive_* + default_travel_mode removed — dead columns。
-        }),
+        },
       });
       if (!res.ok) {
-        const text = await res.text();
         let message = '建立行程失敗，請稍後再試。';
-        try {
-          const data = JSON.parse(text) as { error?: { code?: string; message?: string } };
-          const errMsg = data?.error?.message;
-          if (errMsg) message = errMsg;
-        } catch { /* not JSON */ }
+        // error 是解析過的 JSON；不是 JSON（閘道 HTML）時是原文字串，沒有 error.message
+        const errMsg = (res.error as { error?: { message?: string } } | undefined)?.error?.message;
+        if (errMsg) message = errMsg;
         throw new Error(message);
       }
-      const data = (await res.json()) as { tripId: string };
+      const data = jsonData(res) as { tripId: string };
       // 廣播 tp-trip-created event 讓 TripsListPage refresh list
       window.dispatchEvent(new CustomEvent(EVENT.tripCreated, { detail: { tripId: data.tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(data.tripId)}`);

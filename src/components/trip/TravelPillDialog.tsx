@@ -22,7 +22,7 @@ import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
 import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
-import { apiFetchRaw } from '../../lib/apiClient';
+import { jsonData, typedApiRaw } from '../../lib/api/typed';
 import { saveSegment } from '../../lib/segmentMutations';
 import { useAutosave } from '../../hooks/useAutosave';
 import { useSheetBehavior } from '../../hooks/useSheetBehavior';
@@ -267,9 +267,9 @@ export default function TravelPillDialog({
       return updated;
     },
     onStale: async () => {
-      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/segments`);
+      const res = await typedApiRaw.get('/api/trips/{id}/segments', { path: { id: tripId } });
       if (!res.ok) throw new Error('Failed to refresh segments');
-      const list = await res.json() as Array<{ id: number; version: number; fromEntryId: number; toEntryId: number }>;
+      const list = jsonData(res) as Array<{ id: number; version: number; fromEntryId: number; toEntryId: number }>;
       const found = segmentId != null
         ? list.find((s) => s.id === segmentId)
         : list.find((s) => s.fromEntryId === fromEntryId && s.toEntryId === toEntryId);

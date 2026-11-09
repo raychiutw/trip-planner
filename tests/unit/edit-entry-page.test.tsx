@@ -662,9 +662,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     let attempts = 0;
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.includes('/pois/100') && ++attempts === 1) {
-        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+        return Promise.resolve(new Response('無法儲存', { status: 503 }));
       }
-      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+      return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     const router = createMemoryRouter([
       { path: '/trip/:tripId/stop/:entryId/edit', element: <EditEntryPage /> },
@@ -688,9 +688,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     let attempts = 0;
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.includes('/entries/42') && ++attempts === 1) {
-        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+        return Promise.resolve(new Response('無法儲存', { status: 503 }));
       }
-      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+      return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());
@@ -710,9 +710,9 @@ describe('EditEntryPage — 返回 (v2.33.108: 移除 cancel confirm — auto-sa
     let segmentAttempts = 0;
     (apiFetchRaw as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
       if (url.endsWith('/segments') && ++segmentAttempts === 1) {
-        return Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('無法儲存') });
+        return Promise.resolve(new Response('無法儲存', { status: 503 }));
       }
-      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
+      return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     });
     renderPage();
     await waitFor(() => expect(screen.queryByTestId('edit-entry-description-input')).toBeTruthy());

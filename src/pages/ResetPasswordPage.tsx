@@ -15,7 +15,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
-import { apiFetchRaw } from '../lib/apiClient';
+import { typedApiRaw } from '../lib/api/typed';
 import InlineError from '../components/shared/InlineError';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { MIN_PASSWORD_LEN } from '../server/password';
@@ -185,15 +185,12 @@ export default function ResetPasswordPage() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const res = await apiFetchRaw('/oauth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ token, password }),
-      });
+      const res = await typedApiRaw.post('/api/oauth/reset-password', { body: { token, password } });
       if (res.ok) {
         setSuccess(true);
         return;
       }
-      const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      const errJson = res.error as ApiError | undefined;
       const code = errJson?.error?.code ?? 'UNKNOWN';
       switch (code) {
         case 'RESET_TOKEN_INVALID':

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import type { Permission } from '../types/api';
 
 export interface PendingInvitation {
@@ -56,22 +56,18 @@ export function usePermissions(currentTripIdRef: React.RefObject<string>): UsePe
 
     try {
       const [permsRes, invitesRes] = await Promise.all([
-        apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId), {
-          signal: controller.signal,
-        }),
-        apiFetchRaw('/invitations?tripId=' + encodeURIComponent(tripId), {
-          signal: controller.signal,
-        }).catch(() => null), // pending fetch fail 不擋 members
+        typedApiRaw.get('/api/permissions', { query: { tripId }, signal: controller.signal }),
+        typedApiRaw.get('/api/invitations', { query: { tripId }, signal: controller.signal }).catch(() => null), // pending fetch fail 不擋 members
       ]);
 
       if (permsRes.status === 401) throw new Error('未登入，請重新整理頁面');
       if (permsRes.status === 403) throw new Error('僅管理者可操作');
       if (!permsRes.ok) throw new Error('載入失敗');
-      const perms: Permission[] = await permsRes.json();
+      const perms = jsonData(permsRes) as unknown as Permission[];
 
       let invites: PendingInvitation[] = [];
       if (invitesRes && invitesRes.ok) {
-        const data = await invitesRes.json() as { items: PendingInvitation[] };
+        const data = jsonData(invitesRes) as unknown as { items: PendingInvitation[] };
         invites = data.items ?? [];
       }
 

@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { AuthError, getNewApiAuth } from '../lib/auth';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
@@ -296,14 +296,11 @@ export default function LoginPage() {
       if (outcome.ok) {
         clearFailure();
         // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
-        if (invitationPath) {
+        if (invitationPath && invitationToken) { // token 非空才有 path；一併收窄型別
           try {
-            const acceptRes = await apiFetchRaw('/invitations/accept', {
-              method: 'POST',
-              body: JSON.stringify({ token: invitationToken }),
-            });
+            const acceptRes = await typedApiRaw.post('/api/invitations/accept', { body: { token: invitationToken } });
             if (acceptRes.ok) {
-              const data = (await acceptRes.json()) as { tripId: string };
+              const data = jsonData(acceptRes) as { tripId: string };
               window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
               return;
             }

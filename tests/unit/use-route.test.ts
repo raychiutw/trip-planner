@@ -50,11 +50,9 @@ describe('useRoute', () => {
 
   it('returns null on backend 502/503 (MAPS_UPSTREAM_FAILED / MAPS_LOCKED)', async () => {
     // v2.33.106 T-3: 同上 — 用 waitFor 取代 setTimeout(50) race。
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 503,
-      json: async () => ({ error: { code: 'MAPS_LOCKED' } }),
-    } as unknown as Response);
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: 'MAPS_LOCKED' } }), { status: 503, headers: { 'Content-Type': 'application/json' } }),
+    );
     global.fetch = fetchMock;
     const { result } = renderHook(() => useRoute(FROM, TO));
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -62,14 +60,13 @@ describe('useRoute', () => {
   });
 
   it('returns polyline on successful fetch (Google Routes shape)', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
         polyline: [[26.1, 127.5], [26.5, 127.9]],
         duration: 1200,
         distance: 55000,
-      }),
-    } as unknown as Response);
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
     const { result } = renderHook(() => useRoute(FROM, TO));
     await waitFor(() => expect(result.current).not.toBeNull());
     expect(result.current?.duration).toBe(1200);

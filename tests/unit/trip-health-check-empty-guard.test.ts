@@ -54,7 +54,7 @@ describe('v2.31.58 empty trip AI 健檢 guard', () => {
     });
 
     it('fetch /trips/:id/days?all=1 並累加 timeline length 算 entry count', () => {
-      expect(FRONTEND).toMatch(/\/trips\/\$\{encodeURIComponent\(tripId\)\}\/days\?all=1/);
+      expect(FRONTEND).toMatch(/typedApiRaw\.get\('\/api\/trips\/\{id\}\/days', \{[^\n]*query: \{ all: '1' \}/);
       expect(FRONTEND).toMatch(/d\.timeline\) \? d\.timeline\.length : 0/);
     });
 

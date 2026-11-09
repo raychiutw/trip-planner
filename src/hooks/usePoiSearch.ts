@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PoiSearchResult } from '../types/poi';
 // v2.33.39 round 4: 改走 apiFetchRaw，與 sibling hook (useTrip / useChatPagination)
 // 一致。bare fetch 會繞過 reportFetchResult → useOnlineStatus offline-toast 失效。
-import { apiFetchRaw } from '../lib/apiClient';
+import { jsonData, typedApiRaw } from '../lib/api/typed';
 
 interface UsePoiSearchOptions {
   /** Disable the hook entirely (e.g. when not on search tab). Default: true (enabled). */
@@ -106,18 +106,17 @@ export function usePoiSearch({
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       try {
-        const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
-        const resp = await apiFetchRaw(
-          `/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
-          { signal: ctrl.signal },
-        );
+        const resp = await typedApiRaw.get('/api/poi-search', {
+          query: { q: trimmed, limit, ...(region ? { region } : {}) },
+          signal: ctrl.signal,
+        });
         if (!resp.ok) {
           if (currentKeyRef.current === key && !ctrl.signal.aborted) {
             setResult({ key, status: 'error', results: [], error: 'http-error' });
           }
           return;
         }
-        const raw = await resp.json() as unknown;
+        const raw = jsonData(resp) as unknown;
         const normalised = normaliseRef.current
           ? normaliseRef.current(raw)
           : Array.isArray(raw) ? raw : (raw as { results?: unknown } | null)?.results;

@@ -9,24 +9,29 @@
  *
  * 與 `createApiWithAuth`（SSE ticket 專用，直接走 auth client、不經 apiFetch）不同：那條不重試、不轉 ApiError。
  */
-import { apiFetch } from '../apiClient';
-import { createApi, type Api, type ApiResult } from './client';
+import { apiFetch, apiFetchRaw } from '../apiClient';
+import { createApi, type Api, type ApiResult, type ApiWithHeaders } from './client';
+
+/** 通用 client 的 init → apiFetch／apiFetchRaw 的參數（與手寫呼叫同形）。 */
+function toTransport(input: string, init?: RequestInit): { path: string; opts: RequestInit & { signal?: AbortSignal } } {
+  // apiFetch 以物件展開 header，Headers 實例要先攤平（鍵會變小寫）；Content-Type 還原成 apiFetch 認得的大小寫，
+  // 否則它會再補一份，且 DELETE 不會補（帶 body 的 DELETE 要靠這裡帶過去）
+  const headers = Object.fromEntries([...new Headers(init?.headers)].map(([k, v]) => [k === 'content-type' ? 'Content-Type' : k, v]));
+  // redirect:'manual' 是通用 client 的預設，apiFetch 本來就沒設（跟隨導向）：這裡拿掉，行為與遷移前一致；
+  // 沒有 header／signal 時也不帶空值，讓傳給 apiFetch 的參數與手寫呼叫同形
+  const { redirect: _redirect, headers: _headers, signal, method, ...rest } = init ?? {};
+  const opts: RequestInit & { signal?: AbortSignal } = {
+    ...rest,
+    ...(method && method !== 'GET' ? { method } : {}), // GET 是 apiFetch 的預設
+    ...(Object.keys(headers).length ? { headers } : {}),
+    ...(signal ? { signal } : {}),
+  };
+  return { path: input.replace(/^\/api/, ''), opts };
+}
 
 export const typedApi: Api = createApi({
   fetch: async (input, init) => {
-    // apiFetch 以物件展開 header，Headers 實例要先攤平（鍵會變小寫）；Content-Type 還原成 apiFetch 認得的大小寫，
-    // 否則它會再補一份，且 DELETE 不會補（帶 body 的 DELETE 要靠這裡帶過去）
-    const headers = Object.fromEntries([...new Headers(init?.headers)].map(([k, v]) => [k === 'content-type' ? 'Content-Type' : k, v]));
-    // redirect:'manual' 是通用 client 的預設，apiFetch 本來就沒設（跟隨導向）：這裡拿掉，行為與遷移前一致；
-    // 沒有 header／signal 時也不帶空值，讓傳給 apiFetch 的參數與手寫呼叫同形
-    const { redirect: _redirect, headers: _headers, signal, method, ...rest } = init ?? {};
-    const opts: RequestInit & { signal?: AbortSignal } = {
-      ...rest,
-      ...(method && method !== 'GET' ? { method } : {}), // GET 是 apiFetch 的預設
-      ...(Object.keys(headers).length ? { headers } : {}),
-      ...(signal ? { signal } : {}),
-    };
-    const path = input.replace(/^\/api/, '');
+    const { path, opts } = toTransport(input, init);
     const data = await (Object.keys(opts).length ? apiFetch<unknown>(path, opts) : apiFetch<unknown>(path));
     // 成功一律合成 200／204：呼叫端靠 data 判斷，不依賴確切的 2xx 狀態碼
     return data === undefined
@@ -34,6 +39,51 @@ export const typedApi: Api = createApi({
       : new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
   },
 });
+
+/**
+ * 舊的 `apiFetchRaw` 呼叫端一律 `res.json()`，不看 Content-Type；通用 client 只在 Content-Type 含 json 時才解析。
+ * 為了遷移不改行為：內容能解析成 JSON 就補上 JSON 的 Content-Type（解析失敗、無內容、204／3xx 原樣）。
+ */
+async function jsonIfParsable(res: Response): Promise<Response> {
+  if (res.status === 204 || res.status === 205 || (res.status >= 300 && res.status < 400)) return res;
+  if ((res.headers.get('content-type') ?? '').toLowerCase().includes('json')) return res;
+  const text = await res.text();
+  const headers = new Headers(res.headers);
+  try {
+    if (text !== '') { JSON.parse(text); headers.set('Content-Type', 'application/json'); }
+  } catch { /* 不是 JSON：維持原 Content-Type，data 會是原文字串 */ }
+  return new Response(text, { status: res.status, statusText: res.statusText, headers });
+}
+
+/**
+ * 與 `typedApi` 同一套契約型別，但傳輸走 `apiFetchRaw`：**非 2xx 不丟例外、沒有重試**，呼叫端自己看 `result.ok`／`result.status`。
+ * 回傳是 `{ ok: true, status, data } | { ok: false, status, error }`，另帶 `headers`（原始回應標頭，例如 429 的 `Retry-After`）；型別是契約裡各狀態碼的聯集
+ * （契約沒列的狀態碼，執行期仍會出現在 `status`／`error`，只是型別上看不到）。
+ * `error`／`data` 是已解析的 JSON（解析失敗時是原文字串、無內容時 undefined）。網路錯誤仍丟 `ApiError`（同 `apiFetchRaw`）。
+ */
+export const typedApiRaw: ApiWithHeaders = createApi({
+  includeHeaders: true, // 呼叫端要讀 Retry-After 等標頭
+  fetch: async (input, init) => {
+    const { path, opts } = toTransport(input, init);
+    return jsonIfParsable(await apiFetchRaw(path, opts));
+  },
+});
+
+/** `typedApiRaw` 失敗結果的 `error.message`（`{ error: { message } }`）；不是這個形狀（閘道 HTML、空內容）時回 fallback。 */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { error?: { message?: unknown } } | null | undefined)?.error?.message;
+  return typeof message === 'string' && message ? message : fallback;
+}
+
+/**
+ * 取 `typedApiRaw` 成功回應的 JSON data，與舊的 `await res.json()` 同樣嚴格：
+ * 內容不是 JSON（無內容、閘道 HTML 的 200）就丟 SyntaxError，不讓字串／undefined 悄悄流進後面的欄位存取。
+ */
+export function jsonData<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> extends { data: infer D } ? D : never {
+  const data = (result as unknown as { data?: unknown }).data;
+  if (!result.ok || data === null || typeof data !== 'object') throw new SyntaxError('回應不是 JSON');
+  return data as never;
+}
 
 /** 取成功回應的 data。非 2xx 在 `typedApi` 內已丟 `ApiError`，這裡的 throw 只是讓型別收斂。 */
 export function unwrap<R extends { ok: boolean }>(result: R): Extract<R, { ok: true }> extends { data: infer D } ? D : never {

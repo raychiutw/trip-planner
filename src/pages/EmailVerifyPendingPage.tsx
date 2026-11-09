@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
-import { apiFetchRaw } from '../lib/apiClient';
+import { typedApiRaw } from '../lib/api/typed';
 
 const SCOPED_STYLES = `
 .tp-verify-shell {
@@ -162,10 +162,7 @@ export default function EmailVerifyPendingPage() {
     setResending(true);
     setResendStatus('idle');
     try {
-      const res = await apiFetchRaw('/oauth/send-verification', {
-        method: 'POST',
-        body: JSON.stringify({ email: safeEmail }),
-      });
+      const res = await typedApiRaw.post('/api/oauth/send-verification', { body: { email: safeEmail } });
       // 2026-05-02 cutover: send-verification now returns 500 EMAIL_SEND_FAILED
       // when mac mini SMTP fails (Q7 strict UX). Don't show "sent" if the
       // backend explicitly failed to deliver.

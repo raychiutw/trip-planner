@@ -20,16 +20,16 @@ const onUpdated = (e: Event) => { events.push((e as CustomEvent).detail); };
 beforeEach(() => { apiFetchRaw.mockReset(); events = []; window.addEventListener(EVENT.tripUpdated, onUpdated); });
 afterEach(() => window.removeEventListener(EVENT.tripUpdated, onUpdated));
 
-const res = (status: number, body?: unknown) => ({
-  ok: status >= 200 && status < 300,
-  status,
-  text: async () => (body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body)),
-  json: async () => body,
-});
+// 真的 Response（typedApiRaw 會讀標頭與內容）；mockResolvedValue 共用同一個物件時只能讀一次，所以用 mockImplementation 回新的
+const res = (status: number, body?: unknown) => new Response(
+  body === undefined ? null : typeof body === 'string' ? body : JSON.stringify(body),
+  { status, headers: { 'Content-Type': typeof body === 'string' ? 'text/html' : 'application/json' } },
+);
+const reply = (status: number, body?: unknown) => () => Promise.resolve(res(status, body));
 
 describe('archiveTrip', () => {
   it('歸檔 = PUT，取消歸檔 = DELETE；成功 emit tripUpdated', async () => {
-    apiFetchRaw.mockResolvedValue(res(200, {}));
+    apiFetchRaw.mockImplementation(reply(200, {}));
     expect(await archiveTrip('t 1')).toEqual({ ok: true, data: undefined });
     expect(apiFetchRaw).toHaveBeenLastCalledWith('/trips/t%201/archive', { method: 'PUT' });
     await unarchiveTrip('t 1');
@@ -54,7 +54,7 @@ describe('archiveTrip', () => {
 
 describe('deleteTrip', () => {
   it('DELETE /trips/:id；成功 emit tripUpdated', async () => {
-    apiFetchRaw.mockResolvedValue(res(200, {}));
+    apiFetchRaw.mockImplementation(reply(200, {}));
     expect(await deleteTrip('abc')).toMatchObject({ ok: true });
     expect(apiFetchRaw).toHaveBeenCalledWith('/trips/abc', { method: 'DELETE' });
     expect(events).toEqual([{ tripId: 'abc' }]);
@@ -65,7 +65,7 @@ describe('deleteTrip', () => {
     [404, '行程不存在'],
     [500, '刪除失敗，請稍後再試'],
   ])('%i → %s，且不 emit', async (status, message) => {
-    apiFetchRaw.mockResolvedValue(res(status, {}));
+    apiFetchRaw.mockImplementation(reply(status, {}));
     expect(await deleteTrip('abc')).toMatchObject({ ok: false, status, message });
     expect(events).toEqual([]);
   });
@@ -73,20 +73,20 @@ describe('deleteTrip', () => {
 
 describe('deleteDay', () => {
   it('DELETE /trips/:id/days/:n；回傳 removedEntryCount；成功 emit tripUpdated', async () => {
-    apiFetchRaw.mockResolvedValue(res(200, { removedEntryCount: 3 }));
+    apiFetchRaw.mockImplementation(reply(200, { removedEntryCount: 3 }));
     const r = await deleteDay('abc', 2);
     expect(r).toEqual({ ok: true, data: { removedEntryCount: 3 } });
-    expect(apiFetchRaw).toHaveBeenCalledWith('/trips/abc/days/2', { method: 'DELETE', credentials: 'same-origin' });
+    expect(apiFetchRaw).toHaveBeenCalledWith('/trips/abc/days/2', { method: 'DELETE' });
     expect(events).toEqual([{ tripId: 'abc' }]);
   });
 
   it('沒有 removedEntryCount 視為 0', async () => {
-    apiFetchRaw.mockResolvedValue(res(200, {}));
+    apiFetchRaw.mockImplementation(reply(200, {}));
     expect(await deleteDay('abc', 1)).toEqual({ ok: true, data: { removedEntryCount: 0 } });
   });
 
   it('2xx 但 body 不是合法 JSON → 視為成功（後端已刪除，不能誤報失敗；master 會 throw），數量 0、仍 emit', async () => {
-    apiFetchRaw.mockResolvedValue({ ok: true, status: 200, text: async () => '', json: async () => { throw new SyntaxError('Unexpected end of JSON input'); } });
+    apiFetchRaw.mockImplementation(() => Promise.resolve(new Response('', { status: 200 })));
     expect(await deleteDay('abc', 1)).toEqual({ ok: true, data: { removedEntryCount: 0 } });
     expect(events).toEqual([{ tripId: 'abc' }]);
   });
@@ -121,7 +121,12 @@ describe('結構：行程層級的 endpoint 只有 tripMutations 會打', () => 
   it('src/ 內其他檔案不得直接呼叫 /archive 或刪除行程／天數的 endpoint（含 DELETE /trips/:id）', () => {
     const offenders = walk(join(ROOT, 'src'))
       .filter((p) => !p.endsWith('src/lib/tripMutations.ts'))
-      .filter((p) => /\/trips\/\$\{[^}]*\}\/archive|\/trips\/\$\{[^}]*\}(?:\/days\/\$\{[^}]*\})?`,\s*\{\s*method: 'DELETE'/.test(readFileSync(p, 'utf8')))
+      .filter((p) => {
+        const text = readFileSync(p, 'utf8');
+        // 舊寫法（apiFetch 樣板字串）與 typed 寫法（'/api/trips/{id}...' 字面值）都擋
+        return /\/trips\/\$\{[^}]*\}\/archive|\/trips\/\$\{[^}]*\}(?:\/days\/\$\{[^}]*\})?`,\s*\{\s*method: 'DELETE'/.test(text)
+          || /'\/api\/trips\/\{id\}\/archive'|(?:typedApi|typedApiRaw)\.delete\('\/api\/trips\/\{id\}(?:\/days\/\{num\})?'/.test(text);
+      })
       .map((p) => p.slice(ROOT.length + 1));
     expect(offenders).toEqual([]);
   });

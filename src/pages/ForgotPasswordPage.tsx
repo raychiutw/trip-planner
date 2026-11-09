@@ -11,7 +11,7 @@
  */
 import { useRef, useState } from 'react';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
-import { apiFetchRaw } from '../lib/apiClient';
+import { typedApiRaw } from '../lib/api/typed';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -97,15 +97,12 @@ export default function ForgotPasswordPage() {
     setSubmitting(true);
     setWarning(null);
     try {
-      const res = await apiFetchRaw('/oauth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim() }),
-      });
+      const res = await typedApiRaw.post('/api/oauth/forgot-password', { body: { email: email.trim() } });
       if (res.ok) {
         setSubmitted(true);
         return;
       }
-      const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      const errJson = res.error as ApiError | undefined;
       const code = errJson?.error?.code ?? 'UNKNOWN';
       if (code === 'FORGOT_PASSWORD_RATE_LIMITED') {
         const retryAfter = res.headers.get('Retry-After');
