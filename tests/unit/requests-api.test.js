@@ -7,34 +7,10 @@ import { describe, it, expect } from 'vitest';
  * PATCH status validation is covered through real requests in requests.integration.test.ts.
  */
 
-const requestsTs = readFileSync('functions/api/requests.ts', 'utf-8');
 const apiTypes = readFileSync('src/types/api.ts', 'utf-8');
 
 /* ===== POST /api/requests — message 欄位 ===== */
 
-describe('POST /api/requests', () => {
-  it('accepts message field in POST body', () => {
-    expect(requestsTs).toContain('message');
-  });
-
-  it('has title/body fallback for legacy compatibility', () => {
-    // Should reference both title and body for backward compat
-    expect(requestsTs).toContain('body.title');
-    expect(requestsTs).toContain('body.body');
-  });
-
-  it('inserts message column without mode (migration 0049 phase 2: column dropped)', () => {
-    expect(requestsTs).toContain('INSERT INTO trip_requests (trip_id, message');
-    expect(requestsTs).not.toMatch(/INSERT INTO trip_requests \([^)]*\bmode\b/);
-  });
-
-  it('does NOT reference mode column anywhere (rip-out complete)', () => {
-    // Phase 2 (migration 0049) DROP COLUMN trip_requests.mode 後 code 完全不該 reference mode。
-    expect(requestsTs).not.toContain("body.mode");
-    expect(requestsTs).not.toContain("'trip-edit'");
-    expect(requestsTs).not.toContain("'trip-plan'");
-  });
-});
 
 /* ===== src/types/api.ts — Request interface ===== */
 

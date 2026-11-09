@@ -25,15 +25,8 @@ const TYPES_SRC = readFileSync(
   path.resolve(__dirname, '../../src/types/api.ts'),
   'utf8',
 );
-const BACKEND_SRC = readFileSync(
-  path.resolve(__dirname, '../../functions/api/permissions.ts'),
-  'utf8',
-);
 
 describe('v2.31.35 CollabPanel avatar displayName', () => {
-  it('backend SELECT 加 u.display_name', () => {
-    expect(BACKEND_SRC).toMatch(/SELECT\s+tp\.id[\s\S]{0,80}u\.display_name/);
-  });
 
   it('Permission type 加 displayName?: string | null', () => {
     const permMatch = TYPES_SRC.match(/export interface Permission \{[\s\S]*?\n\}/);

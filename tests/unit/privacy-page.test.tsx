@@ -45,16 +45,6 @@ describe('PrivacyPage — 基本結構', () => {
     expect(screen.getByRole('heading', { name: '聯絡我們', level: 2 })).toBeVisible();
   });
 
-  it('標示政策版本 —— 與 signup 記錄的 PRIVACY_POLICY_VERSION 對得起來', async () => {
-    const { readFileSync } = await import('fs');
-    const { resolve } = await import('path');
-    const signupSrc = readFileSync(
-      resolve(__dirname, '../../functions/api/oauth/signup.ts'), 'utf-8');
-    const version = signupSrc.match(/PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'/)?.[1];
-    expect(version, '後端應有政策版本常數').toBeTruthy();
-    // 使用者同意的是「哪一版」，頁面就得看得到那一版，否則版本紀錄無從對照。
-    expect(pageText()).toContain(version!);
-  });
 
   it('未登入可讀 —— 不呼叫任何需要 session 的 API', () => {
     // Google Play 審核員會用未登入狀態開這頁；元件若在 mount 時打 API，
@@ -82,17 +72,6 @@ describe('PrivacyPage — 揭露範圍（Google Play 要求）', () => {
     }
   });
 
-  it('列出所有會收到資料的接收方「類別」', () => {
-    // 2026-07-21 改為鎖類別而非廠商名（owner：「太詳細了怕會遭受攻擊」）。
-    // 法規要的是「哪一類接收方、為了什麼目的、有無跨境」，不是廠商清單。
-    // 類別涵蓋度仍要完整 —— 少一類就是揭露不完整。
-    // 對照來源：public/_headers 的 CSP connect-src/img-src（瀏覽器實際連線對象）
-    // 加上 functions/api 的 server 端連外。
-    const text = pageText();
-    for (const category of ['託管', '地圖', '錯誤回報', '郵件', '維運']) {
-      expect(text, `未揭露接收方類別「${category}」`).toContain(category);
-    }
-  });
 
   it('不得揭露內部架構或實作細節（攻擊面）', () => {
     // 曾經寫過「經由我們自行維運的一台主機，再透過 Gmail 的郵件伺服器寄出」

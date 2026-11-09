@@ -55,21 +55,7 @@ describe('Google 登入已整個移除', () => {
     }
   });
 
-  it.each([
-    'functions/api/oauth/login/google.ts',
-    'functions/api/oauth/callback/google.ts',
-    'functions/api/account/delete-reauth.ts',
-    'functions/api/account/_deleteReauth.ts',
-    'src/server/oauth-client/google-id-token.ts',
-  ])('%s 已刪除', (f) => {
-    expect(existsSync(join(ROOT, f))).toBe(false);
-  });
 
-  it('舊入口 GET /api/public-config 不再回 providers.google', async () => {
-    const { onRequestGet } = await import('../../functions/api/public-config');
-    const res = await (onRequestGet as unknown as (c: unknown) => Response)({ env: {} });
-    expect(await res.json()).not.toHaveProperty('providers');
-  });
 });
 
 describe('契約快照同步到 production 現況（114 路徑）', () => {

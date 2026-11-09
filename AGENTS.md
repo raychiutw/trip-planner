@@ -83,7 +83,7 @@ Matt Pocock skills do not cover the task or the user explicitly requests it.
 
 ## Layout
 
-`src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
+`src/` SPA · `functions/s`、`functions/trip` Pages Functions（僅 OG meta，不是 API；API 在 trip-planner-api，舊入口已於 #1627 刪除）· `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
 Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 4-tab nav + account header sheet.
 

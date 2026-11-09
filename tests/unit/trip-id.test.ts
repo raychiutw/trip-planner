@@ -78,16 +78,6 @@ describe('genTripId', () => {
 });
 
 describe('匯入路徑使用共用產生器', () => {
-  it('import.ts 不再自己寫死 imp- 前綴', async () => {
-    const { readFileSync } = await import('fs');
-    const { resolve } = await import('path');
-    const src = readFileSync(resolve(__dirname, '../../functions/api/trips/import.ts'), 'utf-8')
-      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    expect(src).not.toMatch(/`imp-\$\{/);
-    // 走 `generateUniqueTripId`（_tripWrite 的包裝，內部呼叫 genTripId 並確保未撞號），
-    // 而不是直接呼叫 genTripId —— 匯入路徑原本沒有唯一性檢查，撞號會噴 raw D1 UNIQUE。
-    expect(src, 'import 應改用共用產生器').toMatch(/generateUniqueTripId\(/);
-  });
 
   it('NewTripPage 不再保留自己那份複製', async () => {
     const { readFileSync } = await import('fs');

@@ -2,6 +2,8 @@
 
 Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東西前先看這份，確保新增的 code 落在對的層次。
 
+> **2026-11-09（#1627）：舊入口已刪除。** 本 repo 不再有 API——後端是 [trip-planner-api](https://github.com/raychiutw/trip-planner-api)（Cloudflare Workers，`/api/*`、OAuth、D1 migration 與排程清理都在那邊）。Pages 只剩 SPA 靜態資產，加上 `/s/:token`、`/trip/*` 兩支 OG meta Function。下文凡提到 `functions/api/`、`src/server/` 的敘述是拆分前的歷史描述，程式已不在本 repo。
+
 使用者介紹請看 [README.md](README.md)。設計系統與視覺規範請看 [DESIGN.md](DESIGN.md)。開發流程請看 [AGENTS.md](AGENTS.md)。
 
 ---
@@ -12,11 +14,11 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 |----|------|
 | Frontend | React 19 + TypeScript + Vite + Tailwind CSS 4（tokens.css @theme 為唯一 CSS 入口）|
 | Routing | React Router v6（BrowserRouter，SPA 單入口）|
-| Backend | Cloudflare Pages Functions（`functions/api/`，TypeScript，Workers runtime）|
+| Backend | 獨立的 [trip-planner-api](https://github.com/raychiutw/trip-planner-api)（Cloudflare Workers）；本 repo 的 Pages Functions 只剩 `functions/s`、`functions/trip`（OG meta）|
 | Database | Cloudflare D1（SQLite on the edge）|
-| Auth | V2 OAuth — `tripline_session` opaque cookie (HMAC sig, HKDF derived sub-key) + Bearer token (client_credentials grant) for service tokens。Cloudflare Access 已 v2.32+ 全拆。詳 [src/server/session.ts](src/server/session.ts) + [functions/api/oauth/](functions/api/oauth/) |
+| Auth | OAuth PKCE + Bearer（由 trip-planner-api 簽發與驗證，見 [ADR-0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md)）|
 | Build | Vite（SPA），Wrangler（Pages 本機模擬）|
-| Testing | Vitest + @testing-library（unit / integration），Playwright（e2e），Miniflare（API integration）|
+| Testing | Vitest + @testing-library（unit / integration），Playwright（e2e）|
 | Observability | Sentry（Vite plugin + runtime），NLog → D1 `api_logs` table |
 | CI/CD | GitHub Actions + Cloudflare Pages auto-deploy |
 
@@ -51,7 +53,7 @@ Tripline 的系統組成、資料流、信任邊界與部署拓撲。想改東�
 │              Cloudflare Pages（trip-planner-dby）                 │
 │  ┌──────────────────────┐      ┌──────────────────────────────┐ │
 │  │ Static assets (dist/) │      │ Pages Functions (functions/) │ │
-│  │ index.html + JS/CSS   │      │ /api/* routes, TS            │ │
+│  │ index.html + JS/CSS   │      │ /s/*、/trip/* OG meta（無 /api）│ │
 │  └──────────────────────┘      └─────────────┬────────────────┘ │
 └────────────────────────────────────────────────┼─────────────────┘
                                                  ▼
@@ -124,73 +126,24 @@ src/
 
 ---
 
-## Backend — Pages Functions
+## Backend
 
-`functions/api/` 下的每個檔案對應一條 route。Cloudflare Pages 的約定：檔名與路徑結構決定 URL。
+API 在 [trip-planner-api](https://github.com/raychiutw/trip-planner-api)，本 repo 沒有後端程式碼。web 只打新 api（`.env.production` 的 `VITE_API_BASE_URL`）。
 
-### 中介層（middleware chain）
+本 repo 的 Pages Functions 只剩兩支，都不是 API，只查 D1（`wrangler.toml` 的 `DB` binding）注入 OG meta：
 
-`functions/api/_middleware.ts` 會在每個 request 進入前執行：
+| 路徑 | 用途 |
+|------|------|
+| `functions/s/[token].ts` | `/s/:token` 分享頁；token 無效／撤銷／過期或任何錯誤都回原 SPA shell，不得 500 |
+| `functions/trip/[[path]].ts` | `/trip/:id` 行程連結預覽；查無行程回 404 HTML |
 
-```
-incoming request
-  → detectSource()     從 header/cookie 判定 source（scheduler / companion / service_token / user / anonymous）
-  → V2 OAuth verify    Bearer token (verifyJwt with alg pin) 或 session cookie (HMAC HKDF derived)
-                       — 詳 src/server/session.ts + src/server/jwt.ts (v2.33.58 alg pin defense)
-  → Origin check       CSRF defense (mutating route + cookie-only auth)，preview origin gated by ENVIRONMENT env
-  → garbled text guard 驗 body 文字編碼（防亂碼）
-  → AppError 攔截      所有 throw 統一包成 JSON 格式回應
-```
-
-**信任邊界重點**：`detectSource()` 的 source 是 **self-reported telemetry**，不是 auth decision。`X-Tripline-Source` / `X-Request-Scope` header 都可被偽造，消費端（如 daily-check）若要做 escalation 必須結合 path / error code 等 secondary signal，不能單憑 source gate。
-
-### 錯誤處理
-
-`functions/api/_errors.ts` 定義 `AppError` class 與錯誤碼表。Handler **一律** `throw new AppError('CODE')`，不直接 `return json({error}, status)` — 中介層會統一轉成 response，保證 response shape 一致。
-
-### Route 分類
-
-```
-functions/api/
-├── _middleware.ts       入口中介
-├── _auth.ts             auth helpers（isAdmin, requireAuth）
-├── _audit.ts            寫 audit_log
-├── _errors.ts           AppError + errorResponse
-├── _poi.ts              findOrCreatePoi 單一 POI resolver（policy: keep/fill-null，#1256 合併舊 resolvePoi）
-├── _entryWrite.ts       entry intake：createEntry / createEntriesBatch / replaceDayEntries，唯一可 INSERT trip_entries 的入口（#1259，eslint 守門）
-├── _requestTermination.ts  共用 request 狀態更新、可重試的健檢／筆記收尾與 stale reap
-├── _requestHealthCompletion.ts  健檢結果與對話摘要收尾
-├── _entry_pois.ts       trip_entry_pois junction CRUD (v2.27.0 multi-POI per entry)
-├── _session.ts / _cookies.ts  V2 OAuth session cookie helpers
-├── _auth_audit.ts       auth_audit_log writer (HMAC IP hash via SESSION_IP_HASH_SECRET, v2.33.62)
-├── _rate_limit.ts       per-IP rate limit (rate_limit_buckets table)
-├── _maps_lock.ts        Google Maps Platform kill switch (app_settings)
-├── _app_settings.ts     typed app_settings accessor (v2.33.62)
-├── oauth/               OAuth 2.1 server endpoints (signup/login/forgot/reset/verify/authorize/consent/token/logout/well-known)
-│   └── _tokenLifecycle.ts  授權碼交換與 refresh 輪替的驗證、消耗、完整發行及 family 撤銷
-├── _types.ts            Env / shared types
-├── _utils.ts            共用 DB / header helpers
-├── _validate.ts         input validation + garbled guard
-├── trips/               trips CRUD + batch days endpoint；_createTrip.ts 持有新行程分批建立、ID 對應及補償
-├── pois/                POI CRUD（AI 維護的 master）
-├── requests/            旅伴請求（含 SSE stream）
-├── permissions/         trip_permissions CRUD
-├── trips.ts             list trips（v2.19.0：POST 寫 destinations[]）
-├── my-trips.ts          caller's accessible trips
-├── requests.ts          top-level requests endpoint
-├── reports.ts           error reports
-├── poi-search.ts        Google Places Text Search proxy (v2.23.0，前端目的地 picker)
-├── places/autocomplete.ts  Places Autocomplete (v2.31.94 custom POI add)
-├── pois/[id]/enrich.ts  Google Place Details — 觸發 POI 補資料 + 更新 status
-├── route.ts             Google Routes API proxy (driving / walking / transit)
-└── trips/[id]/recompute-travel.ts  重排 entries 後 Google Routes 重算 (v2.30.0 後)
-```
+兩者共用的最小部分（`Env`、`resolveActiveShare`）在 `functions/_shared/share.ts`。`public/_routes.json` 只讓 `/trip/*`、`/s/*` 進 Functions，其餘全由 CDN 直接回靜態資產。行為由 `tests/unit/og-pages-functions.test.ts` 與 `tests/unit/old-entry-removed.test.ts` 鎖住。
 
 ---
 
 ## Data Model
 
-D1 schema 演進在 `migrations/0001 ~ 0045*.sql`（含 `migrations/rollback/` 反向 SQL）。核心表：
+D1 schema 的歷史基準在 `migrations/`（至 0101，含 `migrations/rollback/`；**凍結，不再新增**，新 migration 一律進 trip-planner-api）。核心表：
 
 ### 行程結構（時間軸）
 
@@ -220,10 +173,9 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 - `trip_pois` 整表 — 之前 COALESCE pattern (trip_pois overrides pois) 已過時
 - `saved_pois` → 改名 `poi_favorites` (v2.22.0 migration 0050)
 
-**POI 讀寫**: backend 用 `findOrCreatePoi(db, data, opts)` (functions/api/_poi.ts，`opts.policy` 為
-`'keep'` 或 `'fill-null'`) + `syncEntryMaster` / `addAlternate` / `setMaster`
-(functions/api/_entry_pois.ts)。**建立 entry** 一律經 entry intake（`createEntry` /
-`createEntriesBatch`／`replaceDayEntries`，functions/api/_entryWrite.ts）。整日重寫由 `replaceDayEntries`
+**POI 讀寫**: backend（trip-planner-api）用 `findOrCreatePoi(db, data, opts)`（`opts.policy` 為
+`'keep'` 或 `'fill-null'`）+ `syncEntryMaster` / `addAlternate` / `setMaster`。**建立 entry** 一律經 entry intake（`createEntry` /
+`createEntriesBatch`／`replaceDayEntries`）。整日重寫由 `replaceDayEntries`
 一次提交 entries、junction、備選資料、hotel／parking 與版本；其他建立入口保留共用 intake，
 見 `GLOSSARY.md` 的「entry intake」詞條。
 
@@ -232,30 +184,7 @@ Entry 顯示名稱以 `trip_entry_pois.sort_order=1 -> pois.name` 為 canonical 
 OSM / Nominatim / Overpass / OpenTripMap / Wikidata / ORS / Haversine fallback 全 ripped out
 (v2.23.0 hard cutover, no fallback)。改：
 
-```
-src/server/maps/google-client.ts   searchPlaces / autocompletePlaces / getPlaceDetails / computeRoute
-                                   (requireApiKey pre-check, v2.33.58)
-functions/api/poi-search.ts        Places Text Search proxy + pois_search_cache 24h TTL
-functions/api/route.ts             Routes API proxy (driving / walking / transit, no fallback)
-functions/api/pois/[id]/enrich.ts  即時 Place Details 補 POI metadata
-functions/api/admin/maps-{lock,unlock,backfill-status,maps-settings,quota-estimate}.ts
-                                   Kill switch + 90/50 hysteresis (app_settings table)
-trip-planner-agent/scripts/google-poi-refresh-30d.ts  daily refresh 50/day cap (mac mini cron)
-trip-planner-agent/scripts/google-poi-initial-backfill.ts
-trip-planner-agent/scripts/google-quota-monitor.ts
-
-API endpoints:
-  POST /api/pois/:id/enrich          手動觸發單一 POI enrich (admin/owner/即時 + 30d cron)
-  POST /api/trips/:id/recompute-travel  重排 entries 後 Google Routes 重算 (v2.30.0+)
-  GET  /api/poi-search?q=             Places Text Search proxy + pois_search_cache 24h TTL
-  POST /api/places/autocomplete       Places Autocomplete (typeahead, v2.31.94)
-
-排程 (mac mini cron via launchd):
-  trip-planner-agent/scripts/google-poi-refresh-30d.ts   每日 50/day cap (autoplan T11)
-  trip-planner-agent/scripts/google-poi-initial-backfill.ts  一次性
-  trip-planner-agent/scripts/google-quota-monitor.ts     monitor Google Cloud API quota
-  (v2.31.4: poi-enrich-batch.ts + /tp-poi-enrich-monthly skill 已 rip out — 改 即時 + 30d 模型)
-```
+Google Places／Routes proxy、kill switch、enrich 端點都在 trip-planner-api；每日 refresh、backfill、quota monitor 排程在 `trip-planner-agent`（mac mini launchd）。
 
 ### 權限與審計
 
@@ -313,20 +242,9 @@ AI ownership：
    `tripline_session` opaque cookie (HMAC SHA-256 sig with HKDF-derived sub-key,
    v2.33.59 round 13)。session table `oauth_models` (D1) 維護裝置 list + revocation。
 3. **Service Token** — Bearer token via OAuth client_credentials grant (RFC 6749 §4.4)，
-   給 scheduler / admin tooling 用。`functions/api/oauth/token.ts` 走 atomic CAS consume
-   防 parallel double-exchange (v2.33.58 round 12)
+   給 scheduler / admin tooling 用（實作在 trip-planner-api）。
 
-### Session verify (in-isolate CryptoKey cache, v2.33.63)
-
-`functions/api/_middleware.ts` 走 `verifySessionToken(token, env.SESSION_SECRET)` —
-dual-path (HKDF derived → legacy raw fallback for 30-day backward compat after
-v2.33.59 round 13 cutover)。CryptoKey 在 isolate cache 避免每 request import。
-
-### 本機 dev
-
-用 `.dev.vars` 的 `DEV_MOCK_EMAIL` (注意 NOT `.env.local` — wrangler pages dev 只讀
-`.dev.vars`)。Prod 安全靠 `_middleware.ts` `env.ENVIRONMENT === 'production'` 守衛拒絕
-`DEV_MOCK_EMAIL` 生效 (wrangler.toml `[env.production.vars]` 強制聲明此 var)。
+> 認證實作（session／JWT 驗證、本機 dev 的 mock 登入）已隨舊入口刪除；現行認證見 trip-planner-api 與 [ADR-0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md)。
 
 ---
 
@@ -336,17 +254,12 @@ v2.33.59 round 13 cutover)。CryptoKey 在 isolate cache 避免每 request impor
 
 ```
 git push master
-  ├─→ Cloudflare Pages webhook
-  │     → npm run build（Vite SPA build）
-  │     → 自動部署到 trip-planner-dby.pages.dev
-  │     → pages-build-deployment workflow（GitHub Actions 做 status check）
-  │
-  └─→ .github/workflows/deploy.yml（只在 migrations/** 變更時觸發）
-        → wrangler d1 migrations apply --remote
-        → 10-30s 內完成（比 CF Pages build 60-120s 更早落地）
+  └─→ Cloudflare Pages webhook
+        → npm run build（Vite SPA build）
+        → 自動部署到 trip-planner-dby.pages.dev
 ```
 
-Migration 必須 **idempotent**（`IF NOT EXISTS` / `IF EXISTS`），因為 D1 不 wrap 多 statement 在跨 statement transaction；中途被 SIGKILL 會 half-applied，需要重跑安全。
+web 的 CI 不再套用 D1 migration（`deploy.yml` 已於 #1627 刪除）；schema 的權威是 trip-planner-api 的 `migrations/`。D1 的排程清理（rate limit、過期分享、邀請）也在 api 的 Cron Trigger，不在這裡。
 
 ### 環境
 
@@ -371,22 +284,19 @@ Migration 必須 **idempotent**（`IF NOT EXISTS` / `IF EXISTS`），因為 D1 �
 
 ## Testing
 
-三層測試，`npm test` 默認跑前兩層，e2e 要手動：
+兩層測試，`npm test` 跑 unit，e2e 要手動：
 
 ```
 tests/
-├── unit/                  vitest + jsdom
-│   ├── lib / hooks 的純邏輯
-│   └── e.g. scroll-spy.test.ts, tokens-css.test.ts
-├── api/                   vitest + miniflare（D1 in-memory）
-│   ├── Pages Functions endpoint integration
-│   └── 跑 `npm run test:api`
+├── unit/                  vitest（node／jsdom 兩個 project）
+│   ├── lib / hooks / component 的邏輯
+│   └── e.g. scroll-spy.test.ts, tokens-css.test.ts, og-pages-functions.test.ts
 └── e2e/                   playwright
     ├── trip-page.spec.js, offline.spec.ts
     └── 跑 `npm run test:e2e`（需要本機 dev server）
 ```
 
-**原則**：純函式 → unit；Pages Functions → api（用 miniflare 跑真 D1）；使用者流程 → e2e。
+API 的整合測試（miniflare + 真 D1）隨舊入口刪除，現在在 trip-planner-api repo。
 
 ---
 

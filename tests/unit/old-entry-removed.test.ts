@@ -48,7 +48,13 @@ describe('舊入口已刪除（#1627）', () => {
     expect(readdirSync(join(root, 'scripts')).filter((n) => n.startsWith('cleanup-') && n.endsWith('.sql'))).toEqual([]);
   });
 
-  it('migrations/ 保留（歷史基準）', () => {
-    expect(existsSync(join(root, 'migrations/0001_init.sql')) || readdirSync(join(root, 'migrations')).length > 50).toBe(true);
+  it('migrations/ 凍結為歷史基準：保留且不再新增（新 migration 進 trip-planner-api，否則會撞號）', () => {
+    const nums = readdirSync(join(root, 'migrations')).flatMap((n) => (/^(\d{4})_.*\.sql$/.exec(n) ? [Number(n.slice(0, 4))] : []));
+    expect(nums.length).toBeGreaterThan(50);
+    expect(Math.max(...nums)).toBe(101);
+  });
+
+  it('web 不再有套用 D1 migration 的 deploy workflow', () => {
+    expect(existsSync(join(root, '.github/workflows/deploy.yml'))).toBe(false);
   });
 });

@@ -19,25 +19,11 @@ const SPEC = read('SPEC.md');
 
 // v2.33.68 #1（README 不得出現 OSM/ORS 舊描述）已退役：README 改為產品介紹，不再有技術段落，連結與截圖契約改由 readme-product.test.ts 守。
 describe('v2.33.68 #2 — ARCHITECTURE.md V2 OAuth + Google Maps refresh', () => {
-  it('Auth row 改 V2 OAuth (不再 Cloudflare Access)', () => {
-    expect(ARCHITECTURE).toMatch(/V2 OAuth.*tripline_session/);
-    expect(ARCHITECTURE).not.toMatch(/^\| Auth \| Cloudflare Access.*JWT cookie/m);
-  });
-
-  it('Auth section 改 V2 OAuth + .dev.vars (不再 .env.local + CF Access)', () => {
-    expect(ARCHITECTURE).toMatch(/\.dev\.vars/);
-    expect(ARCHITECTURE).toMatch(/V2 OAuth session/);
-  });
-
   it('POI 模型描述 v2.27/v2.29 後狀態 (trip_entry_pois junction)', () => {
     expect(ARCHITECTURE).toMatch(/trip_entry_pois.*junction/);
     expect(ARCHITECTURE).toMatch(/已 DROP/);
   });
 
-  it('Maps stack 改 Google (OSM stack 全標為 ripped out)', () => {
-    expect(ARCHITECTURE).toMatch(/Google Maps Platform stack/);
-    expect(ARCHITECTURE).toMatch(/全 ripped out/);
-  });
 });
 
 describe('v2.33.68 #3 — CONTRIBUTING.md .dev.vars + bun + Node 22', () => {
