@@ -8,7 +8,7 @@ import { mockEnv, seedTrip, seedEntry, getDayId, userIdFor } from './helpers';
 import { createApi, type Api } from './http';
 import { cleanupTrips } from './cleanup-trips';
 import { CONSENT_TEXTS, CURRENT_CONSENT_VERSION } from '../../functions/api/_aiDataConsentText';
-import { isConsentTextComplete, isConsentEnforced } from '../../functions/api/_aiDataConsent';
+import { isConsentTextComplete } from '../../functions/api/_aiDataConsent';
 
 const OWNER = 'aici-owner@test.com';
 const TRIP = 'aici-trip';
@@ -18,9 +18,10 @@ let cookie: string;
 
 beforeAll(async () => {
   db = await createTestDb();
-  api = createApi({ env: mockEnv(db, { AI_CONSENT_ENFORCED: 'true', SESSION_SECRET: 'test-secret-32-chars-long-enough' }) });
+  api = createApi({ env: mockEnv(db, { SESSION_SECRET: 'test-secret-32-chars-long-enough' }) });
   await seedTrip(db, { id: TRIP, owner: OWNER });
   await seedEntry(db, await getDayId(db, TRIP, 1));
+  await db.prepare('DELETE FROM ai_data_consent_events WHERE user_id = ?').bind(userIdFor(OWNER)).run(); // seedTrip 預設幫 owner 同意，這裡要測「沒有同意」
   cookie = (await api.sessionFor(OWNER, userIdFor(OWNER))).cookie; // 帳號端點走瀏覽器 session
 });
 afterAll(async () => {
@@ -62,10 +63,6 @@ describe('文案', () => {
     expect(t).toContain('已經開始的工作');
     expect(t).toContain('無法收回');
   });
-  it('旗標開但文字未完成 → isConsentEnforced 為 false；旗標關 → false', () => {
-    expect(isConsentEnforced({ AI_CONSENT_ENFORCED: 'true' })).toBe(false);
-    expect(isConsentEnforced({})).toBe(false);
-  });
 });
 
 describe('文案未填妥：POST 不得記錄同意', () => {
@@ -85,18 +82,21 @@ describe('文案未填妥：POST 不得記錄同意', () => {
   });
 });
 
-describe('旗標開、文案未完成：不擋', () => {
-  it('GET 狀態：enforced=false', async () => {
+describe('文案未完成：一律強制，所以 AI 被擋（fail closed）——上線前必須先填妥占位符', () => {
+  it('GET 狀態：enforced=true', async () => {
     const res = await api.get('/api/account/ai-data-consent', { cookie });
     expect(res.status).toBe(200);
-    expect(((await res.json()) as any).enforced).toBe(false);
+    expect(((await res.json()) as any).enforced).toBe(true);
   });
-  it('三個入口在完全沒有同意時照常受理', async () => {
-    const r1 = await api.request('POST', '/api/requests', { as: OWNER, json: { tripId: TRIP, message: '未完成文案也不擋' } });
-    expect(r1.status).toBe(201);
-    const r2 = await api.request('POST', `/api/trips/${TRIP}/health-check`, { as: OWNER });
-    expect(r2.status).toBe(202);
-    const r3 = await api.request('POST', `/api/trips/${TRIP}/notes/tips/generate`, { as: OWNER, json: {} });
-    expect(r3.status).toBe(202);
+  it('三個入口在沒有同意時回 403 AI_CONSENT_REQUIRED（而且使用者也無法同意，見上）', async () => {
+    const calls = [
+      api.request('POST', '/api/requests', { as: OWNER, json: { tripId: TRIP, message: '未完成文案' } }),
+      api.request('POST', `/api/trips/${TRIP}/health-check`, { as: OWNER }),
+      api.request('POST', `/api/trips/${TRIP}/notes/tips/generate`, { as: OWNER, json: {} }),
+    ];
+    for (const r of await Promise.all(calls)) {
+      expect(r.status).toBe(403);
+      expect(((await r.json()) as any).error.code).toBe('AI_CONSENT_REQUIRED');
+    }
   });
 });

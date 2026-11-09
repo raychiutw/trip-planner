@@ -2,7 +2,7 @@
  * AI 資料同意（spec #1553 的 server 端；舊入口 Pages Functions 的一份，與新 api 的 tests/baseline/ai-data-consent.test.ts 對應）。唯一 seam＝HTTP 入口到真實本機 D1；只替換外部 AI（TRIPLINE_API_URL 未設，不外連）
  * 與「文案是否填妥」（vi.mock 把三個待填占位符填上，才能測強制生效的情境；真實文案未填妥的行為在 ai-data-consent-incomplete.test.ts）。
  *
- * 涵蓋：三個動作（狀態／同意／撤回）、四種狀態、雙方同意閘門（三個受管制入口）、旗標關閉＝現況、服務 token 不受閘門、
+ * 涵蓋：三個動作（狀態／同意／撤回）、四種狀態、擁有者同意閘門（三個受管制入口；旅伴免同意、擁有者同意後旅伴可直接用）、服務 token 不受閘門、
  * 撤回對排隊中請求的終結、請求列表對服務 token 的資料最小化。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -31,8 +31,7 @@ const V = 'ai-data-v1';
 const ORIGIN = 'https://trip-planner-dby.pages.dev';
 
 let db: D1Database;
-let apiOn: Api; // AI_CONSENT_ENFORCED=true（文案已填妥）
-let apiOff: Api; // 旗標未設
+let apiOn: Api; // 文案已填妥（旗標已移除，一律強制）
 let companion: string;
 
 const uid = userIdFor;
@@ -58,13 +57,13 @@ const body = async (r: Response) => (await r.json()) as Record<string, any>;
 beforeAll(async () => {
   for (const [k, v] of Object.entries(originalTexts)) CONSENT_TEXTS[k] = JSON.parse(fill(JSON.stringify(v)));
   db = await createTestDb();
-  apiOn = createApi({ env: mockEnv(db, { AI_CONSENT_ENFORCED: 'true', ALLOWED_ORIGINS: ORIGIN, SESSION_SECRET }) });
-  apiOff = createApi({ env: mockEnv(db, { ALLOWED_ORIGINS: ORIGIN, SESSION_SECRET }) });
+  apiOn = createApi({ env: mockEnv(db, { ALLOWED_ORIGINS: ORIGIN, SESSION_SECRET }) });
   for (const e of [COLLAB, STRANGER, OTHER]) await seedUser(db, e);
   await seedTrip(db, { id: TRIP, owner: OWNER });
   await db.prepare("INSERT OR IGNORE INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, 'member')").bind(uid(COLLAB), TRIP).run();
   await seedEntry(db, await getDayId(db, TRIP, 1));
   companion = await serviceToken(db, ['companion']);
+  for (const e of [OWNER, COLLAB, STRANGER, OTHER]) await ck(e, apiOn); // 先建 cookie：seedUser 會預設補一筆同意，之後各測試自己 clearEvents
 });
 
 afterAll(async () => {
@@ -81,7 +80,7 @@ describe('GET /api/account/ai-data-consent', () => {
   it('未登入 → 401', async () => {
     expect((await apiOn.request('GET', '/api/account/ai-data-consent')).status).toBe(401);
   });
-  it('從未同意 → none；帶目前版本、說明文字、enforced（旗標開）', async () => {
+  it('從未同意 → none；帶目前版本、說明文字、enforced（恆 true，舊版 client 相容）', async () => {
     await clearEvents();
     const res = await get(OTHER);
     expect(res.status).toBe(200);
@@ -89,7 +88,6 @@ describe('GET /api/account/ai-data-consent', () => {
     expect(b).toMatchObject({ status: 'none', currentVersion: V, acceptedVersion: null, acceptedAt: null, enforced: true });
     expect(b.text.version).toBe(V);
     expect(typeof b.text.title).toBe('string');
-    expect((await body(await get(OTHER, apiOff))).enforced).toBe(false);
   });
 });
 
@@ -258,27 +256,37 @@ describe.each(ENTRIES)('受管制入口：$name', (entry) => {
     expect(await entry.count()).toBeGreaterThan(before);
   };
 
-  it('owner 自己送、沒同意 → 403 AI_CONSENT_REQUIRED（status none），不建立 request', async () => {
+  it('旅伴自己沒同意（none／withdrawn／stale）但 owner 有效 → 成功（旅伴免同意）', async () => {
+    await clearEvents();
+    await accept(OWNER);
+    await allowed(COLLAB); // none
+    await accept(COLLAB); await withdraw(COLLAB);
+    await allowed(COLLAB); // withdrawn
+    await clearEvents();
+    await accept(OWNER); await seedEvent(COLLAB, 'ai-data-v0', 'accepted');
+    await allowed(COLLAB); // stale
+  });
+  it('旅伴送出、owner 沒有有效同意（none／stale／withdrawn）→ 403 AI_CONSENT_OWNER_REQUIRED，不建立 request，即使旅伴自己有同意', async () => {
+    await clearEvents();
+    await accept(COLLAB);
+    await blockedWithoutRows(COLLAB, 'AI_CONSENT_OWNER_REQUIRED', 'none');
+    await seedEvent(OWNER, 'ai-data-v0', 'accepted');
+    await blockedWithoutRows(COLLAB, 'AI_CONSENT_OWNER_REQUIRED', 'stale');
+    await accept(OWNER); await withdraw(OWNER);
+    await blockedWithoutRows(COLLAB, 'AI_CONSENT_OWNER_REQUIRED', 'withdrawn');
+  });
+  it('雙方都沒同意 → 回 AI_CONSENT_OWNER_REQUIRED（缺的是 owner，旅伴不用同意）', async () => {
+    await clearEvents();
+    await blockedWithoutRows(COLLAB, 'AI_CONSENT_OWNER_REQUIRED', 'none');
+  });
+  it('owner 自己送：沒同意回 AI_CONSENT_REQUIRED（不是 OWNER_REQUIRED）', async () => {
     await clearEvents();
     await blockedWithoutRows(OWNER, 'AI_CONSENT_REQUIRED', 'none');
   });
-  it('owner 自己送、撤回／舊版 → status withdrawn／stale', async () => {
-    await clearEvents();
-    await accept(OWNER); await withdraw(OWNER);
-    await blockedWithoutRows(OWNER, 'AI_CONSENT_REQUIRED', 'withdrawn');
-    await clearEvents();
-    await seedEvent(OWNER, 'ai-data-v0', 'accepted');
-    await blockedWithoutRows(OWNER, 'AI_CONSENT_REQUIRED', 'stale');
-  });
-  it('旅伴（共編者）直接放行：自己沒同意、owner 也沒同意都能送', async () => {
-    await clearEvents();
-    await allowed(COLLAB);
-    await accept(OWNER); await withdraw(OWNER);
-    await allowed(COLLAB);
-  });
-  it('owner 同意後可送出', async () => {
+  it('owner 有效 → owner 與旅伴都成功', async () => {
     await clearEvents();
     await accept(OWNER);
+    await allowed(COLLAB);
     await allowed(OWNER);
   });
   it('撤回後新請求立即被擋；重新同意後恢復', async () => {
@@ -297,39 +305,23 @@ describe.each(ENTRIES)('受管制入口：$name', (entry) => {
     expect(res.status).toBe(403);
     expect(((await res.json()) as any).error.code).toBe('PERM_DENIED');
   });
-  it('旗標關閉：沒有任何同意也照常運作（行為與現況相同）', async () => {
+  it('服務 token（無 userId）不套用閘門', async () => {
     await clearEvents();
-    await allowed(COLLAB, apiOff);
-    await allowed(OWNER, apiOff);
-  });
-  it('旗標寫成非 true 的值（false／空字串）等同關閉', async () => {
-    await clearEvents();
-    for (const v of ['false', '', '0']) await allowed(OWNER, createApi({ env: mockEnv(db, { AI_CONSENT_ENFORCED: v }) }));
-  });
-  it('服務 token（無 userId）不套用閘門：行為與旗標關閉時相同', async () => {
-    await clearEvents();
-    const as = async (api: Api) => {
-      const r = await api.request('POST', entry.path, { bearer: companion, json: { tripId: TRIP, message: 'x' } });
-      return { status: r.status, code: ((await r.json()) as any)?.error?.code };
-    };
-    const on = await as(apiOn);
-    expect(on.code).not.toMatch(/^AI_CONSENT/);
-    expect(on).toEqual(await as(apiOff));
+    {
+      const r = await apiOn.request('POST', entry.path, { bearer: companion, json: { tripId: TRIP, message: 'x' } });
+      expect(((await r.json()) as any)?.error?.code ?? '').not.toMatch(/^AI_CONSENT/);
+    }
   });
 });
 
 describe('assertAiConsent（共用模組）', () => {
-  const env = (flag?: string) => mockEnv(db, { AI_CONSENT_ENFORCED: flag });
+  const env = () => mockEnv(db);
   it('服務 token／無 userId 的 auth 直接放行，連 DB 都不查', async () => {
     const boom = { prepare: () => { throw new Error('不應查 DB'); } } as unknown as D1Database;
     for (const auth of [
       { email: 'service:x', userId: null, isServiceToken: true },
       { email: 'x@y.z', userId: null, isServiceToken: false },
-    ]) await expect(assertAiConsent({ ...env('true'), DB: boom }, auth, TRIP)).resolves.toBeUndefined();
-  });
-  it('旗標關閉時不查 DB', async () => {
-    const boom = { prepare: () => { throw new Error('不應查 DB'); } } as unknown as D1Database;
-    await expect(assertAiConsent({ ...env(), DB: boom }, { email: 'a@b.c', userId: 'u', isServiceToken: false }, TRIP)).resolves.toBeUndefined();
+    ]) await expect(assertAiConsent({ ...env(), DB: boom }, auth, TRIP)).resolves.toBeUndefined();
   });
 });
 

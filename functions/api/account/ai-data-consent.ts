@@ -14,13 +14,13 @@ import { requireAccountActor } from './_accountActor';
 import { AppError } from '../_errors';
 import { parseJsonBody, rawJson } from '../_utils';
 import { updateRequest } from '../_requestTermination';
-import { currentConsentText, getConsentState, isConsentEnforced, isConsentTextComplete, recordAccepted, recordWithdrawn } from '../_aiDataConsent';
+import { currentConsentText, getConsentState, isConsentTextComplete, recordAccepted, recordWithdrawn } from '../_aiDataConsent';
 import { CURRENT_CONSENT_VERSION } from '../_aiDataConsentText';
 import type { Env } from '../_types';
 
 async function stateResponse(env: Env, userId: string): Promise<Response> {
   const state = await getConsentState(env.DB, userId);
-  return rawJson({ ...state, text: currentConsentText(), enforced: isConsentEnforced(env) });
+  return rawJson({ ...state, text: currentConsentText(), enforced: true /* 舊版 client 相容：一律強制 */ });
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {

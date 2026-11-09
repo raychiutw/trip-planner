@@ -8,7 +8,7 @@
  * ⚠️ 舊入口與新 api 各有一份，文字與版本號必須一致（web／Flutter 只顯示 server 回的內容）；改文案時兩個 repo 同步修改。
  *
  * - 責任人、聯絡信箱、處理方條款連結三處是**待填占位符**（{{...}}）。只要還有占位符，isConsentTextComplete() 就是 false，
- *   旗標 AI_CONSENT_ENFORCED 開了也不會強制（見 _aiDataConsent.ts）。owner 填妥後以 PR 取代占位符。
+ *   此時無法記錄同意（POST 回 AI_CONSENT_NOT_READY），使用者會被擋在 AI 外面。owner 填妥後以 PR 取代占位符。
  */
 
 export interface ConsentSection {
@@ -40,7 +40,7 @@ export const CONSENT_TEXTS: Record<string, ConsentText> = {
           '送出要求的人在聊天中輸入的文字，以及送出者的顯示名稱（不含 email）。',
           '被要求處理的那一個行程的內容：天數與日期、景點與店家名稱、備註、預約文字、交通方式與時間。',
           '不會交給 AI：密碼、登入憑證、帳號 email、其他行程。',
-          '行程屬於它的擁有者：旅伴在這個行程送出的要求，也會把行程內容交給 AI 處理，旅伴不需要另外同意。',
+          '行程屬於它的擁有者：由擁有者同意；擁有者同意後，旅伴在這個行程送出的要求也會交給 AI 處理，旅伴自己不需要另外同意。',
         ],
       },
       {

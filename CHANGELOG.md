@@ -11,7 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `typedApi`（`src/lib/api/typed.ts`）：契約型別的 typed client，傳輸與錯誤語意沿用 `apiFetch`；變更密碼、刪除帳號、更新顯示名稱三處已改用。
 
 ### Fixed
-- **共編者可直接使用 AI 聊天，同意鈕改為「同意」**：AI 資料同意只在行程擁有者自己送出時檢查，旅伴（共編者）不需同意、擁有者未同意也能用（入口閘門與 mint 同步放寬，ADR-0012 修訂，同意文案同步）；移除「暫時無法使用 AI 助理」畫面；同意鈕「同意並繼續」縮短為「同意」，右上角不再擠。
+- **同意鈕改為「同意」；旅伴（共編者）免自己同意，擁有者同意後即可直接用 AI 聊天**：AI 資料同意以擁有者為準——擁有者尚未同意時，旅伴送出會回 `AI_CONSENT_OWNER_REQUIRED` 並提示轉達擁有者；擁有者同意後旅伴不需任何同意。入口閘門與 mint 同步（ADR-0012 修訂）。
 - **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。
 
 ### Removed
@@ -19,6 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **帳號刪除只走密碼確認**：沒有密碼身分的帳號 fail-closed（不提供輸入欄、不送 DELETE，顯示「此帳號沒有設定密碼，無法在此刪除帳號」）；ADR-0009 標為已被取代。`contracts/openapi.json` 與 `schema.d.ts` 同步到 production 現況（117 → 114 條路徑）。
 
 ### Changed
+- **移除 `AI_CONSENT_ENFORCED` 旗標：AI 資料同意一律強制**：沒有有效同意就不能用 AI；說明文字還有待填占位符時，使用者無法同意（POST 回 `AI_CONSENT_NOT_READY`），AI 入口會一律被擋，所以上線前必須先填妥文案。`GET /api/account/ai-data-consent` 仍回 `enforced: true` 給舊版 App 相容。
 - **移除新 api 登入旗標 `VITE_NEW_API_AUTH`：網站只走新認證（尚未部署，切換日期待定）**：登入（帳密與 Google）、登出與所有 `/api` 請求一律是 PKCE＋DPoP、access token 只放記憶體、refresh 輪替、SSE ticket；`.env.production` 的 `VITE_API_BASE_URL` 指向新 api production。舊的同源 cookie 登入／登出、`/api/oauth/login/google` 連結、cookie 的 SSE（`withCredentials`）與帳號刪除的舊重新驗證導向都已刪除。部署這一版後**所有人需要重新登入一次**；回切要重新部署前一版 web（旗標已不存在，無法用設定回切）。
 - `.env.local.example` 補 `VITE_API_BASE_URL`：本機開發現在也必須指定新 api 的網址。
 

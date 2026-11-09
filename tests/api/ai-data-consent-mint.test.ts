@@ -1,9 +1,9 @@
 /**
  * POST /api/oauth/mint-restricted 的 AI 資料同意檢查（ADR-0012 補強）。
  * 入口閘門只擋「建立請求」；這裡驗證 agent 取得 owner 權限 token 前再檢查一次：
- * 涵蓋旗標啟用前已排隊的請求、撤回與建立請求同時發生漏網的請求。
+ * 涵蓋旗標移除前已排隊的請求、撤回與建立請求同時發生漏網的請求。
  *
- * Value: protects=旗標開且文案填妥時，owner 或一般使用者送出者缺有效資料同意就不簽發 token、請求被終結並留 audit；服務／系統送出的請求只看 owner; fails_when=拿掉 mint 檢查、略過 owner 或送出者其中一方、旗標關閉時仍擋; why_new=oauth-mint-restricted-endpoint.test 不涵蓋資料同意; seam=none; no_claim=agent 端 spawn 行為（mint 失敗不 spawn 在 agent repo）
+ * Value: protects=owner 缺有效資料同意就不簽發 token、請求被終結並留 audit（旅伴送出不需自己同意，旅伴有沒有同意都不影響）; fails_when=拿掉 mint 檢查、略過 owner、改成要求旅伴也同意; why_new=oauth-mint-restricted-endpoint.test 不涵蓋資料同意; seam=none; no_claim=agent 端 spawn 行為（mint 失敗不 spawn 在 agent repo）
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
@@ -24,7 +24,6 @@ const originalTexts = { ...CONSENT_TEXTS };
 
 let db: D1Database;
 let apiOn: Api;
-let apiOff: Api;
 let ownerId: string;
 const uid = userIdFor;
 
@@ -38,8 +37,8 @@ const seedRequest = async (submittedBy: string, status = 'open') =>
 const reqState = (id: number) => db.prepare('SELECT status, terminal_reason, reply FROM trip_requests WHERE id = ?').bind(id).first<{ status: string; terminal_reason: string | null; reply: string | null }>();
 const tokens = async () => (await db.prepare("SELECT id FROM oauth_models WHERE name = 'AccessToken' AND json_extract(payload, '$.user_id') = ?").bind(ownerId).all()).results;
 const audit = async () => (await db.prepare('SELECT outcome, failure_reason, metadata FROM auth_audit_log WHERE user_id = ? ORDER BY id').bind(ownerId).all<{ outcome: string; failure_reason: string | null; metadata: string }>()).results;
-const mint = (id: number, api: Api = apiOn) =>
-  api.request('POST', '/api/oauth/mint-restricted', { json: { request_id: id }, headers: { Authorization: `Bearer ${SECRET}` } });
+const mint = (id: number) =>
+  apiOn.request('POST', '/api/oauth/mint-restricted', { json: { request_id: id }, headers: { Authorization: `Bearer ${SECRET}` } });
 const clean = async () => {
   await clearEvents();
   await db.prepare("DELETE FROM oauth_models WHERE name IN ('Consent','AccessToken') AND json_extract(payload, '$.user_id') = ?").bind(ownerId).run();
@@ -50,8 +49,7 @@ const clean = async () => {
 beforeAll(async () => {
   for (const [k, v] of Object.entries(originalTexts)) CONSENT_TEXTS[k] = JSON.parse(fill(JSON.stringify(v)));
   db = await createTestDb();
-  apiOn = createApi({ env: mockEnv(db, { TRIPLINE_API_SECRET: SECRET, AI_CONSENT_ENFORCED: 'true' }) });
-  apiOff = createApi({ env: mockEnv(db, { TRIPLINE_API_SECRET: SECRET }) });
+  apiOn = createApi({ env: mockEnv(db, { TRIPLINE_API_SECRET: SECRET }) });
   ownerId = (await seedTrip(db, { id: TRIP, owner: OWNER })).ownerUserId;
   await seedUser(db, COLLAB);
 }, 30000);
@@ -65,7 +63,7 @@ afterAll(async () => {
 });
 
 describe('mint-restricted × AI 資料同意', () => {
-  it('owner 與送出者都 valid → 簽發 token', async () => {
+  it('owner valid、旅伴送出（旅伴也同意）→ 簽發 token', async () => {
     await seedEvent(OWNER, 'accepted'); await seedEvent(COLLAB, 'accepted');
     const id = await seedRequest(COLLAB);
     const res = await mint(id);
@@ -74,7 +72,7 @@ describe('mint-restricted × AI 資料同意', () => {
     expect((await reqState(id))!.status).toBe('open');
   });
 
-  it('owner 沒有資料同意（旗標啟用前就排隊的請求）→ 403、不簽發、請求被終結為 needs_consent 並留 audit', async () => {
+  it('owner 沒有資料同意（旗標移除前就排隊的請求）→ 403、不簽發、請求被終結為 needs_consent 並留 audit', async () => {
     const id = await seedRequest(OWNER);
     const res = await mint(id);
     expect(res.status).toBe(403);
@@ -94,10 +92,26 @@ describe('mint-restricted × AI 資料同意', () => {
     expect(await tokens()).toHaveLength(0);
   });
 
-  it('旅伴送出：旅伴沒同意、owner 也沒同意 → 仍簽發（共編者直接可用）', async () => {
+  it('owner 有效、旅伴送出者沒同意 → 簽發（旅伴免同意）', async () => {
+    await seedEvent(OWNER, 'accepted');
     const id = await seedRequest(COLLAB);
     expect((await mint(id)).status).toBe(200);
     expect(await tokens()).toHaveLength(1);
+    expect((await reqState(id))!.status).toBe('open');
+  });
+
+  it('owner 沒同意、旅伴有同意 → 不簽發，缺的是 owner（旅伴自己的同意不能代替 owner）', async () => {
+    await seedEvent(COLLAB, 'accepted');
+    const id = await seedRequest(COLLAB);
+    expect((await mint(id)).status).toBe(403);
+    expect(await tokens()).toHaveLength(0);
+    expect(JSON.parse((await audit()).at(-1)!.metadata).missing).toBe('owner');
+    expect(await reqState(id)).toMatchObject({ status: 'failed', terminal_reason: 'needs_consent' });
+  });
+
+  it('旅伴是舊版同意（stale）、owner valid → 仍簽發', async () => {
+    await seedEvent(OWNER, 'accepted'); await seedEvent(COLLAB, 'accepted', 'ai-data-v0');
+    expect((await mint(await seedRequest(COLLAB))).status).toBe(200);
   });
 
   it('processing 狀態的請求（MINTABLE）缺 owner 同意 → 同樣 403、終結', async () => {
@@ -105,10 +119,6 @@ describe('mint-restricted × AI 資料同意', () => {
     expect((await mint(id)).status).toBe(403);
     expect(await tokens()).toHaveLength(0);
     expect(await reqState(id)).toMatchObject({ status: 'failed', terminal_reason: 'needs_consent' });
-  });
-
-  it('送出者 email 大小寫不同（legacy 未正規化）仍對得上旅伴使用者 → 放行', async () => {
-    expect((await mint(await seedRequest(COLLAB.toUpperCase()))).status).toBe(200);
   });
 
   it('submitted_by 為空字串 → 視為非使用者，只看 owner（owner valid → 簽發）', async () => {
@@ -126,11 +136,6 @@ describe('mint-restricted × AI 資料同意', () => {
   it('服務／系統送出的請求（submitted_by 不是使用者）只看 owner：owner 有效 → 簽發', async () => {
     await seedEvent(OWNER, 'accepted');
     const res = await mint(await seedRequest('service:daily-check'));
-    expect(res.status).toBe(200);
-  });
-
-  it('旗標關閉：沒有任何同意也照常簽發（行為與現況相同）', async () => {
-    const res = await mint(await seedRequest(COLLAB), apiOff);
     expect(res.status).toBe(200);
   });
 

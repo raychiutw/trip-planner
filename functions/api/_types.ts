@@ -24,8 +24,6 @@ export interface Env {
    */
   PUBLIC_ORIGIN?: string;
   DEV_MOCK_EMAIL?: string;
-  /** AI 資料同意閘門旗標（ADR-0012）：'true' 且目前版本文字已填妥才強制；未設＝關。 */
-  AI_CONSENT_ENFORCED?: string;
   TRIPLINE_API_URL?: string;
   TRIPLINE_API_SECRET?: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
