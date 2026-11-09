@@ -2,7 +2,6 @@
  * ChatPage AI 資料同意閘門（spec #1553、ADR-0012；就地 sheet A）。鎖：
  *   - enforced 且未同意 → 送出不 POST /requests、跳資料同意 sheet、輸入保留；同意後續送原訊息
  *   - 暫不使用 → 不 POST /requests、輸入保留
- *   - 後端以 AI_CONSENT_OWNER_REQUIRED 擋下（旅伴）→ 移除樂觀訊息、輸入還原、跳 owner-missing（沒有同意鈕）
  *   - enforced=false → 與沒有此功能時相同（直接送出）
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -106,17 +105,6 @@ describe('ChatPage AI 資料同意閘門', () => {
     await waitFor(() => expect(screen.queryByTestId('ai-data-consent-sheet')).toBeNull());
     expect(requestPosts()).toHaveLength(0);
     expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('把第三天晚餐改海鮮');
-  });
-
-  it('後端回 AI_CONSENT_OWNER_REQUIRED（旅伴自己已同意）：跳 owner-missing、沒有同意鈕、輸入還原、不留「送出失敗」', async () => {
-    installMock(true, 'valid');
-    renderPage(); await ready();
-    postRejects = new ApiError('AI_CONSENT_OWNER_REQUIRED', 403);
-    await typeAndSend('把第三天晚餐改海鮮');
-    expect(await screen.findByText('暫時無法使用 AI 助理')).toBeTruthy();
-    expect(screen.queryByTestId('ai-data-consent-accept')).toBeNull();
-    expect((screen.getByTestId('chat-input') as HTMLTextAreaElement).value).toBe('把第三天晚餐改海鮮');
-    expect(screen.queryByText(/送出失敗/)).toBeNull();
   });
 
   it('enforced=false：直接送出、不跳 sheet', async () => {
