@@ -141,10 +141,6 @@ describe('web 呼叫的 api 端點 ↔ contracts/openapi.json', () => {
 // 例外只能在這裡列：key 是檔案、max 是目前還在的直接呼叫數（只能減不能增）、reason 說明為何不能轉 typedApi。
 // 遷移掉一處就要把 max 調低（降到 0 就刪掉該列），否則「白名單過期」那一條會轉紅。
 const DIRECT_ALLOWED: Record<string, { max: number; reason: string }> = {
-  // 14 個 helper 共用一個 `call(path, init)`，路徑由 helper 參數組成、body 是呼叫端傳入的自由物件。改走 typedApiRaw 需讓 body 符合契約型別，
-  // 目前 tsc 會擋下 9 處不符（entryPoisVersion 契約是 string 而呼叫端傳 number、add-to-trip 的 startTime／endTime 契約必填而 UI 可省略、
-  // source 契約是列舉而呼叫端傳任意 string 等）：每一處都要決定「改 UI 還是改契約」，屬行為／契約決策，不在純遷移範圍（見 PR 說明）。路徑仍由本檔的樣板比對守住。
-  'src/lib/entryMutations.ts': { max: 1, reason: 'apiFetchRaw：動態路徑、自由形狀 body 與契約型別不符（9 處），遷移前須先決定 UI／契約誰改' },
 };
 
 const directCounts = (() => {

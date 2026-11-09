@@ -74,7 +74,7 @@ beforeEach(() => {
     if (String(path).includes('/entries/')) return Promise.resolve({ id: 42, dayId: 71 });
     return Promise.resolve({});
   });
-  apiFetchRawMock.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}), text: () => Promise.resolve('') });
+  apiFetchRawMock.mockImplementation(() => Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } })));
 });
 
 describe('EntryActionPage — move/copy 車程重算 scope', () => {
@@ -122,12 +122,12 @@ describe('EntryActionPage — move/copy 車程重算 scope', () => {
     fireEvent.click(confirm);
     fireEvent.click(confirm);
     expect(apiFetchRawMock).toHaveBeenCalledTimes(1);
-    resolveWrite({ ok: true, status: 200, json: () => Promise.resolve({}), text: () => Promise.resolve('') });
+    resolveWrite(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledTimes(1));
   });
 
   it('409 保留選擇與錯誤，可重新提交', async () => {
-    apiFetchRawMock.mockResolvedValueOnce({ ok: false, status: 409, text: () => Promise.resolve('{"error":{"message":"目標日期衝突"}}') });
+    apiFetchRawMock.mockResolvedValueOnce(new Response('{"error":{"message":"目標日期衝突"}}', { status: 409 }));
     renderPage('move');
     fireEvent.click(await screen.findByTestId('entry-action-day-2'));
     fireEvent.click(screen.getByTestId('entry-action-confirm'));

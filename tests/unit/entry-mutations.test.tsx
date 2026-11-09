@@ -247,3 +247,57 @@ describe('#1261 新增動詞', () => {
     expect(L.events).toEqual([{ tripId: 't1', entryId: 91, dayNum: 2 }]);
   });
 });
+
+describe('錯誤 body 的對外形狀（遷移 typedApiRaw 前後一致）', () => {
+  it('空 body 的 5xx → message 空字串、無 code／payload，仍 emit resync', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response(null, { status: 502 }));
+    const L = listen();
+    const r = await deleteEntry('t1', 7, 2);
+    L.off();
+    expect(r).toEqual({ ok: false, status: 502, message: '', code: undefined, payload: undefined });
+    expect(L.events).toEqual([{ tripId: 't1', entryId: 7, dayNum: 2 }]);
+  });
+
+  it('非 JSON 文字 body → message 取前 200 字、無 code／payload', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response('x'.repeat(300), { status: 500 }));
+    const r = await deleteEntry('t1', 7, 2);
+    expect(r).toEqual({ ok: false, status: 500, message: 'x'.repeat(200), code: undefined, payload: undefined });
+  });
+
+  it('error 為字串（{ error: "STALE_ENTRY" }）→ code 取該字串、message 空、payload 為整個 body', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'STALE_ENTRY' }), { status: 409 }));
+    const r = await deleteEntry('t1', 7, 2);
+    expect(r).toEqual({ ok: false, status: 409, message: '{"error":"STALE_ENTRY"}', code: 'STALE_ENTRY', payload: { error: 'STALE_ENTRY' } });
+  });
+
+  it('409 帶 conflictWith → payload 原樣保留，message 退到 detail', async () => {
+    const body = { error: { code: 'TIME_CONFLICT', detail: '時段衝突' }, conflictWith: { entryId: 3 } };
+    apiFetchRawMock.mockResolvedValueOnce(new Response(JSON.stringify(body), { status: 409 }));
+    const r = await deleteEntry('t1', 7, 2);
+    expect(r).toEqual({ ok: false, status: 409, message: '時段衝突', code: 'TIME_CONFLICT', payload: body });
+  });
+
+  it('2xx 但 body 不是 JSON → 仍算成功（data undefined），照常 emit 與重算', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const L = listen();
+    const r = await deleteEntry('t1', 7, 2);
+    L.off();
+    expect(r.ok).toBe(true);
+    expect(recomputeMock).toHaveBeenCalledWith('t1', 2);
+    expect(L.events).toEqual([{ tripId: 't1', entryId: 7, dayNum: 2 }]);
+  });
+
+  it('204 無內容 → 成功', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect((await deleteEntry('t1', 7, 2)).ok).toBe(true);
+  });
+
+  it('dayNum 為 null 時路徑維持 /days/null/entries、emit 不帶 dayNum', async () => {
+    apiFetchRawMock.mockResolvedValueOnce(res(201, { id: 1 }));
+    const L = listen();
+    await createEntry('t1', null, { name: 'X' });
+    L.off();
+    expect((apiFetchRawMock.mock.calls[0] as [string])[0]).toBe('/trips/t1/days/null/entries');
+    expect(L.events).toEqual([{ tripId: 't1', entryId: 1 }]);
+  });
+});

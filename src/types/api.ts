@@ -317,7 +317,7 @@ export interface PoiFavorite {
   favoritedAt: string;
   note?: string | null;
   // JOIN pois 欄位（GET endpoint 會回）
-  poiName?: string;
+  poiName: string;
   poiAddress?: string | null;
   poiLat?: number | null;
   poiLng?: number | null;

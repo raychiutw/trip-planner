@@ -327,8 +327,10 @@ export default function AddPoiFavoriteToTripPage() {
     if (!favorite || !tripId || dayNum === null || dayStatus !== 'ready' || submitting) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
     if (endTime && !TIME_RE.test(endTime)) return false;
+    // 收藏快速路徑的後端要求 startTime／endTime 必填（缺了回 400）；direct mode 走建立 entry，時間可省
+    if (!isDirectMode && (!startTime || !endTime)) return false;
     return true;
-  }, [favorite, tripId, dayNum, dayStatus, startTime, endTime, submitting]);
+  }, [favorite, tripId, dayNum, dayStatus, startTime, endTime, submitting, isDirectMode]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit || dayNum === null) return;
@@ -351,10 +353,8 @@ export default function AddPoiFavoriteToTripPage() {
         if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       } else {
         // #1261：收藏 fast-path 也走 module —— 以前這條沒重算車程。
-        const r = await addFavoriteToTrip(favoriteId!, tripId, dayNum, {
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-        });
+        // canSubmit 已保證兩欄非空
+        const r = await addFavoriteToTrip(favoriteId!, tripId, dayNum, { startTime, endTime });
         if (!r.ok) throw new ApiError((r.code as ErrorCodeType | undefined) ?? 'SYS_INTERNAL', r.status, r.message, r.payload);
       }
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
@@ -524,7 +524,7 @@ export default function AddPoiFavoriteToTripPage() {
                 onChange={setStartTime}
                 ariaLabel="開始時間"
               />
-              <span className="tp-form-help">可空 — 依景點類型自動推算</span>
+              {isDirectMode && <span className="tp-form-help">可空 — 依景點類型自動推算</span>}
             </div>
 
             <div className="tp-form-field" data-testid="favorites-add-to-trip-end">
@@ -535,8 +535,12 @@ export default function AddPoiFavoriteToTripPage() {
                 onChange={setEndTime}
                 ariaLabel="結束時間"
               />
-              <span className="tp-form-help">可空 — 依停留時間自動推算</span>
+              {isDirectMode && <span className="tp-form-help">可空 — 依停留時間自動推算</span>}
             </div>
+
+            {!isDirectMode && (!startTime || !endTime) && (
+              <p className="tp-form-help" data-testid="favorites-add-to-trip-time-required" role="status">請選擇開始與結束時間</p>
+            )}
           </div>
 
           <div className="tp-form-actions">

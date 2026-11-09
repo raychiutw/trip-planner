@@ -211,7 +211,7 @@ describe('TimelineRail — click-to-edit note', () => {
   });
 
   it('ESC closes edit mode (v2.33.108: 已 auto-save commit，不再 revert)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
@@ -225,7 +225,7 @@ describe('TimelineRail — click-to-edit note', () => {
   });
 
   it('Cmd+Enter saves, calls PATCH per-POI note endpoint (master poiId)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
@@ -242,7 +242,7 @@ describe('TimelineRail — click-to-edit note', () => {
   });
 
   it('onBlur triggers auto-save PATCH (v2.33.108)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
@@ -254,7 +254,7 @@ describe('TimelineRail — click-to-edit note', () => {
   });
 
   it('successful save dispatches tp-entry-updated event', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
     const listener = vi.fn();
     window.addEventListener('tp-entry-updated', listener);
@@ -401,7 +401,7 @@ describe('TimelineRail — drag reorder contract', () => {
 
 describe('TimelineRail — drag reorder runtime', () => {
   it('Day 同列拖動：drag end 後 PATCH batch 一次送所有改變位置的 entry', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    const fetchMock = vi.fn().mockImplementation(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
 
     const events: TimelineEntryData[] = [
