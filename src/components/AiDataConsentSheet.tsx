@@ -2,9 +2,10 @@
  * AiDataConsentSheet — 就地「AI 資料同意」底部 sheet（spec #1553、ADR-0012；已簽核變體 A）。
  * 使用者在原畫面碰到受管制入口被擋時出現，同意後由上層接續原操作並保留輸入。
  * 與 AiConsentSheet（AI 操作授權）是兩個獨立概念。純呈現：狀態與 POST 都在上層（useAiDataConsent）。
- * 旅伴（共編者）送出不需同意，只有行程擁有者自己送出時才會被擋。
+ * mode='owner-missing'：旅伴送出但行程擁有者未同意——沒有「同意」動作（那是 owner 的決定），只告知，
+ * 並給一句可複製的話讓旅伴轉達擁有者（A27 方案 B，不需後端）。
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSheetBehavior } from '../hooks/useSheetBehavior';
 import type { AiDataConsent } from '../hooks/useAiDataConsent';
@@ -30,6 +31,7 @@ export const CONSENT_STYLES = `
 .tp-dc-btn[disabled] { opacity: .5; cursor: default; }
 .tp-dc-keep, .tp-dc-ver { font-size: .8125rem; color: var(--color-muted); margin: 10px 0 0; }
 .tp-dc-ver { font-size: .75rem; margin-top: 6px; }
+.tp-dc-notice { margin: 0 0 8px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-accent-subtle); font-size: .875rem; line-height: 1.5; user-select: all; }
 .tp-dc-err { margin-top: 8px; font-size: .8125rem; color: var(--color-destructive); }
 `;
 
@@ -53,6 +55,7 @@ export function ConsentSections({ consent }: { consent: AiDataConsent }) {
 export interface AiDataConsentSheetProps {
   open: boolean;
   consent: AiDataConsent;
+  mode?: 'consent' | 'owner-missing';
   /** 被攔下、同意後會接續送出的訊息（有才顯示「已保留」提示） */
   message?: string;
   busy?: boolean;
@@ -61,10 +64,27 @@ export interface AiDataConsentSheetProps {
   onDecline: () => void;
 }
 
-export default function AiDataConsentSheet({ open, consent, message, busy = false, error = null, onAccept, onDecline }: AiDataConsentSheetProps) {
+/** 旅伴轉達給擁有者的那一句；路徑名稱要與帳號頁「AI 與資料」一致。 */
+export const OWNER_NOTICE = '我想用 Tripline 的 AI 排行程，請到 帳號設定 → AI 與資料 同意一下，謝謝！';
+
+export default function AiDataConsentSheet({ open, consent, mode = 'consent', message, busy = false, error = null, onAccept, onDecline }: AiDataConsentSheetProps) {
   const primaryRef = useRef<HTMLButtonElement>(null);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
   const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, onDecline, { initialFocusRef: primaryRef, canDismiss: !busy });
   if (!open || typeof document === 'undefined') return null;
+  const ownerMissing = mode === 'owner-missing';
+  const copyNotice = async () => {
+    try {
+      await navigator.clipboard.writeText(OWNER_NOTICE);
+      setCopyHint('已複製，可以貼給擁有者了');
+    } catch {
+      // 剪貼簿不可用（權限／非 https）：選取文字讓使用者自己複製
+      const el = noticeRef.current;
+      if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); }
+      setCopyHint('無法自動複製，請長按上面選取的文字，再選「拷貝」');
+    }
+  };
 
   return createPortal(
     <>
@@ -72,17 +92,33 @@ export default function AiDataConsentSheet({ open, consent, message, busy = fals
       <div ref={backdropRef} className="tp-dc-backdrop" role="presentation" onClick={busy ? undefined : onDecline}>
         <div ref={panelRef} tabIndex={-1} className="tp-dc-sheet" role="dialog" aria-modal="true" aria-labelledby="tp-dc-title"
           onClick={(e) => e.stopPropagation()} onKeyDown={handlePanelKeyDown} data-testid="ai-data-consent-sheet">
-          <h2 className="tp-dc-title" id="tp-dc-title">{consent.text.title}</h2>
-          <ConsentStatusBanner status={consent.status} />
-          <p className="tp-dc-lead">{consent.text.intro}</p>
-          <ConsentSections consent={consent} />
-          <div className="tp-dc-row">
-            <button type="button" className="tp-dc-btn" onClick={onDecline} disabled={busy} data-testid="ai-data-consent-decline">暫不使用</button>
-            <button ref={primaryRef} type="button" className="tp-dc-btn primary" onClick={onAccept} disabled={busy} data-testid="ai-data-consent-accept">{busy ? '處理中⋯' : '同意'}</button>
-          </div>
-          {message && <p className="tp-dc-keep" data-testid="ai-data-consent-keep">你輸入的內容已保留，同意後會自動接續送出</p>}
-          <div className="tp-dc-ver" data-testid="ai-data-consent-version">版本 {consent.currentVersion}</div>
-          {error && <p className="tp-dc-err" role="alert" data-testid="ai-data-consent-error">{error}</p>}
+          {ownerMissing ? (
+            <>
+              <h2 className="tp-dc-title" id="tp-dc-title">暫時無法使用 AI 助理</h2>
+              <div className="tp-dc-banner warn"><b>行程擁有者尚未同意 AI 資料處理。</b>這個行程的內容屬於擁有者，需要他同意後，AI 才能處理你的要求。</div>
+              <p className="tp-dc-lead">你的訊息已保留，沒有送出。把下面這句傳給擁有者，請他到「帳號設定 → AI 與資料」同意：</p>
+              <p ref={noticeRef} className="tp-dc-notice" data-testid="ai-data-consent-owner-notice">{OWNER_NOTICE}</p>
+              <div className="tp-dc-row">
+                <button type="button" className="tp-dc-btn" onClick={onDecline} data-testid="ai-data-consent-decline">知道了</button>
+                <button ref={primaryRef} type="button" className="tp-dc-btn primary" onClick={copyNotice} data-testid="ai-data-consent-copy">複製這句話</button>
+              </div>
+              <p className="tp-dc-keep" role="status">{copyHint}</p>
+            </>
+          ) : (
+            <>
+              <h2 className="tp-dc-title" id="tp-dc-title">{consent.text.title}</h2>
+              <ConsentStatusBanner status={consent.status} />
+              <p className="tp-dc-lead">{consent.text.intro}</p>
+              <ConsentSections consent={consent} />
+              <div className="tp-dc-row">
+                <button type="button" className="tp-dc-btn" onClick={onDecline} disabled={busy} data-testid="ai-data-consent-decline">暫不使用</button>
+                <button ref={primaryRef} type="button" className="tp-dc-btn primary" onClick={onAccept} disabled={busy} data-testid="ai-data-consent-accept">{busy ? '處理中⋯' : '同意'}</button>
+              </div>
+              {message && <p className="tp-dc-keep" data-testid="ai-data-consent-keep">你輸入的內容已保留，同意後會自動接續送出</p>}
+              <div className="tp-dc-ver" data-testid="ai-data-consent-version">版本 {consent.currentVersion}</div>
+              {error && <p className="tp-dc-err" role="alert" data-testid="ai-data-consent-error">{error}</p>}
+            </>
+          )}
         </div>
       </div>
     </>,
