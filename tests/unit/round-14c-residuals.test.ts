@@ -20,7 +20,7 @@ const read = (p: string) => readFileSync(path.resolve(__dirname, '../..', p), 'u
 const HEADERS = read('public/_headers');
 const MIG_0071 = read('migrations/0071_audit_log_user_id.sql');
 const AUDIT_HELPER = read('functions/api/_auth_audit.ts');
-const VITE_CONFIG = read('vite.config.ts');
+const SW_API_CACHE = read('scripts/sw-api-cache.mjs'); // #1645：規則由 vite.config.ts 抽到此處
 const MIDDLEWARE = read('functions/api/_middleware.ts');
 const ENV_TYPES = read('functions/api/_types.ts');
 const APP_SETTINGS = read('functions/api/_app_settings.ts');
@@ -101,10 +101,10 @@ describe('v2.33.62 #5 — recordAuthEvent env param + callers migrated', () => {
 });
 
 describe('v2.33.62 #6 — SW cacheWillUpdate plugin', () => {
-  it('vite.config 加 cacheWillUpdate 防 cross-user PII', () => {
-    expect(VITE_CONFIG).toMatch(/cacheWillUpdate: async/);
-    expect(VITE_CONFIG).toMatch(/request\.headers\.get\('Cookie'\)/);
-    expect(VITE_CONFIG).toMatch(/cc\.includes\('private'\)/);
+  it('SW 規則加 cacheWillUpdate 防 cross-user PII', () => {
+    expect(SW_API_CACHE).toMatch(/const cacheWillUpdate = async/);
+    expect(SW_API_CACHE).toMatch(/request\.headers\.get\('Cookie'\)/);
+    expect(SW_API_CACHE).toMatch(/cc\.includes\('private'\)/);
   });
 });
 
