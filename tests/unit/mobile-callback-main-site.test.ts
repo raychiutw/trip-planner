@@ -93,7 +93,6 @@ describe('新 callback 路徑不與 SPA／Functions 衝突', () => {
 describe('grep 守門：不得新增對舊 mobile-callback 主機的引用', () => {
   // 既有引用的「待清理清單」（舊 callback 在過渡期仍須存在；刪除是另案）。清掉一處就從這裡移除，不得新增。
   const PENDING_CLEANUP = [
-    'functions/api/_mobileOAuth.ts',
     'tests/unit/oauth-authorize-page.test.tsx',
     'wrangler.toml',
   ];

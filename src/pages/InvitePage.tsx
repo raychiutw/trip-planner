@@ -18,7 +18,9 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
-import { normalizeEmail } from '../server/email-utils';
+
+/** 比對 email 用：trim + NFKC + lowercase（與 api 端的正規化規則一致）。 */
+const normalizeEmail = (email: string): string => email.trim().normalize('NFKC').toLowerCase();
 
 const SCOPED_STYLES = `
 .tp-invite-shell {

@@ -11,7 +11,6 @@ import path from 'node:path';
 
 const read = (rel: string) => readFileSync(path.resolve(__dirname, '../../', rel), 'utf8');
 const EDIT_ENTRY = read('src/pages/EditEntryPage.tsx');
-const BACKEND = read('functions/api/trips/[id]/entries/[eid]/pois/[poiId].ts');
 const ADD_STOP = read('src/pages/AddStopPage.tsx');
 const CHANGE_POI = read('src/pages/ChangePoiPage.tsx');
 const CHIP = read('src/components/trip/EditableCategoryChip.tsx');
@@ -108,14 +107,3 @@ describe('ChangePoiPage mode=new — search result editable category override', 
   });
 });
 
-describe('backend PATCH /pois/:poiId — poi_type contract', () => {
-  it('validates poi_type against the whitelist and reuses findOrCreatePoi', () => {
-    expect(BACKEND).toMatch(/ALLOWED_POI_TYPES/);
-    expect(BACKEND).toMatch(/findOrCreatePoi/);
-  });
-
-  it('re-points trip_entry_pois.poi_id rather than mutating the shared pois.type', () => {
-    expect(BACKEND).toMatch(/UPDATE trip_entry_pois SET poi_id/);
-    expect(BACKEND).not.toMatch(/UPDATE pois SET type/);
-  });
-});

@@ -3,7 +3,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildPoiNote, priceLevelSymbol } from '../../src/lib/poiNote';
-import { detectGarbledText } from '../../functions/api/_validate';
 
 describe('priceLevelSymbol', () => {
   it('映射 Google 價位 enum → ￥ 符號', () => {
@@ -48,23 +47,5 @@ describe('buildPoiNote', () => {
 
   it('營業時間但無價位無地址 → 只出營業', () => {
     expect(buildPoiNote({ hoursRaw: '24 時間' })).toBe('營業 24 小時');
-  });
-});
-
-describe('buildPoiNote — 價位符號不觸發後端 garbled guard（回歸）', () => {
-  // 半形 ¥(U+00A5)×3+ 會踩 detectGarbledText 規則二 [U+0080-U+00FF]{3,}，導致
-  // EXPENSIVE / VERY_EXPENSIVE 景點 entry POST 400（code review 抓到）。改用全形
-  // ￥(U+FFE5) 後全 tier 不觸發 — 這裡用真的 detectGarbledText 鎖住。
-  const TIERS = [
-    'PRICE_LEVEL_FREE',
-    'PRICE_LEVEL_INEXPENSIVE',
-    'PRICE_LEVEL_MODERATE',
-    'PRICE_LEVEL_EXPENSIVE',
-    'PRICE_LEVEL_VERY_EXPENSIVE',
-  ];
-  it.each(TIERS)('%s 的備註不被判亂碼', (tier) => {
-    const note = buildPoiNote({ priceLevel: tier, address: '沖繩縣那霸市' });
-    expect(note).toBeTruthy();
-    expect(detectGarbledText(note as string)).toBe(false);
   });
 });

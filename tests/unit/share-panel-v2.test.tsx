@@ -11,7 +11,6 @@ const ROOT = join(__dirname, '..', '..');
 const MODAL = readFileSync(join(ROOT, 'src/components/share/ShareLinkModal.tsx'), 'utf8');
 const API = readFileSync(join(ROOT, 'src/lib/shareApi.ts'), 'utf8');
 const QR = readFileSync(join(ROOT, 'src/lib/shareQr.ts'), 'utf8');
-const SHAREID = readFileSync(join(ROOT, 'functions/api/trips/[id]/shares/[shareId].ts'), 'utf8');
 
 describe('A1 連結命名', () => {
   it('create form has a label input; cards show the label', () => {
@@ -26,10 +25,6 @@ describe('A2 編輯（同網址改區塊/期限）', () => {
     expect(MODAL).toMatch(/share-save-/);
     expect(MODAL).toMatch(/updateShare\(/);
     expect(API).toMatch(/export async function updateShare/);
-  });
-  it("backend PATCH 'update' edits only ACTIVE links (revoked/expired → 404)", () => {
-    expect(SHAREID).toMatch(/body\.action === 'update'/);
-    expect(SHAREID).toMatch(/revoked_at IS NULL AND \(expires_at IS NULL OR expires_at > \?\)/);
   });
 });
 

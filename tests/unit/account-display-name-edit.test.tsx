@@ -9,10 +9,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SRC = readFileSync(join(__dirname, '../../src/pages/AccountPage.tsx'), 'utf8');
-const BACKEND = readFileSync(
-  join(__dirname, '../../functions/api/account/profile.ts'),
-  'utf8',
-);
 
 describe('PR17 (v2.33.142) inline edit — modal 已拔', () => {
   it('無 showEditNameModal state / overlay testid / dialog className', () => {
@@ -99,20 +95,9 @@ describe('PR17 JSX render', () => {
     expect(SRC).toMatch(/<button[\s\S]+?className="tp-account-hero-name-edit"[\s\S]+?onClick=\{startEditName\}/);
   });
 
-  it('input maxLength 50 對齊 backend MAX_DISPLAY_NAME_LEN', () => {
-    expect(SRC).toMatch(/maxLength=\{50\}/);
-    expect(BACKEND).toMatch(/MAX_DISPLAY_NAME_LEN = 50/);
-  });
 
   it('input style class .tp-account-hero-name-input — font size/weight 對齊 hero-name 避免 jump', () => {
     expect(SRC).toMatch(/\.tp-account-hero-name-input \{[\s\S]*?font-size: var\(--font-size-title2\);[\s\S]*?font-weight: 800/);
   });
 });
 
-describe('PATCH /api/account/profile backend handler 未動', () => {
-  it('export onRequestPatch + auth + validation 三層仍在', () => {
-    expect(BACKEND).toMatch(/export const onRequestPatch/);
-    expect(BACKEND).toMatch(/requireAuth\(context\)/);
-    expect(BACKEND).toMatch(/MAX_DISPLAY_NAME_LEN = 50/);
-  });
-});
