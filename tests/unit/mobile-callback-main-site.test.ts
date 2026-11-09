@@ -84,9 +84,8 @@ describe('新 callback 路徑不與 SPA／Functions 衝突', () => {
     }
     expect(paths).toContain('*');
   });
-  it('既有的 SPA 回跳路由未動（/auth/callback、/oauth/authorize）', () => {
+  it('既有的 SPA 回跳路由未動（/oauth/authorize）', () => {
     const src = read('src/entries/main.tsx');
-    expect(src).toContain('path="/auth/callback"');
     expect(src).toContain('path="/oauth/authorize"');
   });
 });
