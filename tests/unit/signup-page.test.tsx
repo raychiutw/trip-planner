@@ -39,13 +39,10 @@ function fillForm({ email, password, name, consent = true }: {
 
 beforeEach(() => {
   navigateMock.mockClear();
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  vi.useRealTimers();
 });
 
 describe('SignupPage', () => {
@@ -69,8 +66,7 @@ describe('SignupPage', () => {
       ))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, message: 'sent' }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -96,8 +92,7 @@ describe('SignupPage', () => {
       }), { status: 201 }))
       .mockReturnValueOnce(pendingVerification);
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+      render(<MemoryRouter><SignupPage /></MemoryRouter>);
     fillForm({ email: 'new@example.com', password: 'longpassword123' });
     fireEvent.click(screen.getByTestId('signup-submit'));
 
@@ -112,8 +107,7 @@ describe('SignupPage', () => {
         { status: 400 },
       ),
     ));
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -135,8 +129,7 @@ describe('SignupPage', () => {
       JSON.stringify({ error: { code: 'SIGNUP_PASSWORD_TOO_SHORT', message: 'short' } }),
       { status: 400 },
     )));
-    vi.useRealTimers();
-    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+      render(<MemoryRouter><SignupPage /></MemoryRouter>);
     fillForm({ email: 'new@example.com', password: 'short', name: 'Traveler' });
     fireEvent.click(screen.getByTestId('signup-submit'));
 
@@ -156,8 +149,7 @@ describe('SignupPage', () => {
         { status: 409 },
       ),
     ));
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -185,8 +177,7 @@ describe('SignupPage', () => {
         { status: 429, headers: { 'Retry-After': '300' } },
       ),
     ));
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -201,8 +192,7 @@ describe('SignupPage', () => {
 
   it('Network failure → generic error banner', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')));
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -219,8 +209,7 @@ describe('SignupPage', () => {
     let resolve: (v: Response) => void;
     const promise = new Promise<Response>((r) => { resolve = r; });
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(promise));
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />
@@ -242,8 +231,7 @@ describe('SignupPage', () => {
       .mockReturnValueOnce(pendingSignup)
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-    render(<MemoryRouter><SignupPage /></MemoryRouter>);
+      render(<MemoryRouter><SignupPage /></MemoryRouter>);
     fillForm({ email: 'new@example.com', password: 'longpassword123' });
     const form = screen.getByTestId('signup-submit').closest('form')!;
     fireEvent.submit(form);
@@ -273,8 +261,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
       }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter initialEntries={['/signup?invitation=tok-xyz']}>
         <SignupPage />
@@ -302,8 +289,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
       }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter initialEntries={['/signup?invitation=tok']}>
         <SignupPage />
@@ -324,8 +310,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
       }), { status: 201 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter initialEntries={['/signup?invitation=expired-tok']}>
         <SignupPage />
@@ -362,8 +347,7 @@ describe('SignupPage with ?invitation=token (V2 共編)', () => {
       { status: 201 },
     ));
     vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
+  
     render(
       <MemoryRouter>
         <SignupPage />

@@ -10,9 +10,16 @@ on:
 permissions:
   contents: read
 
+# 同一個 ref 只保留最新一次：PR 連推會取消舊的；master 不取消（每個合併都要有完整結果）。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    # 之前沒設，runner 失聯時燒了 55 分鐘才被判定。正常值：PR 約 30～40 分（含 mobile-safari）、master 全矩陣約 47 分。
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 70 }}
     steps:
       # v2.33.66 round 16 LOW-1: pin SHA + version comment (per OpenSSF Scorecard)
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,17 +62,12 @@ jobs:
           THRESHOLD_KB: 300
 
       - name: Install Playwright browsers
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx playwright install --with-deps chromium
-          else
-            npx playwright install --with-deps chromium webkit
-          fi
+        run: npx playwright install --with-deps chromium webkit
 
-      - name: Playwright E2E (PR Chrome / main full matrix)
+      - name: Playwright E2E (PR chromium + mobile-safari / main full matrix)
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx playwright test --project=chromium
+            npx playwright test --project=chromium --project=mobile-safari
           else
             npx playwright test
           fi
