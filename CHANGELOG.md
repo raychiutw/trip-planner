@@ -23,6 +23,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `.env.local.example` 補 `VITE_API_BASE_URL`：本機開發現在也必須指定新 api 的網址。
 
 ### For contributors
+- 退役舊入口殘留（#1663、#1627 非破壞性部分）：守門測試改為「舊 mobile-callback 主機、網站網域上的 `/api`、已刪除的 mock auth 說明不得出現在現行程式／設定／文件」，移除待清理清單；`oauth-authorize-page` 測試 fixture 改用主站 callback 網址；`.dev.vars.example`、`.env.local.example`、`wrangler.toml` 註解、CLAUDE.md／AGENTS.md／CONTRIBUTING.md 的舊入口與 mock auth 說明同步清掉。歷史 migration、ADR、CHANGELOG 不改寫。
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 

@@ -90,15 +90,27 @@ describe('新 callback 路徑不與 SPA／Functions 衝突', () => {
   });
 });
 
-describe('grep 守門：不得新增對舊 mobile-callback 主機的引用', () => {
-  // 既有引用的「待清理清單」（舊 callback 在過渡期仍須存在；刪除是另案）。清掉一處就從這裡移除，不得新增。
-  const PENDING_CLEANUP = [
-    'tests/unit/oauth-authorize-page.test.tsx',
-    'wrangler.toml',
-  ];
-  it('src／functions／public／scripts／wrangler.toml／tests 內，舊主機只出現在待清理清單', () => {
-    const out = execFileSync('git', ['grep', '--untracked', '-l', 'mobile-callback\\.trip-planner-dby\\.pages\\.dev', '--', 'src', 'functions', 'public', 'scripts', 'wrangler.toml', 'tests'], { cwd: root, encoding: 'utf-8' }).split('\n').filter(Boolean);
-    const unexpected = out.filter((f) => f !== 'tests/unit/mobile-callback-main-site.test.ts' && !PENDING_CLEANUP.includes(f));
-    expect(unexpected).toEqual([]);
+// 非歷史範圍：程式、設定、範本與現行文件。CHANGELOG、docs/adr、migrations、有日期的研究／QA 文件是歷史紀錄，不掃、不改寫。
+const LIVE_SCOPE = ['src', 'functions', 'public', 'scripts', 'wrangler.toml', 'tests', 'CLAUDE.md', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', 'ARCHITECTURE.md', '.dev.vars.example', '.env.local.example', 'lighthouserc.json'];
+const SELF = 'tests/unit/mobile-callback-main-site.test.ts';
+// git grep 沒命中會以 1 結束，視為空結果；其他錯誤照拋。
+const grepFiles = (pattern: string, scope: string[]) => {
+  try {
+    return execFileSync('git', ['grep', '--untracked', '-l', '-E', pattern, '--', ...scope], { cwd: root, encoding: 'utf-8' }).split('\n').filter(Boolean).filter((f) => f !== SELF);
+  } catch (e) {
+    if ((e as { status?: number }).status === 1) return [];
+    throw e;
+  }
+};
+
+describe('grep 守門：舊入口與舊 mobile-callback 主機不得出現（#1663／#1627）', () => {
+  it('舊 mobile-callback 主機（含測試 fixture）在非歷史範圍已清空，不再有待清理清單', () => {
+    expect(grepFiles('mobile-callback\\.trip-planner-dby\\.pages\\.dev', LIVE_SCOPE)).toEqual([]);
+  });
+  it('網站網域 trip-planner-dby.pages.dev 上的 /api 不再被當成 API 入口（舊入口已刪，API 在 trip-planner-api）', () => {
+    expect(grepFiles('trip-planner-dby\\.pages\\.dev/api', LIVE_SCOPE.filter((p) => p !== 'tests'))).toEqual([]);
+  });
+  it('已隨舊入口刪除的 mock auth／middleware 說明不得留在現行文件與範本', () => {
+    expect(grepFiles('DEV_MOCK_EMAIL|ALLOW_DEV_MOCK|_middleware\\.ts|functions/api', ['CLAUDE.md', 'AGENTS.md', 'README.md', 'CONTRIBUTING.md', '.dev.vars.example', '.env.local.example', 'wrangler.toml'])).toEqual([]);
   });
 });

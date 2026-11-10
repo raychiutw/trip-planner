@@ -94,7 +94,7 @@ npm run dev:init   # local SQLite
 npm run dev        # vite 5173 + wrangler 8788
 ```
 
-Mock auth: copy `.dev.vars.example` → `.dev.vars` (NOT `.env.local`), set all three of `ENVIRONMENT=development` + `ALLOW_DEV_MOCK=1` + `DEV_MOCK_EMAIL` (SEC-6 fail-closed guard; 缺一 → `/api/*` 全 500). See `.dev.vars.example`.
+本機不需要 `.dev.vars`：舊入口與 mock auth 已刪除（#1627），Pages Functions 只用 `DB` binding。
 Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
 ## Design SoT
