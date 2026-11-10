@@ -34,26 +34,7 @@ npm run dev
 
 ### `.dev.vars`
 
-API 需要身份模擬。**用 `.dev.vars` 不是 `.env.local`** — wrangler pages dev
-只讀前者；後者只有 vite 讀，wrangler 完全看不到。
-
-```bash
-# .dev.vars (放在 project root)
-# 本機 mock 認證用（V2 OAuth 之前是 Cloudflare Access；v2.32+ 改 session cookie，
-# DEV_MOCK_EMAIL 仍跳過 prod auth flow 給 dev 用）
-# 三者缺一 → SEC-6 fail-closed guard deny，/api/* 全 500（見 _middleware.ts:299-302）。
-ENVIRONMENT=development
-ALLOW_DEV_MOCK=1
-DEV_MOCK_EMAIL=you@example.com
-```
-
-複製範本：`cp .dev.vars.example .dev.vars`。
-
-沒設會以 anonymous 身份跑，能讀已發布的 trips，不能寫。
-
-**Prod 安全**: `_middleware.ts:241-247` 守衛靠 `env.ENVIRONMENT === 'production'`
-拒絕 `DEV_MOCK_EMAIL` 生效 (v2.33.60+ 此 var 在 wrangler.toml [env.production.vars]
-強制聲明)。
+不需要。舊入口（Pages Functions API）與 mock auth 已隨 #1627 刪除；`functions/s`、`functions/trip` 只讀 `wrangler.toml` 的 `DB` binding。API 的本機設定在 trip-planner-api repo。
 
 ### 本機開發連新 api（CORS）
 
@@ -196,7 +177,7 @@ scripts/                  init-local-db, dump-d1, daily-check, poi-enrich-batch 
 
 ## 遇到問題
 
-1. **本機 API 500 錯誤** — `npm run dev:reset` 重建本機 D1。若仍失敗，檢查 `.dev.vars` 是否存在。
+1. **本機 API 錯誤** — API 在 trip-planner-api repo，先確認 `VITE_API_BASE_URL` 指向的 api 可用，見上方「本機開發連新 api」。
 2. **測試 flaky** — 跑 `npm test -- --run <file>` 單檔重跑；仍 flaky 的話回報 issue，不要 retry 掩蓋問題。
 3. **CF Pages build 失敗** — 多半是 `vite build` 出錯或 migration 沒 idempotent。看 GitHub Actions log。
 4. **Playwright 找不到 element** — 本機 POI 資料可能缺失。v2.29.0 後 POI 走 `pois` master + `trip_entry_pois` junction (trip_pois 已 DROP)。用 production URL 跑 e2e，或重建本機 D1。

@@ -63,7 +63,7 @@ beforeEach(() => {
   fake.apiFetch.mockReset().mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input);
     if (url.endsWith('/api/oauth/userinfo')) return json({ email: 'ray@example.com' });
-    if (url.endsWith('/approve') && init?.method === 'POST') return json({ redirect_to: 'https://mobile-callback.trip-planner-dby.pages.dev/oauth/callback?code=abc&state=st1' });
+    if (url.endsWith('/approve') && init?.method === 'POST') return json({ redirect_to: 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1' });
     if (url.includes('/api/oauth/authorize/requests/')) return json(REQ);
     return json({ error: { code: 'NOT_FOUND', message: 'x' } }, 404);
   });
@@ -183,7 +183,7 @@ describe('已登入', () => {
   it('按「繼續」→ POST approve，並導向 api 回傳的 redirect_to', async () => {
     renderAt('?request_id=req1');
     fireEvent.click(await screen.findByTestId('authz-continue'));
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://mobile-callback.trip-planner-dby.pages.dev/oauth/callback?code=abc&state=st1'));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1'));
     const post = fake.apiFetch.mock.calls.find(([u]) => String(u).endsWith('/approve'));
     expect(post?.[0]).toBe('/api/oauth/authorize/requests/req1/approve');
     expect((post?.[1] as RequestInit).method).toBe('POST');

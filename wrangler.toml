@@ -5,8 +5,9 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
-# v2.33.89 fix: CF Pages wrangler.toml 慣例 — 頂層 `[[d1_databases]]` 套用 preview，
-# production 須走 `[[env.production.d1_databases]]` 才 inject。之前頂層 binding +
+# CF Pages 慣例：production 的 D1 binding 須走 `[[env.production.d1_databases]]` 才會注入
+# （頂層 `[[d1_databases]]` 只套用 preview）。目前只有 functions/s、functions/trip 讀 `DB`。
+[[env.production.d1_databases]]` 才 inject。之前頂層 binding +
 # 沒有 env.production override → prod context.env.DB undefined → 所有 /api/oauth/*
 # /api/my-trips TypeError 500（Pbkdf2 / DB.prepare）。多週時間 prod login 全壞。
 [[env.production.d1_databases]]
@@ -14,14 +15,8 @@ binding = "DB"
 database_name = "trip-planner-db"
 database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
 
-# v2.33.60 round 14: 明示 prod env vars，避免 DEV_MOCK_EMAIL 失誤生效。
-# _middleware.ts:241-247 dev mock auth 守衛靠 envBag.ENVIRONMENT === 'production'
-# 判斷拒。若 CF dashboard 沒設此 var，guard fail-open → DEV_MOCK_EMAIL 在 prod 生效
-# = 完全 auth bypass。改在 wrangler.toml 強制聲明而非靠 CF dashboard 慣例。
-# PUBLIC_ORIGIN 同理顯式聲明：OIDC issuer / email 驗證 / 邀請連結的 trust anchor，
-# 不再靠 CF dashboard 慣例或 getPublicOrigin 的 canonical fallback（v2.55.86 保留為
-# defense-in-depth）。preview 刻意不設 —— 每個 preview 有自己的子網域，靠 request-origin
-# 才正確（getPublicOrigin 對非 production 走 request origin）。
+# 以下兩個 var 目前 Pages Functions 都沒讀（舊入口已於 #1627 刪除）；保留值不動，是否移除另評估。
+# PUBLIC_ORIGIN 是網站本身的網域，不是 API 入口。
 [env.production.vars]
 ENVIRONMENT = "production"
 PUBLIC_ORIGIN = "https://trip-planner-dby.pages.dev"
