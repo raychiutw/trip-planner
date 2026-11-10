@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/qa-email-flows.sh — 端到端驗 prod 發信功能
+# scripts/qa-email-flows.sh — 端到端驗發信功能（預設打新 api staging）
 #
 # 涵蓋 5 條 email-send paths (見 .gstack/qa-reports/qa-report-email-flows-2026-05-03.md):
 #   1. POST /api/oauth/forgot-password      → reset link email
@@ -12,6 +12,7 @@
 # #3 #4 #5 涉及修改真實資料/邀請別人,不在腳本內 live test。
 #
 # 全部 email 走 mac mini Gmail SMTP (TRIPLINE_API_URL Tailscale Funnel)。
+# 這些端點皆免認證（匿名），腳本不需也不得內嵌任何帳密或 token。
 #
 # Usage:
 #   ./scripts/qa-email-flows.sh             # dry-run (only health probe + 不存在 email path)
@@ -19,14 +20,16 @@
 #   ./scripts/qa-email-flows.sh --base http://localhost:8788 --send  # 本機測 (需 .dev.vars 設 TRIPLINE_API_URL)
 #
 # Env overrides (CLI flag 永遠覆蓋 env):
-#   TRIPLINE_QA_BASE        — default https://trip-planner-dby.pages.dev
+#   TRIPLINE_QA_BASE        — default https://trip-planner-api.lean-lean.workers.dev (新 api staging)
+#                             網站網域 (trip-planner-dby.pages.dev) 的 /api 已退役、落到 SPA，一律拒絕
+#   TRIPLINE_QA_ALLOW_PRODUCTION=1 — 打 production api 必須明確設；且 production 一律不可 --send
 #   TRIPLINE_QA_ADMIN_EMAIL — default lean.lean@gmail.com
 #
 # Exit codes: 0 = all pass, 1 = any fail
 
 set -euo pipefail
 
-BASE="${TRIPLINE_QA_BASE:-https://trip-planner-dby.pages.dev}"
+BASE="${TRIPLINE_QA_BASE:-https://trip-planner-api.lean-lean.workers.dev}"
 SEND_REAL=0
 ADMIN_EMAIL="${TRIPLINE_QA_ADMIN_EMAIL:-lean.lean@gmail.com}"
 NONEXISTENT_EMAIL="qa-nonexistent-$(date +%s)@example.invalid"
@@ -59,6 +62,24 @@ done
 if ! printf '%s' "$BASE" | grep -qE '^(https://|http://localhost(:[0-9]+)?(/|$))'; then
   echo "ERROR: --base must be https:// or http://localhost[:port]; got: $BASE" >&2
   exit 2
+fi
+
+# 網站網域的 /api 已退役（落到 SPA 回 200 text/html，會誤判）：拒。
+if printf '%s' "$BASE" | grep -q 'trip-planner-dby\.pages\.dev'; then
+  echo "ERROR: $BASE 是網站網域，/api 已退役；請改用新 api（預設 staging）" >&2
+  exit 2
+fi
+
+# production api：需明確允許；會寄真信的 --send 則一律不准。
+if printf '%s' "$BASE" | grep -q 'trip-planner-api-production'; then
+  if [ "${TRIPLINE_QA_ALLOW_PRODUCTION:-}" != "1" ]; then
+    echo "ERROR: base 是 production；需明確設 TRIPLINE_QA_ALLOW_PRODUCTION=1" >&2
+    exit 2
+  fi
+  if [ "$SEND_REAL" = "1" ]; then
+    echo "ERROR: production 不可 --send（會寄真信）；請對 staging 使用" >&2
+    exit 2
+  fi
 fi
 
 # --send + 非 admin email = 拒。避免誤打到第三方 email (anti-enum 200 後 prod 會

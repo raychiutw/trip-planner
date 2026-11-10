@@ -11,6 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `typedApi`（`src/lib/api/typed.ts`）：契約型別的 typed client，傳輸與錯誤語意沿用 `apiFetch`；變更密碼、刪除帳號、更新顯示名稱三處已改用。
 
 ### Fixed
+- **三支打網站網域 `/api` 的舊腳本處置（#1675）**：舊入口退役後網站網域 `/api/*` 落到 SPA（200 html），腳本會誤判。`scripts/qa-email-flows.sh` 保留，預設 base 改新 api staging，拒絕網站網域，打 production 需 `TRIPLINE_QA_ALLOW_PRODUCTION=1` 且不可 `--send`；`scripts/smoke/poi-favorites-rename-post-deploy.sh`（PR #474 一次性、直寫 production D1）與 `scripts/seed-demo-account.mjs`（cookie 登入、內嵌預設密碼、寫入資料）刪除。
 - **同意鈕改為「同意」；旅伴（共編者）免自己同意，擁有者同意後即可直接用 AI 聊天**：AI 資料同意以擁有者為準——擁有者尚未同意時，旅伴送出會回 `AI_CONSENT_OWNER_REQUIRED` 並提示轉達擁有者；擁有者同意後旅伴不需任何同意。入口閘門與 mint 同步（ADR-0012 修訂）。
 - **新 api 模式下邀請頁「切換帳號並繼續邀請」真的會登出**：原本是導覽到 cookie 登出端點，新 api 沒有 cookie，登入其實還在。
 
