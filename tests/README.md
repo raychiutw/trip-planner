@@ -59,8 +59,6 @@ tests/
 
 ```bash
 npm test                 # vitest unit/integration（本機約 80-90s，2026-07-25 快照）
-npm run test:api         # miniflare API integration
-npm run test:all         # = npm test + npm run test:api
 npm run test:e2e         # playwright
 npm test -- --run <file> # single file rerun (for flaky debug)
 ```

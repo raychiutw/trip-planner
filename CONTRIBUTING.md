@@ -55,6 +55,31 @@ DEV_MOCK_EMAIL=you@example.com
 拒絕 `DEV_MOCK_EMAIL` 生效 (v2.33.60+ 此 var 在 wrangler.toml [env.production.vars]
 強制聲明)。
 
+### 本機開發連新 api（CORS）
+
+web 的所有 API 請求與認證都送到 `VITE_API_BASE_URL`（新 api，跨網域）。新 api 的 CORS 是白名單制：
+請求帶 `Origin` 但不在 `ALLOWED_ORIGINS` → 403（preflight 也一樣）；沒有 `Origin` 才放行。
+production 只放 `https://trip-planner-dby.pages.dev`，staging 沒設，所以 `http://localhost:5173` 直連一律被擋。
+**不要為了本機開發放寬 production 的 `ALLOWED_ORIGINS`，也不要加 `*`。**
+
+**做法 A：vite 代理（公開唯讀端點，已驗證）** — 瀏覽器同源打 `/api`，由 vite 轉送並移除 `Origin`，不需 CORS：
+
+```bash
+# .env.local（範本見 .env.local.example）
+VITE_API_BASE_URL=http://localhost:5173
+DEV_API_PROXY_TARGET=https://trip-planner-api.lean-lean.workers.dev   # staging；不設則是 http://localhost:8788
+npm run dev:vite
+```
+
+限制：DPoP 的 `htu` 綁 api 自己的網址，經代理的登入（`/api/oauth/*`）**未驗證、不保證可用**；寫入請改做法 B。
+代理指向 production 時只打公開唯讀端點。
+
+**做法 B：本機跑新 api（登入／寫入，未在本 repo 驗證）** — 在 `trip-planner-api` repo：
+`.dev.vars` 設 `ALLOWED_ORIGINS=http://localhost:5173`、`PUBLIC_ORIGIN=http://localhost:8787`，
+secret（`SESSION_SECRET`、`OAUTH_SIGNING_PRIVATE_KEY`）一律用本機自己產生的測試值，不複製任何環境的真實值；
+`wrangler dev` 起在 8787，web 的 `.env.local` 設 `VITE_API_BASE_URL=http://localhost:8787`（不設 `DEV_API_PROXY_TARGET`）。
+新 api 的 `validate-redirect-uris` 允許 `http://localhost` 的 redirect URI，但 `tripline-web` client 要在本機 D1 登記 `http://localhost:5173/...`。
+
 ## 每次改 code 前
 
 **先讀 [AGENTS.md](AGENTS.md)。** 本專案以 Matt Pocock 官方技能鏈為預設：依工作規模走 `/grill-with-docs → /to-spec → /to-tickets → /implement → /code-review`，再套用 Tripline 的 feature branch、驗證與 PR 規則；小型且已定案的單一 session 變更可直接進 `/implement`。
@@ -63,21 +88,18 @@ DEV_MOCK_EMAIL=you@example.com
 
 ```bash
 npm run typecheck          # TypeScript 零錯誤
-npm run typecheck:functions  # Pages Functions 型別檢查
+npm run typecheck:functions  # Pages Functions（OG meta）型別檢查
 npm test                   # vitest unit + integration（實測耗時見下方說明，數量看它自己的輸出）
-npm run test:api           # Pages Functions integration（miniflare + 真 D1）
 npm run test:e2e           # Playwright（要先開 dev server）
-npm run test:all           # = npm test + npm run test:api
 ```
 
-**`npm test` 不便宜，別當成隨手跑一次沒成本。** 本機實測約 **80–90 秒**（2026-07-25 快照，Apple Silicon）。原因是 `--maxWorkers=2` 限流 —— 每個 worker 都要各自建 Miniflare D1 並跑 90+ 個 migration，滿並行度下會撞 timeout。這是權宜之計，根本解（共用一份已 migrate 的 D1 快照）記在 [`TODOS.md`](TODOS.md) 的「測試套件 — D1 建置成本迫使 unit 限流 2 worker」。
+**`npm test` 不便宜，別當成隨手跑一次沒成本。** 本機實測約 **80–90 秒**（2026-07-25 快照，Apple Silicon）。原因是 `--maxWorkers=2` 限流，那是拆分前為了 Miniflare D1 建置成本留下的限流（舊入口與其 D1 測試已於 #1627 刪除，是否可放寬另評估）。
 
 測試數量刻意不寫死在這裡 —— 它每週都在變，寫下來就會腐爛。要知道規模直接看 `npm test` 的輸出。
 
 ### 測試分層
 
 - **unit** (`tests/unit/`) — 純邏輯 / lib / hooks / 元件 render
-- **api** (`tests/api/`) — Pages Functions endpoint，跑在 miniflare 上
 - **e2e** (`tests/e2e/`) — Playwright，完整使用者流程
 
 ### 什麼情況要加測試
@@ -153,12 +175,11 @@ src/
 ├── lib/                  apiClient / mapRow / scrollSpy ...
 └── types/
 
-functions/api/            Cloudflare Pages Functions（TS）
+functions/s、functions/trip  Pages Functions（僅 OG meta，TS）
 migrations/               D1 schema（0001 ~ 00NN，idempotent）
 css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme）
-tests/                    unit / api / e2e
+tests/                    unit / e2e
 scripts/                  init-local-db, dump-d1, daily-check, poi-enrich-batch ...
-src/server/               jwt / oauth-d1-adapter / password / email / session / invitation-token / hkdf / email-utils / maps/google-client / oauth-server/ / oauth-client/ (v2.23.0+ Google Maps + V2 OAuth)
 ```
 
 ## 常見任務速查

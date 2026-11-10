@@ -5,7 +5,7 @@
  * 用 HTMLRewriter 注入 og meta，回傳修改後的 index.html。
  */
 
-import type { Env } from '../api/_types';
+import type { Env } from '../_shared/share';
 
 interface TripMeta {
   id: string;

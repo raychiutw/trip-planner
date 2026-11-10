@@ -18,7 +18,9 @@ import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandH
 import { typedApiRaw } from '../lib/api/typed';
 import InlineError from '../components/shared/InlineError';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
-import { MIN_PASSWORD_LEN } from '../server/password';
+
+/** 密碼長度下限，與 api 端政策一致（原在已刪的 src/server/password.ts，#1627）。 */
+const MIN_PASSWORD_LEN = 8;
 
 const SCOPED_STYLES = `
 .tp-auth-shell {

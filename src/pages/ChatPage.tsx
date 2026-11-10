@@ -552,9 +552,9 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   const [consentBusy, setConsentBusy] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   // AI 資料同意（ADR-0012）：送出前本地已知需要同意 → 攔下跳就地同意 sheet；或後端以 AI_CONSENT_* 擋下
-  // 。被攔訊息保留，同意後續送。
+  // （owner-missing＝旅伴送出但行程擁有者未同意，沒有同意動作）。被攔訊息保留，同意後續送。
   const dataConsent = useAiDataConsent();
-  const [dataGate, setDataGate] = useState<{ text: string; tripId: string } | null>(null);
+  const [dataGate, setDataGate] = useState<{ text: string; tripId: string; mode: 'consent' | 'owner-missing' } | null>(null);
   const dataOkRef = useRef(false); // 剛同意完的那一次續送跳過檢查（send 的 closure 還是舊的 needsConsent）
   const [dataBusy, setDataBusy] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -666,11 +666,11 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
 
   const doSend = useCallback(async (text: string) => {
     setInput('');
-    await sendMessage(text, user, () => {
-      // 後端擋下（owner 自己未同意）：保留輸入，跳對應 sheet；本地沒有同意狀態可顯示時退回一般錯誤訊息
+    await sendMessage(text, user, (code) => {
+      // 後端擋下（owner 未同意）：保留輸入，跳對應 sheet；本地沒有同意狀態可顯示時退回一般錯誤訊息
       if (!dataConsent.consent || !activeTripId) return false;
       setInput(text);
-      setDataGate({ text, tripId: activeTripId });
+      setDataGate({ text, tripId: activeTripId, mode: code === 'AI_CONSENT_OWNER_REQUIRED' ? 'owner-missing' : 'consent' });
       return true;
     });
   }, [sendMessage, user, setInput, dataConsent.consent, activeTripId]);
@@ -682,7 +682,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
     if (inflightId) return; // busy
     // 資料同意先於操作授權：隱私同意是前提。本地尚未載入狀態時不攔，由後端 AI_CONSENT_* 當最終關卡（見 doSend）。
     if (dataConsent.needsConsent && !isCompanion && !dataOkRef.current) {
-      setDataGate({ text, tripId: activeTripId });
+      setDataGate({ text, tripId: activeTripId, mode: 'consent' });
       setDataError(null);
       return;
     }
@@ -1057,6 +1057,7 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
         <AiDataConsentSheet
           open={dataGate !== null}
           consent={dataConsent.consent}
+          mode={dataGate?.mode}
           message={dataGate?.text}
           busy={dataBusy}
           error={dataError}

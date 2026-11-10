@@ -18,12 +18,10 @@ const exists = (p: string) => existsSync(path.resolve(__dirname, '../..', p));
 
 const WORKFLOWS = [
   '.github/workflows/ci.yml',
-  '.github/workflows/deploy.yml',
   '.github/workflows/lighthouse.yml',
-  '.github/workflows/rate-limit-cleanup.yml',
 ];
 
-describe('v2.33.66 HIGH-1 — permissions: contents: read on all 4 workflows', () => {
+describe('v2.33.66 HIGH-1 — permissions: contents: read on all workflows', () => {
   for (const wf of WORKFLOWS) {
     it(`${wf} declares permissions: contents: read`, () => {
       const src = read(wf);
@@ -65,25 +63,6 @@ describe('v2.33.66 LOW-3 — lighthouse concurrency', () => {
   });
 });
 
-describe('v2.33.66 MED-2 — rate-limit cleanup SQL extracted', () => {
-  it('scripts/cleanup-rate-limit.sql 存在', () => {
-    expect(exists('scripts/cleanup-rate-limit.sql')).toBe(true);
-  });
-
-  it('SQL 含 DELETE FROM rate_limit_buckets + cutoff guard', () => {
-    const sql = read('scripts/cleanup-rate-limit.sql');
-    expect(sql).toMatch(/DELETE FROM rate_limit_buckets/);
-    expect(sql).toMatch(/locked_until IS NULL/);
-    expect(sql).toMatch(/window_start \+ 3600000/);
-  });
-
-  it('workflow 改 --file= 不再 inline --command', () => {
-    const wf = read('.github/workflows/rate-limit-cleanup.yml');
-    expect(wf).toMatch(/--file=scripts\/cleanup-rate-limit\.sql/);
-    expect(wf).not.toMatch(/--command "DELETE FROM rate_limit_buckets/);
-  });
-});
-
 describe('v2.33.66 LOW-2 — dependabot.yml', () => {
   it('.github/dependabot.yml 存在', () => {
     expect(exists('.github/dependabot.yml')).toBe(true);
@@ -107,11 +86,10 @@ describe('v2.33.66 MED-2 — CODEOWNERS protects workflows + migrations + auth',
     expect(exists('.github/CODEOWNERS')).toBe(true);
   });
 
-  it('保護 workflows + migrations + src/server + headers', () => {
+  it('保護 workflows + migrations + headers', () => {
     const src = read('.github/CODEOWNERS');
     expect(src).toMatch(/\/\.github\/workflows\//);
     expect(src).toMatch(/\/migrations\//);
-    expect(src).toMatch(/\/src\/server\//);
     expect(src).toMatch(/\/public\/_headers/);
   });
 });

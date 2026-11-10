@@ -14,54 +14,12 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
-describe('rate-limit enforcement (regression: bumpRateLimit result was discarded)', () => {
-  // /api/route 的 429 / 放行行為已改走 HTTP 邊界：
-  // tests/api/route-audit-fixes.integration.test.ts
-  it('poi-search and reports also capture + enforce the bumpRateLimit result', () => {
-    for (const f of ['functions/api/poi-search.ts', 'functions/api/reports.ts', 'functions/api/route.ts']) {
-      const src = read(f);
-      expect(src).toMatch(/const rl = await bumpRateLimit\(/);
-      expect(src).toMatch(/if \(!rl\.ok\)/);
-      expect(src).toMatch(/buildRateLimitResponse\(/);
-    }
-  });
-});
 
 // ---- maps/cache expires_at must be SQLite-native (space, not ISO 'T') ----
-describe('maps/cache setCachedSearch writes SQLite-native expires_at', () => {
-  it('stores YYYY-MM-DD HH:MM:SS (no T / ms / Z), so datetime() comparisons work', async () => {
-    let boundExpiresAt: unknown;
-    const db: any = {
-      prepare: () => ({
-        bind: (...args: unknown[]) => {
-          boundExpiresAt = args[4]; // (query_hash, query_text, region, results_json, expires_at)
-          return { run: async () => ({}) };
-        },
-      }),
-    };
-    const { setCachedSearch } = await import('../../src/lib/maps/cache');
-    await setCachedSearch(db, 'ramen', 'JP', []);
-    expect(typeof boundExpiresAt).toBe('string');
-    expect(boundExpiresAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
-    expect(boundExpiresAt).not.toContain('T');
-    expect(boundExpiresAt).not.toContain('Z');
-  });
-});
 
 // ---- Source-level locks for the remaining fixes ----
 describe('audit fix source locks', () => {
-  it('dev/apps PATCH routes allowed_scopes through validateScopes (privilege-escalation fix)', () => {
-    const src = read('functions/api/dev/apps/[client_id].ts');
-    expect(src).toMatch(/import \{[^}]*\bvalidateScopes\b[^}]*\} from '\.\.\/apps'/);
-    expect(src).toMatch(/const cleaned = validateScopes\(body\.allowed_scopes\)/);
-    expect(read('functions/api/dev/apps.ts')).toMatch(/export function validateScopes/);
-  });
 
-  it('invitation-accept INSERT no longer references the dropped email column', () => {
-    const src = read('src/server/invitation-accept.ts');
-    expect(src).toMatch(/INSERT OR IGNORE INTO trip_permissions \(trip_id, role, user_id\)/);
-    expect(src).not.toMatch(/trip_permissions \(email/);
-  });
 
   it('EntryActionPage move action sends snake_case day_id', () => {
     // #1261：move 的 body 由 entry 變更 module 組（moveEntry → { day_id }），頁面只呼叫動詞。
@@ -72,23 +30,7 @@ describe('audit fix source locks', () => {
     expect(mod).not.toMatch(/\{ dayId:/);
   });
 
-  it('rollback gates updated_at by TABLE_COLUMNS membership (no SQL error on permission/relation tables)', () => {
-    const src = read('functions/api/trips/[id]/audit/[aid]/rollback.ts');
-    expect(src).toMatch(/TABLE_COLUMNS\[safeTable\]\.includes\('updated_at'\)/);
-    // insert->delete rollback now checks it actually deleted a row
-    expect(src).toMatch(/delResult\.meta\.changes === 0/);
-  });
 
-  it('_poi find-or-create persists place_id (INSERT column + COALESCE backfill)', () => {
-    const src = read('functions/api/_poi.ts');
-    // migration 0051: place_id 之後接 lifecycle 三欄（status/status_reason/status_checked_at）。
-    // #1256：單筆與批次共用同一條 INSERT_POI_SQL，column parity 由結構保證 → 只剩 1 份。
-    expect((src.match(/country, price, place_id, status, status_reason, status_checked_at\)/g) || []).length).toBe(1);
-    expect(src).toMatch(/'price', 'place_id',/); // COALESCE_FIELDS（status 刻意不進 COALESCE）
-    expect(src).not.toMatch(/'place_id', 'status'/); // lifecycle 不得進 COALESCE_FIELDS
-    expect(src).toMatch(/place_id\?: string \| null/);
-    expect(read('functions/api/pois/find-or-create.ts')).toMatch(/place_id: typeof body\.place_id === 'string'/);
-  });
 
   it('TripNotesPage accordion header: toggle <button> 與 AI <button> 是兄弟（#1587 21，不再 div[role=button] 內含 button）', () => {
     const src = read('src/pages/TripNotesPage.tsx');
@@ -96,9 +38,6 @@ describe('audit fix source locks', () => {
     expect(src).toMatch(/<div className="tp-notes-section-head">\s*<button\s+type="button"\s+className="tp-notes-section-toggle"/);
   });
 
-  it('entries/[eid] re-throws AppError inside the OCC catch (avoids 503 misclassification)', () => {
-    expect(read('functions/api/trips/[id]/entries/[eid].ts')).toMatch(/if \(err instanceof AppError\) throw err;/);
-  });
 });
 
 // ---- Medium-tier audit fixes (v2.45.x) ----
@@ -112,9 +51,6 @@ describe('audit fix source locks — medium tier', () => {
     expect(nav).toMatch(/stop\\\/\[\^\/\]\+\\\/map\\\/\?\$/); // MAP pattern now includes stop/:id/map
   });
 
-  it('dev/apps PATCH app_name uses a typeof guard (no TypeError on JSON null)', () => {
-    expect(read('functions/api/dev/apps/[client_id].ts')).toMatch(/if \(typeof body\.app_name === 'string'\)/);
-  });
 
   it('functions/trip OG title falls back title || name || 行程', () => {
     expect(read('functions/trip/[[path]].ts')).toMatch(/trip\.title \|\| trip\.name \|\| '行程'/);
@@ -126,21 +62,8 @@ describe('audit fix source locks — medium tier', () => {
     expect(src).not.toMatch(/customDate: l\.expiresAt == null \? '' : new Date\(l\.expiresAt\)\.toISOString/);
   });
 
-  it('requests notes dedup scopes the SELECT by ai_source', () => {
-    const src = read('functions/api/_noteAi.ts');
-    expect(src).toMatch(/WHERE trip_id = \? AND ai_source = \? AND origin = 'ai'/);
-    expect(src).toMatch(/\.bind\(tripId, aiSource\)/);
-  });
 
-  it('entries/batch validates start_time/end_time against TIME_RE', () => {
-    const src = read('functions/api/trips/[id]/entries/batch.ts');
-    expect(src).toMatch(/import \{ TIME_RE \} from '\.\.\/\.\.\/\.\.\/_time'/);
-    expect(src).toMatch(/!TIME_RE\.test\(fields\[tf\] as string\)/);
-  });
 
-  it('import MAX_DESTINATIONS aligned to the PUT cap (30, no un-editable trips)', () => {
-    expect(read('functions/api/trips/_import.ts')).toMatch(/export const MAX_DESTINATIONS = 30;/);
-  });
 });
 
 // ---- Medium+low audit fixes (batch 3) ----
@@ -148,20 +71,7 @@ describe('audit fix source locks — batch 3', () => {
   // #1257：add-to-trip 的 append / insert-before 改由 entry intake 承載，
   // tests/api/entry-intake.integration.test.ts「insert-before 讓位」走行為驗證。
 
-  it('segments PATCH increments version on both UPDATE branches (ok + coords-missing) + guards null RETURNING', () => {
-    const src = read('functions/api/trips/[id]/segments/[sid].ts');
-    // v2.55.x 重構：算 travel 抽到 segments/_shared.ts，PATCH 收斂為 2 個 UPDATE 分支
-    // （travel.ok / coords-missing fallback），兩者都帶 version = version + 1（含 audit
-    // 原本要 lock 的 coords-missing branch bump）。
-    expect((src.match(/version = version \+ 1/g) || []).length).toBeGreaterThanOrEqual(2);
-    expect(src).toMatch(/if \(!updated\) throw new AppError\('DATA_NOT_FOUND'/);
-  });
 
-  it('_gcp_monitoring wraps both fetches with AbortController timeouts', () => {
-    const src = read('functions/api/_gcp_monitoring.ts');
-    expect((src.match(/new AbortController\(\)/g) || []).length).toBeGreaterThanOrEqual(2);
-    expect((src.match(/clearTimeout/g) || []).length).toBeGreaterThanOrEqual(2);
-  });
 
   it('AlertPanel is-warning uses design tokens (dark-mode adaptive), not hardcoded rgb', () => {
     const src = read('src/components/shared/AlertPanel.tsx');
@@ -170,16 +80,7 @@ describe('audit fix source locks — batch 3', () => {
   });
 
 
-  it('days entries POST returns entry_pois_version=1 + validates sort_order', () => {
-    const src = read('functions/api/trips/[id]/days/[num]/entries.ts');
-    expect(src).toMatch(/Number\.isInteger/);
-  });
 
-  it('dev/apps validates homepage_url + caps app_description', () => {
-    const src = read('functions/api/dev/apps.ts');
-    expect(src).toMatch(/function validateHomepageUrl/);
-    expect(src).toMatch(/APP_DESCRIPTION_MAX/);
-  });
 });
 
 // ---- Partial-tier hardening fixes ----
@@ -190,20 +91,7 @@ describe('audit fix source locks — partial hardening', () => {
     expect(src).not.toMatch(/findIndex\(\(ev\) => \(ev\.id \?\? `idx-\$\{ev\.id\}`\)/);
   });
 
-  it('notes/_shared non-OCC UPDATE guards a vanished row with 404', () => {
-    expect(read('functions/api/trips/[id]/notes/_shared.ts')).toMatch(/if \(!row\) throw new AppError\('DATA_NOT_FOUND'\)/);
-  });
 
-  it('hkdf cache key uses the full secret (no truncated-prefix collision)', () => {
-    const src = read('src/server/hkdf.ts');
-    expect(src).toMatch(/const cacheKey = `\$\{masterSecret\}:\$\{info\}`/);
-  });
 
-  it('oauth userinfo normalizes created_at with a Z suffix', () => {
-    expect(read('functions/api/oauth/userinfo.ts')).toMatch(/created_at\.endsWith\('Z'\)/);
-  });
 
-  it('days PUT returns the DB-read-back dayVersion (not a local guess)', () => {
-    expect(read('functions/api/trips/[id]/days/[num].ts')).toMatch(/SELECT version FROM trip_days WHERE id = \?/);
-  });
 });

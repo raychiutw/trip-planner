@@ -12,30 +12,9 @@ import { join } from 'node:path';
 import { ServerStatusBanner } from '../../src/components/ServerStatusBanner';
 import { reportFetchResult } from '../../src/lib/networkBus';
 
-const MW = readFileSync(join(__dirname, '../../functions/api/_middleware.ts'), 'utf8');
 const SSE = readFileSync(join(__dirname, '../../src/hooks/useRequestSSE.ts'), 'utf8');
 const MAIN = readFileSync(join(__dirname, '../../src/entries/main.tsx'), 'utf8');
 
-describe('G5: CF _middleware 5xx → alertAdminTelegram + console.error', () => {
-  it('import alertAdminTelegram', () => {
-    expect(MW).toMatch(/import \{ alertAdminTelegram \} from '\.\/_alert'/);
-  });
-
-  it('non-AppError catch path 加 console.error 含 method/path/duration/error', () => {
-    expect(MW).toMatch(/\[_middleware unhandled 5xx\]/);
-    expect(MW).toMatch(/method: request\.method,\s+path: url\.pathname,\s+duration,\s+source: getSource\(\),\s+error: errMsg/);
-  });
-
-  it('context.waitUntil 包 alertAdminTelegram + 含 method/path/source/duration/error 前 200 字', () => {
-    expect(MW).toMatch(/context\.waitUntil\(\s*alertAdminTelegram\(/);
-    expect(MW).toMatch(/CF Worker 5xx unhandled/);
-    expect(MW).toMatch(/errMsg\.slice\(0, 200\)/);
-  });
-
-  it('stack trace slice 500 chars 寫 console (不入 api_logs/telegram 避免 PII)', () => {
-    expect(MW).toMatch(/stack: errStack\.slice\(0, 500\)/);
-  });
-});
 
 describe('G9: useRequestSSE pollOnce AbortController 10s timeout', () => {
   it('POLL_FETCH_TIMEOUT_MS 常數 = 10_000', () => {

@@ -60,3 +60,15 @@ web 與 api（Pages Functions）現在是同一個 Pages 專案、同一個網�
 **不在範圍**：威脅模型文件與外部滲透測試；產出 spec 與票（另打 `/to-spec`、`/to-tickets`）；刪除舊入口（另案）；api 與 agent 的 pull 模式。
 
 **後續約束**：舊入口存在期間 migration 只加不刪；拆分時 mobile 的 issuer 與 redirect URI 要隨 api 新網域更新（Flutter app 尚未上架，現在改成本最低）。
+
+## 補記：舊入口已於 2026-11-09 刪除
+
+（以下為事後補記，上文維持決策當時的原貌，不改寫。）
+
+owner 於 2026-11-09 決定舊入口直接刪除（#1627），web 的對應 PR 移除了 `functions/api/**`、`tests/api/**`、`src/server/*`、`vitest.config.api.mts` 與相關 CI／CODEOWNERS，並把 `public/_routes.json` 的 `/api/*` 拿掉。對上文的影響：
+
+- 「舊入口是旁路」的殘留風險在 web 的 PR 部署到 production 後解除；`trip-planner-dby.pages.dev` 仍是 web 網站本身的網域（Pages 專案不能停用），只是 `/api/*` 不再有 handler。
+- 「只能整體切回舊入口」的回滾路徑消失；之後的回滾是 api 自己的版本回滾。
+- 「舊入口存在期間 migration 只加不刪」的約束理由消失；放寬與否（以及 api 的 migration gate）另案決定，web 的 `migrations/` 凍結為歷史基準，不再新增。
+- D1 的三支排程清理（rate limit、過期分享與孤兒 clone、邀請）已由 api 的 Cron Trigger 取代，web 的 GitHub Actions 版本一併刪除。
+- 仍保留：`functions/s/[token].ts`、`functions/trip/[[path]].ts`（OG meta，不是 API，需要 `DB` binding）。
