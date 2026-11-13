@@ -72,17 +72,7 @@ const SCOPED_STYLES = `
 @media (min-width: 768px) {
   .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
 }
-/* 桌機版面 A（owner 2026-11-13，取代 2026-07-19 的「hero 收窄置中、設定兩欄」）：單欄，
- * 個人卡橫式與設定格同一個容器寬度；容器固定 1040（DESIGN.md Content Width），≥1440 不再攤開，
- * <1440 隨視窗縮。手機仍單欄堆疊、個人卡直式置中。 */
 .tp-account-groups { display: flex; flex-direction: column; gap: 24px; }
-@media (min-width: 1024px) {
-  .tp-account-inner { max-width: 1040px; padding-bottom: 80px; }
-  .tp-account-hero { flex-direction: row; text-align: left; flex-wrap: wrap; padding: 20px 24px; }
-  .tp-account-hero-text { flex: 1; min-width: 180px; }
-  .tp-account-hero-name-row { justify-content: flex-start; }
-  .tp-account-hero-stats { width: 300px; padding-top: 0; border-top: none; }
-}
 
 /* Profile hero (mockup line 7437-7448) */
 .tp-account-hero {
@@ -287,6 +277,17 @@ const SCOPED_STYLES = `
   min-height: 24px; padding: 0 4px;
 }
 .tp-account-stats-error button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+/* 桌機版面 A（owner 2026-11-13，取代 2026-07-19 的「hero 收窄置中、設定兩欄」）：單欄，
+ * 個人卡橫式與設定格同一個容器寬度；容器固定 1040（DESIGN.md Content Width），≥1440 不再攤開，
+ * <1440 隨視窗縮。手機仍單欄堆疊、個人卡直式置中。
+ * 必須放在所有基礎規則（.tp-account-hero 等）之後：同特異度下後寫的贏，放前面會被基礎規則蓋掉（個人卡就變不成橫式）。 */
+@media (min-width: 1024px) {
+  .tp-account-inner { max-width: 1040px; padding-bottom: 80px; }
+  .tp-account-hero { flex-direction: row; text-align: left; flex-wrap: wrap; padding: 20px 24px; }
+  .tp-account-hero-text { flex: 1; min-width: 180px; }
+  .tp-account-hero-name-row { justify-content: flex-start; }
+  .tp-account-hero-stats { width: 300px; padding-top: 0; border-top: none; }
+}
 `;
 
 interface SettingsRow {

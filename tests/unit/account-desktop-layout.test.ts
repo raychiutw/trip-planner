@@ -45,6 +45,14 @@ describe('帳號頁桌機版面 A', () => {
     expect(src).not.toContain('tp-logout-stats-error');
     expect(src).not.toContain('數據載入失敗');
   });
+  it('≥1024 區塊排在所有基礎規則之後（同特異度後寫的贏；排前面個人卡就變不成橫式，真瀏覽器才看得出來）', () => {
+    const start = styles.search(/@media[^{]*min-width:\s*1024\s*px/);
+    expect(start).toBeGreaterThan(0);
+    for (const sel of ['tp-account-inner', 'tp-account-hero', 'tp-account-hero-text', 'tp-account-hero-name-row', 'tp-account-hero-stats']) {
+      const bases = [...styles.matchAll(new RegExp(`^\\.${sel}\\s*\\{`, 'gm'))].map((m) => m.index!);
+      for (const i of bases) expect(i, `基礎規則 .${sel} 在 ≥1024 區塊之後，會蓋掉桌機覆寫`).toBeLessThan(start);
+    }
+  });
   it('media() 取得所有同斷點區塊（不只第一個）', () => {
     expect(media(1024)).toContain('.tp-account-inner');
     expect(media(1024)).toContain('.tp-account-hero');
