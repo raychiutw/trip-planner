@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE 桌機帳號頁與側邊欄 HIG 變體 (#1687)</title>
+<!--
+PROTOTYPE，拋棄式，不得併入 master。對應 raychiutw/trip-planner#1687（parent #1683）。
+問題：桌機帳號頁與全站共用側邊欄，Apple HIG 方向下該長怎樣？
+三個變體，狀態可用網址 hash 重現（#v=B&page=account&w=1440&theme=dark&st=error）。
+token 值逐字取自 css/tokens.css（origin/master ce96157f）；沒有外部腳本、樣式或字型。
+-->
+<style>
+/* ===== 真實 token（css/tokens.css @theme 與 body.dark，僅取本頁用到的） ===== */
+:root, [data-theme="light"]{
+  color-scheme: light;
+  --color-accent:#8A6038; --color-accent-subtle:#F6EFE6; --color-accent-bg:#F1E8DE;
+  --color-accent-text:#8A6038; --color-accent-fill:#8A6038; --color-accent-foreground:#FFFFFF;
+  --color-focus-ring:#8A6038;
+  --color-background:#FFFBF5; --color-secondary:#FAF4EA; --color-tertiary:#F2EAD9; --color-hover:#F9EDE0;
+  --color-foreground:#2A1F18; --color-muted:#6F5A47; --color-border:#EADFCF; --color-border-control:#94795E;
+  --color-destructive:#C13515; --color-destructive-bg:#FDECEC;
+  --color-warning:#F48C06; --color-warning-bg:#FEEED8; --color-warning-deep:#A35A00;
+  --color-success:#06A77D; --color-success-bg:#E1F1E7;
+  --tabbar-tint:rgba(255,255,255,.42); --tabbar-rim:1px solid rgba(255,255,255,.55);
+  --tabbar-shadow:0 8px 28px rgba(42,31,24,.16),0 2px 6px rgba(42,31,24,.10);
+  --shadow-sm:0 1px 2px rgba(42,31,24,.05); --shadow-md:0 6px 16px rgba(42,31,24,.09);
+}
+[data-theme="dark"]{
+  color-scheme: dark;
+  --color-accent:#CBA06E; --color-accent-subtle:#2A2418; --color-accent-bg:#3A3020;
+  --color-accent-text:#E0BC90; --color-accent-fill:#CBA06E; --color-accent-foreground:#1C1C1E;
+  --color-focus-ring:#E0BC90;
+  --color-background:#1C1C1E; --color-secondary:#2C2C2E; --color-tertiary:#3A3A3C; --color-hover:#48484A;
+  --color-foreground:#F5F5F7; --color-muted:#A1A1A6; --color-border:#48484A; --color-border-control:#7C7C80;
+  --color-destructive:#FF6B52; --color-destructive-bg:#402926;
+  --color-warning:#FAA94B; --color-warning-bg:#443526; --color-warning-deep:#FAA94B;
+  --color-success:#7EC89A; --color-success-bg:#2B3631;
+  --tabbar-tint:rgba(28,28,30,.52); --tabbar-rim:1px solid rgba(255,255,255,.12);
+  --tabbar-shadow:0 8px 28px rgba(0,0,0,.44),0 2px 6px rgba(0,0,0,.30);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3); --shadow-md:0 6px 16px rgba(0,0,0,.4);
+}
+:root{
+  --radius-md:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:9999px;
+  --font-size-large-title:2.125rem; --font-size-title2:1.375rem; --font-size-title3:1.25rem;
+  --font-size-callout:1rem; --font-size-footnote:.875rem; --font-size-caption:.75rem; --font-size-caption2:.6875rem;
+  --font-size-eyebrow:.625rem;
+  --sidebar-width-desktop:216px; --spacing-tap-min:44px;
+  --font: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--color-background);color:var(--color-foreground);font:16px/1.5 var(--font)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--color-focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--color-background)}
+.ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ===== 說明頁（prototype 外殼，非設計對象） ===== */
+.doc{max-width:1100px;margin:0 auto;padding:16px}
+.doc h1{font-size:1.25rem;margin:8px 0}
+.banner{background:var(--color-warning-bg);border-radius:var(--radius-md);padding:8px 12px;font-size:.875rem}
+.qs{background:var(--color-secondary);border-radius:var(--radius-lg);padding:12px 16px 12px 36px;margin:12px 0;font-size:.9375rem}
+.qs h2{margin:0 0 6px -20px;font-size:1rem}
+.qs li{margin:4px 0}
+.ctrl{position:sticky;top:0;z-index:20;background:var(--color-background);border-bottom:1px solid var(--color-border);padding:8px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.875rem}
+.seg{display:inline-flex;border:1px solid var(--color-border-control);border-radius:var(--radius-md);overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--color-accent-fill);color:var(--color-accent-foreground)}
+.ctrl label{display:flex;align-items:center;gap:6px}
+.ctrl select{font:inherit;min-height:32px;background:var(--color-background);color:inherit;border:1px solid var(--color-border-control);border-radius:var(--radius-md);padding:2px 6px}
+.vdesc{font-size:.9375rem;margin:8px 0}
+.vdesc b{font-weight:700}
+.stage{width:100%;overflow:hidden;border-radius:var(--radius-lg);border:1px solid var(--color-border);background:var(--color-tertiary);position:relative}
+.stage-in{transform-origin:0 0}
+table.pts{border-collapse:collapse;width:100%;font-size:.875rem;margin:8px 0 24px}
+table.pts th,table.pts td{border-bottom:1px solid var(--color-border);padding:6px 8px;text-align:left;vertical-align:top}
+.tag{display:inline-block;border-radius:var(--radius-full);padding:0 8px;font-size:.75rem;font-weight:700;white-space:nowrap;background:var(--color-secondary)}
+.tag.W{background:var(--color-success-bg)} .tag.H{background:var(--color-accent-bg)} .tag.O{background:var(--color-tertiary)}
+.tag.X{background:var(--color-warning-bg)}
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:8px 0 24px}
+.gal figure{margin:0}.gal figcaption{font-size:.8125rem;color:var(--color-muted);margin-bottom:4px}
+.gal .cell{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:12px}
+.fbar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:30;background:#1c1c1e;color:#fff;border-radius:var(--radius-full);display:flex;align-items:center;gap:4px;padding:4px;font-size:.875rem;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.fbar button{background:transparent;border:0;color:#fff;border-radius:var(--radius-full);min-width:36px;min-height:36px}
+.fbar span{padding:0 8px;white-space:nowrap}
+
+/* ===== 預覽框（模擬 AppShell） ===== */
+.pf{display:grid;grid-template-columns:var(--sbw) 1fr;height:var(--fh);background:var(--color-background);color:var(--color-foreground);font-size:16px;line-height:1.5;overflow:hidden}
+.pf .main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.tb{flex-shrink:0;height:52px;display:flex;align-items:center;padding:0 24px;font-weight:700;font-size:1.0625rem;
+  background:color-mix(in srgb,var(--color-background) 85%,transparent);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--color-border);position:relative;z-index:2}
+.body{flex:1;min-height:0;overflow:auto}.body.accbg{background:var(--color-secondary)}
+.pg-chat{display:flex;flex-direction:column;height:100%;background:var(--color-secondary)}
+.msgs{flex:1;padding:24px;display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto}
+.bub{max-width:70%;padding:10px 14px;border-radius:var(--radius-xl);font-size:.9375rem}
+.bub.me{align-self:flex-end;background:var(--color-accent-bg)}
+.bub.ai{align-self:flex-start;background:var(--color-background)}
+.composer{max-width:760px;width:100%;margin:0 auto;padding:12px 24px 24px}
+.composer div{display:flex;align-items:center;justify-content:space-between;background:var(--color-background);border:1px solid var(--color-border-control);border-radius:var(--radius-xl);padding:10px 14px;color:var(--color-muted);font-size:.9375rem}
+.pg-trips{padding:24px;max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.trip{background:var(--color-secondary);border-radius:var(--radius-lg);padding:16px;display:flex;justify-content:space-between;align-items:center}
+.trip b{display:block}.trip small{color:var(--color-muted);font-size:.8125rem}
+.pg-map{position:relative;height:100%;background:
+  linear-gradient(115deg,transparent 40%,color-mix(in srgb,var(--color-accent) 18%,transparent) 41%,transparent 43%),
+  repeating-linear-gradient(0deg,transparent 0 59px,color-mix(in srgb,var(--color-foreground) 7%,transparent) 59px 60px),
+  repeating-linear-gradient(90deg,transparent 0 59px,color-mix(in srgb,var(--color-foreground) 7%,transparent) 59px 60px),
+  var(--color-tertiary)}
+.pin{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--color-accent-fill);border:2px solid var(--color-background)}
+.mapcard{position:absolute;left:24px;bottom:24px;width:300px;background:var(--color-background);border-radius:var(--radius-lg);padding:12px 16px;box-shadow:var(--shadow-md)}
+.mapcard small{color:var(--color-muted)}
+
+/* ----- 側邊欄共用 ----- */
+.sb{height:100%;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.sb .brand{font-weight:700;font-size:var(--font-size-title3);letter-spacing:-.01em;padding:2px 8px;margin-bottom:12px;display:flex;align-items:baseline;gap:0}
+.sb .brand i{color:var(--color-accent-text);font-style:normal}
+.nv{display:flex;align-items:center;gap:11px;border:0;background:transparent;width:100%;text-align:left;border-radius:var(--radius-md);color:var(--color-muted);font-size:var(--font-size-footnote);font-weight:600;min-height:36px;padding:8px 10px}
+.nv .ico{font-size:20px}
+.nv:hover{background:var(--color-hover);color:var(--color-foreground)}
+.lbl{font-size:var(--font-size-caption);font-weight:600;color:var(--color-muted);padding:0 10px;margin:14px 0 4px;display:flex;justify-content:space-between;align-items:center}
+.ti{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:var(--radius-md);padding:7px 10px 7px 41px;color:var(--color-muted);font-size:var(--font-size-footnote);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti:hover{background:var(--color-hover);color:var(--color-foreground)}
+.chip{display:flex;align-items:center;gap:10px;border:0;background:transparent;width:100%;text-align:left;border-radius:var(--radius-md);padding:8px;min-height:52px}
+.chip:hover{background:var(--color-hover)}
+.av{width:32px;height:32px;border-radius:50%;background:var(--color-accent-fill);color:var(--color-accent-foreground);display:grid;place-items:center;font-weight:700;font-size:var(--font-size-footnote);flex-shrink:0}
+.chip .nm{font-size:var(--font-size-footnote);font-weight:600;line-height:1.25}
+.chip .em{font-size:var(--font-size-caption);color:var(--color-muted);line-height:1.25}
+.chip.on{background:var(--color-accent-bg)}
+
+/* A：扁平 source list + 既有 vibrancy + 既有實心選取 */
+.sbA{--glass-alpha:72%;background:color-mix(in srgb,var(--color-background) 72%,transparent);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border-right:1px solid var(--color-border);padding:16px 12px 12px}
+.sbA .nv.on{background:var(--color-accent-fill);color:var(--color-accent-foreground)}
+.sbA .cta{margin-top:auto;border-top:1px solid var(--color-border);padding-top:8px}
+/* B：macOS tinted source list（實底、tint 選取、可摺疊分區、帳號列含 email） */
+.sbB{background:var(--color-secondary);border-right:1px solid var(--color-border);padding:16px 10px 10px}
+.sbB .nv .ico{color:var(--color-accent)}
+.sbB .nv.on{background:var(--color-accent-bg);color:var(--color-foreground)}
+.sbB .cta{margin-top:auto;padding-top:6px}
+.sbB .disc{border:0;background:transparent;color:var(--color-muted);display:flex;align-items:center;gap:4px;font:inherit;font-size:var(--font-size-caption);font-weight:600;padding:2px 10px;margin:14px 0 4px;min-height:24px;width:100%}
+.sbB .disc .ico{font-size:12px;transform:rotate(90deg)}
+/* C：icon rail（1024 預設收合、1440 預設展開，可手動切換） */
+.sbC{background:var(--color-background);border-right:1px solid var(--color-border);padding:12px 8px}
+.sbC .tg{border:0;background:transparent;border-radius:var(--radius-md);width:40px;height:40px;color:var(--color-muted);display:grid;place-items:center;margin-bottom:8px}
+.sbC .tg:hover{background:var(--color-hover)}
+.sbC .tg .ico{font-size:20px}
+.sbC .nv.on{background:var(--color-accent-fill);color:var(--color-accent-foreground)}
+.sbC.rail .nv{justify-content:center;padding:0;width:48px;height:44px}
+.sbC.rail .nv span,.sbC.rail .brand{display:none}
+.sbC .cta{margin-top:auto}
+.sbC.rail .cta{display:flex;justify-content:center}
+
+/* ----- 帳號頁共用 ----- */
+.acc{padding:24px;margin:0 auto;width:100%}
+.hero-name{display:flex;align-items:center;gap:4px;font-size:var(--font-size-title3);font-weight:700;line-height:1.3}
+.hero-email{font-size:var(--font-size-footnote);color:var(--color-muted)}
+.ed{border:0;background:transparent;width:32px;height:32px;border-radius:var(--radius-md);color:var(--color-muted);display:grid;place-items:center}
+.ed:hover{background:var(--color-hover)}
+.grp{margin:0 0 24px}
+.glbl{font-size:var(--font-size-caption);font-weight:700;color:var(--color-muted);padding:0 4px;margin:0 0 6px;letter-spacing:.02em}
+.rows{background:var(--color-background);border-radius:var(--radius-lg);overflow:hidden}
+.row{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;background:transparent;border-bottom:1px solid var(--color-border);padding:10px 16px;min-height:var(--spacing-tap-min)}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--color-hover)}
+.row .ic{width:32px;height:32px;border-radius:var(--radius-md);background:var(--color-accent-bg);display:grid;place-items:center;flex-shrink:0}
+.row .ic .ico{font-size:18px}
+.row .t{flex:1;min-width:0;display:flex;flex-direction:column}
+.row .t b{font-size:var(--font-size-callout);font-weight:600;line-height:1.3}
+.row .t small{font-size:var(--font-size-caption);color:var(--color-muted);line-height:1.3}
+.row .ch{color:var(--color-muted);font-size:14px}
+.row.danger,.row.danger .t b,.row.danger .t small{color:var(--color-destructive)}
+.row.danger .ic{background:var(--color-destructive-bg)}
+/* 統計三態 */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{text-align:center}
+.stat .v{display:block;font-size:var(--font-size-title3);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.4;min-height:28px}
+.stat .l{display:block;font-size:var(--font-size-caption);color:var(--color-muted)}
+.sk{display:inline-block;width:2.2ch;height:18px;border-radius:var(--radius-full);vertical-align:middle;background:linear-gradient(90deg,var(--color-tertiary),var(--color-hover),var(--color-tertiary));background-size:200% 100%;animation:sh 1.2s linear infinite}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.stat .dash{color:var(--color-muted)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sterr{grid-column:1/-1;display:flex;align-items:center;gap:8px;justify-content:center;font-size:var(--font-size-caption);background:var(--color-warning-bg);border-radius:var(--radius-md);padding:4px 8px;color:var(--color-foreground)}
+.sterr .ico{color:var(--color-warning-deep);font-size:16px}
+.sterr button{border:0;background:transparent;text-decoration:underline;color:var(--color-accent-text);font-size:var(--font-size-caption);font-weight:600;min-height:24px;padding:0 4px}
+/* A 版面：單欄 720，hero 橫式與列同寬 */
+.aA{max-width:720px}
+.aA .hero{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 24px;display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.aA .hero .av{width:64px;height:64px;font-size:1.5rem}
+.aA .hero .id{flex:1;min-width:180px}
+.aA .hero .stats{width:300px}
+.aA .rows{border:1px solid var(--color-border)}
+/* B 版面：寬 1040，hero 全寬，下方等寬雙欄 */
+.aB{max-width:1040px}
+.aB .hero{background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 24px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;margin-bottom:24px}
+.aB .hero .av{width:64px;height:64px;font-size:1.5rem}
+.aB .hero .stats{grid-template-columns:repeat(3,96px)}
+.aB .hero .stat{background:var(--color-secondary);border-radius:var(--radius-lg);padding:8px 4px}
+.aB .cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.aB .rows{border:1px solid var(--color-border)}
+.aB .hero .sterr{grid-column:1/-1}
+/* C 版面：左側 profile 窗格 + 右側單欄設定窗格（System Settings） */
+.aC{max-width:1120px;display:grid;grid-template-columns:288px 1fr;gap:24px;align-items:start}
+.aC .prof{position:sticky;top:0;background:var(--color-background);border-radius:var(--radius-xl);padding:24px;box-shadow:var(--shadow-sm);text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.aC .prof .av{width:80px;height:80px;font-size:1.75rem;margin-bottom:8px}
+.aC .stats{grid-template-columns:1fr;width:100%;gap:0;margin-top:16px;text-align:left}
+.aC .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--color-border)}
+.aC .stat .v{order:2;min-height:0;font-size:var(--font-size-callout)}
+.aC .stat .l{font-size:var(--font-size-footnote);color:var(--color-foreground)}
+.aC .rows{box-shadow:var(--shadow-sm)}
+.aC .row{padding:12px 16px}
+
+@media (prefers-reduced-transparency:reduce){
+  .sbA{background:var(--color-background);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .tb{background:var(--color-background);backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+<symbol id="i-trips" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.500-7 10-7 10z"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 0 16c1.500 0 2-1 1.500-2s0-2 1.500-2h2a3 3 0 0 0 3-3A8 8 0 0 0 12 4z"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-device" viewBox="0 0 24 24"><path d="M7 3h10v18H7zM11 18h2"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="M9 8l-5 4 5 4M15 8l5 4-5 4"/></symbol>
+<symbol id="i-group" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 19c0-3 3-5 6-5s6 2 6 5M17 11a2.500 2.500 0 1 0 0-5M17 14c2.500 0 4.500 1.500 4.500 4"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v4h4M9 12h6M9 16h6"/></symbol>
+<symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17v.5"/></symbol>
+<symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3"/></symbol>
+<symbol id="i-side" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM9 5v14"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12l15-7-5 15-3-6z"/></symbol>
+</defs></svg>
+
+<div class="doc">
+  <div class="banner"><b>PROTOTYPE，拋棄式。</b>不是正式程式碼，不連後端，資料為假（Ray／demo@example.com）。對應 trip-planner#1687，供 owner sign-off。側邊欄是全站共用殼層，所以切換「頁面」可在聊天、行程、地圖、帳號四頁看同一個側邊欄。</div>
+  <h1>桌機帳號頁與側邊欄：三個 Apple HIG 變體</h1>
+  <section class="qs" aria-labelledby="qh">
+    <h2 id="qh">需要 owner 回答的選擇</h2>
+    <ol>
+      <li><b>整體方向</b>：A（保守，單欄）、B（等寬雙欄，全寬 hero）、C（左右分欄，像 System Settings）選哪個，或側邊欄與帳號版面分開選（上方可混搭）？</li>
+      <li><b>2026-07-19 的「hero 收窄置中、設定兩欄」正式作廢</b>，三個變體都取代它。作廢的理由是否成立，是否有想保留的部分？</li>
+      <li><b>內容寬度基準</b>：DESIGN.md「Content Width」是 1040px。A 為 720、B 為 1040、C 為 1120（超出標準）。帳號頁是否允許偏離 1040？</li>
+      <li><b>側邊欄材質</b>：保留 07-19 拍板的 vibrancy 半透明（A），或改實底（B、C）。半透明底的文字對比取決於背後內容，實底可在 token 層算死。</li>
+      <li><b>側邊欄選取樣式</b>：實心 accent 填色加白字（現行，A、C）或 tint 底加中性字（B，符合 DESIGN.md「語意色角色分離」精神，也較接近 macOS 觀感）。</li>
+      <li><b>側邊欄是否可收合成 icon rail</b>（C，1024 預設收合）：這會牴觸「固定 216px、側邊欄含我的行程清單」的現行決策。</li>
+      <li><b>「登出」「刪除帳號」要不要獨立成一個危險區群組</b>（B、C 分開，A 維持同組）。另外登出是否仍標紅：HIG 不把登出視為破壞性動作，但現行 owner 決策是紅色，prototype 維持紅色未動。</li>
+      <li><b>分區標題字級</b>：現行 10px eyebrow 全大寫（DESIGN.md 標示「待 owner 決定」），prototype 一律用 12px（caption）。是否同意？</li>
+      <li><b>統計失敗態</b>：用「—」加一列警示文字與重試鈕（prototype 做法），或失敗時整塊隱藏？</li>
+    </ol>
+  </section>
+</div>
+
+<div class="ctrl" id="ctrl" role="toolbar" aria-label="預覽控制">
+  <span class="seg" id="sgV" role="group" aria-label="變體"></span>
+  <label>側邊欄 <select id="selSb"><option value="A">A 扁平 source list</option><option value="B">B macOS tint</option><option value="C">C icon rail</option></select></label>
+  <label>帳號版面 <select id="selAc"><option value="A">A 單欄</option><option value="B">B 雙欄</option><option value="C">C 左右分欄</option></select></label>
+  <span class="seg" id="sgP" role="group" aria-label="頁面"></span>
+  <span class="seg" id="sgW" role="group" aria-label="寬度"></span>
+  <span class="seg" id="sgT" role="group" aria-label="主題"></span>
+  <span class="seg" id="sgS" role="group" aria-label="統計狀態"></span>
+</div>
+
+<div class="doc">
+  <p class="vdesc" id="vdesc"></p>
+  <div class="stage" id="stage"><div class="stage-in" id="stageIn"></div></div>
+
+  <h2 style="font-size:1.0625rem">統計數字三種狀態（目前帳號版面的樣式）</h2>
+  <div class="gal" id="gal"></div>
+
+  <h2 style="font-size:1.0625rem">設計點與來源分類</h2>
+  <p style="font-size:.875rem;margin:4px 0">
+    <span class="tag W">W</span> 網頁要求（WCAG 2.2）　<span class="tag H">H</span> 原生建議（HIG）　<span class="tag O">O</span> owner 決策（DESIGN.md／issue）　<span class="tag X">衝突</span> 來源互相牴觸，需 owner 決定，prototype 不默默覆寫。
+  </p>
+  <table class="pts" id="pts"><thead><tr><th>設計點</th><th>來源</th><th>說明</th></tr></thead><tbody></tbody></table>
+  <p style="font-size:.8125rem;color:var(--color-muted)">檢視預覽時可用鍵盤 ← → 切換變體。網址 hash 會記錄目前狀態，可貼給別人重現。</p>
+</div>
+
+<div class="fbar" role="group" aria-label="變體切換"><button id="pv" aria-label="上一個變體">&#8592;</button><span id="fl"></span><button id="nx" aria-label="下一個變體">&#8594;</button></div>
+
+<script>
+(function(){
+var NAMES={A:'A 扁平單欄',B:'B 等寬雙欄',C:'C 左右分欄'};
+var PAGES=[['chat','聊天'],['trips','行程'],['map','地圖'],['account','帳號']];
+var S={v:'B',sb:'B',ac:'B',page:'account',w:1440,theme:null,st:'success'};
+var rail=null; // C 側邊欄手動收合狀態；null = 依寬度預設
+var retryTimer=null;
+
+function parseHash(){
+  var h=location.hash.slice(1);if(!h)return;
+  h.split('&').forEach(function(kv){var p=kv.split('=');var k=p[0],v=decodeURIComponent(p[1]||'');
+    if(k==='v'&&NAMES[v]){S.v=v;S.sb=v;S.ac=v}
+    if(k==='sb'&&NAMES[v])S.sb=v; if(k==='ac'&&NAMES[v])S.ac=v;
+    if(k==='page'&&PAGES.some(function(x){return x[0]===v}))S.page=v;
+    if(k==='w'&&(v==='1024'||v==='1440'))S.w=+v;
+    if(k==='theme'&&(v==='light'||v==='dark'))S.theme=v;
+    if(k==='st'&&/^(loading|success|error)$/.test(v))S.st=v;});
+}
+function writeHash(){var o=['v='+S.v,'sb='+S.sb,'ac='+S.ac,'page='+S.page,'w='+S.w,'theme='+theme(),'st='+S.st];
+  try{history.replaceState(null,'','#'+o.join('&'))}catch(e){}}
+function theme(){return S.theme||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
+function ico(n){return '<svg class="ico" aria-hidden="true"><use href="#i-'+n+'"/></svg>'}
+
+/* ---------- 真實文案與資料 ---------- */
+var NAV=[['chat','聊天','chat'],['trips','行程','trips'],['map','地圖','map'],['fav','收藏','heart']];
+var TRIPS=['沖繩五日遊','京都賞楓四日','台南美食小旅行'];
+var USER={name:'Ray',email:'demo@example.com'};
+var GROUPS=[
+ {k:'app',label:'應用程式',rows:[['palette','外觀設定','跟隨系統、淺色、深色'],['bell','通知設定','尚未開放']]},
+ {k:'collab',label:'共編 & 整合',rows:[['device','已連結的應用程式','管理透過 Tripline 登入的應用程式'],['code','開發者選項','OAuth 應用程式註冊']]},
+ {k:'acct',label:'帳號',rows:[['group','已登入裝置','管理所有登入中的裝置'],['doc','隱私權政策','我們收集什麼資料、如何使用'],['out','登出','清除目前裝置的登入狀態',1],['trash','刪除帳號','永久刪除帳號與所有行程，無法復原',1]]}
+];
+function rowH(r){return '<button class="row'+(r[3]?' danger':'')+'" type="button"><span class="ic" aria-hidden="true">'+ico(r[0])+'</span><span class="t"><b>'+r[1]+'</b><small>'+r[2]+'</small></span><span class="ch" aria-hidden="true">'+ico('chev')+'</span></button>'}
+function grpH(label,rows,id){return '<section class="grp" aria-labelledby="g-'+id+'"><h3 class="glbl" id="g-'+id+'">'+label+'</h3><div class="rows">'+rows.map(rowH).join('')+'</div></section>'}
+
+/* ---------- 統計三態 ---------- */
+function statsH(st){
+  var vals=[['3','個行程'],['12','天旅程'],['5','位旅伴']];
+  var cells=vals.map(function(c){
+    var v= st==='success'?c[0]: st==='loading'?'<span class="sk" aria-hidden="true"></span>':'<span class="dash" aria-hidden="true">&mdash;</span>';
+    return '<div class="stat"><span class="v">'+v+'</span><span class="l">'+c[1]+'</span></div>';}).join('');
+  var extra= st==='loading'?'<span class="sr" role="status">統計載入中</span>':'';
+  if(st==='error')extra='<div class="sterr" role="alert">'+ico('warn')+'<span>無法載入統計</span><button type="button" data-retry>重試</button></div>';
+  return '<div class="stats" role="group" aria-label="帳號統計" aria-busy="'+(st==='loading')+'">'+cells+extra+'</div>';
+}
+
+/* ---------- 側邊欄 ---------- */
+function navItems(on,labels){return NAV.map(function(n){var a=n[0]===on;
+  return '<button class="nv'+(a?' on':'')+'" type="button" data-nav="'+n[0]+'"'+(a?' aria-current="page"':'')+' aria-label="'+n[1]+'"'+(labels?'':' title="'+n[1]+'"')+'>'+ico(n[2])+'<span>'+n[1]+'</span></button>'}).join('')}
+function sideH(page){
+  var on= page==='account'?'':page;
+  var acctOn=page==='account';
+  if(S.sb==='A'){
+    return '<nav class="sb sbA" aria-label="主導覽"><div class="brand">Tripline<i>.</i></div>'+navItems(on,1)+
+      '<div class="lbl">我的行程</div>'+TRIPS.map(function(t){return '<button class="ti" type="button">'+t+'</button>'}).join('')+
+      '<div class="cta"><button class="chip'+(acctOn?' on':'')+'" type="button" data-nav="account"><span class="av">R</span><span><span class="nm" style="display:block">'+USER.name+'</span></span></button></div></nav>';
+  }
+  if(S.sb==='B'){
+    return '<nav class="sb sbB" aria-label="主導覽"><div class="brand">Tripline<i>.</i></div>'+navItems(on,1)+
+      '<button class="disc" type="button" aria-expanded="true">'+ico('chev')+'我的行程</button>'+TRIPS.map(function(t){return '<button class="ti" type="button">'+t+'</button>'}).join('')+
+      '<div class="cta"><button class="chip'+(acctOn?' on':'')+'" type="button" data-nav="account"><span class="av">R</span><span><span class="nm" style="display:block">'+USER.name+'</span><span class="em">'+USER.email+'</span></span></button></div></nav>';
+  }
+  var r= rail===null? S.w<1440 : rail;
+  return '<nav class="sb sbC'+(r?' rail':'')+'" aria-label="主導覽"><button class="tg" type="button" data-rail aria-label="'+(r?'展開側邊欄':'收合側邊欄')+'" aria-expanded="'+(!r)+'">'+ico('side')+'</button>'+
+    '<div class="brand">Tripline<i>.</i></div>'+navItems(on,!r)+
+    '<div class="cta"><button class="chip'+(acctOn?' on':'')+'" type="button" data-nav="account" aria-label="帳號 Ray" title="帳號 Ray"><span class="av">R</span>'+(r?'':'<span class="nm">'+USER.name+'</span>')+'</button></div></nav>';
+}
+function sbWidth(){return S.sb==='C'?((rail===null?S.w<1440:rail)?'64px':'216px'):'216px'}
+
+/* ---------- 頁面 ---------- */
+function pageH(p){
+  if(p==='chat')return '<div class="pg-chat"><div class="msgs"><div class="bub me">幫我排沖繩第三天，要有下雨備案</div><div class="bub ai">第三天早上先去美ら海水族館，下雨也能玩。午後改去國際通逛街，傍晚再看天氣決定要不要去海灘。</div><div class="bub me">午餐想吃沖繩麵</div></div><div class="composer"><div><span>輸入訊息</span>'+ico('send')+'</div></div></div>';
+  if(p==='trips')return '<div class="pg-trips">'+[['沖繩五日遊','2026/12/03 – 12/07 · 5 天'],['京都賞楓四日','2027/11/20 – 11/23 · 4 天'],['台南美食小旅行','2027/03/06 – 03/08 · 3 天']].map(function(t){return '<div class="trip"><span><b>'+t[0]+'</b><small>'+t[1]+'</small></span>'+ico('chev')+'</div>'}).join('')+'</div>';
+  if(p==='map')return '<div class="pg-map"><span class="pin" style="left:34%;top:30%"></span><span class="pin" style="left:52%;top:46%"></span><span class="pin" style="left:68%;top:62%"></span><div class="mapcard"><b>第 3 天 · 美ら海水族館</b><br><small>09:30 – 12:00 · 全天候景點</small></div></div>';
+  var ac=S.ac;
+  var hero;
+  var nameRow='<div class="hero-name">'+USER.name+'<button class="ed" type="button" aria-label="編輯名稱">'+ico('pen')+'</button></div><div class="hero-email">'+USER.email+'</div>';
+  if(ac==='A'){
+    return '<div class="acc aA"><section class="hero" aria-label="個人資料"><span class="av" aria-hidden="true">R</span><div class="id">'+nameRow+'</div>'+statsH(S.st)+'</section>'+
+      GROUPS.map(function(g){return grpH(g.label,g.rows,g.k)}).join('')+'</div>';
+  }
+  if(ac==='B'){
+    var acct=GROUPS[2];
+    return '<div class="acc aB"><section class="hero" aria-label="個人資料"><span class="av" aria-hidden="true">R</span><div>'+nameRow+'</div>'+statsH(S.st).replace('class="stats"','class="stats"')+'</section>'+
+      '<div class="cols"><div>'+grpH(GROUPS[0].label,GROUPS[0].rows,'app')+grpH(GROUPS[1].label,GROUPS[1].rows,'collab')+'</div>'+
+      '<div>'+grpH(acct.label,acct.rows.slice(0,2),'acct')+grpH('登出與刪除',acct.rows.slice(2),'danger')+'</div></div></div>';
+  }
+  var a=GROUPS[2];
+  return '<div class="acc aC"><section class="prof" aria-label="個人資料"><span class="av" aria-hidden="true">R</span>'+nameRow+statsH(S.st)+'</section>'+
+    '<div>'+grpH(GROUPS[0].label,GROUPS[0].rows,'app')+grpH(GROUPS[1].label,GROUPS[1].rows,'collab')+grpH(a.label,a.rows.slice(0,2),'acct')+grpH('登出與刪除',a.rows.slice(2),'danger')+'</div></div>';
+}
+var TITLES={chat:'聊天',trips:'行程',map:'地圖',account:'帳號'};
+
+/* ---------- 設計點表 ---------- */
+function T(a,tag,note,x){return {a:a,t:tag,n:note,x:x}}
+var COMMON=[
+ T('單一寬度基準：個人資料與設定格共用同一個容器邊','O','issue #1687 (a)。三個變體的 hero 與設定格左右邊緣必須對齊（可用瀏覽器量：同一容器內，左右 padding 相同）。取代 07-19「hero 收窄置中」。'),
+ T('統計三態：載入=骨架+aria-busy+視覺隱藏的「統計載入中」；成功=數字；失敗=「—」+一列警示（圖示+文字+重試）','W','WCAG 1.4.1 不單靠顏色、4.1.3 狀態訊息（role=status／alert）、2.5.8 重試鈕 ≥24px。現行把載入與失敗都顯示成「—」，無法區分。'),
+ T('失敗列用中性文字加警示圖示，底用 warning-bg，不用語意色當文字','O','DESIGN.md「語意色的角色分離」(2026-07-26)。HIG Color 同方向：顏色上到底與圖形，不上到文字。'),
+ T('骨架動畫在 prefers-reduced-motion 時停用；毛玻璃在 prefers-reduced-transparency 時退回實底','W','動畫：WCAG 2.3.3（AAA）精神；透明度為 media query 降級，tokens.css 既有同類區塊。'),
+ T('焦點框 2px focus-ring + 外圈 2px 底色（雙帶）','O','DESIGN.md「Focus Indicator」；WCAG 2.4.7／1.4.11。prototype 以 :focus-visible 套用，可用 Tab 鍵檢視。'),
+ T('設定列 min-height 44px','O','owner 採用的舒適度目標（不是 HIG／WCAG 最小值）；WCAG 2.5.8 AA 門檻 24px。'),
+ T('分區標題 12px（caption）取代 10px 全大寫 eyebrow','O','DESIGN.md 標示 10px eyebrow 的最小字級口徑「待 owner 決定」；prototype 取 12px 是暫時取向，並非定案。',1),
+ T('「登出」「刪除帳號」維持 destructive 紅','O','owner 既有決策。HIG 不把登出視為破壞性動作，兩者衝突，prototype 沒有覆寫。',1),
+ T('無障礙名稱：icon-only 控制項有 aria-label，目前頁以 aria-current=page 標示','W','WCAG 4.1.2、2.5.3。'),
+];
+var BY={
+ A:[
+  T('側邊欄：移除包住 4 個主導覽的框線卡片（現行用 --tabbar-* 的 tint+rim+shadow 做成浮動玻璃卡）改為平面列表','O','issue #1687 (c)。--tabbar-* 材質回歸只給手機底部膠囊使用。HIG 側邊欄為平面清單。'),
+  T('側邊欄貼齊視窗左緣、全高，右側 1px 分隔線','H','macOS 側邊欄慣例。分隔線為裝飾，不受 1.4.11 3:1 約束。'),
+  T('材質：維持 07-19 的 vibrancy 半透明（72% + blur 30px）','O','owner 07-19 拍板。文字對比依賴背後內容，WCAG 1.4.3 無法在 token 層算死；以實底降級。與 B、C 的實底衝突。',1),
+  T('選取樣式：實心 accent-fill + 白字（現行，tokens 標示 5.51:1）','O','與 B 的 tint 底衝突，見需 owner 回答第 5 點。',1),
+  T('帳號頁：單欄 720，hero 橫式（頭像、姓名信箱、三項統計）與設定格同寬；三個分區垂直堆疊','O','「帳號」群組與其他分區同寬，不再只佔半邊。代價：1440 時兩側大量留白，且 720 偏離 Content Width 1040。',1),
+  T('設定格有 1px 邊框','O','沿用現行。舊 css-hig-rules 寫「無框線設計」，與現況已不一致，需 owner 確認是否仍有效。',1),
+ ],
+ B:[
+  T('側邊欄：實底 secondary、選取為 accent-bg tint + 中性文字，icon 用 accent','H','macOS 側邊欄選取為 tint 觀感。文字用 foreground 符合角色分離規則；icon 屬圖形，accent 對 accent-bg 4.55（tokens 註記）。'),
+  T('側邊欄：分區「我的行程」可摺疊，帳號列同時顯示姓名與信箱','H','source list 分區摺疊為 macOS 慣例。摺疊鈕為 button 並有 aria-expanded。'),
+  T('材質：實底（不用半透明）','W','文字對比可在 token 層算死（WCAG 1.4.3）；與 owner 07-19 vibrancy 決策衝突。',1),
+  T('帳號頁：內容寬 1040（等於 Content Width 標準），hero 全寬，下方等寬雙欄','O','hero 與雙欄共用同一容器邊。左欄「應用程式＋共編」、右欄「帳號＋登出與刪除」，兩欄高度約略相等，「帳號」不再孤立在半邊。'),
+  T('登出與刪除獨立成「登出與刪除」群組','H','HIG 建議破壞性操作與日常操作區隔以免誤觸。需 owner 確認群組名稱與是否拆分，改變了現行的資訊架構。',1),
+  T('1024 時雙欄每欄約 370px，說明文字會換行','W','需 owner 確認換行可接受；WCAG 1.4.10 reflow 不受影響（桌機寬）。'),
+ ],
+ C:[
+  T('側邊欄：icon rail（64px），1024 預設收合、1440 預設展開，頂部切換鈕可手動切換','H','macOS 側邊欄可收合。改變「固定 216px、含我的行程清單」的現行決策。',1),
+  T('收合態的導覽鈕只有 icon：以 aria-label 與 title 提供名稱，hover 顯示 tooltip','W','WCAG 4.1.2、2.5.3、1.4.13。tooltip 的可關閉、可停留行為 prototype 僅用瀏覽器原生 title，尚未達 1.4.13。'),
+  T('側邊欄：實底 background、選取為實心 accent-fill','O','沿用現行選取樣式，與 B 的 tint 相比取捨見第 5 點。'),
+  T('帳號頁：左側 288px profile 窗格（sticky，統計改直列）+ 右側單欄設定窗格，總寬 1120','H','System Settings 形制。profile 與設定窗格共用同一容器的頂邊與兩側邊。1120 超過 Content Width 1040。',1),
+  T('設定格無邊框，以背景層級與極淡陰影區分','H','對應舊 css-hig-rules「無框線設計」；與 A、B 的 1px 邊框做對照。深色下層級差靠 background 與 secondary。'),
+  T('「帳號」「登出與刪除」在右窗格與其他分區同寬','O','issue #1687 (b)。同 B 的拆分，也需 owner 確認。',1),
+ ]
+};
+var DESC={
+ A:'<b>A 扁平單欄（最保守）</b>：側邊欄只拿掉框線卡片，其餘（vibrancy、實心選取、216px、我的行程）照舊；帳號頁單欄 720，hero 橫式，所有分區同寬。取代 07-19：hero 不再收窄置中而是與設定格同寬，設定格不再兩欄。',
+ B:'<b>B 等寬雙欄（推薦）</b>：側邊欄為 macOS tint source list（實底、摺疊分區、帳號列含信箱）；帳號頁 1040 全寬 hero + 等寬雙欄，「帳號」群組與「登出與刪除」佔滿右欄。取代 07-19：保留「設定兩欄」但 hero 改全寬並與兩欄對齊，不再收窄置中；欄內容重新平衡。',
+ C:'<b>C 左右分欄（最像 macOS）</b>：側邊欄為可收合 icon rail；帳號頁為左 profile 窗格 + 右設定窗格（System Settings 形制）。取代 07-19：hero 不再置中而是左窗格，設定改單欄，兩欄概念整個移除。'
+};
+
+/* ---------- 渲染 ---------- */
+function render(){
+  var th=theme();document.documentElement.setAttribute('data-theme',th);
+  var fh=S.w===1440?820:720;
+  var inner='<div class="pf" style="--sbw:'+sbWidth()+';--fh:'+fh+'px;width:'+S.w+'px">'+sideH(S.page)+
+    '<div class="main"><div class="tb">'+TITLES[S.page]+'</div><div class="body'+(S.page==='account'?' accbg':'')+'">'+pageH(S.page)+'</div></div></div>';
+  var si=document.getElementById('stageIn');si.innerHTML=inner;si.style.width=S.w+'px';
+  fit();
+  seg('sgV',['A','B','C'].map(function(k){return [k,NAMES[k]]}),S.v===S.sb&&S.sb===S.ac?S.v:null,function(k){S.v=k;S.sb=k;S.ac=k;rail=null;render()});
+  seg('sgP',PAGES,S.page,function(k){S.page=k;render()});
+  seg('sgW',[['1024','1024'],['1440','1440']],String(S.w),function(k){S.w=+k;rail=null;render()});
+  seg('sgT',[['light','淺色'],['dark','深色']],th,function(k){S.theme=k;render()});
+  seg('sgS',[['loading','統計載入'],['success','統計成功'],['error','統計失敗']],S.st,function(k){S.st=k;render()});
+  document.getElementById('selSb').value=S.sb;document.getElementById('selAc').value=S.ac;
+  document.getElementById('vdesc').innerHTML=(S.sb===S.ac?DESC[S.sb]:'<b>混搭</b>：側邊欄 '+S.sb+'＋帳號版面 '+S.ac+'。')+(S.page!=='account'?' （目前顯示的頁面不是帳號頁，側邊欄變體仍然生效，切到「帳號」看完整版面。）':'');
+  document.getElementById('fl').textContent=(S.sb===S.ac?NAMES[S.sb]:'側邊欄 '+S.sb+' / 帳號 '+S.ac);
+  // 統計三態並列
+  var hold=S.ac; 
+  document.getElementById('gal').innerHTML=['loading','success','error'].map(function(s){
+    return '<figure><figcaption>'+({loading:'載入中',success:'成功',error:'失敗'})[s]+'（帳號版面 '+hold+'）</figcaption><div class="cell"><div class="acc a'+hold+'" style="padding:0;display:block;max-width:none">'+(hold==='C'?'<div class="prof" style="position:static;box-shadow:none;padding:0">':'<div class="hero" style="padding:0;border:0;display:block">')+statsH(s)+'</div></div></div></figure>'}).join('');
+  var rows=COMMON.concat(BY[S.sb===S.ac?S.sb:S.ac]).concat(S.sb!==S.ac?BY[S.sb].filter(function(x){return /^側邊欄/.test(x.a)}):[]);
+  document.querySelector('#pts tbody').innerHTML=rows.map(function(r){return '<tr><td>'+r.a+'</td><td><span class="tag '+r.t+'">'+({W:'W 網頁要求',H:'H 原生建議',O:'O owner 決策'})[r.t]+'</span>'+(r.x?' <span class="tag X">衝突</span>':'')+'</td><td>'+r.n+'</td></tr>'}).join('');
+  writeHash();
+}
+function seg(id,items,cur,cb){var el=document.getElementById(id);el.innerHTML='';items.forEach(function(it){var b=document.createElement('button');b.type='button';b.textContent=it[1];b.setAttribute('aria-pressed',String(it[0]===cur));b.onclick=function(){cb(it[0])};el.appendChild(b)})}
+function fit(){var st=document.getElementById('stage'),si=document.getElementById('stageIn');var s=Math.min(1,st.clientWidth/S.w);si.style.transform='scale('+s+')';var h=si.firstChild.offsetHeight;st.style.height=Math.ceil(h*s)+'px'}
+
+document.addEventListener('click',function(e){
+  var t=e.target.closest&&e.target.closest('[data-nav],[data-rail],[data-retry]');if(!t)return;
+  if(t.hasAttribute('data-nav')){var k=t.getAttribute('data-nav');if(k==='fav')return;S.page=k;render()}
+  else if(t.hasAttribute('data-rail')){rail=!(rail===null?S.w<1440:rail);render()}
+  else if(t.hasAttribute('data-retry')){S.st='loading';render();clearTimeout(retryTimer);retryTimer=setTimeout(function(){S.st='success';render()},900)}
+});
+document.getElementById('selSb').onchange=function(e){S.sb=e.target.value;rail=null;render()};
+document.getElementById('selAc').onchange=function(e){S.ac=e.target.value;render()};
+function cyc(d){var o=['A','B','C'];var i=o.indexOf(S.v);S.v=o[(i+d+3)%3];S.sb=S.v;S.ac=S.v;rail=null;render()}
+document.getElementById('pv').onclick=function(){cyc(-1)};document.getElementById('nx').onclick=function(){cyc(1)};
+document.addEventListener('keydown',function(e){var t=e.target;if(t&&/INPUT|TEXTAREA|SELECT|BUTTON/.test(t.tagName)&&e.key.indexOf('Arrow')===0&&t.tagName!=='BUTTON')return;
+  if(t&&t.isContentEditable)return;if(e.key==='ArrowLeft'){cyc(-1)}else if(e.key==='ArrowRight'){cyc(1)}});
+window.addEventListener('resize',fit);
+parseHash();render();
+})();
+</script>
+</body>
+</html>
