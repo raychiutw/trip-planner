@@ -37,6 +37,7 @@ export interface MyTrip {
 
 export type MyTripsState = { trips: MyTrip[] | undefined; status: 'loading' | 'ready' | 'error' };
 const PENDING: MyTripsState = { trips: undefined, status: 'loading' };
+const MY_TRIPS_TIMEOUT_MS = 15_000; // 逾時（#1688）：卡住時轉 error 態，側欄有重試
 let ownerId: string | null = null;
 let state: MyTripsState = PENDING;
 let inflight: Promise<void> | null = null;
@@ -55,7 +56,7 @@ function refresh() {
   const request = ++requestId;
   state = { ...state, status: 'loading' };
   notify();
-  inflight = typedApi.get('/api/my-trips')
+  inflight = typedApi.get('/api/my-trips', { signal: AbortSignal.timeout(MY_TRIPS_TIMEOUT_MS) })
     .then((res) => {
       const data: unknown = unwrap(res);
       if (request !== requestId || owner !== ownerId) return;
