@@ -22,7 +22,7 @@ describe('useMyTrips 逾時', () => {
     }));
     const { result } = renderHook(() => useMyTrips('u1'));
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(1));
-    expect(timeout).toHaveBeenCalled();
+    expect(timeout).toHaveBeenCalledWith(15_000);
     expect(apiFetchMock.mock.calls[0]![1]?.signal).toBe(ctl.signal);
     expect(result.current.status).toBe('loading');
 

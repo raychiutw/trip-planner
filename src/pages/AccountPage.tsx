@@ -13,6 +13,7 @@ import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { logoutSession } from '../lib/logout';
 import { ApiError } from '../lib/errors';
+import { REQUEST_TIMEOUT_MS } from '../lib/requestTimeout';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -28,8 +29,6 @@ interface AccountStats {
   totalDays: number;
   collaboratorCount: number;
 }
-
-const STATS_TIMEOUT_MS = 15_000;
 
 const SCOPED_STYLES = `
 .tp-account-shell {
@@ -287,11 +286,7 @@ const SCOPED_STYLES = `
   color: var(--color-accent-text); font-size: var(--font-size-caption);
   min-height: 24px; padding: 0 4px;
 }
-.tp-account-stats-error button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
-.tp-account-sr-only {
-  position: absolute; width: 1px; height: 1px; overflow: hidden;
-  clip: rect(0 0 0 0); white-space: nowrap;
-}
+.tp-account-stats-error button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 `;
 
 interface SettingsRow {
@@ -405,7 +400,7 @@ export default function AccountPage() {
     let cancelled = false;
     setStatsError(null);
     // 逾時（#1688）：冷載入慢或請求卡住時轉成失敗態＋重試，不永遠 pending
-    typedApi.get('/api/account/stats', { signal: AbortSignal.timeout(STATS_TIMEOUT_MS) }).then(unwrap)
+    typedApi.get('/api/account/stats', { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }).then(unwrap)
       .then((data) => { if (!cancelled) setStats(data as AccountStats); })
       // v2.33.47 round 7b: 不直接 surface raw error.message (可能 leak backend
       // detail / SQL fragment)。改 ApiError 與 network error 分開 generic 文案。
@@ -584,17 +579,17 @@ export default function AccountPage() {
                 <span className="tp-account-hero-stat-value">
                   {statsLoading
                     ? <span className="tp-account-skeleton" aria-hidden="true" />
-                    : stats ? stats[key] : <span aria-hidden="true">—</span>}
+                    : stats?.[key] ?? <span aria-hidden="true">—</span>}
                 </span>
                 <span className="tp-account-hero-stat-label">{label}</span>
               </div>
             ))}
-            {statsLoading && <span className="tp-account-sr-only" role="status">統計載入中</span>}
+            {statsLoading && <span className="sr-only" role="status">統計載入中</span>}
             {statsError && (
               <div className="tp-account-stats-error" role="alert">
                 <Icon name="warning" />
                 <span>{statsError}</span>
-                <button type="button" onClick={() => { setStatsError(null); setStatsAttempt((n) => n + 1); }}>重試</button>
+                <button type="button" onClick={() => setStatsAttempt((n) => n + 1)}>重試</button>
               </div>
             )}
           </div>

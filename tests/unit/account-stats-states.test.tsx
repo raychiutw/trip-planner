@@ -83,7 +83,7 @@ describe('統計請求逾時', () => {
       });
     });
     const group = renderPage();
-    expect(timeout).toHaveBeenCalled();
+    expect(timeout).toHaveBeenCalledWith(15_000);
     expect(statsCalls()[0]![1]?.signal).toBe(ctl.signal);
     expect(group.getAttribute('aria-busy')).toBe('true');
     ctl.abort();

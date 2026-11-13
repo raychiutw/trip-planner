@@ -55,10 +55,40 @@ describe('DesktopSidebar B — 我的行程可摺疊', () => {
     expect(screen.getByTestId('sidebar-trip-kyoto-5')).toBeTruthy();
     fireEvent.click(btn);
     expect(btn.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.queryByTestId('sidebar-trip-kyoto-5')).toBeNull();
     fireEvent.click(btn);
     expect(btn.getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByTestId('sidebar-trip-kyoto-5')).toBeTruthy();
+  });
+
+  it('aria-controls 永遠指向存在的元素：摺疊時仍在 DOM 且 hidden，展開時可見', () => {
+    const { container } = renderSidebar();
+    const btn = screen.getByRole('button', { name: /我的行程/ });
+    const target = () => container.ownerDocument.getElementById(btn.getAttribute('aria-controls')!);
+    expect(target()).not.toBeNull();
+    expect(target()!.hasAttribute('hidden')).toBe(false);
+    fireEvent.click(btn);
+    expect(target()).not.toBeNull();
+    expect(target()!.hasAttribute('hidden')).toBe(true);
+    fireEvent.click(btn);
+    expect(target()!.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('hidden 要真的隱藏：樣式不得用 display 覆蓋 [hidden]', () => {
+    const { style } = renderSidebar();
+    expect(rule(style, '.tp-sidebar-trips')).toMatch(/display:\s*flex/);
+    expect(style).toMatch(/\.tp-sidebar-trips\[hidden\]\s*\{[^}]*display:\s*none/);
+  });
+});
+
+describe('DesktopSidebar B — 焦點與 dark 不變式', () => {
+  it('新增的 :focus-visible 都帶 DESIGN.md 規定的內帶 box-shadow', () => {
+    const { style } = renderSidebar();
+    expect(rule(style, '.tp-sidebar-section-label:focus-visible')).toMatch(/box-shadow:\s*0 0 0 2px var\(--color-background\)/);
+  });
+
+  it('dark 覆寫不得冗餘：不得出現 body.dark .tp-sidebar', () => {
+    const { style } = renderSidebar();
+    expect(style).not.toMatch(/body\.dark\s+\.tp-sidebar/);
   });
 });
 
