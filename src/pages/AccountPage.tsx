@@ -29,6 +29,8 @@ interface AccountStats {
   collaboratorCount: number;
 }
 
+const STATS_TIMEOUT_MS = 15_000;
+
 const SCOPED_STYLES = `
 .tp-account-shell {
   min-height: 100%;
@@ -71,18 +73,16 @@ const SCOPED_STYLES = `
 @media (min-width: 768px) {
   .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
 }
-/* §10.4（owner 2026-07-19）：桌機用滿橫向空間 — inner 加寬、設定分區走 2-col grid，
- * hero 收窄置中（profile 卡不隨寬度攤開變空）。手機仍單欄堆疊。 */
+/* 桌機版面 A（owner 2026-11-13，取代 2026-07-19 的「hero 收窄置中、設定兩欄」）：單欄，
+ * 個人卡橫式與設定格同一個容器寬度；容器固定 1040（DESIGN.md Content Width），≥1440 不再攤開，
+ * <1440 隨視窗縮。手機仍單欄堆疊、個人卡直式置中。 */
 .tp-account-groups { display: flex; flex-direction: column; gap: 24px; }
 @media (min-width: 1024px) {
   .tp-account-inner { max-width: 1040px; padding-bottom: 80px; }
-  .tp-account-hero { max-width: 560px; width: 100%; margin-inline: auto; }
-  .tp-account-groups {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    align-items: start;
-  }
+  .tp-account-hero { flex-direction: row; text-align: left; flex-wrap: wrap; padding: 20px 24px; }
+  .tp-account-hero-text { flex: 1; min-width: 180px; }
+  .tp-account-hero-name-row { justify-content: flex-start; }
+  .tp-account-hero-stats { width: 300px; padding-top: 0; border-top: none; }
 }
 
 /* Profile hero (mockup line 7437-7448) */
@@ -262,9 +262,35 @@ const SCOPED_STYLES = `
 }
 .tp-account-row.is-danger:hover { background: var(--color-priority-high-bg); }
 
-.tp-logout-stats-error {
-  font-size: var(--font-size-caption2);
-  color: var(--color-muted);
+.tp-account-skeleton {
+  display: inline-block; width: 2.2ch; height: 18px; vertical-align: middle;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-tertiary), var(--color-hover), var(--color-tertiary));
+  background-size: 200% 100%;
+  animation: tp-account-shimmer 1.2s linear infinite;
+}
+@keyframes tp-account-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .tp-account-skeleton { animation: none; } }
+.tp-account-stats-error {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: var(--font-size-caption);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  color: var(--color-foreground);
+}
+.tp-account-stats-error .svg-icon { width: 16px; height: 16px; color: var(--color-warning-deep); flex-shrink: 0; }
+.tp-account-stats-error button {
+  border: 0; background: transparent; cursor: pointer;
+  text-decoration: underline; font-weight: 600;
+  color: var(--color-accent-text); font-size: var(--font-size-caption);
+  min-height: 24px; padding: 0 4px;
+}
+.tp-account-stats-error button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.tp-account-sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
 }
 `;
 
@@ -288,6 +314,8 @@ export default function AccountPage() {
 
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [statsAttempt, setStatsAttempt] = useState(0);
+  const statsLoading = !stats && !statsError;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   /* ── 刪除帳號（Google Play 強制要求的帳號刪除路徑）──────────────────
@@ -375,16 +403,18 @@ export default function AccountPage() {
   useEffect(() => {
     if (!auth.user) return;
     let cancelled = false;
-    typedApi.get('/api/account/stats').then(unwrap)
+    setStatsError(null);
+    // 逾時（#1688）：冷載入慢或請求卡住時轉成失敗態＋重試，不永遠 pending
+    typedApi.get('/api/account/stats', { signal: AbortSignal.timeout(STATS_TIMEOUT_MS) }).then(unwrap)
       .then((data) => { if (!cancelled) setStats(data as AccountStats); })
       // v2.33.47 round 7b: 不直接 surface raw error.message (可能 leak backend
       // detail / SQL fragment)。改 ApiError 與 network error 分開 generic 文案。
       .catch((e) => {
         if (cancelled) return;
-        setStatsError(e instanceof ApiError ? '統計資料載入失敗' : '網路錯誤，請稍後再試');
+        setStatsError(e instanceof ApiError ? '無法載入統計' : '網路錯誤，請稍後再試');
       });
     return () => { cancelled = true; };
-  }, [auth.user]);
+  }, [auth.user, statsAttempt]);
 
   /** 開啟刪除確認前先抓預覽 —— 沒有數字就不該讓使用者按下不可逆的按鈕。 */
   const openDeleteModal = useCallback(async () => {
@@ -495,7 +525,7 @@ export default function AccountPage() {
       <div className="tp-account-inner">
         <section className="tp-account-hero" data-testid="account-hero">
           <div className="tp-account-hero-avatar" aria-hidden="true">{initial}</div>
-          <div>
+          <div className="tp-account-hero-text">
             <div className="tp-account-hero-name-row">
               {editingName ? (
                 <input
@@ -544,23 +574,30 @@ export default function AccountPage() {
             </div>
             <div className="tp-account-hero-email">{user.email}</div>
           </div>
-          <div className="tp-account-hero-stats">
-            <div className="tp-account-hero-stat">
-              <span className="tp-account-hero-stat-value">{stats?.tripCount ?? '—'}</span>
-              <span className="tp-account-hero-stat-label">個行程</span>
-            </div>
-            <div className="tp-account-hero-stat">
-              <span className="tp-account-hero-stat-value">{stats?.totalDays ?? '—'}</span>
-              <span className="tp-account-hero-stat-label">天旅程</span>
-            </div>
-            <div className="tp-account-hero-stat">
-              <span className="tp-account-hero-stat-value">{stats?.collaboratorCount ?? '—'}</span>
-              <span className="tp-account-hero-stat-label">位旅伴</span>
-            </div>
+          <div className="tp-account-hero-stats" role="group" aria-label="帳號統計" aria-busy={statsLoading}>
+            {([
+              ['tripCount', '個行程'],
+              ['totalDays', '天旅程'],
+              ['collaboratorCount', '位旅伴'],
+            ] as const).map(([key, label]) => (
+              <div className="tp-account-hero-stat" key={key}>
+                <span className="tp-account-hero-stat-value">
+                  {statsLoading
+                    ? <span className="tp-account-skeleton" aria-hidden="true" />
+                    : stats ? stats[key] : <span aria-hidden="true">—</span>}
+                </span>
+                <span className="tp-account-hero-stat-label">{label}</span>
+              </div>
+            ))}
+            {statsLoading && <span className="tp-account-sr-only" role="status">統計載入中</span>}
+            {statsError && (
+              <div className="tp-account-stats-error" role="alert">
+                <Icon name="warning" />
+                <span>{statsError}</span>
+                <button type="button" onClick={() => { setStatsError(null); setStatsAttempt((n) => n + 1); }}>重試</button>
+              </div>
+            )}
           </div>
-          {statsError && (
-            <div className="tp-logout-stats-error" role="status">數據載入失敗：{statsError}</div>
-          )}
         </section>
 
         <div className="tp-account-groups">
