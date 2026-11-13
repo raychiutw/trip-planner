@@ -67,6 +67,25 @@ describe('apiFetch 的 signal 涵蓋 refresh 階段', () => {
     expect((await client.apiFetch('/api/me')).status).toBe(200);
   });
 
+  it('已登入但 access token 過期（401 → refresh 階段卡住）時，signal 同樣能中斷', async () => {
+    const api = createFakeOAuthApi();
+    const storage = createMemoryAuthStorage();
+    let hang = false;
+    const gate = new Promise<never>(() => {});
+    const client = createAuthClient({
+      apiBase: FAKE_API_BASE, storage,
+      fetch: async (input, init) => { if (hang && String(input).includes('/api/oauth/token')) await gate; return api.fetch(input, init); },
+    });
+    await client.login(FAKE_EMAIL, FAKE_PASSWORD);
+    api.expireAccessTokens();
+    hang = true;
+    const ctl = new AbortController();
+    const p = client.apiFetch('/api/me', { signal: ctl.signal }).catch((e) => e);
+    await new Promise((r) => setTimeout(r, 20));
+    ctl.abort(new DOMException('timeout', 'TimeoutError'));
+    expect(((await p) as DOMException).name).toBe('TimeoutError');
+  });
+
   it('signal 已經 abort 時不啟動 refresh，直接以原因 reject', async () => {
     const { api, client, release } = await coldClientWithHangingTokenEndpoint();
     const ctl = new AbortController();
