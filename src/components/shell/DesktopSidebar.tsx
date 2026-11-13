@@ -73,9 +73,10 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   flex-shrink: 0;
 }
-.tp-sidebar-section-label:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.tp-sidebar-section-label:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .tp-sidebar-section-label .svg-icon { width: 12px; height: 12px; transition: transform 150ms; transform: rotate(90deg); }
 .tp-sidebar-section-label[aria-expanded="false"] .svg-icon { transform: none; }
+.tp-sidebar-trips[hidden] { display: none; }
 .tp-sidebar-trips {
   display: flex; flex-direction: column; gap: 2px;
   overflow-y: auto; flex: 1; min-height: 0;
@@ -259,8 +260,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
           <Icon name="chevron-right" />
           我的行程
         </button>
-        {tripsOpen && (
-        <nav className="tp-sidebar-trips" id="sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
+        <nav className="tp-sidebar-trips" id="sidebar-trips" hidden={!tripsOpen} aria-label="我的行程" data-testid="sidebar-trips">
           {tripsStatus === 'error' && trips === undefined ? (
             <div className="tp-sidebar-trips-empty" role="alert">載入行程失敗，請稍後再試</div>
           ) : trips === undefined ? (
@@ -288,7 +288,6 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
             })
           )}
         </nav>
-        )}
 
         <div className="tp-sidebar-cta">
           {user === undefined ? (
