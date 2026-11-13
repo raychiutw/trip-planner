@@ -10,7 +10,7 @@
  *   - stats fetch /account/stats render values
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
@@ -91,12 +91,12 @@ describe('AccountPage', () => {
     });
   });
 
-  it('stats 載入失敗 → 顯示「數據載入失敗」 status', async () => {
+  it('stats 載入失敗 → 統計區顯示警示列', async () => {
     apiFetchMock.mockReset();
     apiFetchMock.mockRejectedValue(new Error('boom'));
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/數據載入失敗/)).toBeTruthy();
+      expect(within(screen.getByRole('group', { name: '帳號統計' })).getByRole('alert').textContent).toContain('重試');
     });
   });
 
