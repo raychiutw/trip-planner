@@ -26,6 +26,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
+import { shortcutAttrs } from '../lib/globalShortcuts';
 import AppShell from '../components/shell/AppShell';
 import { useRegisterRefresh } from '../contexts/RefreshContext';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -549,6 +550,7 @@ export default function PoiFavoritesPage() {
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="搜尋收藏（名稱 / 地址 / 備註）"
                 data-testid="favorites-search-input"
+                {...shortcutAttrs('search')}
                 aria-label="搜尋收藏"
               />
             </div>

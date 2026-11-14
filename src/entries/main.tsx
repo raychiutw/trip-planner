@@ -44,6 +44,7 @@ import { rememberBranchLocation } from '../lib/branchMemory';
 import { Suspense, StrictMode, useEffect, useRef, type ReactNode } from 'react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useKeyboardInset } from '../hooks/useKeyboardInset';
+import { useGlobalShortcuts } from '../lib/globalShortcuts';
 import { ServerStatusBanner } from '../components/ServerStatusBanner';
 
 /**
@@ -248,6 +249,7 @@ function BranchLocationTracker() {
  */
 function KeyboardInsetTracker() {
   useKeyboardInset();
+  useGlobalShortcuts(); // 全域快捷鍵（#1697）同樣全站掛一次
   return null;
 }
 
