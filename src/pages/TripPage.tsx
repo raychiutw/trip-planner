@@ -253,6 +253,8 @@ function TripPageInner(
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
+  // #1719：使用者已自己選過天 → 初始定位（hash / 今天）的延後 switchDay 不再蓋掉它。
+  const userPickedDay = useRef(false);
   // ⑨ 連續捲動：scroll-spy 最後同步過的 day，避免每個 scroll frame 都 switchDay。
   const scrollDayRef = useRef(0);
   useEffect(() => { initialScrollDone.current = false; }, [activeTripId]);
@@ -535,6 +537,7 @@ function TripPageInner(
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
       manualScrollTs.current = Date.now();
+      userPickedDay.current = true;
       switchDay(dayNum);
       scrollToDay(dayNum);
       history.replaceState(null, '', '#day' + dayNum);
@@ -608,6 +611,7 @@ function TripPageInner(
       const hashDay = parseInt(hashMatch[1] ?? '0', 10);
       if (dayNums.includes(hashDay)) {
         requestAnimationFrame(() => {
+          if (userPickedDay.current) return;
           switchDay(hashDay);
           scrollToDay(hashDay);
         });
@@ -632,6 +636,7 @@ function TripPageInner(
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (todayDayNum !== undefined) {
       rafId = requestAnimationFrame(() => {
+        if (userPickedDay.current) return;
         switchDay(todayDayNum);
         scrollToDay(todayDayNum);
         timeoutId = setTimeout(() => {

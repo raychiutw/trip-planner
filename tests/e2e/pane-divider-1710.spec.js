@@ -53,7 +53,11 @@ test('方向鍵 ±2%、雙擊回 1:1', async ({ page }) => {
   await expect(sep).toHaveAttribute('aria-valuenow', '50');
 });
 
-test('拖曳改變寬度，且守住最小寬 中欄 400／右欄 360', async ({ page }) => {
+test('拖曳改變寬度，且守住最小寬 中欄 400／右欄 360', async ({ page, browserName }) => {
+  // #1719：e2e 擋掉 Google Maps → 右欄出現可捲動的地圖錯誤遮罩（overflow-y:auto）。Linux 版 WebKit
+  // 按住滑鼠拖過可捲動區塊時，即使有 pointer capture 也不再把滑鼠事件送進頁面（pointerup 都收不到）；
+  // 拿掉遮罩或空白頁都正常，macOS WebKit 也正常。屬測試環境產物，拖曳邏輯由 chromium 覆蓋。
+  test.skip(browserName === 'webkit', 'Linux WebKit 拖過可捲動的地圖錯誤遮罩時不送滑鼠事件（#1719）');
   const sep = page.getByRole('separator', { name: NAME });
   const box = await sep.boundingBox();
   await drag(page, box.x + 100);
