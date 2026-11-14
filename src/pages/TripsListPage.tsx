@@ -311,7 +311,6 @@ body.dark .tp-trips-sort {
   padding: 4px 8px 4px 10px;
 }
 .tp-trips-search.is-persistent {
-  order: -1; /* 工具列最左；分類 tab 與排序推到右邊 */
   flex: 1 1 220px; min-width: 220px; max-width: 360px;
   width: auto; justify-content: flex-start;
   padding: 4px 12px; color: var(--color-muted);
@@ -610,6 +609,7 @@ export default function TripsListPage() {
   );
   const error = tripsStatus === 'error' && !sharedTrips;
 
+
   // Section 4.7：filter subtab + sort + search expanding bar — pure client-side
   // 操作 myTrips 已知子集合，避免重新打 /api。
   // mockup-parity-qa-fixes: 加「已歸檔」第 4 顆 filter tab
@@ -663,6 +663,53 @@ export default function TripsListPage() {
     // 'updated' 預設保留 /my-trips 順序（API 已 most-recent-first）
     return list;
   }, [myTrips, filterTab, sortBy, searchTerm, isOwnedByUser]);
+
+  const searchField = (
+    <div className={`tp-trips-search ${searchPersistent ? 'is-persistent' : searchOpen ? 'is-open' : ''}`}>
+      {searchPersistent ? (
+        <Icon name="search" />
+      ) : (
+      <button
+        type="button"
+        className="tp-trips-search-toggle"
+        onClick={() => {
+          setSearchOpen((o) => {
+            if (o) setSearchTerm('');
+            return !o;
+          });
+        }}
+        aria-label={searchOpen ? '關閉搜尋' : '開啟搜尋'}
+        title={searchOpen ? undefined : shortcutTitle('搜尋', 'search')}
+        data-testid="trips-list-search-toggle"
+        {...(searchOpen ? {} : shortcutAttrs('search'))}
+      >
+        <Icon name={searchOpen ? 'x-mark' : 'search'} />
+      </button>
+      )}
+      {(searchPersistent || searchOpen) && (
+        <>
+          <input
+            type="text"
+            placeholder="搜尋行程名稱或地區"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoFocus={!searchPersistent}
+            data-testid="trips-list-search-input"
+            title={searchPersistent ? shortcutTitle('搜尋', 'search') : undefined}
+            {...shortcutAttrs('search')}
+            aria-label="搜尋行程"
+          />
+          {searchTerm ? (
+            <span className="tp-trips-search-count" data-testid="trips-list-search-count">
+              {visibleTrips.length} 筆
+            </span>
+          ) : searchPersistent && (
+            <kbd className="tp-trips-search-hint" aria-hidden="true" data-testid="trips-list-search-hint">⌥⌘F</kbd>
+          )}
+        </>
+      )}
+    </div>
+  );
 
   // For badge counts shown on filter subtabs — counts on the unfiltered set.
   const tabCounts = useMemo(() => {
@@ -823,6 +870,7 @@ export default function TripsListPage() {
 
           {!loading && !error && myTrips.length > 0 && (
             <div className="tp-trips-toolbar" data-testid="trips-list-toolbar">
+              {searchPersistent && searchField}
               <div className="tp-trips-tabs" role="group" aria-label="行程分類">
                 {([
                   { key: 'all', label: '全部', count: tabCounts.all },
@@ -856,50 +904,7 @@ export default function TripsListPage() {
                   ]}
                 />
               </div>
-              <div className={`tp-trips-search ${searchPersistent ? 'is-persistent' : searchOpen ? 'is-open' : ''}`}>
-                {searchPersistent ? (
-                  <Icon name="search" />
-                ) : (
-                <button
-                  type="button"
-                  className="tp-trips-search-toggle"
-                  onClick={() => {
-                    setSearchOpen((o) => {
-                      if (o) setSearchTerm('');
-                      return !o;
-                    });
-                  }}
-                  aria-label={searchOpen ? '關閉搜尋' : '開啟搜尋'}
-                  title={searchOpen ? undefined : shortcutTitle('搜尋', 'search')}
-                  data-testid="trips-list-search-toggle"
-                  {...(searchOpen ? {} : shortcutAttrs('search'))}
-                >
-                  <Icon name={searchOpen ? 'x-mark' : 'search'} />
-                </button>
-                )}
-                {(searchPersistent || searchOpen) && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="搜尋行程名稱或地區"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      autoFocus={!searchPersistent}
-                      data-testid="trips-list-search-input"
-                      title={searchPersistent ? shortcutTitle('搜尋', 'search') : undefined}
-                      {...shortcutAttrs('search')}
-                      aria-label="搜尋行程"
-                    />
-                    {searchTerm ? (
-                      <span className="tp-trips-search-count" data-testid="trips-list-search-count">
-                        {visibleTrips.length} 筆
-                      </span>
-                    ) : searchPersistent && (
-                      <kbd className="tp-trips-search-hint" aria-hidden="true" data-testid="trips-list-search-hint">⌥⌘F</kbd>
-                    )}
-                  </>
-                )}
-              </div>
+              {!searchPersistent && searchField}
             </div>
           )}
 
@@ -1122,6 +1127,7 @@ export default function TripsListPage() {
       )}
     </div>
   ) : cardGridMain;
+
 
   return (
     <>
