@@ -72,3 +72,19 @@ test('summary refresh keeps selected detail and nonzero reading position', async
   await expect.poll(() => main.evaluate((el) => el.scrollTop)).toBeGreaterThan(40);
   await expect(page).toHaveURL(new RegExp(`selected=${tripId}`));
 });
+
+test('active trip card dot sits before the eyebrow text instead of over it (#1717)', async ({ page }) => {
+  await page.goto('/trips');
+  await expect(page.getByTestId('trips-list-page')).toBeVisible();
+  const eyebrow = page.locator('.tp-trip-card.is-active .tp-trip-card-eyebrow');
+  await expect(eyebrow).toBeVisible();
+  const gap = await eyebrow.evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0);
+    return rects[0].left - el.getBoundingClientRect().left;
+  });
+  // 8px 圓點 + 8px 間距在文字前面；舊版 absolute 圓點時文字從 0 開始、被圓點蓋住
+  expect(gap).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: test.info().outputPath('active-card.png') });
+});

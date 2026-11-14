@@ -128,16 +128,16 @@ const SCOPED_STYLES = `
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
 }
-.tp-trip-card.is-active::before {
+/* #1717：選取圓點原本 absolute 落在封面上；v2.55.89 拿掉封面後會壓到眉標，改成眉標前的行內圓點。 */
+.tp-trip-card.is-active .tp-trip-card-eyebrow::before {
   content: "";
-  position: absolute;
-  top: 12px;
-  left: 12px;
+  display: inline-block;
   width: 8px;
   height: 8px;
+  margin-right: 8px;
+  vertical-align: 1px;
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  z-index: 2;
   box-shadow: 0 0 0 3px var(--color-accent-subtle);
 }
 .tp-trip-card-cover {
@@ -165,7 +165,7 @@ const SCOPED_STYLES = `
 .tp-trip-card[data-tone] { background: var(--t-subtle); border-color: var(--color-border); }
 .tp-trip-card[data-tone]:hover { border-color: var(--t); }
 .tp-trip-card[data-tone].is-active { border-color: var(--t); }
-.tp-trip-card[data-tone].is-active::before { background: var(--t); box-shadow: 0 0 0 3px var(--t-subtle); }
+.tp-trip-card[data-tone].is-active .tp-trip-card-eyebrow::before { background: var(--t); box-shadow: 0 0 0 3px var(--t-subtle); }
 .tp-trip-card[data-tone] .tp-trip-card-avatar { background: var(--t-bg); color: var(--color-foreground); }
 
 .tp-trip-card-eyebrow {
