@@ -97,7 +97,9 @@ describe('不得有 :focus 規則用 outline:none 蓋掉外框', () => {
   // typeahead 候選項以整列底色表示焦點（非表單欄位本身）
   const ALLOW = ['.app-shell-sheet > [tabindex="-1"]:focus', '.tp-custom-poi-typeahead-item:focus-visible',
     // 選單項目以整列底色表示焦點（非表單欄位）
-    '.tp-rail-menu-item:focus-visible'];
+    '.tp-rail-menu-item:focus-visible',
+    // #1710 分隔線以 ::before 變 3px 柔褐線表示焦點（元素本身是 9px 寬的點擊區，外框無處可畫）
+    '.app-shell-divider:focus-visible'];
   for (const file of FILES) {
     it(`${file}`, () => {
       const rules = parseRules(read(file));
