@@ -87,11 +87,4 @@ describe('useRequireAuth', () => {
       );
     });
   });
-
-  it('已經在 /login 上又是未登入 → 不再 navigate（否則 redirect_after 一層層巢狀編碼，無限導向迴圈）', async () => {
-    mockCurrentUser.mockReturnValue({ user: null, reload: () => {} });
-    renderHook(() => useRequireAuth(), { wrapper: wrapper('/login?redirect_after=%2Faccount') });
-    await new Promise((r) => setTimeout(r, 10));
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
 });

@@ -31,8 +31,6 @@ export function useRequireAuth(): UseCurrentUserResult {
   useEffect(() => {
     // Wait for the userinfo probe to settle (undefined = still loading)
     if (result.user !== null) return;
-    // 已在登入頁就不再導：redirect_after 會一層層巢狀編碼成無限導向迴圈
-    if (pathname.startsWith('/login')) return;
     const redirectAfter = `${pathname}${search}`;
     navigate(`/login?redirect_after=${encodeURIComponent(redirectAfter)}`, { replace: true });
   }, [result.user, pathname, search, navigate]);

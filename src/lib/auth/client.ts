@@ -9,6 +9,7 @@
  */
 import { exportPublicJwk, generateDpopKeyPair, createDpopProof, jwkThumbprint } from './dpop';
 import { createPkcePair } from './pkce';
+import { resetCurrentUserCache } from '../currentUserCache';
 import type { AuthStorage } from './storage';
 
 export const CLIENT_ID = 'tripline-web';
@@ -104,6 +105,8 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     accessToken = null;
     idToken = null;
     keyPairCache = null;
+    // 憑證一清，共享的使用者（lib/currentUserCache）就不能再給下一個身分；staleIdToken 不需歸零：它以 token 字串比對，新登入的 id_token 必然是另一個字串
+    resetCurrentUserCache();
     await storage.clear();
   }
 

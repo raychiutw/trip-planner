@@ -158,11 +158,17 @@ describe('冷載入瀑布（#1691）', () => {
     expect(text).not.toContain(EMAIL);
     expect(text).not.toContain(NAME);
     expect(text).not.toContain('ray.secret');
+    // 無障礙：個人卡 aria-busy ＋ 視覺隱藏的載入文字；還原後兩者消失
+    const hero = screen.getByTestId('account-hero');
+    expect(hero.getAttribute('aria-busy')).toBe('true');
+    expect(hero.querySelector('.sr-only')?.textContent).toContain('載入帳號資料');
     // 還原前不可操作：設定列整塊 inert
     expect(container.querySelector('.tp-account-groups')?.hasAttribute('inert')).toBe(true);
     // 還原完成後才出現使用者資料
     await waitFor(() => expect(screen.getByTestId('account-hero').textContent).toContain(EMAIL), { timeout: 3000 });
     expect(container.querySelector('.tp-account-groups')?.hasAttribute('inert')).toBe(false);
+    expect(screen.getByTestId('account-hero').hasAttribute('aria-busy')).toBe(false);
+    expect(screen.getByTestId('account-hero').textContent).not.toContain('載入帳號資料');
   });
 
   it('reload()（改名後）不再用過時的 id_token：改問 userinfo 拿新資料', async () => {

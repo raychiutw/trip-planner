@@ -76,3 +76,31 @@ describe('auth client 的 id_token', () => {
     expect(c.getIdToken()).toBeNull();
   });
 });
+
+describe('清憑證一律清掉共享的使用者（非 logoutSession 的路徑）', () => {
+  const seed = async () => {
+    const { setCachedCurrentUser, getCachedCurrentUser } = await import('../../src/lib/currentUserCache');
+    setCachedCurrentUser(Promise.resolve({ id: 'u1' }));
+    expect(getCachedCurrentUser()).not.toBeNull();
+    return getCachedCurrentUser;
+  };
+
+  it('refresh 被拒（invalid_grant → failReauth）', async () => {
+    const storage = createMemoryAuthStorage();
+    await storage.saveSession({ refreshToken: 'rt1', keyPair: await generateDpopKeyPair() });
+    const fetchImpl = async () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 });
+    const c = createAuthClient({ apiBase: 'https://api.test', storage, fetch: fetchImpl as unknown as typeof fetch, lock: (fn) => fn(), onReauthRequired: () => {} });
+    const get = await seed();
+    expect(await c.restoreSession()).toBe(false);
+    expect(get()).toBeNull();
+  });
+
+  it('restoreSession 發現只剩一半殘留', async () => {
+    const storage = createMemoryAuthStorage();
+    await storage.saveRefreshToken('rt-orphan'); // 有 refresh token、沒有金鑰
+    const c = createAuthClient({ apiBase: 'https://api.test', storage, fetch: (async () => new Response('{}')) as unknown as typeof fetch, lock: (fn) => fn() });
+    const get = await seed();
+    expect(await c.restoreSession()).toBe(false);
+    expect(get()).toBeNull();
+  });
+});

@@ -522,9 +522,10 @@ export default function AccountPage() {
     <div className="tp-account-shell" data-testid="account-page">
       <TitleBar title="帳號" />
       <div className="tp-account-inner">
-        <section className="tp-account-hero" data-testid="account-hero">
+        <section className="tp-account-hero" data-testid="account-hero" aria-busy={!loaded || undefined}>
           <div className="tp-account-hero-avatar" aria-hidden="true">{loaded ? initial : ''}</div>
           <div className="tp-account-hero-text">
+            {!loaded && <span className="sr-only" role="status">載入帳號資料</span>}
             <div className="tp-account-hero-name-row">
               {!loaded ? (
                 <span className="tp-account-skeleton" style={{ width: '8ch', height: 28 }} aria-hidden="true" />
