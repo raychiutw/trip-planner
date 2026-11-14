@@ -6,6 +6,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useCurrentUser } from '../../src/hooks/useCurrentUser';
 import { readAuthHint, writeAuthHint } from '../../src/lib/authHint';
 import { resetCurrentUserCache } from '../../src/lib/currentUserCache';
+import { logoutSession } from '../../src/lib/logout';
 
 const SAMPLE_USER = {
   id: 'uid-1',
@@ -233,6 +234,18 @@ describe('useCurrentUser', () => {
     const afterLogout = renderHook(() => useCurrentUser());
     await waitFor(() => expect(afterLogout.result.current.user?.id).toBe('uid-2'));
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('logoutSession() 會清掉共享的使用者：登出後的下一個 mount 不會拿到上一位', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
+    );
+    const first = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(first.result.current.user).toEqual(SAMPLE_USER));
+    await logoutSession();
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ error: { code: 'AUTH_REQUIRED' } }), { status: 401 }));
+    const after = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(after.result.current.user).toBeNull());
   });
 
   it('共享結果只存活有限時間（TTL），不是長效快取', async () => {
