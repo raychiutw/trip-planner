@@ -136,6 +136,8 @@ describe('全站掃描：任何 :focus／:focus-visible 規則都不得用 outli
     // 按鈕本身不畫，外框改畫在子元素／容器（已有 2px focus-ring 規則）
     '.tp-account-circle:focus-visible',
     '.tp-notes-section-toggle:focus-visible',
+    // #1710 分隔線以 ::before 變 3px 柔褐線表示焦點（元素本身是 9px 寬的點擊區，外框無處可畫）
+    '.app-shell-divider:focus-visible',
   ]);
   it('src 與 css 下沒有漏網', () => {
     const bad: string[] = [];

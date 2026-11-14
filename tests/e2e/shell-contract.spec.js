@@ -23,9 +23,10 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await expect(page.getByTestId('app-shell-bottom-nav')).toBeVisible({ visible: compact });
     await tab.focus();
     await expect(tab).toBeFocused();
+    // #1708：展開側欄有 220ms 欄寬過場，等位置停穩再量，否則會量到過場中途的負 x
+    await expect.poll(async () => (await tab.boundingBox())?.x ?? -1).toBeGreaterThanOrEqual(0);
     const bounds = await tab.boundingBox();
     expect(bounds).toBeTruthy();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1);
     if (compact) {
       const navBounds = await page.getByTestId('app-shell-bottom-nav').boundingBox();
