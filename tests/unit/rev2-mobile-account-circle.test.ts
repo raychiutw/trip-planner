@@ -37,6 +37,6 @@ describe('rev2 手機帳號圓圈 — 4 根頁 header', () => {
     expect(s).not.toMatch(/name="user"/);
     // 桌機隱藏（帳號在 sidebar chip），手機才顯
     expect(s).toMatch(/\.tp-account-circle\s*\{[\s\S]*?display:\s*none/);
-    expect(s).toMatch(/@media \(max-width: 1023px\)[\s\S]*?\.tp-account-circle\s*\{\s*display:\s*grid/);
+    expect(s).toMatch(/@media \(max-width: 719px\)[\s\S]*?\.tp-account-circle\s*\{\s*display:\s*grid/);
   });
 });

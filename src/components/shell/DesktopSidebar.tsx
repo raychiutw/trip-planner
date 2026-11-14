@@ -201,6 +201,25 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption); color: var(--color-muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* 寬版 720–1023px（#1713）：brand 與 root tab 離開側欄、疊到 AppShell 的頂部 bar
+ * （.app-shell 是 position:relative，bar 底由 .app-shell::before 畫）；側欄只剩行程清單與帳號。
+ * 選中樣式沿用上面 .tp-sidebar-nav-item（#1707），只改成橫排。 */
+@media (min-width: 720px) and (max-width: 1023px) {
+  .tp-sidebar-brand {
+    position: absolute; top: 0; left: 0; z-index: 1;
+    height: var(--topbar-height-wide); margin: 0; padding: 0 20px; box-sizing: border-box;
+  }
+  .tp-sidebar-nav {
+    position: absolute; top: 0; right: 12px; z-index: 1;
+    height: var(--topbar-height-wide); margin: 0;
+    flex-direction: row; align-items: center; gap: 4px;
+  }
+  .tp-sidebar-nav-item { padding: 6px 12px; gap: 8px; }
+  .tp-sidebar-divider { display: none; }
+  /* #1708 的側欄隱藏鈕只在 ≥1024 有意義（寬版左欄固定在） */
+  .tp-sidebar-toggle { display: none; }
+}
 `;
 
 /** 本機日期 YYYY-MM-DD（與 start/endDate 同格式，可直接字串比較）。 */

@@ -593,7 +593,8 @@ function cardMeta(trip: TripInfo): string {
 export default function TripsListPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  // #1713：≥720 就是「清單＋內容欄」版面（720–1023 無右欄），行程詳情走 TripPageHost 的中欄。
+  const isDesktop = useMediaQuery('(min-width: 720px)');
   const [searchParams, setSearchParams] = useSearchParams();
   // v2.39.0: 分享連結 modal — 由 card ⋯ / 行程頁 ⋯ 的「分享連結」開啟。
   const [shareTripId, setShareTripId] = useState<string | null>(null);

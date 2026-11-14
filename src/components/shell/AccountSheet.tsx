@@ -30,7 +30,7 @@ export const ACCOUNT_SHEET_STYLES = `
   overflow-y: auto; overscroll-behavior: contain;
   animation: account-sheet-slide var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2,0.8,0.2,1));
 }
-@media (max-width: 1023px) {
+@media (max-width: 719px) {
   .account-sheet-panel { width: 100vw; }
 }
 /* 桌機置中實心卡片（#1711，#1705 變體 A；比照 App regular form sheet：maxWidth 560／maxHeight 720、置中）。

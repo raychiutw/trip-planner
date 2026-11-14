@@ -67,16 +67,20 @@ describe('AppShell — CSS rules（驗 SCOPED_STYLES，jsdom 不套 media query�
     );
   });
 
-  it('mobile breakpoint <1024px 隱藏 sidebar', () => {
-    // 找 max-width: 1023px 內的 sidebar display: none
+  it('mobile breakpoint <720px 隱藏 sidebar（#1713：720–1023 sidebar 變行程清單欄）', () => {
     expect(APP_SHELL_STYLES).toMatch(
-      /@media[^{]*max-width:\s*1023px[\s\S]*?\.app-shell-sidebar[\s\S]*?display:\s*none/,
+      /@media \(max-width: 719px\) \{\s*\.app-shell-sidebar \{\s*display:\s*none/,
     );
+  });
+
+  it('寬版 720–1023px：頂部 bar + 240px 左欄、隱藏底部膠囊', () => {
+    expect(APP_SHELL_STYLES).toMatch(/@media \(min-width: 720px\) and \(max-width: 1023px\)[\s\S]*?grid-template-columns:\s*var\(--sidebar-width-wide\) 1fr/);
+    expect(APP_SHELL_STYLES).toMatch(/@media \(min-width: 720px\) \{\s*\.app-shell-bottom-nav \{\s*display:\s*none/);
   });
 
   it('mobile breakpoint <1024px 隱藏 sheet', () => {
     expect(APP_SHELL_STYLES).toMatch(
-      /@media[^{]*max-width:\s*1023px[\s\S]*?\.app-shell-sheet[\s\S]*?display:\s*none/,
+      /@media \(max-width: 1023px\) \{\s*\.app-shell-sheet \{\s*display:\s*none/,
     );
   });
 

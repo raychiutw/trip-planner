@@ -64,6 +64,9 @@ export interface TripPageHostProps {
 export default function TripPageHost({ children }: TripPageHostProps) {
   const location = useLocation();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+  // #1713：720–1023 只有 /trips 的「清單＋內容欄」；操作頁（右欄 stack）要 ≥1024，
+  // 否則該寬度的整頁操作頁沒有 placeholder 可 portal。
+  const isWide = useMediaQuery('(min-width: 720px)');
   const tripPageRef = useRef<TripPageHandle>(null);
   const [portalNode, setPortalNode] = useState<Element | null>(null);
   // setPortalNode（useState setter）本身在 re-render 之間已保證 identity 穩定，
@@ -71,7 +74,7 @@ export default function TripPageHost({ children }: TripPageHostProps) {
   // re-render（例如每次路由變化）都會產生新 object，讓消費這個 context 的 host
   // （TripsListPage/TripStackLayout）跟著不必要 re-render。
   const portalContextValue = useMemo(() => ({ setPortalNode }), [setPortalNode]);
-  const tripId = isDesktop
+  const tripId = isDesktop || (isWide && location.pathname === '/trips')
     ? resolveDesktopMiddleColumnTripId(location.pathname, location.search)
     : null;
 

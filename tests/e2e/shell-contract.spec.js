@@ -14,10 +14,10 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/trips');
     await expect(page.getByTestId('trips-list-page')).toBeVisible();
-    const compact = width < 1024;
+    const compact = width < 720; // #1713：720–1023 為寬版（頂部 root tab）
     const tab = page.getByTestId(compact ? 'global-bottom-nav-trips' : 'sidebar-nav-trips');
     // #1708：<1200 側欄自動收合，導覽要先用切換鈕展開才在畫面上（仍可達）
-    if (!compact && width < 1200) await page.getByRole('button', { name: '顯示側欄' }).last().click();
+    if (width >= 1024 && width < 1200) await page.getByRole('button', { name: '顯示側欄' }).last().click();
     await expect(tab).toBeVisible();
     await expect(tab).toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId('app-shell-bottom-nav')).toBeVisible({ visible: compact });

@@ -146,7 +146,8 @@ body:not(.dark) { color-scheme: light; }
 
     /* AppShell layout grid templates.
      *   ≥1024px: 3-pane rev2 (sidebar 216 / 中欄行程 1fr / 右欄地圖 1fr — owner 2026-07-17)
-     *   <1024px: single-column + 底部浮動玻璃膠囊 tab
+     *   720–1023px: 頂部 bar（root tab）+ 左欄行程清單 240px，無右欄（#1713）
+     *   <720px: single-column + 底部浮動玻璃膠囊 tab
      */
     --grid-3pane-desktop: 216px 1fr 1fr;
     --grid-2pane-desktop: 216px 1fr;
@@ -157,6 +158,9 @@ body:not(.dark) { color-scheme: light; }
      * （後者已同步移除多疊的 12px）。 */
     --nav-height-mobile: 80px;
     --sidebar-width-desktop: 216px;
+    /* 寬版 720–1023px（#1713）：左欄只放行程清單 240px；頂部 bar 56px（品牌＋root tab）。 */
+    --sidebar-width-wide: 240px;
+    --topbar-height-wide: 56px;
 
     /* Font size */
     --font-size-large-title: 2.125rem;

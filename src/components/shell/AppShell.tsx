@@ -218,7 +218,12 @@ export const APP_SHELL_STYLES = `
   .app-shell-divider:focus-visible { outline: none; }
   /* rev2 §10.1（owner 2026-07-19）：桌機 primary nav 改回 macOS sidebar（DesktopSidebar
    * 頂部 4-tab）→ 桌機**隱藏**底部浮動膠囊。故無需膠囊置中，也無需為膠囊在 main 留
-   * padding-bottom。手機（<1024）維持底部膠囊常駐（見下方 max-width:1023px 段）。 */
+   * padding-bottom。手機（<720）維持底部膠囊常駐（見下方 max-width:719px 段）。 */
+}
+
+/* 寬版 ≥720px（#1713，比照 App 的 regular 導覽，ADR-0009）：不要底部浮動膠囊。
+ * 720–1023 的 root tab 改放頂部 bar（見下方），≥1024 放側欄。 */
+@media (min-width: 720px) {
   .app-shell-bottom-nav {
     display: none;
   }
@@ -231,7 +236,34 @@ export const APP_SHELL_STYLES = `
 .tp-sidebar-toggle.tp-sidebar-toggle-float { display: none; }
 @media (min-width: 1024px) { .tp-sidebar-toggle.tp-sidebar-toggle-float { display: grid; } }
 
-/* Mobile <1024px：單欄 + bottom nav 常駐.
+
+/* 寬版 720–1023px（#1713，owner 簽核 #1706 變體 A）：頂部全寬 bar（品牌＋4 個 root tab，
+ * 由 DesktopSidebar 的 brand／nav 以 absolute 疊上去）＋左欄只放「我的行程」（240px）＋
+ * 帳號左下；無右欄。bar 底是 ::before 撐滿整列。 */
+@media (min-width: 720px) and (max-width: 1023px) {
+  .app-shell {
+    position: relative;
+    grid-template-columns: var(--sidebar-width-wide) 1fr;
+    grid-template-rows: var(--topbar-height-wide) 1fr;
+  }
+  .app-shell::before {
+    content: '';
+    grid-column: 1 / -1; grid-row: 1;
+    background: var(--color-secondary);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .app-shell-sidebar { grid-column: 1; grid-row: 2; }
+  .app-shell-main { grid-column: 2; grid-row: 2; }
+}
+
+/* <1024px 沒有右欄（≥1024 才有 3-pane 的第三欄）。 */
+@media (max-width: 1023px) {
+  .app-shell-sheet {
+    display: none;
+  }
+}
+
+/* Mobile <720px：單欄 + bottom nav 常駐.
  *
  * Why height: 100dvh (not min-height): we need .app-shell-main to be a real
  * scroll container so sticky elements inside (like TitleBar + .tp-map-day-tabs)
@@ -242,10 +274,9 @@ export const APP_SHELL_STYLES = `
   .app-shell-divider {
     display: none;
   }
+}
+@media (max-width: 719px) {
   .app-shell-sidebar {
-    display: none;
-  }
-  .app-shell-sheet {
     display: none;
   }
   /* rev2 owner 2026-07-20「功能 tab 下方應該是全版該功能頁面」：底部 tab 已改全透明
