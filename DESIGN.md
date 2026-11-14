@@ -97,7 +97,7 @@
 | `label` | 12px / 16px | 12px / 16px | 600 | 表單 label、metadata、chip label |
 | `sidebar-item` | 14px / 20px | n/a | 600 | Desktop sidebar nav |
 | `bottom-nav-label` | n/a | 11px / 14px | 700 | Compact bottom nav label |
-| `eyebrow` | 10px / 14px | 10px / 14px | 600 | 僅用於 uppercase label，例如 `DAY 01` |
+| `eyebrow` | 10px / 14px | 10px / 14px | 600 | uppercase label；`Day 01` 依 App 不轉大寫（#1692） |
 
 > **手機全域字級放大（owner 2026-07-24，v2.57.42）**：字級 token 全為 `rem`。`@media (max-width:760px)` 下 root `html { font-size: 106.25% }`（16→17px，iOS HIG body 標準）→ 上表 Compact 欄所有 rem 字級**等比放大 6.25%**（body 實得 17px、footnote 14.9px…）。`spacing`/`radius` 為 px 不受影響（版面不變、只有字變大）；輸入框仍 ≥16px（`max(16px,1em)` 以 1em=17px 計）不觸發 iOS 聚焦縮放。
 
@@ -1307,3 +1307,5 @@ email → user_id 完整切換。
 8. **Hairline over shadow** — 卡片區分優先用 1px border，shadow 只用在浮層（toast、sheet、dialog）。
 9. **Tabular numbers everywhere** — 時間、日期、stats 數字強制 `tabular-nums`。
 10. **無裝飾元素** — 不用 gradient、emoji、decorative SVG、rainbow 類型色；資訊本身是主角。
+
+> **#1692（2026-11-14）**：時間軸 DaySection 眉標寫 `Day 01`（依 App，不轉大寫）；手機 header 帳號圓圈為線條 person.crop.circle（透明底＋描邊圓＋人像線稿），不再是柔褐實心圓。
