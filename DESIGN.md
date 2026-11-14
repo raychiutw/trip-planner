@@ -1239,6 +1239,7 @@ email → user_id 完整切換。
 | Hero | `tp-page-eyebrow`「我的收藏」+ count meta「N 個收藏 POI」+ region pill row（`role="group"` + `aria-pressed`，reuse ExplorePage L470-885 邏輯）+ type filter row（餐廳 / 景點 / 飯店 / 購物 / 其他）+ search-within-favorites (`<input type="search">` client-side filter，200+ POIs 必須能搜) |
 | Body | 收藏 POI grid + 「目前在 N 個行程」usage badges + per-card「加入行程 →」link to `/favorites/:id/add-to-trip` |
 | Batch toolbar | sticky bottom toolbar（multi-select 啟動時顯示）：「全選 / 取消 / 刪除」三 action — **不支援 batch add-to-trip**（per-card link 才是加入行程入口，batch 僅刪除） |
+| 桌機多選（#1714） | 與 checkbox 共用同一份選取狀態：⌘／Ctrl-click 卡片加減單張、⇧-click 從最近一次勾選或 ⌘-click 的卡片（錨點）選到該卡；一般點擊不變。Mac 的 Ctrl-click 是右鍵，修飾鍵以 ⌘ 為準 |
 
 **Batch flow（DUC1 sign-off — delete-only）**
 
