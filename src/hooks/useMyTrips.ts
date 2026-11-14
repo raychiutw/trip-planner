@@ -44,13 +44,17 @@ let ownerId: string | null = null;
 let state: MyTripsState = PENDING;
 let inflight: Promise<void> | null = null;
 let requestId = 0;
+// 失敗後「掛載時自動重試」一次就好：頁面若在 loading 時卸載用到清單的子樹（GlobalMapPage），
+// 失敗 → 重新掛載 → 重試 → loading 卸載 → 失敗… 會變成無限請求迴圈（master 就有；#1691 讓重新掛載不必再打 userinfo，空轉更快）。
+// 成功、手動重試、清單更新事件、換使用者都會重置。
+let mountRetryUsed = false;
 let eventsAttached = false;
 const listeners = new Set<() => void>();
 
 function notify() { for (const listener of listeners) listener(); }
 
 /** 手動重試（錯誤態的「重試」按鈕用）。 */
-export function refreshMyTrips() { if (!inflight) refresh(); }
+export function refreshMyTrips() { mountRetryUsed = false; if (!inflight) refresh(); }
 
 function refresh() {
   if (!ownerId) return;
@@ -64,6 +68,7 @@ function refresh() {
       if (request !== requestId || owner !== ownerId) return;
       if (!Array.isArray(data)) throw new Error('Invalid trip list');
       state = { trips: data, status: 'ready' };
+      mountRetryUsed = false;
       notify();
     })
     .catch(() => {
@@ -75,6 +80,7 @@ function refresh() {
 }
 
 function onTripsUpdated() {
+  mountRetryUsed = false;
   if (listeners.size > 0) {
     refresh();
   } else {
@@ -98,6 +104,7 @@ function subscribe(listener: () => void) {
 
 /** Test-only：清 module cache（避免測試互相污染）。 */
 export function __clearMyTripsCache(): void {
+  mountRetryUsed = false;
   ownerId = null;
   state = PENDING;
   inflight = null;
@@ -131,12 +138,16 @@ export function useMyTrips(userId: string | null | undefined): MyTripsState {
     ensureEvents();
     if (ownerId !== userId) {
       ownerId = userId;
+      mountRetryUsed = false;
       state = PENDING;
       inflight = null;
       requestId++;
       notify();
     }
-    if (!inflight && (state.status === 'error' || (state.status === 'loading' && state.trips === undefined))) refresh();
+    if (!inflight && ((state.status === 'error' && !mountRetryUsed) || (state.status === 'loading' && state.trips === undefined))) {
+      if (state.status === 'error') mountRetryUsed = true;
+      refresh();
+    }
   }, [userId]);
 
   return current;

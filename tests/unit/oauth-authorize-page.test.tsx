@@ -69,7 +69,7 @@ beforeEach(() => {
   });
   fake.getAuthorizeAuth.mockReset().mockReturnValue({
     login: fake.login, restoreSession: fake.restoreSession, logout: fake.logout,
-    apiFetch: fake.apiFetch, isAuthenticated: fake.isAuthenticated, refresh: vi.fn(),
+    apiFetch: fake.apiFetch, isAuthenticated: fake.isAuthenticated, refresh: vi.fn(), getIdToken: () => null,
   });
   assign = vi.fn();
   Object.defineProperty(window, 'location', { configurable: true, value: { ...window.location, assign } });

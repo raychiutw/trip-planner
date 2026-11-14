@@ -14,7 +14,7 @@ const navigateMock = vi.fn();
 vi.mock('../../src/lib/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/lib/auth')>();
   const client: import('../../src/lib/auth').AuthClient = {
-    isAuthenticated: () => true, restoreSession: async () => true,
+    isAuthenticated: () => true, restoreSession: async () => true, getIdToken: () => null,
     apiFetch: (input, init) => globalThis.fetch(String(input), init),
     login: async (email, password) => {
       let res: Response;

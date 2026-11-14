@@ -18,7 +18,7 @@ vi.mock('../../src/lib/auth', async (orig) => {
       isAuthenticated: () => true,
       restoreSession: async () => true,
       apiFetch: (input: string | URL, init?: RequestInit) => fetch(String(input), init),
-      login: async () => {}, refresh: async () => {}, logout: h.logout,
+      login: async () => {}, refresh: async () => {}, logout: h.logout, getIdToken: () => null,
     }),
   };
 });

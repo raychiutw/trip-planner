@@ -8,7 +8,9 @@
  * - 網路錯誤、5xx／429 的暫時性 refresh 失敗（`AUTH_NETWORK`／`AUTH_UNAVAILABLE`）原樣往上丟，不當成登出。
  */
 import { writeAuthHint } from '../authHint';
-import { AuthError, type AuthClient } from './client';
+import { resetCurrentUserCache } from '../currentUserCache';
+import { AuthError, CLIENT_ID, type AuthClient } from './client';
+import { userFromIdToken } from './idToken';
 
 /** `/api` 之後的路徑前綴；來源：contracts/openapi.json 中沒有 `security` 的 operation。 */
 const PUBLIC_PREFIXES = [
@@ -36,6 +38,7 @@ let quietDepth = 0;
 export function defaultReauthHandler(): void {
   if (quietDepth > 0) return;
   writeAuthHint(false);
+  resetCurrentUserCache();
   const { pathname, search } = globalThis.location;
   if (pathname.startsWith('/login')) return;
   globalThis.location.assign(`/login?redirect_after=${encodeURIComponent(`${pathname}${search}`)}`);
@@ -60,11 +63,18 @@ export async function sendViaNewApi(auth: AuthClient, apiBase: string, path: str
   }
 }
 
-/** useCurrentUser 的新 api 版：沒有任何本機憑證回 401（不送請求）；有就還原登入後取 userinfo。 */
-export async function fetchCurrentUserViaNewApi(auth: AuthClient): Promise<Response> {
+/**
+ * useCurrentUser 的新 api 版：沒有任何本機憑證回 401（不送請求）；有就還原登入。
+ * token 回應的 id_token 通過驗證（見 idToken.ts）就直接當顯示用的使用者資料，省掉一次 userinfo；否則落回 userinfo。
+ * `staleIdToken`：已知過時的 id_token（例如改完顯示名稱後 reload），遇到就不用、直接問 userinfo。
+ */
+export async function fetchCurrentUserViaNewApi(auth: AuthClient, staleIdToken: string | null = null): Promise<Response> {
   return quiet(async () => {
     try {
       if (!auth.isAuthenticated() && !(await auth.restoreSession())) return unauthorized('尚未登入');
+      const idToken = auth.getIdToken();
+      const fromToken = idToken !== staleIdToken ? userFromIdToken(idToken, CLIENT_ID) : null;
+      if (fromToken) return new Response(JSON.stringify(fromToken), { status: 200, headers: { 'Content-Type': 'application/json' } });
       return await auth.apiFetch('/api/oauth/userinfo');
     } catch (e) {
       if (e instanceof AuthError && e.code === 'AUTH_REQUIRED') return unauthorized(e.message);

@@ -65,14 +65,15 @@ export const ACCOUNT_SHEET_STYLES = `
 
 export default function AccountSheet({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { bg, closeSheet } = useAccountSheet();
+  const { bg } = useAccountSheet();
 
   const close = useCallback(() => {
-    closeSheet();
     const to = bg ? bg.pathname + bg.search + bg.hash : '/trips';
-    // replace：把 /account URL 換回背景（背景 component 全程 mounted → 同 route 不 remount、保留狀態）。
+    // 只導回背景，不在這裡清 flag：router 的導覽是非同步的，先 closeSheet 會有一個 render 是 open=false 但 path 仍 /account，
+    // 主 Routes 於是短暫 render 全頁 AccountPage（背景頁被 unmount、側邊欄帳號卡被換掉，焦點還原落在那張暫時的卡上而後失焦）。
+    // 路徑離開 /account 後，AccountModalRoutes 的 effect 會收掉 flag（與 back button 同一條路）。
     navigate(to, { replace: true });
-  }, [closeSheet, navigate, bg]);
+  }, [navigate, bg]);
 
   /*
    * 統一 sheet 引擎（#1150 story 6）：原本這裡只有一個 window keydown 監聽 Escape ——

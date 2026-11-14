@@ -1,3 +1,4 @@
+import { resetCurrentUserCache } from '../../src/lib/currentUserCache';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -117,6 +118,7 @@ it('換帳號重新掛載後不沿用上一位使用者的可存取行程清單'
   await screen.findByTestId('sidebar-trip-t1');
   first.unmount();
   currentUserId = 'other';
+  resetCurrentUserCache(); // 真實換帳號必經登出／登入，兩者都會清掉共享的使用者
   listReply = async () => response([{ tripId: 'other-trip', name: '其他帳號行程' }]);
   render(<MemoryRouter initialEntries={['/chat']}><ActiveTripProvider><ChatPage /></ActiveTripProvider></MemoryRouter>);
   expect(await screen.findByTestId('sidebar-trip-other-trip')).toHaveTextContent('其他帳號行程');

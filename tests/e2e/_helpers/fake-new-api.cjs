@@ -133,7 +133,14 @@ function issueTokens(familyId) {
   S.refresh.set(refresh, { family: familyId, used: false });
   S.access.set(access, { family: familyId, expired: false });
   fam.current = refresh;
-  return { access_token: access, refresh_token: refresh, token_type: 'DPoP', expires_in: 900 };
+  const out = { access_token: access, refresh_token: refresh, token_type: 'DPoP', expires_in: 900 };
+  // 對齊真 api：scope 含 openid 時回未簽章也無妨的 id_token（web 只驗 sub／aud／exp，見 src/lib/auth/idToken.ts）。可由 /__fake/no-id-token 關掉以測落回 userinfo
+  const user = Object.values(S.users).find((u) => u.id === fam.userId);
+  if (user && !S.noIdToken) {
+    const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    out.id_token = `${b64u({ alg: 'ES256' })}.${b64u({ iss: ORIGIN, sub: user.id, aud: 'tripline-web', email: user.email, email_verified: true, name: user.displayName ?? user.email.split('@')[0], exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`;
+  }
+  return out;
 }
 
 function revokeFamily(id) { const f = S.families.get(id); if (f) f.revoked = true; }
@@ -152,6 +159,7 @@ async function handle(req, res) {
     return send(req, res, 200, { stats: S.stats, families, log: S.log, unhandled: S.unhandled, users: Object.keys(S.users) });
   }
   if (path === '/__fake/reset' && req.method === 'POST') { reset(); return send(req, res, 200, { ok: true }); }
+  if (path === '/__fake/no-id-token' && req.method === 'POST') { S.noIdToken = true; return send(req, res, 200, { ok: true }); }
   if (path === '/__fake/expire-access' && req.method === 'POST') { for (const a of S.access.values()) a.expired = true; return send(req, res, 200, { ok: true }); }
 
   // ---- 公開端點 ----
@@ -217,6 +225,7 @@ async function handle(req, res) {
     if (path === '/api/oauth/logout' && m === 'POST') { revokeFamily(familyId); return send(req, res, 204); }
     if (path === '/api/my-trips' && m === 'GET') return send(req, res, 200, [FAKE_TRIP]);
     if (path === '/api/requests' && m === 'GET') return send(req, res, 200, []);
+    if (path === '/api/account/stats' && m === 'GET') return send(req, res, 200, { tripCount: 6, totalDays: 45, collaboratorCount: 2 });
 
     if (path === '/api/account' && m === 'GET') {
       return send(req, res, 200, { hasPassword: user.password !== null, tripsOwned: 0, collaboratorsAffected: 0 });

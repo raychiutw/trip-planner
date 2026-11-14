@@ -13,7 +13,7 @@ vi.mock('../../src/lib/auth', async (importOriginal) => {
   const client: import('../../src/lib/auth').AuthClient = {
     isAuthenticated: () => true, restoreSession: async () => true,
     apiFetch: (input, init) => globalThis.fetch(String(input), init),
-    login: async () => { session.loggedIn = true; }, refresh: async () => {}, logout: async () => {},
+    login: async () => { session.loggedIn = true; }, refresh: async () => {}, logout: async () => {}, getIdToken: () => null,
   };
   return { ...actual, getNewApiAuth: () => client, getNewApiBase: () => '' };
 });
