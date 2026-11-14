@@ -35,6 +35,17 @@ test.describe('帳號置中卡片', () => {
     await expect(page.getByTestId('sidebar-account-card')).toBeFocused();
   });
 
+  test('1280：卡片內 .tp-account-inner 不吃 viewport 的 768 規則（padding 16／gap 24）；全頁 /account 仍是 24／32', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const sheet = await openSheet(page, 1280);
+    const read = (loc) => loc.evaluate((e) => { const c = getComputedStyle(e); return { pl: c.paddingLeft, pt: c.paddingTop, gap: c.rowGap }; });
+    expect(await read(sheet.locator('.tp-account-inner'))).toEqual({ pl: '16px', pt: '24px', gap: '24px' });
+    await page.keyboard.press('Escape');
+    await page.goto('/account');
+    await page.getByTestId('account-hero').waitFor();
+    expect(await read(page.locator('.tp-account-inner'))).toEqual({ pl: '24px', pt: '40px', gap: '32px' });
+  });
+
   test('1280×600：矮視窗卡片縮到 100vh-48', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 600 });
     const sheet = await openSheet(page, 1280);
