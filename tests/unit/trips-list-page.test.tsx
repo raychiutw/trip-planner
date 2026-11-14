@@ -44,7 +44,7 @@ function mockMatchMedia(isDesktop: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (q: string) => ({
-      matches: isDesktop && q.includes('1024'),
+      matches: isDesktop && /min-width: (720|1024)px/.test(q),
       media: q,
       onchange: null,
       addListener: vi.fn(),
@@ -314,6 +314,7 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
   ];
 
   it('toolbar 顯示三個 filter tab + sort dropdown + search toggle', async () => {
+    mockMatchMedia(false); // ≥720 搜尋欄常駐（#1712），toggle 只在窄螢幕存在
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-toolbar')).toBeTruthy());
@@ -346,6 +347,7 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
   });
 
   it('search toggle expand → input 出現 + 過濾後 count 顯示', async () => {
+    mockMatchMedia(false); // ≥720 搜尋欄常駐（#1712），toggle 只在窄螢幕存在
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-search-toggle')).toBeTruthy());
