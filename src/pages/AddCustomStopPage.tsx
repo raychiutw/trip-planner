@@ -561,7 +561,7 @@ export default function AddCustomStopPage() {
                       onClick={() => handlePickDay(d.dayNum)}
                       data-testid={`add-custom-stop-daypicker-chip-${d.dayNum}`}
                     >
-                      <span className="tp-add-stop-daypicker-chip-num">DAY {String(d.dayNum).padStart(2, '0')}</span>
+                      <span className="tp-add-stop-daypicker-chip-num">Day {String(d.dayNum).padStart(2, '0')}</span>
                       {mmdd && <span className="tp-add-stop-daypicker-chip-date">{mmdd}{d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}</span>}
                     </button>
                   );
