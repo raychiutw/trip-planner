@@ -28,6 +28,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 
+## [2.57.138] - 2026-11-14
+
+### Fixed
+- **切換目前天時，打開的選單與鍵盤焦點不再消失（#1719）**：某天變成目前天時，整天的時間軸原本會被卸載重建（為了重播進場動畫），剛打開的 ⋯ 選單、右鍵選單或聚焦的列會跟著不見。改成同一個節點上重播動畫。
+- **剛載入行程時選的天不再被跳回**：網址帶 `#dayN` 或自動定位到今天時，初始定位會延後一個 frame 才切天；使用者若在這之前就點了別天，會被打回去。現在手動選過就不再套用初始定位。
+
+### For contributors
+- CI mobile-safari 時紅時綠的四條 e2e（#1719）：右鍵選單與 Day 方向鍵兩組由上面兩個修正根治（Linux WebKit 容器、2 CPU 下：右鍵選單 175 次紅 9 次 → 0；Day 方向鍵 20 次紅 7 次 → 0）。分欄拖曳測試在 WebKit 跳過：e2e 擋掉 Google Maps 後右欄是可捲動的地圖錯誤遮罩，Linux WebKit 拖過可捲動區塊時不再送滑鼠事件（macOS WebKit 正常），拖曳邏輯由 chromium 覆蓋。
+
 ## [2.57.137] - 2026-11-14
 
 ### Fixed
