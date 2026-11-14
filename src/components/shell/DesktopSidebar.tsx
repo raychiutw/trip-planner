@@ -90,7 +90,16 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column; gap: 2px;
   overflow-y: auto; flex: 1; min-height: 0;
 }
+.tp-sidebar-trips-filter {
+  flex-shrink: 0; width: 100%; box-sizing: border-box; margin: 0 0 4px;
+  padding: 6px 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--color-border); background: var(--color-background);
+  color: var(--color-foreground); font: inherit; font-size: var(--font-size-footnote);
+}
+.tp-sidebar-trips-filter:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
+.tp-sidebar-past-toggle { margin-top: 6px; }
 .tp-trip-item {
+  flex-shrink: 0; /* #1704：列變高時不被 flex column 壓扁 */
   display: block; padding: 9px 12px; border-radius: var(--radius-md);
   color: var(--color-muted);
   font-size: var(--font-size-footnote); font-weight: 600;
@@ -188,6 +197,20 @@ const SCOPED_STYLES = `
 }
 `;
 
+/** 本機日期 YYYY-MM-DD（與 start/endDate 同格式，可直接字串比較）。 */
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 已歸檔不列入；結束日（缺則起始日）早於今天 = 過去；沒日期的視為即將出發。 */
+export function groupSidebarTrips(trips: MyTrip[], query: string, today = todayLocal()) {
+  const q = query.trim().toLowerCase();
+  const shown = trips.filter((t) => t.archivedAt == null && (!q || `${t.name} ${t.title ?? ''}`.toLowerCase().includes(q)));
+  const isPast = (t: MyTrip) => { const end = t.endDate ?? t.startDate; return !!end && end < today; };
+  return { current: shown.filter((t) => !isPast(t)), past: shown.filter(isPast) };
+}
+
 export interface SidebarUser {
   name: string;
   email: string;
@@ -238,6 +261,8 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
   const { pathname } = location;
   const navigate = useNavigate();
   const [tripsOpen, setTripsOpen] = useState(true);
+  const [query, setQuery] = useState('');
+  const [pastOpen, setPastOpen] = useState(false);
   const { openSheet } = useAccountSheet();
   const { setActiveTrip } = useActiveTrip();
 
@@ -304,13 +329,35 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
               <span className="tp-trip-skeleton is-b" />
               <span className="tp-trip-skeleton is-c" />
             </div>
-          ) : trips.length === 0 ? (
-            <div className="tp-sidebar-trips-empty">尚無行程</div>
-          ) : (
-            trips.map((t) => {
-              return <SidebarTripRow key={t.tripId} trip={t} active={t.tripId === activeTripId} menu={tripMenu?.(t) ?? null} to={tripDestination(pathname, t.tripId)} onOpen={() => setActiveTrip(t.tripId)} />;
-            })
-          )}
+          ) : (() => {
+            const { current, past } = groupSidebarTrips(trips, query);
+            const row = (t: MyTrip) => <SidebarTripRow key={t.tripId} trip={t} active={t.tripId === activeTripId} menu={tripMenu?.(t) ?? null} to={tripDestination(pathname, t.tripId)} onOpen={() => setActiveTrip(t.tripId)} />;
+            const pastShown = pastOpen || (query.trim() !== '' && past.length > 0); // 過濾命中過去行程時自動展開
+            return (
+              <>
+                <input
+                  type="search" className="tp-sidebar-trips-filter" data-testid="sidebar-trips-filter"
+                  placeholder="搜尋行程名稱" aria-label="搜尋行程名稱"
+                  value={query} onChange={(e) => setQuery(e.target.value)}
+                />
+                {current.length === 0 && past.length === 0 && <div className="tp-sidebar-trips-empty" data-testid="sidebar-trips-no-match">{query.trim() ? '找不到符合的行程' : '尚無行程'}</div>}
+                {current.map(row)}
+                {past.length > 0 && (
+                  <>
+                    <button
+                      type="button" className="tp-sidebar-section-label tp-sidebar-past-toggle"
+                      aria-expanded={pastShown} data-testid="sidebar-trips-past-toggle"
+                      onClick={() => setPastOpen((o) => !o)}
+                    >
+                      <Icon name="chevron-right" />
+                      過去 · {past.length}
+                    </button>
+                    {pastShown && past.map(row)}
+                  </>
+                )}
+              </>
+            );
+          })()}
         </nav>
 
         <div className="tp-sidebar-cta">
