@@ -5,7 +5,7 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { useRefreshRunner } from '../../contexts/RefreshContext';
 import { useSheetMode } from '../../contexts/SheetModeContext';
@@ -176,7 +176,7 @@ export const APP_SHELL_STYLES = `
   }
   /* #1708 側欄整欄隱藏：第一欄寬度收成 0（推開內容，不做浮層）；sidebar 以 visibility 退出可見與 Tab 順序 */
   .app-shell { transition: grid-template-columns 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-  .app-shell[data-sidebar-collapsed="true"][data-layout="3pane"] { grid-template-columns: 0px 1fr 1fr; }
+  .app-shell[data-sidebar-collapsed="true"][data-layout="3pane"] { grid-template-columns: 0px var(--grid-3pane-rest, 1fr 1fr); }
   .app-shell[data-sidebar-collapsed="true"][data-layout="2pane"] { grid-template-columns: 0px 1fr; }
   .app-shell[data-sidebar-collapsed="true"] > .app-shell-sidebar {
     visibility: hidden;
@@ -189,6 +189,31 @@ export const APP_SHELL_STYLES = `
     position: absolute; top: 16px; left: 12px; z-index: 500;
     background: var(--color-secondary); border: 1px solid var(--color-border);
   }
+  /* #1710 中欄／右欄分隔線：sheet 與分隔線明確釘在第 3 欄，避免自動排位把 sheet 擠到第 2 列。
+   * 分隔線是第 3 欄左緣的 9px 點擊區（置中 1px 線，hover／拖曳／聚焦才變 3px 柔褐）。 */
+  .app-shell[data-layout="3pane"] .app-shell-sheet { grid-column: 3; grid-row: 1; }
+  .app-shell-divider {
+    grid-column: 3; grid-row: 1;
+    justify-self: start;
+    width: 9px; margin-left: -4px;
+    z-index: 5;
+    cursor: col-resize;
+    touch-action: none;
+    display: flex; justify-content: center;
+  }
+  .app-shell-divider::before {
+    content: '';
+    width: 1px;
+    background: var(--color-border);
+    transition: width var(--transition-duration-fast, 120ms) ease-out, background-color var(--transition-duration-fast, 120ms) ease-out;
+  }
+  .app-shell-divider:hover::before,
+  .app-shell-divider:focus-visible::before,
+  .app-shell-divider[data-dragging="true"]::before {
+    width: 3px;
+    background: var(--color-accent);
+  }
+  .app-shell-divider:focus-visible { outline: none; }
   /* rev2 §10.1（owner 2026-07-19）：桌機 primary nav 改回 macOS sidebar（DesktopSidebar
    * 頂部 4-tab）→ 桌機**隱藏**底部浮動膠囊。故無需膠囊置中，也無需為膠囊在 main 留
    * padding-bottom。手機（<1024）維持底部膠囊常駐（見下方 max-width:1023px 段）。 */
@@ -212,6 +237,9 @@ export const APP_SHELL_STYLES = `
  * min-height the grid grows with content, main isn't constrained, and the
  * window scrolls instead — breaking sticky inside main. */
 @media (max-width: 1023px) {
+  .app-shell-divider {
+    display: none;
+  }
   .app-shell-sidebar {
     display: none;
   }
@@ -238,6 +266,7 @@ body.print-mode .app-shell {
 }
 body.print-mode .app-shell-sidebar,
 body.print-mode .app-shell-sheet,
+body.print-mode .app-shell-divider,
 body.print-mode .app-shell-bottom-nav {
   display: none;
 }
@@ -246,7 +275,7 @@ body.print-mode .app-shell-main {
 }
 @media print {
   .app-shell { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-  .app-shell-sidebar, .app-shell-sheet, .app-shell-bottom-nav { display: none; }
+  .app-shell-sidebar, .app-shell-sheet, .app-shell-divider, .app-shell-bottom-nav { display: none; }
   .app-shell-main { padding-bottom: 0; }
 }
 
@@ -269,6 +298,11 @@ body.print-mode .app-shell-main {
   outline: none;
 }
 `;
+
+/** #1710 最小寬（owner 2026-11-14 簽核）：中欄 400／右欄 360；±2% 為鍵盤步進。 */
+const MIN_MAIN_PX = 400;
+const MIN_SHEET_PX = 360;
+const KEY_STEP = 2;
 
 export const APP_SHELL_LAYOUT_3PANE = '3pane';
 export const APP_SHELL_LAYOUT_2PANE = '2pane';
@@ -302,6 +336,27 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
   const sidebarCollapsed = useSidebarCollapsed();
+  const sheetRef = useRef<HTMLElement>(null);
+  const [mainPct, setMainPct] = useState(50);
+  const [dragging, setDragging] = useState(false);
+  const clampPct = (pct: number) => {
+    const total = (mainRef.current?.getBoundingClientRect().width ?? 0) + (sheetRef.current?.getBoundingClientRect().width ?? 0);
+    if (!total) return pct;
+    // shortcut: 視窗窄到兩個最小寬放不下時 min > max，以中欄最小寬為準。
+    return Math.min(Math.max(pct, (MIN_MAIN_PX / total) * 100), Math.max(100 - (MIN_SHEET_PX / total) * 100, (MIN_MAIN_PX / total) * 100));
+  };
+  const onDividerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!dragging || !mainRef.current || !sheetRef.current) return;
+    const left = mainRef.current.getBoundingClientRect().left;
+    const total = mainRef.current.getBoundingClientRect().width + sheetRef.current.getBoundingClientRect().width;
+    setMainPct(clampPct(((e.clientX - left) / total) * 100));
+  };
+  const onDividerKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const d = e.key === 'ArrowRight' ? KEY_STEP : e.key === 'ArrowLeft' ? -KEY_STEP : 0;
+    if (!d) return;
+    e.preventDefault();
+    setMainPct(clampPct(mainPct + d));
+  };
   // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
   // 捲動隱藏的 navHidden / lastYRef 與其 scroll listener 已整個移除。
 
@@ -329,7 +384,17 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   return (
     <>
       <style>{APP_SHELL_STYLES}</style>
-      <div className="app-shell" data-layout={layout} data-has-bottom-nav={bottomNav ? 'true' : 'false'} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'} data-testid="app-shell">
+      <div
+        className="app-shell"
+        data-layout={layout}
+        data-has-bottom-nav={bottomNav ? 'true' : 'false'}
+        data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}
+        data-testid="app-shell"
+        style={mainPct === 50 ? undefined : {
+          ['--grid-3pane-rest' as string]: `minmax(${MIN_MAIN_PX}px, ${mainPct}fr) minmax(${MIN_SHEET_PX}px, ${100 - mainPct}fr)`,
+          ['--grid-3pane-desktop' as string]: `var(--sidebar-width-desktop) var(--grid-3pane-rest)`,
+        }}
+      >
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
         </aside>
@@ -369,9 +434,29 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
           {main}
         </main>
         {(sheet || sheetPortalId) && (
-          <aside className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId}>
-            {sheet}
-          </aside>
+          <>
+            <aside ref={sheetRef} className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId}>
+              {sheet}
+            </aside>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="調整中欄與右欄寬度"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(mainPct)}
+              tabIndex={0}
+              className="app-shell-divider"
+              data-testid="app-shell-divider"
+              data-dragging={dragging ? 'true' : 'false'}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); }}
+              onPointerMove={onDividerMove}
+              onPointerUp={() => setDragging(false)}
+              onPointerCancel={() => setDragging(false)}
+              onDoubleClick={() => setMainPct(50)}
+              onKeyDown={onDividerKey}
+            />
+          </>
         )}
         {bottomNav && (
           <nav
