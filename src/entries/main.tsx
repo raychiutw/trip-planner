@@ -39,6 +39,7 @@ import TripPageHost from '../components/trip/TripPageHost';
 import AccountSheet from '../components/shell/AccountSheet';
 import { AccountSheetProvider, useAccountSheet } from '../contexts/AccountSheetContext';
 import { RefreshProvider } from '../contexts/RefreshContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { PRIMARY_NAV_ITEMS, isItemActive } from '../components/shell/navItems';
 import { rememberBranchLocation } from '../lib/branchMemory';
 import { Suspense, StrictMode, useEffect, useRef, type ReactNode } from 'react';
@@ -251,6 +252,12 @@ function KeyboardInsetTracker() {
   return null;
 }
 
+/** DocumentTitleTracker — 全站掛一次 useDocumentTitle（#1696）。需在 ActiveTripProvider 內。 */
+function DocumentTitleTracker() {
+  useDocumentTitle();
+  return null;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -267,6 +274,7 @@ if (el) {
           <BranchLocationTracker />
           <KeyboardInsetTracker />
           <ActiveTripProvider>
+          <DocumentTitleTracker />
           <NewTripProvider>
           <RefreshProvider>
           {/* owner 2026-07-21 回報 #2「開關第三欄面板會刷新第二欄」修復：TripPageHost
