@@ -223,7 +223,8 @@ test('#1303：沒有行程時 root 地圖保留建立引導，清單失敗則顯
   await page.unroute('**/api/my-trips');
   await page.route('**/api/my-trips', (route) => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
   await page.reload();
-  await expect(page.getByRole('alert')).toContainText('無法載入行程清單');
+  // 範圍限定在地圖頁：失敗時側邊欄的清單也有自己的 alert（兩處都是對的）。過去只有一個是因為 my-trips 在無限重試迴圈裡閃爍，見 my-trips-error-remount-loop.test.tsx
+  await expect(page.getByTestId('global-map-page').getByRole('alert')).toContainText('無法載入行程清單');
   await expect(page.getByTestId('global-map-empty')).toHaveCount(0);
 });
 
