@@ -414,9 +414,8 @@ function TripPageInner(
     }
   }, [activeTripId, trip]);
 
-  /* --- Update document title --- */
+  /* --- Update meta（分頁標題由 useDocumentTitle 統一設定）--- */
   useEffect(() => {
-    if (trip?.title) document.title = trip.title;
     if (trip?.description) {
       document.querySelector('meta[name="description"]')?.setAttribute('content', trip.description);
     }

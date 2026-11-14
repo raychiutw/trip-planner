@@ -32,7 +32,7 @@
 - **Differentiation:** 暖調 V2 柔褐三色（主柔褐 + sage 交通 + 粉 活動/收藏；非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
 - **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
 
-> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#CBA06E`，取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
+> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#D0A576`（2026-11-14 #1702 由 `#CBA06E` 改 App 單一值），取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
 
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
@@ -208,8 +208,8 @@
 ### Dark Mode (柔褐三色 Dark)
 | Token | Hex | 用途 |
 |-------|-----|------|
-| accent（柔褐） | `#CBA06E` | 深色主 accent |
-| accent-deep | `#E0BC90` | hover、icon glyph（深色更亮） |
+| accent（柔褐） | `#D0A576` | 深色主 accent（2026-11-14 #1702 起與 App 單一值 `#D0A576` 對齊） |
+| accent-deep | `#E5C39F` | hover、icon glyph（深色更亮；即 App 的 tintDeep） |
 | accent-subtle | `#33271A` | 卡片淡底、selected row |
 | accent-bg | `#44341F` | icon 底、卡片邊、badge |
 | accent-2（sage） | `#8FBE9C` | 交通 |
@@ -276,6 +276,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - 這是**聊天專用**的角色色，不重啟已退場的 sage／pink 三色系統（V3 三色退場，v2.55.88）；靛藍 token 在 `css/tokens.css` 的 plain `:root`／`body.dark`。時間行只剩時間（名稱已搬到氣泡上方）。
 - 為什麼改：V3 三色退場把 `--color-accent-2-bg` 與 `--color-accent-3-bg` 收斂成同值，原本靠它們區分 AI 與旅伴的頭像變成同色；owner 2026-11-07 指示「不用頭像，比照 App」。`tests/unit/chat-role-colors-distinct.test.ts` 把 token 展開成實際色值，三種氣泡底色與三種標籤色都必須兩兩不同，且自己與 AI 的氣泡色差要夠大（RGB 差總和 ≥ 24，擋住「值不同但看起來一樣」）。
 - **聊天底部材質**：訊息區延伸到螢幕底，輸入 dock（`.tp-chat-dock` ＝ 擁有者授權提示條 ＋ composer〔`.tp-glass`〕）與手機 tab 膠囊浮在訊息上面；訊息區底部留白 = dock 高度（含提示條；ResizeObserver 量測，`--chat-composer-h`）+ `--nav-overlay-h` + safe-area。dock 長高（textarea 多行、提示條出現）時，若使用者本來就在底部，捲動位置會重新釘回底部，最新一則不會被蓋住；「跳到最新」按鈕以 dock 為定位容器，在提示條之上。玻璃要有東西可折射——曾經因為用 padding 把訊息擋在輸入列上方，底下只剩純色，blur 數值都對卻看起來是實心。`tests/e2e/chat-composer-glass.spec.js` 驗訊息區真的延伸到 composer 底下、留白隨輸入長高並涵蓋提示條、長高後仍貼底、手機上 composer 在膠囊之上、提示條貼在 composer 上方。
+- **聊天送出鍵（#1699，比照 App）**：輸入框 Return 換行，⌘Return（Windows／Linux 為 Ctrl+Return）送出；IME 組字中的 Return 不送出；送出鈕行為不變。取代舊的「Enter 送出、Shift+Enter 換行」。`tests/e2e/chat-composer-keys.spec.js` 驗證。
 
 **AI 聊天捲動（#1209，owner 核准 A）**：離底部 >80px 時，在 composer 上方 12px、聊天欄置中顯示 44×44px 中性描邊向下箭頭；≤80px 隱藏。按箭頭使用原生平滑捲動，減少動態效果時立即捲動。回到底部的邊界只刷新最新五筆一次；刷新 spinner／失敗重試佔用箭頭位置。距頂 ≤80px 載入較早訊息時，頂部中央以不改變訊息高度的 sticky 狀態顯示載入／失敗重試。獨立與嵌入聊天共用規則。五態原型：[Cloudflare preview](https://59a64497.trip-planner-dby.pages.dev/prototype-1209-chat-scroll.html)。
 
@@ -347,7 +348,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 ### Unified App Shell
 > **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）〔2026-11-13 更正：材質已改實底 tint source list（#1689），現行描述見 §Desktop Sidebar〕。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
 - **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 —— **4-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**帳號移出 tab slot**：手機 header 右上 `person.crop.circle` 圓圈 → 開有自己 Navigation Stack 的 **Account sheet**（關閉回原頁原狀態、deep-link 相容）；桌機 sidebar 左下 account chip → 同 Account sheet／popover。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
-  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
+  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。圓圈內是人像圖示（`nav-account`，比照 App，不再顯示姓名首字），可及名稱維持「帳號」；桌機 sidebar 帳號列仍顯示姓名與信箱。「行程」root tab 圖示是行李箱（`nav-suitcase`，描邊；`nav-suitcase-fill` 實心版供選取樣式用，2026-11-14 #1701，比照 App），不再是房子。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕走標題列右側：`StackPanelHeader` 有右側 primary action slot（`primaryAction`，放在 `✕` 之前），見「Form Pages > 表單頁主要動作」。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
 - **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（實底 tint source list，#1689：品牌 → 4-tab 主導覽 → 可摺疊的我的行程清單 → 帳號列左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。 **側欄點行程（#1693）**：留在目前的 root tab——聊天→`/chat` 換成該行程的對話、地圖→該行程地圖、其他→行程詳情；判斷集中在 `navItems.ts` 的 `tripDestination`，與地圖頁 trip switcher 共用。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
@@ -371,11 +372,11 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Mode | Rule | 版型 |
 |------|------|------|
 | compact | default | 手機與平板共用：titlebar + hamburger + bottom nav |
-| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄 sidebar（實底；**頂部 primary nav 4-tab** + 可摺疊我的行程清單 + 左下帳號列）+ 中欄 timeline + 右欄操作面板。**桌機隱藏底部浮動玻璃膠囊**（`AppShell` 對 `.app-shell-bottom-nav` 設 `display: none`） |
+| desktop | `@media (min-width: 1024px)`（只看寬度） | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄 sidebar（實底；**頂部 primary nav 4-tab** + 可摺疊我的行程清單 + 左下帳號列）+ 中欄 timeline + 右欄操作面板。**桌機隱藏底部浮動玻璃膠囊**（`AppShell` 對 `.app-shell-bottom-nav` 設 `display: none`） |
 
 > ⚠️ **本行 2026-07-26 更正**：原寫「底部浮動玻璃膠囊 nav（primary nav 已由 sidebar **移膠囊**）」—— 方向剛好相反。rev2（owner 2026-07-19）是把 primary nav **搬回 sidebar 頂部**、桌機隱藏膠囊；膠囊只留在手機。同檔 §Unified App Shell 與 §Desktop Sidebar 一直是對的，只有本表這一行寫反。
 
-不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 且 `pointer: fine` 的環境都走 compact。
+不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 的環境都走 compact。觸控大螢幕（例如 iPad 橫向）一樣走桌機版；凡是只在 hover 時才顯示的控制（timeline 列 ⋯、行程筆記 grip），在 `(hover: none)` 下一律常駐（#1698）。
 
 ### Border Radius
 | Token | Value | 用途 |
@@ -505,9 +506,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab>` 元件 + `.tp-map-day-tab*` CSS family。Trip detail 透過 `<DayNav>` wrapper 加上 sticky modifier；MapPage 直接用 plain wrapper（黏在底部 card-rail 上方）。
 
-**Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「DAY N / 總覽」，無日期副標（2026-07-17 移除）
+**Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「Day N / 全部」（2026-11-14 比照 App，取代「DAY N / 總覽」），無日期副標（2026-07-17 移除）
 - **統一色系（owner 2026-07-24；地圖與 Trip 明細頁一致，不套 dayColor）**：
-  - Idle: `DAY 01` eyebrow muted 文字、透明底
+  - Idle: `Day 1` eyebrow muted 文字、透明底
   - Active: **實心 accent-fill 膠囊 + accent-foreground eyebrow**，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）——（沿革：2026-07-17「淡 tonal pill」→ 2026-07-24「比照 root tab 實心」；同批移除地圖 idle eyebrow 的 per-day 色）
 - Hover (idle): `color-foreground`
 - min-height 34px（扁平 strip，不搶垂直空間）；桌機（≥1024）每 tab 固定 88px、水平可捲
@@ -612,6 +613,7 @@ owner 2026-07-18「6 條全接」+ 2026-07-21「桌機三欄 shell panel 化」�
 - **Typography**（對齊 mockup `.stop-n:291` / `.stop-s:296`）：標題 `.tp-rail-name` = `--font-size-headline`（17px 桌機 / `--font-size-callout` 16px 手機）/ **weight 500（medium，非 bold；Apple Music track row 質感）** / `letter-spacing: -0.012em`（SF 式緊排）/ nowrap ellipsis；**選中（`[data-expanded]`）→ 600**。副標 `.tp-rail-sub` = `--font-size-subheadline`（15px）/ `letter-spacing: -0.006em` muted，inline 串接 time chip · 類型 · 停留 · ★rating · desc。（先前 15/11px 太小是「不像 Apple」主因；標題此處刻意用 500 medium 而非 card-title 700，為 Apple Music track row 例外。）
 - **內縮分隔線**（mockup `.stop-c::after:278`）：列間 hairline 走 `.tp-rail-item::after`（`left: 44px` 桌機 / `36px` 手機 = padding+node+gap，對齊文字起點）而非全寬 border-bottom；hover / 展開 / 末列隱藏。Apple 列表簽名細節。
 - **動作 = ⋯ context menu**：row 右側 `.tp-rail-head-actions` = ⋯ trigger（桌機 hover/focus/menu-open 才顯、觸控恆顯）+ 展開 caret。⋯ 用**原生 Popover API**（top-layer 自動逃 `.tp-rail-content` 的 overflow:hidden、light-dismiss、鍵盤 ↑↓/Home/End）。menu 分組（destructive 獨立末組）：**在地圖開啟｜編輯備註 / 換景點 / 編輯景點｜重新排序 / **上移一格 / 下移一格**（W13 拖拉 a11y：VoiceOver/觸控不靠拖曳的替代排序，首列無上移、末列無下移，與拖曳共用 `applyReorder`→`/entries/batch`）/ 複製到其他天 / 移到其他天｜刪除景點（紅）**。testid 沿用舊 toolbar（`timeline-rail-edit/-delete/-copy-open/-move-open-N`）。展開明細只留**資訊面**（景點說明 / 備註 inline / 備選景點），**無 action 工具列**（`.tp-rail-actions` 已移除）。
+- **右鍵 / 鍵盤開選單（#1694）**：`RailRowMenu` 收 `contextTargetRef`，該元素上**右鍵**（游標位置開）、**Shift+F10 / 選單鍵**（元素左側垂直置中開）開出和 ⋯ 同一個選單；輸入框、連結、選單內保留瀏覽器原生行為。列內聚焦（非輸入框）按 **Delete** 開「刪除景點」同一個 ConfirmModal（排序模式停用）。其他卡片（#1695）傳自己的 ref 即可沿用。
 - **排序模式**：⋯「重新排序」→ `.tp-rail-body[data-sort-mode]`：所有列顯 grip、可拖（dnd-kit，`useSortable` disabled 由 sortMode gate）、底部 sticky「完成排序」bar 退出。resting 列不放常駐 grip（拖拉排序在 ⋯ 內，非列上 icon）。
 - **依類型 tone 上同色系淡底**：卡片 bg = tone `-subtle`、border = tone `-bg`（柔褐／sage／粉，見 Stop Type Color Convention）。`data-now="true"` → 編號 node accent 實心；`data-past="true"` → opacity 0.55。
 
@@ -1091,7 +1093,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 被否決的是 `outline: none` + `box-shadow: var(--shadow-ring)`。兩個獨立理由：
 
 1. **既有 owner 選擇**是保留明顯的焦點框；把 Apple 原生焦點建議直接當作 Web `box-shadow` 禁令並不準確。
-2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。
+2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#D0A576`** —— 焦點框字面上不存在。
 
 第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
 
@@ -1125,9 +1127,9 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 | | 一般階 | 對頁面底色 | `prefers-contrast: more` | 加強後 |
 |---|---|---|---|---|
 | 淺色 | `#8A6038` | 5.35:1 | `#3D2610` | 13.73:1 |
-| 深色 | `#E0BC90` | 9.53:1 | `#FFE8C8` | 14.28:1 |
+| 深色 | `#E5C39F` | 10.24:1 | `#FFE8C8` | 14.28:1 |
 
-深色刻意**不用** `--color-accent`（`#CBA06E`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
+深色刻意**不用** `--color-accent`（`#D0A576`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
 
 ## Accessibility
 - **Touch target:** mobile 主操作以 44×44 CSS px 為本專案目標；Web AA 的 24×24 CSS px 與例外、Apple native 預設／最小 pt 值見「Web 設計驗收與來源」。
@@ -1239,6 +1241,7 @@ email → user_id 完整切換。
 | Hero | `tp-page-eyebrow`「我的收藏」+ count meta「N 個收藏 POI」+ region pill row（`role="group"` + `aria-pressed`，reuse ExplorePage L470-885 邏輯）+ type filter row（餐廳 / 景點 / 飯店 / 購物 / 其他）+ search-within-favorites (`<input type="search">` client-side filter，200+ POIs 必須能搜) |
 | Body | 收藏 POI grid + 「目前在 N 個行程」usage badges + per-card「加入行程 →」link to `/favorites/:id/add-to-trip` |
 | Batch toolbar | sticky bottom toolbar（multi-select 啟動時顯示）：「全選 / 取消 / 刪除」三 action — **不支援 batch add-to-trip**（per-card link 才是加入行程入口，batch 僅刪除） |
+| 桌機多選（#1714） | 與 checkbox 共用同一份選取狀態：⌘／Ctrl-click 卡片加減單張、⇧-click 從最近一次勾選或 ⌘-click 的卡片（錨點）選到該卡；一般點擊不變。Mac 的 Ctrl-click 是右鍵，修飾鍵以 ⌘ 為準 |
 
 **Batch flow（DUC1 sign-off — delete-only）**
 

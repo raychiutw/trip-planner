@@ -105,7 +105,9 @@ const ICONS: Record<string, string> = {
   // rev2 owner 2026-07-18：底部膠囊 nav 對齊 Flutter CupertinoIcons（chat_bubble /
   // house / map / heart）— SF-style thin outline，跨 web+mobile 一致。
   'nav-chat': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M12 20.3c4.6 0 8.4-3.4 8.4-7.65S16.6 5 12 5 3.6 8.4 3.6 12.65c0 1.87.75 3.58 1.99 4.9-.15 1.1-.59 2.12-1.24 2.95 1.4-.08 2.74-.52 3.85-1.25 1.12.65 2.4 1.05 3.8 1.05z"/>',
-  'nav-trips': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M4 11.4 12 4.5l8 6.9M5.8 9.9V19a1 1 0 0 0 1 1h10.4a1 1 0 0 0 1-1V9.9"/>',
+  // #1701：「行程」root tab 比照 App 用行李箱（SF suitcase）；-fill 給選中樣式用（#1707）。
+  'nav-suitcase': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6.5 7.5h11a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V9.5a2 2 0 0 1 2-2zM9 10.5v6M15 10.5v6"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9.5 7.5V6A1.5 1.5 0 0 1 11 4.5h2A1.5 1.5 0 0 1 14.5 6v1.5"/>',
+  'nav-suitcase-fill': '<path fill-rule="evenodd" d="M6.5 7.5h11a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V9.5a2 2 0 0 1 2-2zM8.4 10.5a.6.6 0 0 1 1.2 0v6a.6.6 0 0 1-1.2 0zM14.4 10.5a.6.6 0 0 1 1.2 0v6a.6.6 0 0 1-1.2 0z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9.5 7.5V6A1.5 1.5 0 0 1 11 4.5h2A1.5 1.5 0 0 1 14.5 6v1.5"/>',
   'nav-map': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M9 5 3.5 7v12L9 17l6 2 5.5-2V5l-5.5 2L9 5zM9 5v12M15 7v12"/>',
   'nav-fav': '<path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M12 20.3l-1.35-1.23C5.9 14.9 3 12.1 3 8.75 3 6.2 5.05 4.2 7.6 4.2c1.44 0 2.82.67 3.72 1.73l.68.8.68-.8c.9-1.06 2.28-1.73 3.72-1.73C18.95 4.2 21 6.2 21 8.75c0 3.35-2.9 6.15-7.65 10.33L12 20.3z"/>',
   // 底部 tab 的「帳號」。線條風格對齊其他 nav-*（stroke 1.7、round cap），
@@ -149,7 +151,7 @@ export default function Icon({ name }: { name: string }) {
   // **不要**將 ICONS 改為動態 fetch / CMS — 一旦 user-controlled 字串進 path，
   // 即 stored-XSS via SVG。改寫請保證 ICONS 永遠是 hardcoded literal map。
   return (
-    <span className="svg-icon" aria-hidden="true">
+    <span className="svg-icon" aria-hidden="true" data-icon={name}>
       <svg
         viewBox="0 0 24 24"
         fill="currentColor"

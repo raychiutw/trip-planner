@@ -69,6 +69,8 @@ const SCOPED_STYLES = `
 }
 .tp-notes-reservation-row:hover .tp-notes-reservation-grip,
 .tp-notes-reservation-row:focus-within .tp-notes-reservation-grip { opacity: 1; }
+/* 觸控（無 hover）沒有 hover 可觸發，grip 常駐（#1698） */
+@media (hover: none) { .tp-notes-reservation-grip { opacity: 1; } }
 .tp-notes-reservation-grip:active { cursor: grabbing; }
 .tp-notes-reservation-grip .svg-icon { width: 14px; height: 14px; }
 .tp-notes-reservation-body { min-width: 0; }

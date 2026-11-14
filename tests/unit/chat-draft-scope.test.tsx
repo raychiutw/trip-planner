@@ -112,7 +112,7 @@ it('does not send on the IME confirmation Enter reported with keyCode 229', asyn
   const input = await screen.findByTestId('chat-input') as HTMLTextAreaElement;
   await waitFor(() => expect(input.disabled).toBe(false));
   fireEvent.change(input, { target: { value: '輸入中' } });
-  fireEvent.keyDown(input, { key: 'Enter', keyCode: 229, isComposing: false });
+  fireEvent.keyDown(input, { key: 'Enter', metaKey: true, keyCode: 229, isComposing: false });
   expect(apiFetchMock.mock.calls.filter(([path, init]) => path === '/requests' && init?.method === 'POST')).toHaveLength(0);
   expect(input.value).toBe('輸入中');
 });

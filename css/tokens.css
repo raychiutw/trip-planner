@@ -38,7 +38,7 @@ body:not(.dark) { color-scheme: light; }
     --color-accent-text: #8A6038;
     --color-accent-text-on-tonal: #8A6038;
     /* 填色面專用：「實心填色 + accent-foreground 白字」（主要按鈕、側欄 active、底部 tab
-     * 選中膠囊…），白字 5.51 ✅。深色維持 #CBA06E（深字 7.12 已通過）。 */
+     * 選中膠囊…），白字 5.51 ✅。深色維持 #D0A576（深字 7.56 已通過；2026-11-14 #1702 起對齊 App 單一值）。 */
     --color-accent-fill: #8A6038;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
@@ -1056,28 +1056,28 @@ body.dark {
 /* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
     body.dark {
-        --color-accent: #CBA06E;
+        --color-accent: #D0A576;
         --color-accent-subtle: #2A2418;
         --color-accent-bg: #3A3020;
-        --color-accent-deep: #E0BC90;
-        /* 深色刻意不用 accent(#CBA06E) —— 它與 --color-accent-fill 同值，焦點框疊在
-         * 實心鈕上會變成 1.00:1。#E0BC90 對頁面底 9.53:1、對 accent-fill 1.34:1
+        --color-accent-deep: #E5C39F;
+        /* 深色刻意不用 accent(#D0A576) —— 它與 --color-accent-fill 同值，焦點框疊在
+         * 實心鈕上會變成 1.00:1。#E5C39F 對頁面底 10.24:1、對 accent-fill 1.36:1
          * （後者靠雙帶的內圈隔開，見 DESIGN.md §Focus Indicator）。 */
-        --color-focus-ring: #E0BC90;
+        --color-focus-ring: #E5C39F;
         /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038，
-         * 否則深底疊深字破版。深色 accent 當文字本就 7.12 通過，這裡對齊 accent-deep 更寬裕。
-         * #E0BC90 on #1C1C1E = 9.53 ✅ */
-        --color-accent-text: #E0BC90;
-        --color-accent-text-on-tonal: #E0BC90;
-        /* 深色填色鈕維持 #CBA06E（深字 #1C1C1E 疊其上 = 7.12 ✅，本就通過，不需壓深）。 */
-        --color-accent-fill: #CBA06E;
+         * 否則深底疊深字破版。深色 accent 當文字本就 7.56 通過，這裡對齊 accent-deep 更寬裕。
+         * #E5C39F on #1C1C1E = 10.24 ✅ */
+        --color-accent-text: #E5C39F;
+        --color-accent-text-on-tonal: #E5C39F;
+        /* 深色填色鈕維持 #D0A576（深字 #1C1C1E 疊其上 = 7.56 ✅，本就通過，不需壓深）。 */
+        --color-accent-fill: #D0A576;
         /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
-        --color-accent-2: #CBA06E;
-        --color-accent-2-deep: #E0BC90;
+        --color-accent-2: #D0A576;
+        --color-accent-2-deep: #E5C39F;
         --color-accent-2-subtle: #2A2418;
         --color-accent-2-bg: #3A3020;
-        --color-accent-3: #CBA06E;
-        --color-accent-3-deep: #E0BC90;
+        --color-accent-3: #D0A576;
+        --color-accent-3-deep: #E5C39F;
         --color-accent-3-subtle: #2A2418;
         --color-accent-3-bg: #3A3020;
         /* 聊天協作者（見 plain :root 的說明）：深色基色用 App 的 systemIndigo dark，標籤字提亮到 5.51:1。 */
