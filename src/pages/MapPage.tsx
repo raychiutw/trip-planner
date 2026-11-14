@@ -12,7 +12,8 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
-import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { tripDestination } from '../components/shell/navItems';
 import { useTripContext } from '../contexts/TripContext';
 import { useTripSelection } from '../hooks/useMyTrips';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
@@ -239,6 +240,7 @@ export default function MapPage() {
   const { tripId, entryId: entryIdStr } = useParams<{ tripId: string; entryId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { trip, allDays, loading, error } = useTripContext();
   const { user } = useCurrentUser();
   const { trips } = useTripSelection(user?.id, { explicitTripId: tripId });
@@ -248,8 +250,8 @@ export default function MapPage() {
    * pickTrip → navigate /trip/:newId/map（整頁切換 trip context）。 */
   const pickTrip = useCallback((newTripId: string) => {
     if (newTripId === tripId) return;
-    navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
-  }, [tripId, navigate]);
+    navigate(tripDestination(pathname, newTripId));
+  }, [tripId, navigate, pathname]);
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
 
