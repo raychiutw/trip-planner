@@ -49,7 +49,7 @@ import { useTripPageHandle } from '../contexts/TripPageHandleContext';
 import { useTripMainPortal } from '../contexts/TripMainPortalContext';
 import { TRIP_MAIN_PORTAL_ID } from '../lib/tripStackRoutes';
 import { shortcutAttrs, shortcutTitle } from '../lib/globalShortcuts';
-import { useTripSelection, refreshMyTrips, type MyTrip } from '../hooks/useMyTrips';
+import { useTripSelection, refreshMyTrips, isTripOwner, type MyTrip } from '../hooks/useMyTrips';
 
 const SCOPED_STYLES = `
 /* Terracotta preview v2 Section 16 parity: desktop 240px auto-fill cards,
@@ -520,6 +520,15 @@ export function destinationTone(countries: string | null | undefined): Destinati
   return DEST_TONE_CYCLE[h % DEST_TONE_CYCLE.length] ?? 'accent';
 }
 
+/** 行程卡外框：持有自己的 ref 給右鍵 / Shift+F10 / Delete（#1695）。 */
+function TripCardWrap({ children, renderMenu }: {
+  children: React.ReactNode;
+  renderMenu: (ref: React.RefObject<HTMLDivElement | null>) => React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  return <div ref={ref} className="tp-trip-card-wrap">{children}{renderMenu(ref)}</div>;
+}
+
 function eyebrow(countries: string | null | undefined, dayCount: number | undefined): string {
   // Section 4.7 (terracotta-ui-parity-polish): mockup eyebrow 用中文 (line 6904)
   // 取代既有 「JAPAN · 12 DAYS」全英文。
@@ -723,7 +732,7 @@ export default function TripsListPage() {
 
   const handleMenuArchive = useCallback((tripId: string) => {
     const trip = myTrips.find((candidate) => candidate.tripId === tripId);
-    if (!trip || trip.ownerUserId !== user?.id) return;
+    if (!trip || !isTripOwner(trip, user?.id)) return;
     setArchiveTarget({ tripId, label: trip.title || trip.name || tripId, archived: trip.archivedAt != null });
   }, [myTrips, user?.id]);
 
@@ -985,7 +994,20 @@ export default function TripsListPage() {
                   ? (isOwnTrip ? '由你建立' : (t.ownerDisplayName ?? ownerEmail.split('@')[0]))
                   : '';
                 return (
-                  <div key={t.tripId} className="tp-trip-card-wrap">
+                  <TripCardWrap key={t.tripId} renderMenu={(contextTargetRef) => (
+                    <TripCardMenu
+                      tripId={t.tripId}
+                      contextTargetRef={contextTargetRef}
+                      onArchive={isTripOwner(t, user?.id) ? handleMenuArchive : undefined}
+                      archived={t.archivedAt != null}
+                      onCollab={handleMenuCollab}
+                      onEdit={handleMenuEdit}
+                      onHealthCheck={handleMenuHealthCheck}
+                      onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
+                      onShare={(id) => setShareTripId(id)}
+                      onDelete={isTripOwner(t, user?.id) ? handleMenuDelete : undefined}
+                    />
+                  )}>
                     <button
                       type="button"
                       onClick={(e) => handleCardClick(t.tripId, e)}
@@ -1008,18 +1030,7 @@ export default function TripsListPage() {
                         </div>
                       </div>
                     </button>
-                    <TripCardMenu
-                      tripId={t.tripId}
-                      onArchive={t.ownerUserId === user?.id ? handleMenuArchive : undefined}
-                      archived={t.archivedAt != null}
-                      onCollab={handleMenuCollab}
-                      onEdit={handleMenuEdit}
-                      onHealthCheck={handleMenuHealthCheck}
-                      onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
-                      onShare={(id) => setShareTripId(id)}
-                      onDelete={handleMenuDelete}
-                    />
-                  </div>
+                  </TripCardWrap>
                 );
               })}
               <button
@@ -1103,7 +1114,7 @@ export default function TripsListPage() {
             </button>
             <TripActionsMenu
               tripId={effectiveSelectedId}
-              onArchive={embeddedTrip?.ownerUserId === user?.id ? () => handleMenuArchive(effectiveSelectedId) : undefined}
+              onArchive={isTripOwner(embeddedTrip ?? undefined, user?.id) ? () => handleMenuArchive(effectiveSelectedId) : undefined}
               archived={embeddedTrip?.archivedAt != null}
               tripPageRef={tripPageRef}
               onEdit={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/edit`)}

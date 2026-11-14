@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
+import { useContextMenuTrigger } from './RailRowMenu';
 
 const SCOPED_STYLES = `
 .tp-card-menu-trigger {
@@ -81,27 +82,39 @@ export interface TripCardMenuProps {
   onNotes?: (tripId: string) => void;
   /** 用戶選「分享連結」 — host 開 ShareLinkModal 建立/管理公開分享連結。 (v2.39.0) */
   onShare?: (tripId: string) => void;
-  /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。 */
-  onDelete: (tripId: string) => void;
+  /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。Owner-only：旅伴不要傳（選單項、Delete 鍵都跟著沒有）。 */
+  onDelete?: (tripId: string) => void;
   /** Owner-only trip-wide archive or restore. Omit for collaborators. */
   onArchive?: (tripId: string) => void;
   archived?: boolean;
   /** 預設關掉 menu 後 host 不需要做事。 */
   onClose?: () => void;
+  /** 該元素上右鍵 / Shift+F10 / 選單鍵從座標開同一個選單；有 onDelete 時 Delete 鍵開刪除確認（#1695，與 RailRowMenu 同一個 hook）。 */
+  contextTargetRef?: React.RefObject<HTMLElement | null>;
+  /** 沒有常駐 ⋯（側欄行程列）：只靠右鍵 / 鍵盤開。 */
+  triggerless?: boolean;
 }
 
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 const BOTTOM_SAFE_AREA = 96;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onArchive, archived, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onArchive, archived, onClose, contextTargetRef, triggerless }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // 右鍵 / 鍵盤開啟時的錨點；有值就貼座標，沒有就貼 trigger。
+  const pointRef = useRef<{ x: number; y: number } | null>(null);
+
+  useContextMenuTrigger(contextTargetRef, (x, y) => {
+    pointRef.current = { x, y };
+    setOpen(true);
+  }, onDelete ? () => onDelete(tripId) : undefined);
 
   const close = useCallback(() => {
     setOpen(false);
+    pointRef.current = null;
     onClose?.();
   }, [onClose]);
 
@@ -110,14 +123,22 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
     let rafId: number | null = null;
     function recompute() {
       const btn = triggerRef.current;
-      if (!btn) return;
-      const r = btn.getBoundingClientRect();
       const vw = window.innerWidth;
       const vh = window.innerHeight;
+      const menuH = menuRef.current?.offsetHeight || 335;
+      const pt = pointRef.current;
+      if (pt) {
+        setPos({
+          top: Math.max(VIEWPORT_MARGIN, Math.min(pt.y, vh - menuH - VIEWPORT_MARGIN)),
+          left: Math.max(VIEWPORT_MARGIN, Math.min(pt.x, vw - MENU_WIDTH - VIEWPORT_MARGIN)),
+        });
+        return;
+      }
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
       let left = r.right - MENU_WIDTH;
       if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
       if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
-      const menuH = menuRef.current?.offsetHeight || 335;
       const top = Math.max(VIEWPORT_MARGIN, Math.min(r.bottom + 6, vh - BOTTOM_SAFE_AREA - menuH));
       setPos({ top, left });
     }
@@ -201,7 +222,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    onDelete(tripId);
+    onDelete?.(tripId);
     close();
   }
 
@@ -282,34 +303,38 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
           <span>{archived ? '取消歸檔' : '歸檔行程'}</span>
         </button>
       )}
-      <button
-        type="button"
-        role="menuitem"
-        className="tp-card-menu-item is-destructive"
-        onClick={handleDelete}
-        data-testid={`trip-card-menu-delete-${tripId}`}
-      >
-        <Icon name="x-circle" />
-        <span>刪除行程</span>
-      </button>
+      {onDelete && (
+        <button
+          type="button"
+          role="menuitem"
+          className="tp-card-menu-item is-destructive"
+          onClick={handleDelete}
+          data-testid={`trip-card-menu-delete-${tripId}`}
+        >
+          <Icon name="x-circle" />
+          <span>刪除行程</span>
+        </button>
+      )}
     </div>
   ), document.body) : null;
 
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="tp-card-menu-trigger"
-        onClick={handleTrigger}
-        aria-label="行程選項"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        data-testid={`trip-card-menu-trigger-${tripId}`}
-      >
-        <Icon name="ellipsis" />
-      </button>
+      {!triggerless && (
+        <button
+          ref={triggerRef}
+          type="button"
+          className="tp-card-menu-trigger"
+          onClick={handleTrigger}
+          aria-label="行程選項"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          data-testid={`trip-card-menu-trigger-${tripId}`}
+        >
+          <Icon name="ellipsis" />
+        </button>
+      )}
       {dropdown}
     </>
   );
