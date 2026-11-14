@@ -16,7 +16,8 @@ import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
 import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
-import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
+import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop, tripDestination } from './navItems';
+import { useActiveTrip } from '../../contexts/ActiveTripContext';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
@@ -206,6 +207,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
   const navigate = useNavigate();
   const [tripsOpen, setTripsOpen] = useState(true);
   const { openSheet } = useAccountSheet();
+  const { setActiveTrip } = useActiveTrip();
 
   return (
     <>
@@ -277,8 +279,9 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
               return (
                 <Link
                   key={t.tripId}
-                  to={`/trips?selected=${encodeURIComponent(t.tripId)}`}
+                  to={tripDestination(pathname, t.tripId)}
                   className={clsx('tp-trip-item', active && 'is-active')}
+                  onClick={() => setActiveTrip(t.tripId)}
                   aria-current={active ? 'page' : undefined}
                   data-testid={`sidebar-trip-${t.tripId}`}
                 >

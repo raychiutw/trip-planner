@@ -61,6 +61,18 @@ export function scrollBranchToTop(): void {
   for (const el of targets) el.scrollTo({ top: 0, behavior });
 }
 
+/**
+ * 切換 active trip 後要去哪頁（桌機側欄與 trip switcher 共用的唯一判斷）：
+ * 聊天 → 留在 /chat（對話跟著 active trip 換）、地圖 → 該行程地圖、其他 → 行程詳情。
+ */
+export function tripDestination(pathname: string, tripId: string): string {
+  const id = encodeURIComponent(tripId);
+  const key = PRIMARY_NAV_ITEMS.find((item) => isItemActive(pathname, item))?.key;
+  if (key === 'chat') return '/chat';
+  if (key === 'map') return `/trip/${id}/map`;
+  return `/trips?selected=${id}`;
+}
+
 export function isItemActive(pathname: string, item: NavItem): boolean {
   // additionalActivePatterns 優先（更精確的 regex match）
   if (item.additionalActivePatterns) {
