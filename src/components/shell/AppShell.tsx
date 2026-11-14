@@ -345,6 +345,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
     // shortcut: 視窗窄到兩個最小寬放不下時 min > max，以中欄最小寬為準。
     return Math.min(Math.max(pct, (MIN_MAIN_PX / total) * 100), Math.max(100 - (MIN_SHEET_PX / total) * 100, (MIN_MAIN_PX / total) * 100));
   };
+  const paneRest = `minmax(${MIN_MAIN_PX}px, ${mainPct}fr) minmax(${MIN_SHEET_PX}px, ${100 - mainPct}fr)`;
   const onDividerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging || !mainRef.current || !sheetRef.current) return;
     const left = mainRef.current.getBoundingClientRect().left;
@@ -391,8 +392,8 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
         data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}
         data-testid="app-shell"
         style={mainPct === 50 ? undefined : {
-          ['--grid-3pane-rest' as string]: `minmax(${MIN_MAIN_PX}px, ${mainPct}fr) minmax(${MIN_SHEET_PX}px, ${100 - mainPct}fr)`,
-          ['--grid-3pane-desktop' as string]: `var(--sidebar-width-desktop) var(--grid-3pane-rest)`,
+          ['--grid-3pane-rest' as string]: paneRest,
+          ['--grid-3pane-desktop' as string]: `var(--sidebar-width-desktop) ${paneRest}`,
         }}
       >
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
@@ -435,7 +436,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
         </main>
         {(sheet || sheetPortalId) && (
           <>
-            <aside ref={sheetRef} className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId}>
+            <aside className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId} ref={sheetRef}>
               {sheet}
             </aside>
             <div
