@@ -16,6 +16,7 @@ import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
 import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
+import SidebarToggle from './SidebarToggle';
 import TripCardMenu, { type TripCardMenuProps } from '../trip/TripCardMenu';
 import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop, tripDestination } from './navItems';
 import { useActiveTrip } from '../../contexts/ActiveTripContext';
@@ -41,6 +42,12 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
+.tp-sidebar-toggle {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 8px; border: 0; cursor: pointer;
+  display: grid; place-items: center; background: transparent; color: var(--color-muted);
+}
+.tp-sidebar-toggle:hover { background: var(--color-hover); color: var(--color-foreground); }
+.tp-sidebar-toggle:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 /* §10.1 primary nav（macOS sidebar 頂部 4-tab，與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS +
  * isItemActive）。#1689：不再包浮動框線卡片（tabbar 玻璃材質只給手機底部膠囊）。 */
@@ -268,9 +275,10 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-sidebar" data-testid="desktop-sidebar">
+      <div className="tp-sidebar" id="desktop-sidebar" data-testid="desktop-sidebar">
         <div className="tp-sidebar-brand">
           {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
+          <SidebarToggle />
         </div>
 
         {/* §10.1 primary nav：macOS sidebar 頂部 4-tab（聊天/行程/地圖/收藏）。桌機膠囊隱藏後

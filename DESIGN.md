@@ -477,6 +477,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
+- **整欄隱藏（#1708，原型 #1704 變體 A，owner 2026-11-14）：** 品牌列右側有切換鈕（`sidebar.left` 圖示，`aria-expanded`／`aria-controls`，快捷鍵 ⌥⇧S）；收合＝整欄隱藏、不留圖示窄欄，中欄推到最左，切換鈕改浮在中欄左上。預設展開；視窗 <1200px 自動收合，窄視窗手動展開是**推開內容**（不做浮層）。寬視窗的手動選擇存 `localStorage`（`tp-sidebar-collapsed`）；窄視窗的展開只是暫時狀態，跨過 1200px 即重設，因此自動行為不覆寫手動偏好。減少動態效果時欄寬不做動畫。狀態在 `src/lib/sidebarCollapse.ts`。
 - **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent-bg tint 底＋`--color-selected-fg`（icon 換實心、未選 icon muted，#1707）；清單項連 `/trips?selected=<id>`，active trip（URL 推導）為次，見下 Active state。
 - 清單狀態：`trips===undefined` → skeleton（不先渲染空態）；`[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
