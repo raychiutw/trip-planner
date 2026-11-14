@@ -16,7 +16,8 @@
  *
  * 不含原 ExplorePage 的 search/region/heart toggle — 那些留在 /explore。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -344,6 +345,8 @@ export default function PoiFavoritesPage() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
+  // ⇧-click 範圍選取的錨點：最近一次勾選／⌘-click 的卡片 id
+  const anchorIdRef = useRef<number | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteFailureCount, setDeleteFailureCount] = useState(0);
   const [searchFilter, setSearchFilter] = useState('');
@@ -423,6 +426,7 @@ export default function PoiFavoritesPage() {
   useEffect(() => { setPage(1); }, [searchFilter, typeFilter, regionFilter]);
 
   function toggleSelection(id: number) {
+    anchorIdRef.current = id;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -430,7 +434,24 @@ export default function PoiFavoritesPage() {
       return next;
     });
   }
-  function clearSelection() { setSelectedIds(new Set()); }
+  function clearSelection() { anchorIdRef.current = null; setSelectedIds(new Set()); }
+  // 桌機 Finder 式多選：⌘／Ctrl-click 加減單張、⇧-click 從錨點選到該張（與 checkbox 共用 selectedIds）
+  function handleCardClick(e: MouseEvent<HTMLElement>, id: number) {
+    if (deletingSelected || (!e.metaKey && !e.ctrlKey && !e.shiftKey)) return;
+    e.preventDefault(); // 避免 ⌘-click 在「加入行程」連結上開新分頁
+    const anchor = anchorIdRef.current;
+    if (e.shiftKey && anchor !== null) {
+      const ids = visibleFavorites.map((r) => r.id);
+      const a = ids.indexOf(anchor), b = ids.indexOf(id);
+      if (a >= 0 && b >= 0) {
+        const range = ids.slice(Math.min(a, b), Math.max(a, b) + 1);
+        setSelectedIds((prev) => new Set([...prev, ...range]));
+        return;
+      }
+    }
+    if (e.shiftKey) { anchorIdRef.current = id; setSelectedIds((prev) => new Set(prev).add(id)); return; }
+    toggleSelection(id);
+  }
   function selectAllVisible() {
     setSelectedIds((prev) => new Set([...prev, ...visibleFavorites.map((r) => r.id)]));
   }
@@ -675,6 +696,8 @@ export default function PoiFavoritesPage() {
                         key={row.id}
                         data-tone={poiTypeToTone(mapNominatimCategory(row.poiType))}
                         data-testid={`favorites-card-${row.id}`}
+                        onClick={(e) => handleCardClick(e, row.id)}
+                        onMouseDown={(e) => { if (e.shiftKey) e.preventDefault(); }}
                         {...(isDeleting ? { 'aria-live': 'polite' } : {})}
                       >
                         <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(row.poiType)] ?? '景點'}</div>

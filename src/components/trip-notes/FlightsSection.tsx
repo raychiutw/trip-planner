@@ -72,6 +72,8 @@ const SCOPED_STYLES = `
 }
 .tp-notes-flight-row:hover .tp-notes-flight-grip,
 .tp-notes-flight-row:focus-within .tp-notes-flight-grip { opacity: 1; }
+/* 觸控（無 hover）沒有 hover 可觸發，grip 常駐（#1698） */
+@media (hover: none) { .tp-notes-flight-grip { opacity: 1; } }
 .tp-notes-flight-grip:active { cursor: grabbing; }
 .tp-notes-flight-grip .svg-icon { width: 14px; height: 14px; }
 

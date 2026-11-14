@@ -43,7 +43,7 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
       />,
     );
     const todayEyebrow = eyebrowTexts().find((t) => t.includes('今天'));
-    expect(todayEyebrow).toBe('DAY 2 · 今天');
+    expect(todayEyebrow).toBe('Day 2 · 今天');
   });
 
   it('non-today day eyebrow 純「DAY 0X」 不含「今天」', () => {
@@ -96,9 +96,9 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
       />,
     );
     const texts = eyebrowTexts();
-    expect(texts).toContain('DAY 1');
-    expect(texts).toContain('DAY 2');
-    expect(texts).toContain('DAY 3');
+    expect(texts).toContain('Day 1');
+    expect(texts).toContain('Day 2');
+    expect(texts).toContain('Day 3');
   });
 
   it('day tab 單行：無 .tp-map-day-tab-date 日期副標 element', () => {
