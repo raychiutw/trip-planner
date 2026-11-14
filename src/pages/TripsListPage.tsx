@@ -740,7 +740,7 @@ export default function TripsListPage() {
       );
       target?.focus();
     });
-  });
+  }, '你正在閱讀的詳情會保持開啟。');
 
   const handleMenuArchive = useCallback((tripId: string) => {
     const trip = myTrips.find((candidate) => candidate.tripId === tripId);

@@ -9,7 +9,11 @@ import { archiveTrip, unarchiveTrip, deleteTrip } from '../lib/tripMutations';
 
 type Pending = { kind: 'delete' | 'archive'; tripId: string; label: string; archived: boolean };
 
-export function useTripLifecycleConfirm(onDone?: (kind: Pending['kind'], tripId: string) => void): {
+export function useTripLifecycleConfirm(
+  onDone?: (kind: Pending['kind'], tripId: string) => void,
+  /** 附在「歸檔」確認文案後的額外說明（行程清單頁旁邊可能開著詳情才需要）。 */
+  archiveNote = '',
+): {
   requestDelete: (tripId: string, label: string) => void;
   /** `archived` = 目前已歸檔（確認後是取消歸檔）。 */
   requestArchive: (tripId: string, label: string, archived: boolean) => void;
@@ -44,7 +48,7 @@ export function useTripLifecycleConfirm(onDone?: (kind: Pending['kind'], tripId:
         ? `即將刪除「${pending.label}」，此操作無法復原。`
         : pending?.archived
           ? `「${pending.label}」會回到所有旅伴的「全部」清單。`
-          : `「${pending?.label ?? ''}」會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。`}
+          : `「${pending?.label ?? ''}」會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。${archiveNote}`}
       confirmLabel={pending?.kind === 'delete' ? '刪除' : pending?.archived ? '取消歸檔' : '歸檔'}
       confirmTone={pending?.kind === 'delete' ? undefined : 'primary'}
       busy={busy}
