@@ -1317,4 +1317,4 @@ email → user_id 完整切換。
 9. **Tabular numbers everywhere** — 時間、日期、stats 數字強制 `tabular-nums`。
 10. **無裝飾元素** — 不用 gradient、emoji、decorative SVG、rainbow 類型色；資訊本身是主角。
 
-> **#1692（2026-11-14）**：時間軸 DaySection 眉標寫 `Day 01`（依 App，不轉大寫）；手機 header 帳號圓圈為線條 person.crop.circle（透明底＋描邊圓＋人像線稿），不再是柔褐實心圓。
+> **#1692（2026-11-14）**：時間軸 DaySection、新增景點頁（`AddStopPage` 標題／counter／day chip）與地圖 `MapDayTab` 眉標寫 `Day 01`／`Day N`（依 App，不轉大寫）；手機 header 帳號圓圈為線條 person.crop.circle（透明底＋描邊圓＋人像線稿），不再是柔褐實心圓。

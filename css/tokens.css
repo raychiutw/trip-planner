@@ -1683,7 +1683,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
    * 不用加深前景色來補（票上的坑 3 也提醒過）：那會讓 active 態變過深。opacity 對狀態
    * 辨識本來就是多餘的 —— active 已經同時換了 color **和** background（實心膠囊）。
    * 連帶刪掉原本的 `.is-active … { opacity: 1 }`，它失去存在意義。 */
-  text-transform: uppercase;
+  text-transform: none; /* Day N 依 App 不轉大寫（#1692） */
   font-variant-numeric: tabular-nums;
 }
 /* .tp-map-day-tab-date 已移除（owner 2026-07-17：day 膠囊改單行 DAY N、去日期副標）。 */

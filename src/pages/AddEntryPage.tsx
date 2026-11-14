@@ -72,7 +72,7 @@ const SCOPED_STYLES = `
 .tp-add-entry-daypicker-label {
   font-size: var(--font-size-eyebrow, 0.75rem);
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none; /* Day 依 App 不轉大寫（#1692） */
   letter-spacing: 0.08em;
   color: var(--color-muted);
 }
@@ -152,7 +152,7 @@ const SCOPED_STYLES = `
   margin: 0 0 8px;
   font-size: var(--font-size-eyebrow, 0.75rem);
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none; /* Day 依 App 不轉大寫（#1692） */
   letter-spacing: 0.08em;
   color: var(--color-muted);
 }
@@ -167,7 +167,7 @@ function formatDayLabel(day: DayApiRow): string {
   const num = String(day.dayNum).padStart(2, '0');
   const mmdd = (day.date ?? '').slice(5).replace('-', '/');
   const dow = day.dayOfWeek ? `（${day.dayOfWeek}）` : '';
-  return `DAY ${num} · ${mmdd}${dow}`;
+  return `Day ${num} · ${mmdd}${dow}`;
 }
 
 export default function AddEntryPage() {
@@ -247,7 +247,7 @@ export default function AddEntryPage() {
           <main className="tp-add-entry-body">
             {/* Day dropdown — fallback to first day if URL missing ?day */}
             <div className="tp-add-entry-daypicker">
-              <span className="tp-add-entry-daypicker-label">DAY</span>
+              <span className="tp-add-entry-daypicker-label">Day</span>
               {dayStatus === 'ready' && allDays.length > 0 && dayNum !== null ? (
                 <div data-testid="add-entry-daypicker" style={{ flex: 1 }}>
                   <TripSelect<number>

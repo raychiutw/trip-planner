@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
  * v2.31.33 fix #134: AddStopPage counter mobile 191px 容不下完整 dayLabel
- * → 簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。
+ * → 簡化「將加入 DAY 01 · 7/29（三）」為「→ Day 01」短 day index。
  *
  * Bug 取證（mobile prod QA）：「已選 0 個 · 將加入 DAY 01 · 7/29（三）」248px > counter
  * 191px = overflow 57px → ellipsis 切成「... · ...」。
@@ -21,9 +21,9 @@ const SRC = readFileSync(
 );
 
 describe('v2.31.33 AddStopPage counter shorten', () => {
-  it('counter 用「→ DAY {dayNum}」格式（不再 dayLabel + 將加入）', () => {
-    // 短格式「已選 N 個 → DAY 01」
-    expect(SRC).toMatch(/已選\s*<strong>\{totalSelected\}<\/strong>\s*個\s*→\s*DAY/);
+  it('counter 用「→ Day {dayNum}」格式（不再 dayLabel + 將加入）', () => {
+    // 短格式「已選 N 個 → Day 01」
+    expect(SRC).toMatch(/已選\s*<strong>\{totalSelected\}<\/strong>\s*個\s*→\s*Day/);
     expect(SRC).toMatch(/String\(dayNum\)\.padStart\(2,\s*'0'\)/);
   });
 
