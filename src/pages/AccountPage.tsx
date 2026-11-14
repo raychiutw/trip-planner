@@ -19,6 +19,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import { useSheetMode } from '../contexts/SheetModeContext';
 import Icon from '../components/shared/Icon';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import AiDataConsentSettings from '../components/AiDataConsentSettings';
@@ -69,8 +70,9 @@ const SCOPED_STYLES = `
   padding: 24px 16px calc(var(--nav-height-mobile, 88px) + 24px);
   display: flex; flex-direction: column; gap: 24px;
 }
+/* 卡片（.is-sheet，560px）寬度與視窗無關，不套這組全頁用的間距。 */
 @media (min-width: 768px) {
-  .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
+  .tp-account-shell:not(.is-sheet) .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
 }
 .tp-account-groups { display: flex; flex-direction: column; gap: 24px; }
 
@@ -281,12 +283,14 @@ const SCOPED_STYLES = `
  * 個人卡橫式與設定格同一個容器寬度；容器固定 1040（DESIGN.md Content Width），≥1440 不再攤開，
  * <1440 隨視窗縮。手機仍單欄堆疊、個人卡直式置中。
  * 必須放在所有基礎規則（.tp-account-hero 等）之後：同特異度下後寫的贏，放前面會被基礎規則蓋掉（個人卡就變不成橫式）。 */
+/* #1711：帳號在 sheet 內（桌機是 560 寬置中卡片）時不套這組橫式規則 —— 卡片寬度與視窗寬無關，
+ * 套了個人卡會被擠壞；所以以「是否在 sheet 內」為條件，而非只看視窗寬。 */
 @media (min-width: 1024px) {
-  .tp-account-inner { max-width: 1040px; padding-bottom: 80px; }
-  .tp-account-hero { flex-direction: row; text-align: left; flex-wrap: wrap; padding: 20px 24px; }
-  .tp-account-hero-text { flex: 1; min-width: 180px; }
-  .tp-account-hero-name-row { justify-content: flex-start; }
-  .tp-account-hero-stats { width: 300px; padding-top: 0; border-top: none; }
+  .tp-account-shell:not(.is-sheet) .tp-account-inner { max-width: 1040px; padding-bottom: 80px; }
+  .tp-account-shell:not(.is-sheet) .tp-account-hero { flex-direction: row; text-align: left; flex-wrap: wrap; padding: 20px 24px; }
+  .tp-account-shell:not(.is-sheet) .tp-account-hero-text { flex: 1; min-width: 180px; }
+  .tp-account-shell:not(.is-sheet) .tp-account-hero-name-row { justify-content: flex-start; }
+  .tp-account-shell:not(.is-sheet) .tp-account-hero-stats { width: 300px; padding-top: 0; border-top: none; }
 }
 `;
 
@@ -305,6 +309,7 @@ const NO_PASSWORD_DELETE_BLOCKED = '此帳號沒有設定密碼，無法在此�
 
 export default function AccountPage() {
   const auth = useRequireAuth();
+  const { inSheet } = useSheetMode();
   const { user, reload: reloadUser } = useCurrentUser();
   const navigate = useNavigate();
 
@@ -516,7 +521,7 @@ export default function AccountPage() {
 
   const sidebar = <DesktopSidebarConnected />;
   const main = (
-    <div className="tp-account-shell" data-testid="account-page">
+    <div className={`tp-account-shell${inSheet ? ' is-sheet' : ''}`} data-testid="account-page">
       <TitleBar title="帳號" />
       <div className="tp-account-inner">
         <section className="tp-account-hero" data-testid="account-hero">

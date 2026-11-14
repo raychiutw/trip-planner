@@ -6,8 +6,9 @@
  */
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { MQ_BELOW_DESKTOP } from '../lib/breakpoints';
 
-const MOBILE_QUERY = '(max-width: 1023px)';
+const MOBILE_QUERY = MQ_BELOW_DESKTOP;
 
 function isMobile(): boolean {
   // SSR / no-matchMedia env → assume desktop (safer redirect, avoids

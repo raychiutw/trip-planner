@@ -10,16 +10,18 @@
  * 避免 login/account + 清單 flicker。
  */
 import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import DesktopSidebar, { type DesktopSidebarProps, type SidebarUser } from './DesktopSidebar';
+import { useLocation, useNavigate } from 'react-router-dom';
+import DesktopSidebar, { type DesktopSidebarProps, type SidebarTripMenu, type SidebarUser } from './DesktopSidebar';
+import { useTripLifecycleConfirm } from '../../hooks/useTripLifecycleConfirm';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
-import { useTripSelection } from '../../hooks/useMyTrips';
+import { useTripSelection, isTripOwner } from '../../hooks/useMyTrips';
 
-export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'tripsStatus' | 'activeTripId'>;
+export type DesktopSidebarConnectedProps = Omit<DesktopSidebarProps, 'user' | 'trips' | 'tripsStatus' | 'activeTripId' | 'tripMenu'>;
 
 export default function DesktopSidebarConnected(props: DesktopSidebarConnectedProps) {
   const { user } = useCurrentUser();
   const { pathname, search } = useLocation();
+  const navigate = useNavigate();
   const { trips, status: tripsStatus, activeTripId: preferredTripId } = useTripSelection(user?.id, { fallback: false });
 
   const sidebarUser = useMemo<SidebarUser | null | undefined>(() => {
@@ -39,5 +41,33 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     return m ? m[1] : preferredTripId;
   }, [pathname, search, preferredTripId]);
 
-  return <DesktopSidebar {...props} user={sidebarUser} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} />;
+  // 刪掉正在看的行程 → 離開已不存在的詳情
+  const { requestDelete, requestArchive, dialog } = useTripLifecycleConfirm((kind, tripId) => {
+    if (kind === 'delete' && activeTripId === tripId && new URLSearchParams(search).get('selected') === tripId) navigate('/trips', { replace: true });
+  });
+
+  // #1695：行程列右鍵選單 = 行程卡 ⋯ 同一個 TripCardMenu；刪除 / 歸檔 owner-only（沒傳＝選單項與 Delete 鍵都沒有）。
+  const tripMenu = useMemo<SidebarTripMenu>(() => (t) => {
+    const owner = isTripOwner(t, user?.id);
+    const label = t.title || t.name || t.tripId;
+    const go = (suffix: string) => (id: string) => navigate(`/trip/${encodeURIComponent(id)}/${suffix}`);
+    const del = owner ? () => requestDelete(t.tripId, label) : undefined;
+    return {
+      onEdit: go('edit'),
+      onCollab: go('collab'),
+      onHealthCheck: go('health'),
+      onNotes: go('notes'),
+      onArchive: owner ? () => requestArchive(t.tripId, label, t.archivedAt != null) : undefined,
+      archived: t.archivedAt != null,
+      onDelete: del,
+      onDeleteKey: del,
+    };
+  }, [navigate, user?.id, requestDelete, requestArchive]);
+
+  return (
+    <>
+      {dialog}
+      <DesktopSidebar {...props} user={sidebarUser} trips={trips} tripsStatus={tripsStatus} activeTripId={activeTripId} tripMenu={tripMenu} />
+    </>
+  );
 }

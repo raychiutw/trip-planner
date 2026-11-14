@@ -27,12 +27,16 @@ describe('rev2 手機帳號圓圈 — 4 根頁 header', () => {
     expect(s).toMatch(/account=\{<AccountCircle \/>\}/);
   });
 
-  it('AccountCircle：authed → /account 首字母、anon → /login，桌機 CSS 隱藏', () => {
+  it('AccountCircle：authed → /account 人像圖示、anon → /login，桌機 CSS 隱藏', () => {
     const s = src('components/shell/AccountCircle.tsx');
     expect(s).toMatch(/to="\/account"/);
     expect(s).toMatch(/to="\/login"/);
+    // 線條 person.crop.circle（依 App；#1692）：透明底 + 描邊圓，非實心 accent 圓
+    expect(s).not.toMatch(/\.tp-account-circle-avatar\s*\{[^}]*background:\s*var\(--color-accent-fill\)/);
+    expect(s).toMatch(/\.tp-account-circle-avatar\s*\{[^}]*border:\s*1\.5px solid currentColor/);
+    expect(s).not.toMatch(/name="user"/);
     // 桌機隱藏（帳號在 sidebar chip），手機才顯
     expect(s).toMatch(/\.tp-account-circle\s*\{[\s\S]*?display:\s*none/);
-    expect(s).toMatch(/@media \(max-width: 1023px\)[\s\S]*?\.tp-account-circle\s*\{\s*display:\s*grid/);
+    expect(s).toMatch(/@media \(max-width: 719px\)[\s\S]*?\.tp-account-circle\s*\{\s*display:\s*grid/);
   });
 });

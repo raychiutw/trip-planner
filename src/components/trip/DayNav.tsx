@@ -50,7 +50,7 @@ export default function DayNav({
 
   const tabs = useMemo(
     () => days.map((d) => {
-      const eyebrowBase = `DAY ${d.dayNum}`;
+      const eyebrowBase = `Day ${d.dayNum}`;
       const isToday = d.dayNum === todayDayNum;
       return {
         day: d,

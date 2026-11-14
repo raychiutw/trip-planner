@@ -117,7 +117,7 @@ describe('PoiFavoritesPage — batch flow delete-only (DUC1)', () => {
     expect(screen.getByTestId('favorites-toolbar').textContent).toContain('已選 3 個');
     fireEvent.click(screen.getByTestId('favorites-delete-selected'));
     const dialog = screen.getByTestId('confirm-modal');
-    expect(dialog.textContent).toContain('確定移除收藏？');
+    expect(dialog.textContent).toContain('確定移除 3 筆收藏？');
     expect(screen.getByTestId('confirm-modal-confirm').textContent).toContain('移除');
     expect(dialog.textContent).toContain('沖繩餐廳');
     expect(dialog.textContent).toContain('沖繩海灘');

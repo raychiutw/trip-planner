@@ -781,7 +781,8 @@ export default function ChatPage({ embedded = false, lockTripId }: ChatPageProps
   );
 
   function onComposerKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
+    // 比照 App（#1699）：Return 換行，⌘/Ctrl+Return 送出
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229) {
       e.preventDefault();
       void send(input);
     }

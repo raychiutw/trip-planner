@@ -12,8 +12,8 @@ const TRIP_ID = 'okinawa-trip-2026-Ray';
 const EPS = 1.5;
 
 /** @param {import('@playwright/test').Page} page */
-async function measure(page) {
-  await page.goto('/account');
+async function measure(page, skipGoto = false) {
+  if (!skipGoto) await page.goto('/account');
   await page.getByTestId('account-hero').waitFor();
   await page.getByTestId('account-hero').getByText('個行程').waitFor();
   await page.waitForLoadState('networkidle');
@@ -62,7 +62,11 @@ test.describe('帳號頁桌機版面 A／側邊欄 B 幾何', () => {
 
   test('1024px：容器填滿可用寬度、個人卡與設定格同寬、個人卡橫式不換行', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
-    const m = await measure(page);
+    // #1708：<1200 側欄預設收合；本案要量「側欄展開時」的 1024 版面，先展開並等 220ms 欄寬過場結束
+    await page.goto('/account');
+    await page.getByRole('button', { name: '顯示側欄' }).last().click();
+    await expect.poll(async () => (await page.getByTestId('desktop-sidebar').boundingBox())?.width).toBeCloseTo(216, 0);
+    const m = await measure(page, true);
     expect(Math.abs(m.sidebar.width - 216)).toBeLessThan(EPS);
     // 填滿捲動容器的可視寬（扣掉 216px 側邊欄；捲軸寬度因平台而異，所以以 clientWidth 為準）
     expect(m.shellClientWidth).toBeGreaterThan(1024 - 216 - 20);

@@ -13,7 +13,8 @@ import { restoreDragScroll, rememberScroll, recallScroll, restoreScrollTo } from
 import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { lsRenewAll } from '../lib/localStorage';
-import { useTripSelection } from '../hooks/useMyTrips';
+import { EntryEditAccessContext } from '../contexts/EntryEditAccessContext';
+import { useTripSelection, canEditTrip } from '../hooks/useMyTrips';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -235,7 +236,9 @@ function TripPageInner(
   const { user: currentUser } = useCurrentUser();
   const explicitTripId = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId))
     ? effectiveUrlTripId : getQueryTrip();
-  const { activeTripId, status: tripsStatus } = useTripSelection(currentUser?.id, { explicitTripId });
+  const { activeTripId, status: tripsStatus, trips: myTrips } = useTripSelection(currentUser?.id, { explicitTripId });
+  // #1695：viewer / 匿名不提供刪除景點（與後端 hasWritePermission 的 role != 'viewer' 一致）。
+  const canEditEntries = canEditTrip(myTrips?.find((t) => t.tripId === activeTripId), currentUser?.id);
   const resolveState = useMemo<ResolveState>(() => activeTripId
     ? { status: 'resolved', tripId: activeTripId }
     : tripsStatus === 'ready' ? { status: 'unpublished' } : { status: 'loading' },
@@ -414,9 +417,8 @@ function TripPageInner(
     }
   }, [activeTripId, trip]);
 
-  /* --- Update document title --- */
+  /* --- Update meta（分頁標題由 useDocumentTitle 統一設定）--- */
   useEffect(() => {
-    if (trip?.title) document.title = trip.title;
     if (trip?.description) {
       document.querySelector('meta[name="description"]')?.setAttribute('content', trip.description);
     }
@@ -876,11 +878,13 @@ function TripPageInner(
   // v2.10 Wave 1：TripDaysContext 提供 ⎘/⇅ popover 用的 DayOption[] 給 RailRow。
   const wrappedMain = (
     <TripIdContext.Provider value={activeTripId}>
-      <TripDaysContext.Provider value={dayOptions}>
-        <TripSegmentsContext.Provider value={tripSegmentsContextValue}>
-          {mainContent}
-        </TripSegmentsContext.Provider>
-      </TripDaysContext.Provider>
+      <EntryEditAccessContext.Provider value={canEditEntries}>
+        <TripDaysContext.Provider value={dayOptions}>
+          <TripSegmentsContext.Provider value={tripSegmentsContextValue}>
+            {mainContent}
+          </TripSegmentsContext.Provider>
+        </TripDaysContext.Provider>
+      </EntryEditAccessContext.Provider>
     </TripIdContext.Provider>
   );
 

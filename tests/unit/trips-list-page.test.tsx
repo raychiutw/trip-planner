@@ -44,7 +44,7 @@ function mockMatchMedia(isDesktop: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (q: string) => ({
-      matches: isDesktop && q.includes('1024'),
+      matches: isDesktop && /min-width: (720|1024)px/.test(q),
       media: q,
       onchange: null,
       addListener: vi.fn(),
@@ -81,8 +81,9 @@ function mockApi(_my: { tripId: string }[], all: Array<Record<string, unknown>>)
 
 const SAMPLE = [
   // mockup-parity-qa-fixes: API 透過 deepCamel() 回 camelCase；test mock 跟 prod response shape 一致
-  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, dayCount: 5, startDate: '2026-07-26', endDate: '2026-07-30', memberCount: 2 },
-  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 0, dayCount: 4, startDate: '2026-08-15', endDate: '2026-08-18', memberCount: 1 },
+  // 日期取遠未來：側欄 #1709 把已結束行程收進「過去」摺疊，固定近日會隨時間變紅
+  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, dayCount: 5, startDate: '2099-07-26', endDate: '2099-07-30', memberCount: 2 },
+  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 0, dayCount: 4, startDate: '2099-08-15', endDate: '2099-08-18', memberCount: 1 },
 ];
 
 describe('TripsListPage', () => {
@@ -139,7 +140,8 @@ describe('TripsListPage', () => {
 
   it('刪除行程後已掛載的側欄同步移除該行程', async () => {
     __clearMyTripsCache();
-    let available = [...SAMPLE];
+    // 刪除行程 owner-only（#1695）：這筆要是自己的行程
+    let available = [{ ...SAMPLE[0], ownerUserId: 'u1' }, SAMPLE[1]];
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input);
       if (path === '/api/my-trips') return new Response(JSON.stringify(available), { status: 200 });
@@ -312,6 +314,7 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
   ];
 
   it('toolbar 顯示三個 filter tab + sort dropdown + search toggle', async () => {
+    mockMatchMedia(false); // ≥720 搜尋欄常駐（#1712），toggle 只在窄螢幕存在
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-toolbar')).toBeTruthy());
@@ -344,6 +347,7 @@ describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () 
   });
 
   it('search toggle expand → input 出現 + 過濾後 count 顯示', async () => {
+    mockMatchMedia(false); // ≥720 搜尋欄常駐（#1712），toggle 只在窄螢幕存在
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-search-toggle')).toBeTruthy());
@@ -406,7 +410,7 @@ describe('TripsListPage — owner-wide archive', () => {
     expect(fetcher.mock.calls.some(([path, init]) => String(path) === '/api/trips/okinawa/archive' && init?.method === 'PUT')).toBe(false);
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
-    expect(screen.getByTestId('sidebar-trip-okinawa')).toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-trip-okinawa')).not.toBeInTheDocument(); // #1709：已歸檔不列入側欄
     fireEvent.click(screen.getByTestId('trips-list-tab-archived'));
     await screen.findByTestId('trips-list-card-okinawa');
     fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
@@ -415,6 +419,7 @@ describe('TripsListPage — owner-wide archive', () => {
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
     fireEvent.click(screen.getByTestId('trips-list-tab-all'));
     await screen.findByTestId('trips-list-card-okinawa');
+    expect(await screen.findByTestId('sidebar-trip-okinawa')).toBeInTheDocument();
   });
 
   it('does not expose archive to a collaborator, and failed mutation keeps the card', async () => {
@@ -525,6 +530,29 @@ describe('TripsListPage — 刪除與歸檔的失敗與副作用（Trip mutation
     expect(await screen.findByText('已刪除「沖繩之旅」')).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
     expect(screen.getByTestId('trips-list-card-seoul')).toBeInTheDocument();
+  });
+
+  const stubOwn = () => vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => (
+    new Response(String(input) === '/api/my-trips' ? JSON.stringify([OWN]) : 'null', { status: 200 })
+)));
+
+  it('歸檔確認文案帶「你正在閱讀的詳情會保持開啟。」（清單頁旁邊可能開著詳情）', async () => {
+    stubOwn();
+    mount();
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    expect(screen.getByText(/旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。/)).toBeInTheDocument();
+  });
+
+  it('嵌入模式（?selected=）從詳情選單歸檔：畫面上只有一個確認 dialog', async () => {
+    mockMatchMedia(false);
+    stubOwn();
+    mount('/trips?selected=okinawa');
+    fireEvent.click(await screen.findByTestId('trips-embedded-menu-trigger'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
+    expect(screen.getByText(/你正在閱讀的詳情會保持開啟。/)).toBeInTheDocument();
   });
 
   it('歸檔回 500 → 顯示失敗訊息、確認對話框保留、按鈕可再按', async () => {

@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import { useContextMenuTrigger } from '../../hooks/useContextMenuTrigger';
+import { clampToViewport } from '../../lib/menuPosition';
 
 export type RailMenuItem =
   | { kind: 'sep' }
@@ -22,45 +24,67 @@ export type RailMenuItem =
  * z-index 戰爭）+ light-dismiss（點外面 / Esc 關閉 + 焦點歸還 trigger，免自寫 handler）。top-layer
  * 預設不跟 anchor 走，故開啟時（toggle→open）依 trigger rect 定位。
  */
-export function RailRowMenu({ menuId, label, items, testid }: {
+export function RailRowMenu({ menuId, label, items, testid, contextTargetRef, onDeleteKey, hideTrigger }: {
   menuId: string;
   label: string;
   items: RailMenuItem[];
   testid?: string;
+  /** 給了就讓該元素支援右鍵 / Shift+F10 / 選單鍵從座標開同一個選單（#1694，行程卡、收藏卡等沿用）。 */
+  contextTargetRef?: React.RefObject<HTMLElement | null>;
+  /** 給了就讓 contextTargetRef 內（非輸入框）按 Delete 呼叫它；沒權限時不要傳（右鍵與 Delete 同一份權限）。 */
+  onDeleteKey?: () => void;
+  /** 沒有常駐 ⋯（收藏卡）：只靠右鍵 / Shift+F10 開選單。 */
+  hideTrigger?: boolean;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // native popover invoker 不自動反映可被 CSS / AT 讀取的 aria-expanded 屬性 → 手動追蹤開合
   // （讓 SR 念「已展開的選單按鈕」+ 讓 .tp-rail-menu-trigger[aria-expanded="true"] 開啟時保持可見）。
   const [open, setOpen] = useState(false);
+  // 右鍵 / 鍵盤開啟時的錨點座標；有值就貼座標，沒有就貼 trigger。
+  const pointRef = useRef<{ x: number; y: number } | null>(null);
   const positionMenu = () => {
-    const t = triggerRef.current;
     const m = menuRef.current;
-    if (!t || !m) return;
-    const r = t.getBoundingClientRect();
+    if (!m) return;
     const mh = m.offsetHeight || 300;
     const mw = m.offsetWidth || 216;
-    // 下方空間夠 → 貼 trigger 下緣；否則往上翻。右對齊 trigger、夾在 viewport 內。
-    const top = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
-    const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
+    const pt = pointRef.current;
+    const t = triggerRef.current;
+    // 貼座標（右鍵 / 鍵盤）；沒有座標就貼 trigger 下緣（下方空間不夠則往上翻），右對齊 trigger。
+    // 沒有 trigger（hideTrigger）又沒座標時無處可貼，不動。
+    if (!pt && !t) return;
+    let x: number, y: number;
+    if (pt) { x = pt.x; y = pt.y; } else {
+      const r = t!.getBoundingClientRect();
+      x = r.right - mw;
+      y = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
+    }
+    const { left, top } = clampToViewport(x, y, mw, mh, window.innerWidth, window.innerHeight);
     m.style.top = `${top}px`;
     m.style.left = `${left}px`;
   };
+  useContextMenuTrigger(contextTargetRef, (x, y) => {
+    pointRef.current = { x, y };
+    try { menuRef.current?.showPopover(); } catch { pointRef.current = null; /* 已開 / 不支援 */ }
+    positionMenu(); // 同步定位，避免 toggle 事件前閃在 (0,0)
+  }, onDeleteKey);
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="tp-rail-menu-trigger"
-        popoverTarget={menuId}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`更多動作：${label}`}
-        onClick={(e) => e.stopPropagation()}
-        data-testid={testid}
-      >
-        <Icon name="ellipsis" />
-      </button>
+      {!hideTrigger && (
+        <button
+          ref={triggerRef}
+          type="button"
+          className="tp-rail-menu-trigger"
+          popoverTarget={menuId}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`更多動作：${label}`}
+          onClick={(e) => e.stopPropagation()}
+          data-testid={testid}
+        >
+          <Icon name="ellipsis" />
+        </button>
+      )}
       <div
         ref={menuRef}
         id={menuId}
@@ -71,7 +95,7 @@ export function RailRowMenu({ menuId, label, items, testid }: {
         onToggle={(e) => {
           const isOpen = e.newState === 'open';
           setOpen(isOpen);
-          if (!isOpen) return;
+          if (!isOpen) { pointRef.current = null; return; }
           positionMenu();
           // 開啟時焦點移進 menu 首項（鍵盤導航）；native popover 已管 Esc / 點外面關閉 + 焦點歸還 trigger。
           menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();

@@ -13,6 +13,7 @@ import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { useAutosave } from '../../hooks/useAutosave';
 import MarkdownText from '../shared/MarkdownText';
+import { useCanEditEntries } from '../../contexts/EntryEditAccessContext';
 import { useNavigate } from 'react-router-dom';
 import MapLinks from './MapLinks';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
@@ -88,6 +89,9 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   const navigate = useNavigate();
   // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const headRef = useRef<HTMLDivElement>(null);
+  // #1695：沒有編輯權限（viewer / 匿名）不提供刪除；選單項與 Delete 鍵共用這一份判斷。
+  const canDelete = useCanEditEntries() && entryIdNum != null;
   const [deleting, setDeleting] = useState(false);
 
   // v2.33.108: note 改 auto-save — onBlur 立即 flush，Cmd+Enter 仍 flush。
@@ -289,7 +293,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
         : []),
     ],
     // 末組：刪除（destructive 紅，Apple 慣例獨立末組）
-    entryIdNum != null
+    canDelete
       ? [{ kind: 'item', label: '刪除景點', icon: 'trash', danger: true, testid: `timeline-rail-delete-${entry.id}`,
           onSelect: () => setShowDeleteConfirm(true) }]
       : [],
@@ -323,6 +327,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
             展開走 div onClick（滑鼠便利，保留 mockup 整列可點），無障礙 toggle 走下方獨立的
             caret <button>（鍵盤 focus + SR），chip 亦是可 focus 的 sibling button 正常曝露。 */}
         <div
+          ref={headRef}
           className="tp-rail-head"
           onClick={handleHeadActivate}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
@@ -387,6 +392,8 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
                 menuId={`rail-menu-${entry.id}`}
                 label={entryDisplayTitle}
                 items={menuItems}
+                contextTargetRef={headRef}
+                onDeleteKey={canDelete && !sortMode ? () => setShowDeleteConfirm(true) : undefined}
                 testid={`timeline-rail-menu-${entry.id}`}
               />
             )}

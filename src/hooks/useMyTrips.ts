@@ -31,6 +31,8 @@ export interface MyTrip {
   countries?: string | null;
   owner?: string;
   ownerUserId?: string | null;
+  /** 目前使用者在這個行程的角色（/api/my-trips 帶；viewer 不能改 entries，只有 owner 能刪行程）。 */
+  role?: 'owner' | 'member' | 'viewer';
   ownerDisplayName?: string | null;
   memberCount?: number;
   archivedAt?: string | null;
@@ -101,6 +103,21 @@ export function __clearMyTripsCache(): void {
   inflight = null;
   requestId++;
   notify();
+}
+
+/** 只有擁有者能刪行程、變更歸檔（旅伴不行）；選單項、右鍵與 Delete 鍵都走這一份判斷。 */
+export function isTripOwner(trip: MyTrip | undefined, userId: string | null | undefined): boolean {
+  return !!trip && (trip.role === 'owner' || (!!userId && trip.ownerUserId === userId));
+}
+
+/**
+ * 能不能改這個行程的 entries —— 規則同後端 `role != 'viewer'`（旅伴可、viewer 不可）。
+ * `/api/my-trips` 沒帶 role 時退回 `ownerUserId === 目前使用者`。TripPage 與各選單共用這一份。
+ */
+export function canEditTrip(trip: MyTrip | undefined, userId: string | null | undefined): boolean {
+  if (!trip) return false;
+  if (trip.role) return trip.role !== 'viewer';
+  return !!userId && trip.ownerUserId === userId;
 }
 
 /**

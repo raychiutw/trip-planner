@@ -1,12 +1,14 @@
 /**
  * DaySection day header（v2.55.49）— 每日 custom title（trip_days.title）移除後，
  * hero 改以「日期為主標」：
- *   - eyebrow chip 顯示「DAY NN」（補零）
+ *   - eyebrow chip 顯示「Day NN」（補零，依 App；#1692）
  *   - hero <h2> 顯示日期「YYYY-MM-DD（週）」，無 date 時 fallback「Day N」
  *   - custom title 與區域 chip（.tp-hero-chip-muted）皆已移除
  *
  * （原本測 title || label || Day N 的 fallback chain + area chip，功能已下線。）
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
@@ -45,7 +47,7 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
     expect(document.querySelector('.tp-hero-title')?.textContent).toBe('Day 3');
   });
 
-  it('eyebrow chip 顯示「DAY 03」（補零、不再含日期）', () => {
+  it('eyebrow chip 顯示「Day 03」（補零、不再含日期）', () => {
     dnd(
       <DaySection
         dayNum={3}
@@ -53,7 +55,12 @@ describe('DaySection day header（v2.55.49 — 日期為主標）', () => {
         daySummary={makeSummary({ date: '2026-07-30', dayOfWeek: '四' })}
       />,
     );
-    expect(document.querySelector('.tp-hero-chip')?.textContent).toBe('DAY 03');
+    expect(document.querySelector('.tp-hero-chip')?.textContent).toBe('Day 03');
+  });
+
+  it('eyebrow chip 不被 uppercase 轉成「DAY」（CSS 守門）', () => {
+    const css = readFileSync(join(__dirname, '../../css/tokens.css'), 'utf8');
+    expect(css).toMatch(/\.tp-hero-chip \{[^}]*text-transform: none/);
   });
 
   it('custom title 移除後：無區域 chip（.tp-hero-chip-muted）', () => {

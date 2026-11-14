@@ -14,16 +14,19 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/trips');
     await expect(page.getByTestId('trips-list-page')).toBeVisible();
-    const compact = width < 1024;
+    const compact = width < 720; // #1713：720–1023 為寬版（頂部 root tab）
     const tab = page.getByTestId(compact ? 'global-bottom-nav-trips' : 'sidebar-nav-trips');
+    // #1708：<1200 側欄自動收合，導覽要先用切換鈕展開才在畫面上（仍可達）
+    if (width >= 1024 && width < 1200) await page.getByRole('button', { name: '顯示側欄' }).last().click();
     await expect(tab).toBeVisible();
     await expect(tab).toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId('app-shell-bottom-nav')).toBeVisible({ visible: compact });
     await tab.focus();
     await expect(tab).toBeFocused();
+    // #1708：展開側欄有 220ms 欄寬過場，等位置停穩再量，否則會量到過場中途的負 x
+    await expect.poll(async () => (await tab.boundingBox())?.x ?? -1).toBeGreaterThanOrEqual(0);
     const bounds = await tab.boundingBox();
     expect(bounds).toBeTruthy();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1);
     if (compact) {
       const navBounds = await page.getByTestId('app-shell-bottom-nav').boundingBox();

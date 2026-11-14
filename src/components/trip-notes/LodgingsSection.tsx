@@ -59,6 +59,8 @@ const SCOPED_STYLES = `
 }
 .tp-notes-lodging-row:hover .tp-notes-lodging-grip,
 .tp-notes-lodging-row:focus-within .tp-notes-lodging-grip { opacity: 1; }
+/* 觸控（無 hover）沒有 hover 可觸發，grip 常駐（#1698） */
+@media (hover: none) { .tp-notes-lodging-grip { opacity: 1; } }
 .tp-notes-lodging-grip:active { cursor: grabbing; }
 .tp-notes-lodging-grip .svg-icon { width: 14px; height: 14px; }
 .tp-notes-lodging-body { min-width: 0; }

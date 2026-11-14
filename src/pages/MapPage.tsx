@@ -1,7 +1,7 @@
 /**
  * MapPage — trip map with a floating day strip and a separate card rail.
  *
- *  /trip/:tripId/map                  → 總覽 by default
+ *  /trip/:tripId/map                  → 全部 by default
  *  /trip/:tripId/map?day=N            → specific day
  *  /trip/:tripId/map?day=all          → overview (all days, per-day dayColor polyline)
  *  /trip/:tripId/stop/:entryId/map    → focus that entry (auto-detects day)
@@ -12,7 +12,8 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { lazyWithRetry } from '../lib/lazyWithRetry';
-import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { tripDestination } from '../components/shell/navItems';
 import { useTripContext } from '../contexts/TripContext';
 import { useTripSelection } from '../hooks/useMyTrips';
 import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
@@ -239,6 +240,7 @@ export default function MapPage() {
   const { tripId, entryId: entryIdStr } = useParams<{ tripId: string; entryId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { trip, allDays, loading, error } = useTripContext();
   const { user } = useCurrentUser();
   const { trips } = useTripSelection(user?.id, { explicitTripId: tripId });
@@ -248,8 +250,8 @@ export default function MapPage() {
    * pickTrip → navigate /trip/:newId/map（整頁切換 trip context）。 */
   const pickTrip = useCallback((newTripId: string) => {
     if (newTripId === tripId) return;
-    navigate(`/trip/${encodeURIComponent(newTripId)}/map`);
-  }, [tripId, navigate]);
+    navigate(tripDestination(pathname, newTripId));
+  }, [tripId, navigate, pathname]);
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
 
@@ -543,10 +545,10 @@ export default function MapPage() {
           aria-label="行程日期"
           onKeyDown={onDayTabsKeyDown}
         >
-          {/* 「總覽」tab prepend 於 Day 01 之前 */}
+          {/* 「全部」tab prepend 於 Day 1 之前 */}
           <MapDayTab
             key="overview"
-            dayLabel="總覽"
+            dayLabel="全部"
             isActive={isOverview}
             onClick={() => handleTabClick('overview')}
             testId="map-day-overview"
@@ -554,7 +556,7 @@ export default function MapPage() {
           {dayTabs.map((t) => (
             <MapDayTab
               key={t.dayNum}
-              dayLabel={`DAY ${t.dayNum}`}
+              dayLabel={`Day ${t.dayNum}`}
               isActive={!isOverview && t.dayNum === activeTab}
               onClick={() => handleTabClick(t.dayNum)}
               testId={`map-day-${t.dayNum}`}

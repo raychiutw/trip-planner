@@ -1,5 +1,8 @@
 /* ===== tokens.css — V2 Terracotta Design System (single-theme, Inter + Noto Sans TC) ===== */
 
+/* 斷點對應（CSS @media 不能用變數；JS 端單一來源是 src/lib/breakpoints.ts，改值時兩處＋DESIGN.md 一起改）：
+ * 720 寬版（BP_WIDE）· 1024 桌機（BP_DESKTOP）· 1200 側欄自動收合（BP_SIDEBAR_AUTO_COLLAPSE，max-width 用 1199.98）。 */
+
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
 /* #1445 F7：使用者在「外觀設定」手動選深色／淺色時，body 的 .dark 與系統設定可能不一致。
@@ -38,8 +41,12 @@ body:not(.dark) { color-scheme: light; }
     --color-accent-text: #8A6038;
     --color-accent-text-on-tonal: #8A6038;
     /* 填色面專用：「實心填色 + accent-foreground 白字」（主要按鈕、側欄 active、底部 tab
-     * 選中膠囊…），白字 5.51 ✅。深色維持 #CBA06E（深字 7.12 已通過）。 */
+     * 選中膠囊…），白字 5.51 ✅。深色維持 #D0A576（深字 7.56 已通過；2026-11-14 #1702 起對齊 App 單一值）。 */
     --color-accent-fill: #8A6038;
+    /* #1707（owner 2026-11-14 簽核 #1703 B）：「選中」前景（root tab／Day tab／側欄選中的 icon 與 label）。
+     * 底是 --color-accent-bg 淡柔褐（不再實心 accent-fill + 白字）；#8A6038 疊在 accent-bg 只有 4.55，
+     * 11px label 太緊，所以前景改這個更深的值：on accent-bg 6.31／頁面底 7.42。#8A6038 只當底色。 */
+    --color-selected-fg: #6F4C2C;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
      * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
@@ -142,7 +149,8 @@ body:not(.dark) { color-scheme: light; }
 
     /* AppShell layout grid templates.
      *   ≥1024px: 3-pane rev2 (sidebar 216 / 中欄行程 1fr / 右欄地圖 1fr — owner 2026-07-17)
-     *   <1024px: single-column + 底部浮動玻璃膠囊 tab
+     *   720–1023px: 頂部 bar（root tab）+ 左欄行程清單 240px，無右欄（#1713）
+     *   <720px: single-column + 底部浮動玻璃膠囊 tab
      */
     --grid-3pane-desktop: 216px 1fr 1fr;
     --grid-2pane-desktop: 216px 1fr;
@@ -153,6 +161,9 @@ body:not(.dark) { color-scheme: light; }
      * （後者已同步移除多疊的 12px）。 */
     --nav-height-mobile: 80px;
     --sidebar-width-desktop: 216px;
+    /* 寬版 720–1023px（#1713）：左欄只放行程清單 240px；頂部 bar 56px（品牌＋root tab）。 */
+    --sidebar-width-wide: 240px;
+    --topbar-height-wide: 56px;
 
     /* Font size */
     --font-size-large-title: 2.125rem;
@@ -715,7 +726,7 @@ body.dark {
     }
     .tp-hero-chip {
         padding: 0; border: none;
-        font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
+        font-size: inherit; font-weight: inherit; letter-spacing: 0.04em; text-transform: none; /* Day 01 依 App 不轉大寫（#1692） */
         color: var(--color-accent-text-on-tonal); /* #1423：疊在 tonal 底時 accent-text 只有 4.28 */
     }
     .tp-hero-chip::after {
@@ -1056,28 +1067,30 @@ body.dark {
 /* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
     body.dark {
-        --color-accent: #CBA06E;
+        --color-accent: #D0A576;
         --color-accent-subtle: #2A2418;
         --color-accent-bg: #3A3020;
-        --color-accent-deep: #E0BC90;
-        /* 深色刻意不用 accent(#CBA06E) —— 它與 --color-accent-fill 同值，焦點框疊在
-         * 實心鈕上會變成 1.00:1。#E0BC90 對頁面底 9.53:1、對 accent-fill 1.34:1
+        --color-accent-deep: #E5C39F;
+        /* 深色刻意不用 accent(#D0A576) —— 它與 --color-accent-fill 同值，焦點框疊在
+         * 實心鈕上會變成 1.00:1。#E5C39F 對頁面底 10.24:1、對 accent-fill 1.36:1
          * （後者靠雙帶的內圈隔開，見 DESIGN.md §Focus Indicator）。 */
-        --color-focus-ring: #E0BC90;
+        --color-focus-ring: #E5C39F;
         /* 深色的前景變體必須是**淺**值（深底上要亮字）—— 不能繼承淺色的 #8A6038，
-         * 否則深底疊深字破版。深色 accent 當文字本就 7.12 通過，這裡對齊 accent-deep 更寬裕。
-         * #E0BC90 on #1C1C1E = 9.53 ✅ */
-        --color-accent-text: #E0BC90;
-        --color-accent-text-on-tonal: #E0BC90;
-        /* 深色填色鈕維持 #CBA06E（深字 #1C1C1E 疊其上 = 7.12 ✅，本就通過，不需壓深）。 */
-        --color-accent-fill: #CBA06E;
+         * 否則深底疊深字破版。深色 accent 當文字本就 7.56 通過，這裡對齊 accent-deep 更寬裕。
+         * #E5C39F on #1C1C1E = 10.24 ✅ */
+        --color-accent-text: #E5C39F;
+        --color-accent-text-on-tonal: #E5C39F;
+        /* 深色填色鈕維持 #D0A576（深字 #1C1C1E 疊其上 = 7.56 ✅，本就通過，不需壓深）。 */
+        --color-accent-fill: #D0A576;
+        /* #1707：深色選中前景 #D0A576 on accent-bg #3A3020 = 5.74。 */
+        --color-selected-fg: #D0A576;
         /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
-        --color-accent-2: #CBA06E;
-        --color-accent-2-deep: #E0BC90;
+        --color-accent-2: #D0A576;
+        --color-accent-2-deep: #E5C39F;
         --color-accent-2-subtle: #2A2418;
         --color-accent-2-bg: #3A3020;
-        --color-accent-3: #CBA06E;
-        --color-accent-3-deep: #E0BC90;
+        --color-accent-3: #D0A576;
+        --color-accent-3-deep: #E5C39F;
         --color-accent-3-subtle: #2A2418;
         --color-accent-3-bg: #3A3020;
         /* 聊天協作者（見 plain :root 的說明）：深色基色用 App 的 systemIndigo dark，標籤字提亮到 5.51:1。 */
@@ -1647,13 +1660,11 @@ body.dark .tp-toast { background: var(--color-secondary); }
 }
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
-  /* #1140 item 3（owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17 淡 tonal
-   * sign-off）：active 改實心 accent-fill 膠囊，與 root tab（.tp-global-bottom-nav-btn.is-active，
-   * GlobalBottomNav.tsx）同一形制與 token。per-day polyline 對應改由 idle eyebrow 顏色承載
-   * （見 MapDayTab），不再進 active 底色 —— 避免 amber/lime 等淺色天在實心底上白字對比不足
-   * （day palette 本就不進 UI chrome，見 DESIGN.md DV / dayPalette.ts）。 */
-  color: var(--color-accent-foreground);
-  background: var(--color-accent-fill);
+  /* #1707（owner 2026-11-14 簽核 #1703 B；取代 2026-07-24「比照 root tab 實心」）：
+   * 淡柔褐 accent-bg 不透明底 + selected-fg 前景，與 root tab 同一形制。底是不透明色，
+   * 所以前景對比（6.31／深色 5.74）與底下的玻璃、地圖內容無關。 */
+  color: var(--color-selected-fg);
+  background: var(--color-accent-bg);
 }
 .tp-map-day-tab:focus-visible {
   outline: 2px solid var(--color-focus-ring);
@@ -1675,7 +1686,7 @@ body.dark .tp-toast { background: var(--color-secondary); }
    * 不用加深前景色來補（票上的坑 3 也提醒過）：那會讓 active 態變過深。opacity 對狀態
    * 辨識本來就是多餘的 —— active 已經同時換了 color **和** background（實心膠囊）。
    * 連帶刪掉原本的 `.is-active … { opacity: 1 }`，它失去存在意義。 */
-  text-transform: uppercase;
+  text-transform: none; /* Day N 依 App 不轉大寫（#1692） */
   font-variant-numeric: tabular-nums;
 }
 /* .tp-map-day-tab-date 已移除（owner 2026-07-17：day 膠囊改單行 DAY N、去日期副標）。 */

@@ -13,6 +13,8 @@ export interface NavItem {
   label: string;
   href: string;
   icon: string;
+  /** 選中時的實心版本（#1707：選中不只靠顏色） */
+  iconActive: string;
   matchPrefixes: readonly string[];
   exactOnly?: boolean;
   /** 額外 path 正則（比 prefix 更精確，例：/trip/:id/map 也算「地圖」active） */
@@ -28,10 +30,10 @@ const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/m
 const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
 export const PRIMARY_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
-  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav',   matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat', iconActive: 'nav-chat-fill',  matchPrefixes: ['/chat'] },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-suitcase', iconActive: 'nav-suitcase-fill', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map', iconActive: 'nav-map-fill',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav', iconActive: 'nav-fav-fill',   matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
   // 帳號不在 tab（HIG 4-tab，grill v2 owner 2026-07-23，supersede #1120 五-tab）：
   // 帳號入口＝手機 header 右上 <AccountCircle/> 圓圈 → Account sheet（W1）／桌機 sidebar 左下 chip。
   // 見 docs/plans/apple-hig-compliance/、DESIGN.md :247。
@@ -59,6 +61,18 @@ export function scrollBranchToTop(): void {
     (el) => el.scrollTop > 0,
   );
   for (const el of targets) el.scrollTo({ top: 0, behavior });
+}
+
+/**
+ * 切換 active trip 後要去哪頁（桌機側欄與 trip switcher 共用的唯一判斷）：
+ * 聊天 → 留在 /chat 並帶 ?tripId（⌘-click 開新分頁也停在該行程）、地圖 → 該行程地圖、其他 → 行程詳情。
+ */
+export function tripDestination(pathname: string, tripId: string): string {
+  const id = encodeURIComponent(tripId);
+  const key = PRIMARY_NAV_ITEMS.find((item) => isItemActive(pathname, item))?.key;
+  if (key === 'chat') return `/chat?tripId=${id}`;
+  if (key === 'map') return `/trip/${id}/map`;
+  return `/trips?selected=${id}`;
 }
 
 export function isItemActive(pathname: string, item: NavItem): boolean {

@@ -62,6 +62,7 @@ import { usePoiSelection } from '../hooks/usePoiSelection';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
 import { CustomPoiForm } from '../components/trip/CustomPoiForm';
+import { MQ_BELOW_DESKTOP } from '../lib/breakpoints';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import {
   selectDefaultCenter,
@@ -92,15 +93,15 @@ type AddStopCategory = PoiSearchCategory;
 
 function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
   const dayPad = String(dayNum).padStart(2, '0');
-  if (!day) return `DAY ${dayPad}`;
+  if (!day) return `Day ${dayPad}`;
   const date = day.date ?? '';
-  if (!date) return `DAY ${dayPad}`;
+  if (!date) return `Day ${dayPad}`;
   const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
-  if (!m) return `DAY ${dayPad} · ${date}`;
+  if (!m) return `Day ${dayPad} · ${date}`;
   const month = parseInt(m[2]!, 10);
   const dom = parseInt(m[3]!, 10);
   const weekdayChar = day.dayOfWeek ?? '';
-  return `DAY ${dayPad} · ${month}/${dom}${weekdayChar ? `（${weekdayChar}）` : ''}`;
+  return `Day ${dayPad} · ${month}/${dom}${weekdayChar ? `（${weekdayChar}）` : ''}`;
 }
 
 const SCOPED_STYLES = `
@@ -649,7 +650,7 @@ export default function AddStopPage() {
 
   // v2.31.99: 載入所有 days 給 day picker chip row 用。currentDay 從 allDays
   // 衍生（不另外 setState 避免兩條 state truth）。
-  // 失敗時維持 null（label 退回 DAY NN）。
+  // 失敗時維持 null（label 退回 Day NN）。
   const allDays = useTripDays<DayApiRow>(tripId, { enabled: !!auth.user }).data;
 
   const currentDay = useMemo<DayApiRow | null>(() => {
@@ -672,7 +673,7 @@ export default function AddStopPage() {
   useEffect(() => {
     if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
     if (typeof window === 'undefined' || !window.matchMedia) return;
-    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    if (!window.matchMedia(MQ_BELOW_DESKTOP).matches) return;
     navigate(
       `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
       { replace: true },
@@ -895,10 +896,10 @@ export default function AddStopPage() {
         }
         summary={
           <span className="tp-add-stop-counter" data-testid="add-stop-counter">
-            {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（DAY 01 · 7/29（三））→
-                簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index。Page header 已顯完整日期。 */}
+            {/* v2.31.33: mobile counter 191px 容不下完整 dayLabel（Day 01 · 7/29（三））→
+                簡化「將加入 Day 01 · 7/29（三）」為「→ Day 01」短 day index。Page header 已顯完整日期。 */}
             {hasDay
-              ? <>已選 <strong>{totalSelected}</strong> 個 → DAY {String(dayNum).padStart(2, '0')}</>
+              ? <>已選 <strong>{totalSelected}</strong> 個 → Day {String(dayNum).padStart(2, '0')}</>
               : <>請先選擇加入哪天</>
             }
           </span>
@@ -929,7 +930,7 @@ export default function AddStopPage() {
                       onClick={() => handlePickDay(d.dayNum)}
                       data-testid={`add-stop-daypicker-chip-${d.dayNum}`}
                     >
-                      <span className="tp-add-stop-daypicker-chip-num">DAY {String(d.dayNum).padStart(2, '0')}</span>
+                      <span className="tp-add-stop-daypicker-chip-num">Day {String(d.dayNum).padStart(2, '0')}</span>
                       {mmdd && <span className="tp-add-stop-daypicker-chip-date">{mmdd}{d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}</span>}
                     </button>
                   );

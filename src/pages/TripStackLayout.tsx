@@ -41,6 +41,7 @@ import { useContext, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { MQ_DESKTOP } from '../lib/breakpoints';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { SheetStackProvider } from '../contexts/SheetStackContext';
 import { TripContext } from '../contexts/TripContext';
@@ -58,7 +59,7 @@ import ShareLinkModal from '../components/share/ShareLinkModal';
 
 export default function TripStackLayout() {
   const { tripId } = useParams<{ tripId: string }>();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const isDesktop = useMediaQuery(MQ_DESKTOP);
   const navigate = useNavigate();
   const { user } = useCurrentUser();
   const tripCtx = useContext(TripContext);

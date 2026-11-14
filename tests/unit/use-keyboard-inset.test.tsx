@@ -139,10 +139,4 @@ describe('wiring source-lock', () => {
   it('#1140 item 10：data-kb-open 時 root tab 滑出畫面', () => {
     expect(appShellSrc).toMatch(/:root\[data-kb-open="1"\]\s*\.app-shell-bottom-nav\s*\{[\s\S]{0,120}transform:\s*translate\(-50%,/);
   });
-
-  it('Enter 送出保留（owner 2026-07-24：不反轉成 ⌘Enter）', () => {
-    // 送出條件仍是 Enter 且非 Shift、非組字中；沒有改成 metaKey/ctrlKey 才送。
-    expect(chatSrc).toMatch(/e\.key === 'Enter' && !e\.shiftKey/);
-    expect(chatSrc).not.toMatch(/e\.key === 'Enter' && \(e\.metaKey \|\| e\.ctrlKey\)/);
-  });
 });

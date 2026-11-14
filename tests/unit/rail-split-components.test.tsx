@@ -23,6 +23,7 @@ import { EntryTimeChip } from '../../src/components/trip/EntryTimeChip';
 import { StopPoiChoiceCard } from '../../src/components/trip/StopPoiChoiceCard';
 import { RailRow } from '../../src/components/trip/RailRow';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
+import { EntryEditAccessContext } from '../../src/contexts/EntryEditAccessContext';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 
 beforeEach(() => { Object.values(mutations).forEach((m) => m.mockClear()); });
@@ -91,7 +92,9 @@ describe('RailRow ⋯ menu 條件分支', () => {
   function renderRow(entry: TimelineEntryData, extra: Partial<React.ComponentProps<typeof RailRow>> = {}) {
     return render(
       <MemoryRouter><TripIdContext.Provider value="t1">
-        <RailRow entry={entry} index={0} expanded={false} onToggle={() => {}} isPast={false} isNow={false} isLast sortMode={false} onEnterSortMode={() => {}} stopNumber={1} {...extra} />
+        <EntryEditAccessContext.Provider value>
+          <RailRow entry={entry} index={0} expanded={false} onToggle={() => {}} isPast={false} isNow={false} isLast sortMode={false} onEnterSortMode={() => {}} stopNumber={1} {...extra} />
+        </EntryEditAccessContext.Provider>
       </TripIdContext.Provider></MemoryRouter>,
     );
   }

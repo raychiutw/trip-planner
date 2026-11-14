@@ -1,7 +1,7 @@
 /**
  * AccountCircle — rev2 手機統一 header 右上帳號圓圈（owner 2026-07-17 mockup `.ph-avatar`）。
  *
- * 手機四個根 tab 頁（聊天/行程/地圖/收藏）的 header 右上顯示帳號圓圈（首字母）→ /account；
+ * 手機四個根 tab 頁（聊天/行程/地圖/收藏）的 header 右上顯示帳號圓圈（人像圖示，比照 App；#1701）→ /account；
  * 匿名 → 登入 icon → /login。桌機帳號入口是 sidebar 左下 chip → 本元件 CSS 桌機隱藏
  * （≥1024）。搭配底部 nav 由 5-tab 降 4-tab（帳號移出 tab slot）。
  */
@@ -22,14 +22,13 @@ export const ACCOUNT_CIRCLE_STYLES = `
 .tp-account-circle-avatar {
   width: 30px; height: 30px; border-radius: var(--radius-full);
   display: grid; place-items: center;
-  background: var(--color-accent-fill); color: var(--color-accent-foreground);
-  font-size: 0.8125rem; font-weight: 800; line-height: 1;
+  border: 1.5px solid currentColor; color: var(--color-foreground); /* 線條 person.crop.circle（依 App） */
 }
-.tp-account-circle .svg-icon { width: 17px; height: 17px; }
+.tp-account-circle .svg-icon { width: 18px; height: 18px; }
 .tp-account-circle:focus-visible { outline: none; }
 .tp-account-circle:focus-visible .tp-account-circle-avatar { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 /* 桌機帳號在 sidebar 左下 chip → header 圓圈只手機顯示。 */
-@media (max-width: 1023px) {
+@media (max-width: 719px) {
   .tp-account-circle { display: grid; }
 }
 `;
@@ -52,14 +51,12 @@ export default function AccountCircle() {
           aria-label="登入"
           data-testid="titlebar-account"
         >
-          <span className="tp-account-circle-avatar"><Icon name="user" /></span>
+          <span className="tp-account-circle-avatar"><Icon name="nav-account" /></span>
         </Link>
       </>
     );
   }
 
-  const source = (user.displayName || user.email || '?').trim();
-  const letter = (source[0] || '?').toUpperCase();
   return (
     <>
       <style>{ACCOUNT_CIRCLE_STYLES}</style>
@@ -71,7 +68,7 @@ export default function AccountCircle() {
         data-testid="titlebar-account"
         onClick={() => openSheet(location)}
       >
-        <span className="tp-account-circle-avatar">{letter}</span>
+        <span className="tp-account-circle-avatar"><Icon name="nav-account" /></span>
       </Link>
     </>
   );

@@ -9,6 +9,7 @@
  * Auth: useRequireAuth — page is for logged-in users.
  * TitleBar 右上 action 拔除 (v2.33.140) — back ← 已回 /favorites，重複入口。
  */
+import { shortcutAttrs } from '../lib/globalShortcuts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { typedApi, unwrap } from '../lib/api/typed';
@@ -905,6 +906,7 @@ export default function ExplorePage() {
                 aria-invalid={queryError ? true : undefined}
                 aria-describedby={queryError ? 'explore-search-error' : undefined}
                 data-testid="explore-search-input"
+                {...shortcutAttrs('search')}
               />
               <button type="submit" disabled={searching} data-testid="explore-search-submit">
                 {searching ? '搜尋中...' : '搜尋'}

@@ -26,8 +26,7 @@ test('desktop restores an accessible trip and its day across reload', async ({ p
 test('desktop filter does not remove an accessible trip from the detail picker', async ({ page }) => {
   const tripId = 'busan-trip-2026-Demo';
   await page.goto('/trips');
-  await page.getByTestId('trips-list-search-toggle').click();
-  await page.getByTestId('trips-list-search-input').fill('沖繩');
+  await page.getByTestId('trips-list-search-input').fill('沖繩'); // 桌機常駐（#1712）
   await expect(page.getByTestId(`trips-list-card-${tripId}`)).toHaveCount(0);
   await page.getByRole('navigation', { name: '我的行程' }).getByRole('link', { name: '釜山三日遊' }).click();
   await expect(page.getByTestId('trip-main-portal')).toBeVisible();
