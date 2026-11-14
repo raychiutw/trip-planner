@@ -844,6 +844,8 @@ Alert（不可逆）MUST 具備三件事：
 | undo | `⌘Z` / 底部 toast |
 | 批次 | `⌘`／`⇧` 多選 + toolbar／選單刪除（僅永久刪除才再 Alert 確認） |
 
+**全域快捷鍵（#1697，`src/lib/globalShortcuts.ts`）**：聚焦搜尋 `⌥⌘F`、新增 `⌥⇧N`，一律帶修飾鍵避開瀏覽器保留鍵（`⌘N` 等）。頁面把目標元素標 `shortcutAttrs(action)`（`data-shortcut` + `aria-keyshortcuts`），沒標的頁面按了不做事；tooltip 用 `shortcutTitle` 寫「說明（快捷鍵）」。上表的 `⌘N` 與 `⌘Z` 不採用：`⌘N` 被瀏覽器保留，產品沒有 Undo。
+
 桌機 **MUST NOT** 使用 FAB（Material 浮動鈕）或 hamburger 選單，**MUST NOT** 依賴 iOS 滑動刪除手勢。
 
 > **FAB 條款的範圍限定在「CRUD 動作入口」。** 地圖頁右下的浮動控制（重新定位／定位我，`MapFabs`）不是 CRUD 入口，不受此條約束 —— 它們是地圖檢視控制，macOS 的地圖類 App 也把這類控制浮在圖面上。看到 `tp-map-fab` 不要當成違規。
