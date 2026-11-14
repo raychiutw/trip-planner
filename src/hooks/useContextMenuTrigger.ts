@@ -24,7 +24,14 @@ export function useContextMenuTrigger(
       const link = (e.target as HTMLElement).closest('a[href]');
       if (isEditableTarget(e.target) || (link && link !== el)) return;
       e.preventDefault();
-      openRef.current(e.clientX, e.clientY);
+      const { clientX: x, clientY: y } = e;
+      // WebKit 在按下時就送 contextmenu，之後的 pointerup 會把剛開的 popover 當成「點外面」關掉；
+      // 按鍵還沒放開就等放開之後再開（Chromium／鍵盤 buttons 為 0，照舊立即開）。
+      if (e.buttons) {
+        const done = () => { el.ownerDocument.removeEventListener('pointerup', done, true); el.ownerDocument.removeEventListener('pointercancel', done, true); setTimeout(() => openRef.current(x, y), 0); };
+        el.ownerDocument.addEventListener('pointerup', done, true);
+        el.ownerDocument.addEventListener('pointercancel', done, true);
+      } else openRef.current(x, y);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.isComposing || e.repeat || isEditableTarget(e.target)) return;
