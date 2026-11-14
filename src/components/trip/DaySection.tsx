@@ -145,10 +145,20 @@ const DaySection = React.memo(function DaySection({
   localToday,
   isActive,
 }: DaySectionProps) {
-  const [animKey, setAnimKey] = useState(0);
+  // #1719：變成目前天時只重播進場動畫，不換 key 重建內容（會吃掉剛開的選單與鍵盤焦點）。
+  const [entered, setEntered] = useState(false);
+  const slotRef = useRef<HTMLDivElement>(null);
   const prevActiveRef = useRef(false);
   useEffect(() => {
-    if (isActive && !prevActiveRef.current) setAnimKey((k) => k + 1);
+    if (isActive && !prevActiveRef.current) {
+      setEntered(true);
+      const el = slotRef.current;
+      if (el?.classList.contains('day-content-enter')) {
+        el.classList.remove('day-content-enter');
+        void el.offsetWidth; // 強制 reflow，讓同一個 class 的動畫重新開始
+        el.classList.add('day-content-enter');
+      }
+    }
     prevActiveRef.current = !!isActive;
   }, [isActive]);
 
@@ -202,8 +212,8 @@ const DaySection = React.memo(function DaySection({
       </div>
 
       <div
-        key={animKey}
-        className={clsx(animKey > 0 && 'day-content-enter', day && 'day-content-loaded')}
+        ref={slotRef}
+        className={clsx(entered && 'day-content-enter', day && 'day-content-loaded')}
         id={`day-slot-${dayNum}`}
       >
         {!day ? (
