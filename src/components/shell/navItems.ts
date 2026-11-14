@@ -29,7 +29,7 @@ const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
 export const PRIMARY_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-suitcase', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav',   matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
   // 帳號不在 tab（HIG 4-tab，grill v2 owner 2026-07-23，supersede #1120 五-tab）：
