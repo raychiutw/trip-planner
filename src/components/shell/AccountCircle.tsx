@@ -23,7 +23,6 @@ export const ACCOUNT_CIRCLE_STYLES = `
   width: 30px; height: 30px; border-radius: var(--radius-full);
   display: grid; place-items: center;
   border: 1.5px solid currentColor; color: var(--color-foreground); /* 線條 person.crop.circle（依 App） */
-  font-size: 0.8125rem; font-weight: 800; line-height: 1;
 }
 .tp-account-circle .svg-icon { width: 18px; height: 18px; }
 .tp-account-circle:focus-visible { outline: none; }
