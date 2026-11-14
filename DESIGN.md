@@ -32,7 +32,7 @@
 - **Differentiation:** 暖調 V2 柔褐三色（主柔褐 + sage 交通 + 粉 活動/收藏；非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
 - **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
 
-> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#CBA06E`，取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
+> **⚠️ V3 Apple Music 改版進行中（2026-07-17，桌機 React）。** 語意三色（sage 交通 / 粉 收藏活動）**退場**。SoT 轉移到 `trip-planner.flutter/docs/discovery/design.md` §2 + 桌機 mockup `docs/design-sessions/2026-07-15-v3-apple-music-desktop.html`。**Phase 1（v2.55.88）已 ship**：`--color-accent-2/-3` 在 tokens.css 收斂成單一柔褐 accent（全站不再彩虹）+ dark mode 換中性深灰（**v2.56.4 owner「全黑太多、tab 也黑，參考 HIG」→ 整條 iOS system gray 往上抬一階**：base `#1C1C1E`/surface `#2C2C2E`/tertiary `#3A3A3C`/hover `#48484A` + accent `#D0A576`（2026-11-14 #1702 由 `#CBA06E` 改 App 單一值），取代原近黑 `#121214` 系與下方舊暖褐 dark 表）。**卡片 neutral surface + 去封面/常駐 sidebar/單層 DAY selector 是後續 Phase**——下方三色表為歷史，逐 Phase 改寫。見 memory `project_v3_desktop_redesign`。
 
 ## Palette — V2 柔褐三色（canonical source: tokens.css `@theme`）
 | Token | Hex | 用途 |
@@ -208,8 +208,8 @@
 ### Dark Mode (柔褐三色 Dark)
 | Token | Hex | 用途 |
 |-------|-----|------|
-| accent（柔褐） | `#CBA06E` | 深色主 accent |
-| accent-deep | `#E0BC90` | hover、icon glyph（深色更亮） |
+| accent（柔褐） | `#D0A576` | 深色主 accent（2026-11-14 #1702 起與 App 單一值 `#D0A576` 對齊） |
+| accent-deep | `#E5C39F` | hover、icon glyph（深色更亮；即 App 的 tintDeep） |
 | accent-subtle | `#33271A` | 卡片淡底、selected row |
 | accent-bg | `#44341F` | icon 底、卡片邊、badge |
 | accent-2（sage） | `#8FBE9C` | 交通 |
@@ -1091,7 +1091,7 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 被否決的是 `outline: none` + `box-shadow: var(--shadow-ring)`。兩個獨立理由：
 
 1. **既有 owner 選擇**是保留明顯的焦點框；把 Apple 原生焦點建議直接當作 Web `box-shadow` 禁令並不準確。
-2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#CBA06E`** —— 焦點框字面上不存在。
+2. **實測也不合格**：`box-shadow: 0 0 0 2px` 貼著 border box、沒有間隙，所以相鄰色是**元件自己的填色**、每個 surface 都不一樣。疊 `--color-accent-fill` 量到**淺色 1.46:1、深色 1.00:1**，違反 WCAG 1.4.11。深色是 1.00 因為 `--color-accent` 與 `--color-accent-fill` **是同一個 hex `#D0A576`** —— 焦點框字面上不存在。
 
 第 2 點還有一個結構性後果：貼邊寫法要對**每一種填色**逐個調校，加一個新按鈕色就多一個要驗的組合；`outline-offset` 只要驗父層底色。這是「不需逐個 surface 調校」的意思。
 
@@ -1125,9 +1125,9 @@ Toast 只用於環境狀態與低風險通知，例如離線、恢復連線、�
 | | 一般階 | 對頁面底色 | `prefers-contrast: more` | 加強後 |
 |---|---|---|---|---|
 | 淺色 | `#8A6038` | 5.35:1 | `#3D2610` | 13.73:1 |
-| 深色 | `#E0BC90` | 9.53:1 | `#FFE8C8` | 14.28:1 |
+| 深色 | `#E5C39F` | 10.24:1 | `#FFE8C8` | 14.28:1 |
 
-深色刻意**不用** `--color-accent`（`#CBA06E`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
+深色刻意**不用** `--color-accent`（`#D0A576`）—— 它與 `--color-accent-fill` 同值，焦點框疊在實心鈕上會是 1.00:1。
 
 ## Accessibility
 - **Touch target:** mobile 主操作以 44×44 CSS px 為本專案目標；Web AA 的 24×24 CSS px 與例外、Apple native 預設／最小 pt 值見「Web 設計驗收與來源」。
