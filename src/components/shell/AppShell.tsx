@@ -5,12 +5,13 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { useRefreshRunner } from '../../contexts/RefreshContext';
 import { useSheetMode } from '../../contexts/SheetModeContext';
 import { useSidebarCollapsed } from '../../lib/sidebarCollapse';
 import SidebarToggle from './SidebarToggle';
+import { usePaneDivider } from './usePaneDivider';
 
 export const APP_SHELL_STYLES = `
 .app-shell {
@@ -333,9 +334,6 @@ body.print-mode .app-shell-main {
 `;
 
 /** #1710 最小寬（owner 2026-11-14 簽核）：中欄 400／右欄 360；±2% 為鍵盤步進。 */
-const MIN_MAIN_PX = 400;
-const MIN_SHEET_PX = 360;
-const KEY_STEP = 2;
 
 export const APP_SHELL_LAYOUT_3PANE = '3pane';
 export const APP_SHELL_LAYOUT_2PANE = '2pane';
@@ -370,27 +368,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   const mainRef = useRef<HTMLElement>(null);
   const sidebarCollapsed = useSidebarCollapsed();
   const sheetRef = useRef<HTMLElement>(null);
-  const [mainPct, setMainPct] = useState(50);
-  const [dragging, setDragging] = useState(false);
-  const clampPct = (pct: number) => {
-    const total = (mainRef.current?.getBoundingClientRect().width ?? 0) + (sheetRef.current?.getBoundingClientRect().width ?? 0);
-    if (!total) return pct;
-    // shortcut: 視窗窄到兩個最小寬放不下時 min > max，以中欄最小寬為準。
-    return Math.min(Math.max(pct, (MIN_MAIN_PX / total) * 100), Math.max(100 - (MIN_SHEET_PX / total) * 100, (MIN_MAIN_PX / total) * 100));
-  };
-  const paneRest = `minmax(${MIN_MAIN_PX}px, ${mainPct}fr) minmax(${MIN_SHEET_PX}px, ${100 - mainPct}fr)`;
-  const onDividerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!dragging || !mainRef.current || !sheetRef.current) return;
-    const left = mainRef.current.getBoundingClientRect().left;
-    const total = mainRef.current.getBoundingClientRect().width + sheetRef.current.getBoundingClientRect().width;
-    setMainPct(clampPct(((e.clientX - left) / total) * 100));
-  };
-  const onDividerKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const d = e.key === 'ArrowRight' ? KEY_STEP : e.key === 'ArrowLeft' ? -KEY_STEP : 0;
-    if (!d) return;
-    e.preventDefault();
-    setMainPct(clampPct(mainPct + d));
-  };
+  const { gridStyle, dividerProps } = usePaneDivider(mainRef, sheetRef);
   // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
   // 捲動隱藏的 navHidden / lastYRef 與其 scroll listener 已整個移除。
 
@@ -424,10 +402,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
         data-has-bottom-nav={bottomNav ? 'true' : 'false'}
         data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'}
         data-testid="app-shell"
-        style={mainPct === 50 ? undefined : {
-          ['--grid-3pane-rest' as string]: paneRest,
-          ['--grid-3pane-desktop' as string]: `var(--sidebar-width-desktop) ${paneRest}`,
-        }}
+        style={gridStyle}
       >
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
@@ -472,24 +447,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
             <aside className="app-shell-sheet" data-testid="app-shell-sheet" id={sheetPortalId} ref={sheetRef}>
               {sheet}
             </aside>
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="調整中欄與右欄寬度"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(mainPct)}
-              tabIndex={0}
-              className="app-shell-divider"
-              data-testid="app-shell-divider"
-              data-dragging={dragging ? 'true' : 'false'}
-              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); }}
-              onPointerMove={onDividerMove}
-              onPointerUp={() => setDragging(false)}
-              onPointerCancel={() => setDragging(false)}
-              onDoubleClick={() => setMainPct(50)}
-              onKeyDown={onDividerKey}
-            />
+            <div {...dividerProps} />
           </>
         )}
         {bottomNav && (
