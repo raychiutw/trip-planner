@@ -28,6 +28,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 
+## [2.57.137] - 2026-11-14
+
+### Fixed
+- **行程列表選中卡片的圓點不再壓到眉標文字（#1717）**：拿掉封面（v2.55.89）後，原本 absolute 落在封面上的選取圓點直接疊在「日本」等眉標上；改成眉標前的行內圓點。e2e 量文字起點與眉標左緣距離鎖住。
+
 ## [2.57.136] - 2026-11-14
 
 桌機 HIG 對齊與 Web／App 一致化（spec #1692；Web 與 App 不同處以 App 為準）。
