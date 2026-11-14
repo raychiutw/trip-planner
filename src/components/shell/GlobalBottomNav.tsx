@@ -87,8 +87,9 @@ const SCOPED_STYLES = `
 .tp-global-bottom-nav-btn.is-active span { text-shadow: none; }
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); background: var(--color-hover); }
 .tp-global-bottom-nav-btn.is-active {
-  background: var(--color-accent-fill);
-  color: var(--color-accent-foreground);
+  /* #1707（owner 2026-11-14 簽核 #1703 B）：淡柔褐 accent-bg 底 + selected-fg 前景（原實心 accent-fill + 白字）。 */
+  background: var(--color-accent-bg);
+  color: var(--color-selected-fg);
 }
 .tp-global-bottom-nav-btn.is-active span { font-weight: 700; }
 /* rev2 §10.1（2026-07-19）：桌機底部膠囊已隱藏（primary nav 搬進 sidebar，見
@@ -138,7 +139,7 @@ export default function GlobalBottomNav({ authed }: GlobalBottomNavProps) {
                 }
               }}
             >
-              <Icon name={item.icon} />
+              <Icon name={active ? item.iconActive : item.icon} />
               <span>{item.label}</span>
             </Link>
           );

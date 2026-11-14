@@ -41,7 +41,8 @@
 | `--color-accent-deep` | `#8A6038` | hover / pressed |
 | `--color-accent-text` | `#8A6038` | 疊頁面／表面色（`-background`／`-secondary`／`-tertiary`／`-hover`）的**文字色** |
 | `--color-accent-text-on-tonal` | `#8A6038` | 疊同色系 tint（`-subtle`／`-bg`）的**文字色** |
-| `--color-accent-fill` | `#8A6038` | 實心填色面（主要按鈕、tab 選中膠囊）+ `--color-accent-foreground` 白字 |
+| `--color-accent-fill` | `#8A6038` | 實心填色面（主要按鈕等）+ `--color-accent-foreground` 白字；**不再用於 tab 選中**（見 [ADR-0013](docs/adr/0013-selection-style-tonal-bg-solid-icon.md)） |
+| `--color-selected-fg` | 淺 `#6F4C2C`／深 `#D0A576` | **選中前景**（root tab／Day tab／側欄選中的 icon 與 label），底是 `--color-accent-bg`；對 accent-bg 6.31／5.74、頁面底 7.42 |
 | `--color-accent-subtle` | `#F6EFE6` | badge bg、selected row |
 | `--color-accent-bg` | `#F1E8DE` | accent panel |
 | `--color-background` | `#FFFBF5` | page bg |
@@ -51,7 +52,7 @@
 | `--color-border` | `#EADFCF` | hairline |
 | `--color-line-strong` | `#C8B89F` | divider strong |
 
-> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖 polyline 與 entry card**（map polyline + Map page bottom entry card num/eyebrow）。對應 Data Visualization 例外。**Day 指示 tab（day strip / MapDayTab）嚴守 柔褐主色 accent 統一色系**（idle eyebrow muted、active 實心 accent-fill + accent-foreground），**地圖與 Trip 明細頁一致、都不套 dayColor**（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」；此前地圖 day strip eyebrow 曾套 per-day 色，已退場）。理由：多色服務於地圖 N 條 polyline 視覺區分需求；day tab chrome 一致性更重要，且淺色天（amber/lime）在膠囊上對比不足。
+> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖 polyline 與 entry card**（map polyline + Map page bottom entry card num/eyebrow）。對應 Data Visualization 例外。**Day 指示 tab（day strip / MapDayTab）嚴守 柔褐主色 accent 統一色系**（idle eyebrow muted、active accent-bg 淡柔褐底 + selected-fg，ADR-0013），**地圖與 Trip 明細頁一致、都不套 dayColor**（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」；此前地圖 day strip eyebrow 曾套 per-day 色，已退場）。理由：多色服務於地圖 N 條 polyline 視覺區分需求；day tab chrome 一致性更重要，且淺色天（amber/lime）在膠囊上對比不足。
 
 > **落地頁插畫示意色 `--d1..--d4`**（2026-09-24）：`LandingPage` 的 SVG 插畫用一組**插畫專用**柔和色（淺色 `#C9857F` / `#7FA8C9` / `#8FBF8A` / `#C9A97F`，`body.dark` 另一組較亮），值取自 owner 核准的視覺 SoT `docs/design-sessions/2026-07-20-landing-page-FINAL-variantB.html`，定義在該頁 `SCOPED_STYLES`、範圍限 `.tp-lp`。**不是上面的 Day palette，也不擴大它的使用範圍。** hero 停留點圓圈裡的白色數字對比偏低（淺色 2.1–2.9:1）是 mockup 原設計，owner 2026-09-24 決定維持（屬插畫附帶文字，SVG 以 `aria-label` 描述）。
 
@@ -290,7 +291,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 「柔褐三色 accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守柔褐三色。
 
-**地圖 chrome 子例外（2026-07-24 收斂）：** 地圖相關頁面（`MapPage`、`TripMapRail`、`OceanMap`）的 **entry card**（bottom POI 卡的 num / eyebrow）可套 `dayColor(N)` 與 polyline 同色呼應。**Day 指示 tab（MapDayTab / day strip）不再套 dayColor** —— 統一柔褐（idle muted、active 實心 accent-fill），地圖與 Trip 明細頁一致（owner「地圖模式 day tab 回到統一色系」）。其他 chrome（返回鈕、主導航、title、overflow menu）一律柔褐。
+**地圖 chrome 子例外（2026-07-24 收斂）：** 地圖相關頁面（`MapPage`、`TripMapRail`、`OceanMap`）的 **entry card**（bottom POI 卡的 num / eyebrow）可套 `dayColor(N)` 與 polyline 同色呼應。**Day 指示 tab（MapDayTab / day strip）不再套 dayColor** —— 統一柔褐（idle muted、active accent-bg 底 + selected-fg），地圖與 Trip 明細頁一致（owner「地圖模式 day tab 回到統一色系」）。其他 chrome（返回鈕、主導航、title、overflow menu）一律柔褐。
 
 ### 地圖 Polyline 規格（含飯店）
 
@@ -476,12 +477,12 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
-- **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent-bg tint 底＋中性文字（icon 恆為 accent）；清單項連 `/trips?selected=<id>`，active trip（URL 推導）套同一個 tint 底。
+- **rev2 owner 2026-07-19（§10.1）：macOS sidebar** — 由上而下＝品牌 → **4-tab 主導覽**（聊天/行程/地圖/收藏）→ 分隔線 → **「我的行程」清單**（`useMyTrips` 注入 `/api/trips?all=1`）→ 帳號 chip 左下 → `/account`。桌機底部膠囊隱藏後，primary nav 回到 sidebar 頂部。主導覽 active 用 accent-bg tint 底＋`--color-selected-fg`（icon 換實心、未選 icon muted，#1707）；清單項連 `/trips?selected=<id>`，active trip（URL 推導）為次，見下 Active state。
 - 清單狀態：`trips===undefined` → skeleton（不先渲染空態）；`[]` → 「尚無行程」；有資料 → 逐行 `.tp-trip-item`。
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，底部帳號區只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
 - Primary nav 順序（聊天 / 行程 / 地圖 / 收藏）+ active route patterns 由 `navItems.ts`（`PRIMARY_NAV_ITEMS` + `isItemActive`）單一來源掌管，`GlobalBottomNav`（手機膠囊）共用同一份；nav testid＝`sidebar-nav-<key>`（vs 膠囊 `global-bottom-nav-<key>`）。
 - **材質＝實底（#1689，owner 2026-11-13 簽核 B，取代先前 vibrancy 半透明毛玻璃）**：`background: var(--color-secondary)` + 右側 `1px solid var(--color-border)` 分隔線；不用半透明、不掛 `tp-glass`；寬度維持 216px、不做 icon rail。文字/hover/border 走主 app token → 自動 light/dark adapt。主導覽**不再**包 `--tabbar-*` 浮動框線卡片（該材質回歸只給手機底部膠囊）。
-- Active state ＝ `--color-accent-bg` tint 底 + 中性文字 `--color-foreground`（主導覽與我的行程項目皆同）；主導覽 icon 一律 `--color-accent`；inactive 文字走 `--color-muted`。
+- Active state（#1707，ADR-0013）：**主導覽**＝`--color-accent-bg` 底 + `--color-selected-fg` 文字與實心 icon，未選 icon／文字 `--color-muted`；**我的行程目前項目為次**＝無底、`--color-foreground`、字重 700、左側 3px `--color-accent` 短條（聊天頁「聊天」為主、行程為脈絡；`/trips?selected=` 同理）。
 - 「我的行程」分區標題是 disclosure button（`aria-expanded`，預設展開，摺疊狀態不持久化）；帳號列同時顯示姓名與信箱。
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
@@ -491,7 +492,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **常駐，捲動不隱藏**（owner 2026-07-20 / 07-21；捲動隱藏邏輯已於 2026-07-21 移除）。
 - 高度需包含 safe-area inset，頁面內容必須留出底部 padding。
 - Bottom nav 是主功能定位，不是 breadcrumb。子頁與明細頁 active item 依所屬主功能決定，不新增子頁 tab。
-- Active item 使用不同於 CTA 的定位樣式：實心 `--color-accent-fill` 膠囊 + `--color-accent-foreground` icon/label；inactive 保持 muted。**不可用「柔褐淡底 + `--color-accent` label」** —— 那組是 3.24:1，且 nav label 是 11px 小字（見 §Color Approach 通則）。
+- Active item（#1707，[ADR-0013](docs/adr/0013-selection-style-tonal-bg-solid-icon.md)，取代 2026-07-24 實心 accent-fill 膠囊）：`--color-accent-bg` 淡柔褐膠囊 + `--color-selected-fg` icon/label，**icon 換實心版本**（`nav-*-fill`，選中不只靠顏色）；inactive icon／label 保持 `--color-muted`。**前景不可用 `--color-accent` 或 `#8A6038`** —— 疊在 accent-bg 只有 3.24／4.55:1，nav label 是 11px 小字（見 §Color Approach 通則）；選中前景一律 `--color-selected-fg`。
 
 | Route family | Active bottom nav |
 |--------------|-------------------|
@@ -509,7 +510,7 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 **Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「Day N / 全部」（2026-11-14 比照 App，取代「DAY N / 總覽」），無日期副標（2026-07-17 移除）
 - **統一色系（owner 2026-07-24；地圖與 Trip 明細頁一致，不套 dayColor）**：
   - Idle: `Day 1` eyebrow muted 文字、透明底
-  - Active: **實心 accent-fill 膠囊 + accent-foreground eyebrow**，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）——（沿革：2026-07-17「淡 tonal pill」→ 2026-07-24「比照 root tab 實心」；同批移除地圖 idle eyebrow 的 per-day 色）
+  - Active: **`--color-accent-bg` 不透明淡柔褐膠囊 + `--color-selected-fg` eyebrow**，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）。底不透明，所以疊在地圖玻璃上對比（6.31／深色 5.74）與底下內容無關。——（沿革：2026-07-17「淡 tonal pill」→ 2026-07-24「比照 root tab 實心」→ 2026-11-14 #1707 回到淡底 + 深前景，ADR-0013；同批移除地圖 idle eyebrow 的 per-day 色）
 - Hover (idle): `color-foreground`
 - min-height 34px（扁平 strip，不搶垂直空間）；桌機（≥1024）每 tab 固定 88px、水平可捲
 - Today marker: eyebrow 文字後綴「· 今天」（不是另一個 pill）

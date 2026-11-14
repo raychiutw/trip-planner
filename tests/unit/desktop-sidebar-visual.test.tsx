@@ -64,10 +64,10 @@ describe('DesktopSidebar rev2 §10.1 — 清單視覺 token（材質見 desktop-
     expect(style).toContain('var(--color-muted)');
   });
 
-  it('active trip item bg 用 accent', () => {
+  it('active trip item 無底（#1707 為次：700 + 左側短條，見 selection-style-1707）', () => {
     const { container } = renderSidebar({ user: null, trips: [] });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-trip-item\.is-active\s*\{[^}]*background:\s*var\(--color-accent-bg\)/);
+    expect(style).toMatch(/\.tp-trip-item\.is-active\s*\{[^}]*font-weight:\s*700/);
   });
 
   it('trip item font-weight 600', () => {

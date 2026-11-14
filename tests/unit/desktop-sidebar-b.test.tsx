@@ -36,14 +36,14 @@ describe('DesktopSidebar B — 材質', () => {
     expect(style).not.toMatch(/--tabbar-/);
   });
 
-  it('選取 = accent-bg tint + 中性文字；icon 用 accent', () => {
+  it('選取 = accent-bg tint + selected-fg；未選 icon muted（#1707）', () => {
     const { style } = renderSidebar();
     const on = rule(style, '.tp-sidebar-nav-item.is-active');
     expect(on).toMatch(/background:\s*var\(--color-accent-bg\)/);
-    expect(on).toMatch(/color:\s*var\(--color-foreground\)/);
+    expect(on).toMatch(/color:\s*var\(--color-selected-fg\)/);
     expect(on).not.toMatch(/accent-fill|accent-foreground/);
-    expect(rule(style, '.tp-sidebar-nav-item .svg-icon')).toMatch(/color:\s*var\(--color-accent\)/);
-    expect(rule(style, '.tp-trip-item.is-active')).toMatch(/background:\s*var\(--color-accent-bg\)/);
+    expect(rule(style, '.tp-sidebar-nav-item .svg-icon')).toMatch(/color:\s*var\(--color-muted\)/);
+    expect(rule(style, '.tp-trip-item.is-active')).not.toMatch(/background/);
   });
 });
 

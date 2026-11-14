@@ -318,6 +318,7 @@ API 的整合測試（miniflare + 真 D1）隨舊入口刪除，現在在 trip-p
 | [0010](docs/adr/0010-mobile-oauth-public-client-callback-contract.md) | Mobile OAuth 是 public client，callback 與 client 依環境精確綁定、用 HTTPS app link |
 | [0011](docs/adr/0011-split-web-api-agent-and-bearer-token.md) | 拆成 web、api、agent 三個專案，認證改 bearer token（Accepted 2026-11-02；web 尚未切換、無 WAF，含殘留風險） |
 | [0012](docs/adr/0012-ai-data-consent-requester-and-owner.md) | AI 資料同意：送出者與行程 owner 雙方持有，server 端把關（Accepted；文案欄位待補） |
+| [0013](docs/adr/0013-selection-style-tonal-bg-solid-icon.md) | 選取樣式：淡柔褐 accent-bg 底 + `--color-selected-fg` + 實心圖示，取代實心 accent-fill 膠囊（Accepted 2026-11-14，#1707） |
 
 新決策**新增 ADR**，不要改回寫在這裡；被推翻的舊決策標 superseded、不要刪。
 

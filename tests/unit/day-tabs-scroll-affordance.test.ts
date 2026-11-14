@@ -30,10 +30,10 @@ describe('tokens.css — .tp-map-day-tabs horizontal scroll', () => {
 });
 
 describe('tokens.css — Day tab 比照 root tab（#1140 item 3/4）', () => {
-  it('item 3：active 用實心 --color-accent-fill（比照 root tab），非 14% 淡 tonal', () => {
+  it('#1707：active 用 --color-accent-bg 淡柔褐底（比照 root tab，取代實心 accent-fill）', () => {
     const activeRule = TOKENS_CSS.match(/\.tp-map-day-tab\.is-active\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(activeRule).toMatch(/background:\s*var\(--color-accent-fill\)/);
-    expect(activeRule).toMatch(/color:\s*var\(--color-accent-foreground\)/);
+    expect(activeRule).toMatch(/background:\s*var\(--color-accent-bg\)/);
+    expect(activeRule).toMatch(/color:\s*var\(--color-selected-fg\)/);
     // 舊的淡 tonal（14% day-color tint）不應再存在
     expect(activeRule).not.toMatch(/14%/);
   });
