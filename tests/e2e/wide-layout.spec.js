@@ -78,12 +78,18 @@ test('1024 前後切換：1023 tab 在頂部橫排，1024 回側欄直排＋右�
   await expect(page.getByTestId('trips-list-page')).toBeVisible();
   expect((await box(page.getByTestId('sidebar-nav-trips'))).y).toBeLessThan(56);
 
+  // 1024–1199：#1708 側欄預設收合（tab 收進切換鈕），右欄出現、不再有頂部 bar
   await page.setViewportSize({ width: 1024, height: 800 });
+  await expect(page.getByTestId('sidebar-nav-trips')).toBeHidden();
+  await expect(page.getByRole('button', { name: '顯示側欄' }).last()).toBeVisible();
+  await expect(page.getByTestId('app-shell-bottom-nav')).toBeHidden();
+
+  // ≥1200：側欄展開，tab 直排
+  await page.setViewportSize({ width: 1280, height: 800 });
   const chat = await box(page.getByTestId('sidebar-nav-chat'));
   const trips = await box(page.getByTestId('sidebar-nav-trips'));
-  expect(trips.y).toBeGreaterThan(chat.y + 20); // 直排
+  expect(trips.y).toBeGreaterThan(chat.y + 20);
   expect((await box(page.getByTestId('desktop-sidebar'))).width).toBeLessThanOrEqual(217);
-  await expect(page.getByTestId('app-shell-bottom-nav')).toBeHidden();
 
   await page.setViewportSize({ width: 719, height: 800 });
   await expect(page.getByTestId('desktop-sidebar')).toBeHidden();
