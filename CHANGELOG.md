@@ -35,7 +35,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **剛載入行程時選的天不再被跳回**：網址帶 `#dayN` 或自動定位到今天時，初始定位會延後一個 frame 才切天；使用者若在這之前就點了別天，會被打回去。現在手動選過就不再套用初始定位。
 
 ### For contributors
-- CI mobile-safari 時紅時綠的四條 e2e（#1719）：右鍵選單與 Day 方向鍵兩組由上面兩個修正根治（Linux WebKit 容器、2 CPU 下：右鍵選單 175 次紅 9 次 → 0；Day 方向鍵 20 次紅 7 次 → 0）。分欄拖曳測試在 WebKit 跳過：e2e 擋掉 Google Maps 後右欄是可捲動的地圖錯誤遮罩，Linux WebKit 拖過可捲動區塊時不再送滑鼠事件（macOS WebKit 正常），拖曳邏輯由 chromium 覆蓋。
+- CI mobile-safari 時紅時綠的四條 e2e（#1719）：右鍵選單與 Day 方向鍵兩組由上面兩個修正根治（Linux WebKit 容器、2 CPU、不重試：四支 spec 修正前重複 3 次共 105 次紅 7 次，修正後重複 5 次共 175 次 0 紅；單看 Day 方向鍵 20 次紅 7 次 → 0）。分欄拖曳測試在 WebKit 跳過：e2e 擋掉 Google Maps 後右欄是可捲動的地圖錯誤遮罩，Linux WebKit 拖過可捲動區塊時不再送滑鼠事件（macOS WebKit 正常），拖曳邏輯由 chromium 覆蓋。
 
 ## [2.57.137] - 2026-11-14
 
