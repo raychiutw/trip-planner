@@ -28,6 +28,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 
+## [2.57.136] - 2026-11-14
+
+桌機 HIG 對齊與 Web／App 一致化（spec #1692；Web 與 App 不同處以 App 為準）。
+
+### Added
+- **桌機側欄整欄隱藏**：側欄標頭切換鈕（⌥⇧S），視窗 <1200px 自動收合、跨門檻重設手動偏好；收合時中欄推滿（#1708）。
+- **側欄「我的行程」分組與常駐過濾欄**：「進行中／即將出發」一組，「過去 · N」預設折疊；已封存不列入（#1709）。
+- **中欄與右欄可拖曳分隔線**：最小寬 400／360，方向鍵 ±2%、雙擊回 1:1，`role="separator"`（#1710）。
+- **720–1023px 寬版**：比照 App，頂部 root tab bar＋240px 行程清單欄、帳號在左下，不再用手機底部膠囊（#1713）。
+- **右鍵選單與 Delete 鍵**：timeline 列、行程卡、收藏卡、側欄行程（#1694、#1695）；收藏可用 ⌘／⇧ 點選多選（#1714）。
+- **全域快捷鍵** ⌥⌘F 搜尋、⌥⇧N 新增（#1697）；**分頁標題**依頁面與行程名稱（#1696）。
+- **行程清單桌機常駐搜尋欄**（工具列最左，觸控不顯示快捷鍵提示）（#1712）。
+
+### Changed
+- **選取樣式統一**：手機底部膠囊、Day tab、側欄選中改淡柔褐底＋深柔褐字＋實心圖示；聊天頁「聊天」為主、目前行程為次（ADR-0013，#1707）。
+- **帳號在桌機改為置中卡片**（560×720）（#1711）。
+- **以 App 為準**：聊天 Return 換行、⌘Return 送出（#1699）；Day tab「全部／Day N」，時間軸、新增景點、地圖眉標一律「Day 01」（#1700）；「行程」圖示改行李箱、手機帳號圓圈改線條人像（#1701）；深色柔褐改 `#D0A576`（#1702）。
+- 側欄點行程留在原本的 tab（#1693）；觸控大螢幕上原本 hover 才出現的控制項改常駐（#1698）。
+
+### For contributors
+- 斷點集中到 `src/lib/breakpoints.ts`（720／1024／1200）；分隔線邏輯抽成 `usePaneDivider`；`isEditableTarget` 移到 `src/lib`。
+
 ## [2.57.133] - 2026-11-08
 
 ### Fixed
