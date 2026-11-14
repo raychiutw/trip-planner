@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isEditableTarget } from './isEditableTarget';
 
 /**
  * 全域快捷鍵（桌機 HIG，#1697）。一律帶修飾鍵，避開瀏覽器保留鍵（⌘N/⌘W/⌘T…）；不做 ⌘Z（產品沒有 Undo）。
@@ -54,7 +55,10 @@ export function useGlobalShortcuts(): void {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.isComposing || e.repeat || e.defaultPrevented) return;
       const s = SHORTCUTS.find((x) => x.match(e));
-      if (s && runAction(s.action)) e.preventDefault();
+      if (!s) return;
+      // 不帶 ⌘/Ctrl 的組合（⌥⇧N 等）在 Mac 輸入框是特殊字元，輸入中不攔截。
+      if (!cmd(e) && isEditableTarget(e.target)) return;
+      if (runAction(s.action)) e.preventDefault();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

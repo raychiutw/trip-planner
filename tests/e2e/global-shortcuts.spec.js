@@ -28,6 +28,10 @@ test('行程清單：⌥⌘F 聚焦常駐搜尋、⌥⇧N 開新增行程', asyn
   await expect(page.getByTestId('trips-list-search-input')).toBeVisible();
   await page.keyboard.press(SEARCH);
   await expect(page.getByTestId('trips-list-search-input')).toBeFocused();
+  // ⌥⇧N 不帶 ⌘：焦點在輸入框時不攔截（Mac 特殊字元），先離開搜尋欄
+  await page.keyboard.press(NEW);
+  await expect(page).toHaveURL(/\/trips$/);
+  await page.getByTestId('trips-list-search-input').blur();
   await page.keyboard.press(NEW);
   await expect(page).toHaveURL(/\/trips\/new/);
 });

@@ -4,11 +4,8 @@
  */
 import { useEffect, useRef } from 'react';
 
-/** 輸入框、選單內保留原生行為（複製貼上、文字刪除、Shift+F10 等）；checkbox / radio 不算輸入框。 */
-export function isEditableTarget(t: EventTarget | null): boolean {
-  return t instanceof HTMLElement
-    && !!t.closest('input:not([type="checkbox"]):not([type="radio"]),textarea,select,[contenteditable="true"],[role="menu"]');
-}
+import { isEditableTarget } from '../lib/isEditableTarget';
+export { isEditableTarget };
 
 export function useContextMenuTrigger(
   targetRef: React.RefObject<HTMLElement | null> | undefined,
@@ -30,12 +27,12 @@ export function useContextMenuTrigger(
       openRef.current(e.clientX, e.clientY);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
+      if (e.isComposing || e.repeat || isEditableTarget(e.target)) return;
       if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
         e.preventDefault();
         const r = el.getBoundingClientRect();
         openRef.current(r.left + 16, r.top + r.height / 2);
-      } else if (e.key === 'Delete' && deleteRef.current) {
+      } else if (e.key === 'Delete' && deleteRef.current && !(e.target instanceof HTMLInputElement && e.target.type === 'checkbox')) {
         e.preventDefault();
         deleteRef.current();
       }
