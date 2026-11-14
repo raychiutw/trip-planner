@@ -75,6 +75,8 @@ const SCOPED_STYLES = `
 }
 .tp-notes-emergency-row:hover .tp-notes-emergency-grip,
 .tp-notes-emergency-row:focus-within .tp-notes-emergency-grip { opacity: 1; }
+/* 觸控（無 hover）沒有 hover 可觸發，grip 常駐（#1698） */
+@media (hover: none) { .tp-notes-emergency-grip { opacity: 1; } }
 .tp-notes-emergency-grip:active { cursor: grabbing; }
 .tp-notes-emergency-grip .svg-icon { width: 14px; height: 14px; }
 

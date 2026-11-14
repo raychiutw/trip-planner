@@ -3,7 +3,7 @@
  *
  * 淺色模式只剩一個棕 #8A6038：所有 accent 系列 token 與寫死色碼都是它，
  * 舊的裝飾色 #A97A4A、色塊上文字色 #7A5430 與 PWA／theme-color 的舊橘 #F47B5E 不得在 production 來源出現。
- * 深色模式的 accent（#CBA06E 一帶）維持原狀，不在本守門範圍。
+ * 深色模式比照 App 單一值 #D0A576（#1702），前景文字用 App 的 tintDeep #E5C39F，見檔尾第二個 describe。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -55,5 +55,39 @@ describe('web 品牌色單一值 #8A6038', () => {
     }
     expect(contrastRatio(BRAND, light('accent-subtle'))).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(BRAND, light('accent-bg'))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+/** 深色色票區塊：body.dark 中含 --color-accent: 的那個（排除 composite override 區塊）。 */
+const darkBlock = tokens.slice(tokens.indexOf('/* ===== Dark mode override')).match(/body\.dark\s*\{([\s\S]*?)\n\s{4}\}/)![1];
+const dark = (name: string) => darkBlock.match(new RegExp(`--color-${name}:\\s*(#[0-9A-Fa-f]{6})`))![1].toUpperCase();
+const DARK_TINT = '#D0A576';
+const DARK_TINT_DEEP = '#E5C39F';
+
+describe('web 深色品牌色對齊 App #D0A576（#1702）', () => {
+  it.each(['accent', 'accent-fill', 'accent-2', 'accent-3'])('深色 --color-%s 是 #D0A576', (name) => {
+    expect(dark(name)).toBe(DARK_TINT);
+  });
+
+  it.each(['accent-deep', 'accent-text', 'accent-text-on-tonal', 'accent-2-deep', 'accent-3-deep', 'focus-ring'])(
+    '深色前景 --color-%s 是 App 的 tintDeep #E5C39F', (name) => {
+      expect(dark(name)).toBe(DARK_TINT_DEEP);
+    });
+
+  it('舊深色值 #CBA06E／#E0BC90 不得殘留在 production 來源', () => {
+    const hits = sources.filter((f) => /#CBA06E|#E0BC90/i.test(readFileSync(f, 'utf8'))).map((f) => f.replace(ROOT + '/', ''));
+    expect(hits).toEqual([]);
+  });
+
+  it('對比：前景文字壓在深色底與 tonal 底 ≥ 4.5；填色鈕深字 ≥ 4.5；焦點框對頁面底 ≥ 3', () => {
+    for (const bg of ['background', 'secondary', 'accent-subtle', 'accent-bg']) {
+      expect(contrastRatio(dark('accent-text'), dark(bg)), `accent-text on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrastRatio(dark('accent-foreground'), dark('accent-fill'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(dark('focus-ring'), dark('background'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('焦點框與實心填色鈕要分得開（不得同值，否則 1.00:1）', () => {
+    expect(dark('focus-ring')).not.toBe(dark('accent-fill'));
   });
 });

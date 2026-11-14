@@ -100,7 +100,7 @@ function flatRules(css: string): Array<{ selector: string; body: string }> {
  * - 前綴 `(^|[;{\s])` 要求 color 前面是行首/分號/大括號/空白，才不會誤抓 `border-color`。
  * - 結尾 `\s*[,)]` 同時涵蓋 `var(--color-accent)` 與帶 fallback 的 `var(--color-accent, #A97A4A)`，
  *   也讓 `--color-accent-text` / `-deep` / `-subtle` 不被誤匹配（它們後面接的是 `-`）。
- * - `--color-accent-2` / `-3` 在 tokens.css 裡是**同一個 hex**（light `#A97A4A`、dark `#CBA06E`），
+ * - `--color-accent-2` / `-3` 在 tokens.css 裡是**同一個 hex**（light `#A97A4A`、dark `#D0A576`），
  *   三色系統退場後值被統一但 token 名保留給既有消費者。不一起擋等於前門上鎖後門開著。
  * - 硬編碼 hex 同理。
  */
