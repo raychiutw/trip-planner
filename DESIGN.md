@@ -483,6 +483,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **材質＝實底（#1689，owner 2026-11-13 簽核 B，取代先前 vibrancy 半透明毛玻璃）**：`background: var(--color-secondary)` + 右側 `1px solid var(--color-border)` 分隔線；不用半透明、不掛 `tp-glass`；寬度維持 216px、不做 icon rail。文字/hover/border 走主 app token → 自動 light/dark adapt。主導覽**不再**包 `--tabbar-*` 浮動框線卡片（該材質回歸只給手機底部膠囊）。
 - Active state ＝ `--color-accent-bg` tint 底 + 中性文字 `--color-foreground`（主導覽與我的行程項目皆同）；主導覽 icon 一律 `--color-accent`；inactive 文字走 `--color-muted`。
 - 「我的行程」分區標題是 disclosure button（`aria-expanded`，預設展開，摺疊狀態不持久化）；帳號列同時顯示姓名與信箱。
+- 「我的行程」清單（#1709，#1704 變體 A）：頂端常駐過濾欄（placeholder「搜尋行程名稱」，即時篩選）；單行列分兩組——「進行中／即將出發」（結束日 ≥ 今天或無日期，不折疊）與「過去」（可折疊、預設折疊、標題顯示筆數；過濾命中過去行程時自動展開）；已歸檔不列入。`.tp-trip-item` 帶 `flex-shrink:0` 避免列被壓扁。
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
 
