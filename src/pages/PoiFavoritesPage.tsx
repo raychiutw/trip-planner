@@ -442,6 +442,8 @@ export default function PoiFavoritesPage() {
   // ⇧-click 範圍選取的錨點：最近一次勾選／⌘-click 的卡片 id
   const anchorIdRef = useRef<number | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  /** 這次確認要刪的 id；與勾選狀態分開，單張刪除不動到使用者的多選。 */
+  const [deleteIds, setDeleteIds] = useState<number[]>([]);
   const [deleteFailureCount, setDeleteFailureCount] = useState(0);
   const [searchFilter, setSearchFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -513,6 +515,7 @@ export default function PoiFavoritesPage() {
     return filteredFavorites.slice(start, start + PAGE_SIZE);
   }, [filteredFavorites, usePagination, page]);
   const selectedFavorites = favorites.filter((row) => selectedIds.has(row.id));
+  const deleteRows = favorites.filter((row) => deleteIds.includes(row.id));
   const hiddenSelectedCount = selectedFavorites.length
     - visibleFavorites.filter((row) => selectedIds.has(row.id)).length;
 
@@ -557,20 +560,21 @@ export default function PoiFavoritesPage() {
     setRegionFilter('all');
   }
 
-  /** 右鍵 / Delete：卡片已在選取中就沿用整組選取，否則只選這一張（Finder 慣例）。 */
+  /** 右鍵 / Delete：卡片在選取集合內就刪整批，否則只刪這一張、不動選取（Finder 慣例）。 */
   function requestDeleteOne(id: number) {
     if (deletingSelected) return;
-    if (!selectedIds.has(id)) setSelectedIds(new Set([id]));
+    setDeleteIds(selectedIds.has(id) ? selectedFavorites.map((row) => row.id) : [id]);
     setDeleteFailureCount(0);
     setDeleteConfirmOpen(true);
   }
   function requestDeleteSelected() {
     if (selectedFavorites.length === 0 || deletingSelected) return;
+    setDeleteIds(selectedFavorites.map((row) => row.id));
     setDeleteFailureCount(0);
     setDeleteConfirmOpen(true);
   }
   async function handleDeleteSelected() {
-    const ids = selectedFavorites.map((row) => row.id);
+    const ids = deleteIds;
     if (ids.length === 0 || deletingSelected) return;
     setDeleteConfirmOpen(false);
     setDeletingSelected(true);
@@ -585,7 +589,8 @@ export default function PoiFavoritesPage() {
       const failed = results.filter((r) => !r.ok);
       const succeeded = new Set(results.filter((r) => r.ok).map((r) => r.id));
       setFavorites((prev) => prev.filter((row) => !succeeded.has(row.id)));
-      setSelectedIds(new Set(failed.map((r) => r.id)));
+      setSelectedIds((prev) => new Set([...prev].filter((x) => !succeeded.has(x))));
+      setDeleteIds(failed.map((r) => r.id));
       if (failed.length === 0) {
         showToast(`已移除 ${ids.length} 個收藏`, 'success', 2400);
       } else {
@@ -848,17 +853,17 @@ export default function PoiFavoritesPage() {
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        title={deleteFailureCount ? `${deleteFailureCount} 個收藏移除失敗` : '確定移除收藏？'}
+        title={deleteFailureCount ? `${deleteFailureCount} 個收藏移除失敗` : `確定移除 ${deleteRows.length} 筆收藏？`}
         message={deleteFailureCount
-          ? `以下 ${selectedFavorites.length} 個收藏尚未移除，請重試。已成功的項目不會重送。`
-          : `即將從收藏移除以下 ${selectedFavorites.length} 個景點。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
+          ? `以下 ${deleteRows.length} 個收藏尚未移除，請重試。已成功的項目不會重送。`
+          : `即將移除 ${deleteRows.length} 筆收藏（下列景點）。景點本身不會被刪除，之後仍可從搜尋或探索再次收藏；但這次移除無法復原。`}
         confirmLabel={deleteFailureCount ? '重試移除' : '移除'}
         busy={deletingSelected}
         onConfirm={handleDeleteSelected}
         onCancel={() => { setDeleteConfirmOpen(false); setDeleteFailureCount(0); }}
       >
         <ol className="favorites-delete-list" aria-label="將移除的收藏">
-          {selectedFavorites.map((row) => <li key={row.id}>{row.poiName}</li>)}
+          {deleteRows.map((row) => <li key={row.id}>{row.poiName}</li>)}
         </ol>
       </ConfirmModal>
     </div>

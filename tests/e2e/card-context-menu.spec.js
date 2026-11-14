@@ -118,11 +118,40 @@ test.describe('收藏卡', () => {
     await page.keyboard.press('Shift+F10');
     await expect(menu).toBeVisible();
     await page.keyboard.press('Escape');
-    await page.getByTestId('favorites-check-501').focus();
+    await page.getByTestId('favorites-add-to-trip-501').focus();
     await page.keyboard.press('Delete');
     const modal = page.getByTestId('confirm-modal');
     await expect(modal).toContainText('首里城');
     await expect(modal).not.toContainText('美麗海水族館');
+  });
+
+  test('焦點在卡內 checkbox 按 Delete 不觸發刪除', async ({ page }) => {
+    await withFavorites(page);
+    await page.goto('/favorites');
+    await page.getByTestId('favorites-check-501').focus();
+    await page.keyboard.press('Delete');
+    await expect(page.getByTestId('confirm-modal')).toHaveCount(0);
+  });
+
+  test('已多選時：卡在選取內整批移除並寫明筆數；不在選取內只移除該張且不動選取', async ({ page }) => {
+    await withFavorites(page);
+    await page.goto('/favorites');
+    await page.getByTestId('favorites-check-501').check();
+    await page.getByTestId('favorites-check-502').check();
+    await page.getByTestId('favorites-add-to-trip-501').focus();
+    await page.keyboard.press('Delete');
+    const modal = page.getByTestId('confirm-modal');
+    await expect(modal).toContainText('移除 2 筆');
+    await expect(modal).toContainText('美麗海水族館');
+    await page.keyboard.press('Escape');
+    await page.getByTestId('favorites-check-502').uncheck();
+    await page.getByTestId('favorites-card-502').click({ button: 'right', position: { x: 30, y: 20 } });
+    await page.getByTestId('favorites-menu-remove-502').click();
+    await expect(modal).toContainText('移除 1 筆');
+    await expect(modal).toContainText('美麗海水族館');
+    await expect(modal).not.toContainText('首里城');
+    await page.getByTestId('confirm-modal-cancel').click();
+    await expect(page.getByTestId('favorites-check-501')).toBeChecked();
   });
 });
 
