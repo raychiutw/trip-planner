@@ -95,7 +95,7 @@ const SCOPED_STYLES = `
   flex-shrink: 0; width: 100%; box-sizing: border-box; margin: 0 0 4px;
   padding: 6px 10px; border-radius: var(--radius-md);
   border: 1px solid var(--color-border); background: var(--color-background);
-  color: var(--color-foreground); font: inherit; font-size: var(--font-size-footnote);
+  color: var(--color-foreground); font: inherit; font-size: var(--font-size-body); /* iOS 聚焦 <16px 會放大 */
 }
 .tp-sidebar-trips-filter:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 1px; }
 .tp-sidebar-past-toggle { margin-top: 6px; }
