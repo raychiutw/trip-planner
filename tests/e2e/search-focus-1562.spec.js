@@ -18,7 +18,8 @@ for (const [vpName, vp] of [['手機 390', { width: 390, height: 844 }], ['桌�
       await page.emulateMedia({ colorScheme: /** @type {'light'|'dark'} */ (scheme) });
       await setupApiMocks(page);
       await page.goto('/trips');
-      await page.getByTestId('trips-list-search-toggle').click();
+      if (vp.width < 720) await page.getByTestId('trips-list-search-toggle').click(); // 桌機常駐（#1712）
+      else await page.getByTestId('trips-list-search-input').focus();
       const input = page.getByTestId('trips-list-search-input');
       await expect(input).toBeFocused();
       // 從輸入框 Shift+Tab 再 Tab 回來 = 真的用鍵盤 Tab 進搜尋框
