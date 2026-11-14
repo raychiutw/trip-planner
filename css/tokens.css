@@ -719,7 +719,7 @@ body.dark {
     }
     .tp-hero-chip {
         padding: 0; border: none;
-        font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
+        font-size: inherit; font-weight: inherit; letter-spacing: 0.04em; text-transform: none; /* Day 01 依 App 不轉大寫（#1692） */
         color: var(--color-accent-text-on-tonal); /* #1423：疊在 tonal 底時 accent-text 只有 4.28 */
     }
     .tp-hero-chip::after {

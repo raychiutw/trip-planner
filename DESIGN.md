@@ -98,7 +98,7 @@
 | `label` | 12px / 16px | 12px / 16px | 600 | 表單 label、metadata、chip label |
 | `sidebar-item` | 14px / 20px | n/a | 600 | Desktop sidebar nav |
 | `bottom-nav-label` | n/a | 11px / 14px | 700 | Compact bottom nav label |
-| `eyebrow` | 10px / 14px | 10px / 14px | 600 | 僅用於 uppercase label，例如 `DAY 01` |
+| `eyebrow` | 10px / 14px | 10px / 14px | 600 | uppercase label；`Day 01` 依 App 不轉大寫（#1692） |
 
 > **手機全域字級放大（owner 2026-07-24，v2.57.42）**：字級 token 全為 `rem`。`@media (max-width:760px)` 下 root `html { font-size: 106.25% }`（16→17px，iOS HIG body 標準）→ 上表 Compact 欄所有 rem 字級**等比放大 6.25%**（body 實得 17px、footnote 14.9px…）。`spacing`/`radius` 為 px 不受影響（版面不變、只有字變大）；輸入框仍 ≥16px（`max(16px,1em)` 以 1em=17px 計）不觸發 iOS 聚焦縮放。
 
@@ -484,6 +484,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - **材質＝實底（#1689，owner 2026-11-13 簽核 B，取代先前 vibrancy 半透明毛玻璃）**：`background: var(--color-secondary)` + 右側 `1px solid var(--color-border)` 分隔線；不用半透明、不掛 `tp-glass`；寬度維持 216px、不做 icon rail。文字/hover/border 走主 app token → 自動 light/dark adapt。主導覽**不再**包 `--tabbar-*` 浮動框線卡片（該材質回歸只給手機底部膠囊）。
 - Active state（#1707，ADR-0013）：**主導覽**＝`--color-accent-bg` 底 + `--color-selected-fg` 文字與實心 icon，未選 icon／文字 `--color-muted`；**我的行程目前項目為次**＝無底、`--color-foreground`、字重 700、左側 3px `--color-accent` 短條（聊天頁「聊天」為主、行程為脈絡；`/trips?selected=` 同理）。
 - 「我的行程」分區標題是 disclosure button（`aria-expanded`，預設展開，摺疊狀態不持久化）；帳號列同時顯示姓名與信箱。
+- 「我的行程」清單（#1709，#1704 變體 A）：頂端常駐過濾欄（placeholder「搜尋行程名稱」，即時篩選）；單行列分兩組——「進行中／即將出發」（結束日 ≥ 今天或無日期，不折疊）與「過去」（可折疊、預設折疊、標題顯示筆數；過濾命中過去行程時自動展開）；已歸檔不列入。`.tp-trip-item` 帶 `flex-shrink:0` 避免列被壓扁。
 - `/trip/:id/map` 與 `/trip/:id/stop/:eid/map` active item = 地圖；其他 `/trip/:id/*` active item = 行程。
 - 不和 page titlebar 重複放頁面說明文字。
 
@@ -1308,3 +1309,5 @@ email → user_id 完整切換。
 8. **Hairline over shadow** — 卡片區分優先用 1px border，shadow 只用在浮層（toast、sheet、dialog）。
 9. **Tabular numbers everywhere** — 時間、日期、stats 數字強制 `tabular-nums`。
 10. **無裝飾元素** — 不用 gradient、emoji、decorative SVG、rainbow 類型色；資訊本身是主角。
+
+> **#1692（2026-11-14）**：時間軸 DaySection 眉標寫 `Day 01`（依 App，不轉大寫）；手機 header 帳號圓圈為線條 person.crop.circle（透明底＋描邊圓＋人像線稿），不再是柔褐實心圓。
