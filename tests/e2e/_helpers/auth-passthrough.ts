@@ -18,6 +18,7 @@ const passthrough: AuthClient = {
   login: async () => { throw new Error('穿透 auth 不支援登入；要驗登入請用 playwright.newapi.config.js'); },
   refresh: async () => {},
   logout: async () => {},
+  getIdToken: () => null,
 };
 
 export const getNewApiBase = (): string => '';

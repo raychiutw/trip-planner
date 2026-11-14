@@ -16,6 +16,7 @@ import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { jsonData, typedApiRaw } from '../lib/api/typed';
 import { AuthError, getNewApiAuth } from '../lib/auth';
+import { resetCurrentUserCache } from '../lib/currentUserCache';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
 const SCOPED_STYLES = `
@@ -278,6 +279,7 @@ export default function LoginPage() {
   ): Promise<{ ok: true } | { ok: false; code: string; retryAfter: string | null }> {
     try {
       await getNewApiAuth().login(trimmedEmail, pwd);
+      resetCurrentUserCache(); // 換了身分：不可沿用登入前共享的使用者
       return { ok: true };
     } catch (err) {
       if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {

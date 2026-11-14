@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useCurrentUser } from '../../src/hooks/useCurrentUser';
 import { readAuthHint, writeAuthHint } from '../../src/lib/authHint';
+import { resetCurrentUserCache } from '../../src/lib/currentUserCache';
 
 const SAMPLE_USER = {
   id: 'uid-1',
@@ -217,17 +218,46 @@ describe('useCurrentUser', () => {
     expect(hooks[2].result.current.user).toEqual(SAMPLE_USER);
   });
 
-  it('dedup window does not survive a real microtask tick (no accidental long-lived cache)', async () => {
-    // Pins the invariant the header comment promises: the shared in-flight
-    // promise only lives for one microtask, so two mounts separated by even
-    // a single `await Promise.resolve()` must NOT dedup onto each other.
+  it('後 mount 的元件沿用已落定的結果（不再打第二次），登出清除後才重打（#1691）', async () => {
+    // 側邊欄比頁面晚一個 commit 才 mount；過去因此多打一次 userinfo，且 my-trips 被排在它後面。
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
-    renderHook(() => useCurrentUser());
-    await Promise.resolve();
-    renderHook(() => useCurrentUser());
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    const first = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(first.result.current.user).toEqual(SAMPLE_USER));
+    const later = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(later.result.current.user).toEqual(SAMPLE_USER));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    resetCurrentUserCache(); // 登出／重新登入
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ...SAMPLE_USER, id: 'uid-2' }), { status: 200 }));
+    const afterLogout = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(afterLogout.result.current.user?.id).toBe('uid-2'));
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('共享結果只存活有限時間（TTL），不是長效快取', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
+    );
+    const first = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(first.result.current.user).toEqual(SAMPLE_USER));
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now + 31_000);
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
+    const later = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(later.result.current.user).toEqual(SAMPLE_USER));
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('未登入（null）不進共享結果：登入後的下一個 mount 會重新確認', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: { code: 'AUTH_REQUIRED' } }), { status: 401 }),
+    );
+    const anon = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(anon.result.current.user).toBeNull());
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify(SAMPLE_USER), { status: 200 }));
+    const loggedIn = renderHook(() => useCurrentUser());
+    await waitFor(() => expect(loggedIn.result.current.user).toEqual(SAMPLE_USER));
   });
 
   it('a shared in-flight request that fails resolves every concurrent subscriber to null', async () => {

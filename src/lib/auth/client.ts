@@ -54,9 +54,11 @@ export interface AuthClient {
   logout(): Promise<void>;
   apiFetch(input: string | URL, init?: RequestInit): Promise<Response>;
   isAuthenticated(): boolean;
+  /** 最近一次 token 回應的 id_token（只在記憶體；顯示用，見 idToken.ts）。 */
+  getIdToken(): string | null;
 }
 
-interface TokenResponse { access_token: string; refresh_token: string; token_type: string }
+interface TokenResponse { access_token: string; refresh_token: string; token_type: string; id_token?: string }
 
 const defaultLock = <T>(fn: () => Promise<T>): Promise<T> => {
   const locks = (globalThis.navigator as Navigator | undefined)?.locks;
@@ -91,6 +93,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
 
   // ---- 只存在記憶體的狀態 ----
   let accessToken: string | null = null;
+  let idToken: string | null = null;
   let keyPairCache: CryptoKeyPair | null = null;
   let inflightRefresh: Promise<void> | null = null;
   let loggingOut = false;
@@ -99,6 +102,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
 
   async function clearLocal(): Promise<void> {
     accessToken = null;
+    idToken = null;
     keyPairCache = null;
     await storage.clear();
   }
@@ -184,6 +188,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     await storage.saveSession({ refreshToken: tokens.refresh_token, keyPair });
     keyPairCache = keyPair;
     accessToken = tokens.access_token;
+    idToken = tokens.id_token ?? null;
   }
 
   async function doRefresh(): Promise<void> {
@@ -204,6 +209,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     // 先存下輪替後的新 refresh token，再開放新 access token：舊的已經作廢，掉了就回不去
     await storage.saveRefreshToken(tokens.refresh_token);
     accessToken = tokens.access_token;
+    idToken = tokens.id_token ?? null;
   }
 
   function refresh(): Promise<void> {
@@ -260,5 +266,5 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     }
   }
 
-  return { login, refresh, restoreSession, logout, apiFetch, isAuthenticated: () => accessToken !== null };
+  return { login, refresh, restoreSession, logout, apiFetch, isAuthenticated: () => accessToken !== null, getIdToken: () => idToken };
 }

@@ -8,7 +8,11 @@
  * 真的在測認證的檔案（auth-new-api、new-api-wiring…）用 `vi.unmock('…/src/lib/auth')`／直接 import `lib/auth/client`，
  * 走真正的實作。這個 mock 只影響「入口」`src/lib/auth/index.ts` 的 getNewApiAuth／getNewApiBase。
  */
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
+import { resetCurrentUserCache } from '../src/lib/currentUserCache';
+
+// useCurrentUser 的共享結果是 module 層級；案例之間必須清掉，否則上一案的使用者／never-resolve 的請求會漏進下一案。
+beforeEach(() => resetCurrentUserCache());
 
 vi.mock('../src/lib/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/auth')>();
@@ -19,6 +23,7 @@ vi.mock('../src/lib/auth', async (importOriginal) => {
     login: async () => {},
     refresh: async () => {},
     logout: async () => {},
+    getIdToken: () => null,
   };
   return { ...actual, getNewApiAuth: () => passthrough, getNewApiBase: () => '' };
 });

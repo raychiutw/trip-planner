@@ -470,11 +470,12 @@ export default function AccountPage() {
     }
   }, [navigate]);
 
-  if (!auth.user || !user) return null;
+  // auth 還原中（或正要導去登入）：照常渲染殼層與骨架，不 return null（#1691）。骨架不含任何使用者資料。
+  const loaded = !!auth.user && !!user;
 
   // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
   // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。
-  const displayName = currentName || user.email.split('@')[0] || user.email;
+  const displayName = user ? currentName || user.email.split('@')[0] || user.email : '';
   const initial = displayName.charAt(0).toUpperCase();
 
   // v2.54.10「依設定分區三色」(mockup V1)：每組設定一色，由 group.tone 驅動 row icon chip。
@@ -520,10 +521,12 @@ export default function AccountPage() {
       <TitleBar title="帳號" />
       <div className="tp-account-inner">
         <section className="tp-account-hero" data-testid="account-hero">
-          <div className="tp-account-hero-avatar" aria-hidden="true">{initial}</div>
+          <div className="tp-account-hero-avatar" aria-hidden="true">{loaded ? initial : ''}</div>
           <div className="tp-account-hero-text">
             <div className="tp-account-hero-name-row">
-              {editingName ? (
+              {!loaded ? (
+                <span className="tp-account-skeleton" style={{ width: '8ch', height: 28 }} aria-hidden="true" />
+              ) : editingName ? (
                 <input
                   ref={nameInputRef}
                   type="text"
@@ -541,7 +544,7 @@ export default function AccountPage() {
                     }
                   }}
                   maxLength={50}
-                  placeholder={user.email.split('@')[0]}
+                  placeholder={user?.email.split('@')[0]}
                   disabled={savingName}
                   aria-label="編輯名稱"
                   data-testid="account-edit-name-input"
@@ -568,7 +571,9 @@ export default function AccountPage() {
                 </>
               )}
             </div>
-            <div className="tp-account-hero-email">{user.email}</div>
+            <div className="tp-account-hero-email">
+              {loaded ? user?.email : <span className="tp-account-skeleton" style={{ width: '16ch', height: 14 }} aria-hidden="true" />}
+            </div>
           </div>
           <div className="tp-account-hero-stats" role="group" aria-label="帳號統計" aria-busy={statsLoading}>
             {([
@@ -596,7 +601,8 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <div className="tp-account-groups">
+        {/* 還原前整塊 inert：骨架期間不可操作（登出、刪除帳號等） */}
+        <div className="tp-account-groups" inert={!loaded}>
         {groups.map((group) => (
           <section key={group.key} className="tp-account-group">
             <div className="tp-account-group-label" data-testid={`account-group-label-${group.key}`}>{group.label}</div>
@@ -640,7 +646,7 @@ export default function AccountPage() {
         ))}
         </div>
         {/* AI 資料同意（ADR-0012）：enforced=false 時整區不渲染 */}
-        <AiDataConsentSettings />
+        {loaded && <AiDataConsentSettings />}
 
         {/* 版本頁尾 —— 使用者回報問題時第一個要問的就是「你用哪一版」。
             值由 vite define 注入，與 Sentry release tag 同源（vite.config.ts），

@@ -9,7 +9,7 @@ const API = 3102;
 
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: /new-api-e2e\.spec\.js$/,
+  testMatch: /(new-api-e2e|cold-load-waterfall)\.spec\.js$/,
   timeout: 30000,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // 假 api 的狀態是全域的，測試之間靠 /__fake/reset 隔離，不能平行
