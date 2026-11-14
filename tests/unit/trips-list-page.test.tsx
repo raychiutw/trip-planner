@@ -81,8 +81,9 @@ function mockApi(_my: { tripId: string }[], all: Array<Record<string, unknown>>)
 
 const SAMPLE = [
   // mockup-parity-qa-fixes: API 透過 deepCamel() 回 camelCase；test mock 跟 prod response shape 一致
-  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, dayCount: 5, startDate: '2026-07-26', endDate: '2026-07-30', memberCount: 2 },
-  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 0, dayCount: 4, startDate: '2026-08-15', endDate: '2026-08-18', memberCount: 1 },
+  // 日期取遠未來：側欄 #1709 把已結束行程收進「過去」摺疊，固定近日會隨時間變紅
+  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, dayCount: 5, startDate: '2099-07-26', endDate: '2099-07-30', memberCount: 2 },
+  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 0, dayCount: 4, startDate: '2099-08-15', endDate: '2099-08-18', memberCount: 1 },
 ];
 
 describe('TripsListPage', () => {
@@ -407,7 +408,7 @@ describe('TripsListPage — owner-wide archive', () => {
     expect(fetcher.mock.calls.some(([path, init]) => String(path) === '/api/trips/okinawa/archive' && init?.method === 'PUT')).toBe(false);
     fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
-    expect(screen.getByTestId('sidebar-trip-okinawa')).toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-trip-okinawa')).not.toBeInTheDocument(); // #1709：已歸檔不列入側欄
     fireEvent.click(screen.getByTestId('trips-list-tab-archived'));
     await screen.findByTestId('trips-list-card-okinawa');
     fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
@@ -416,6 +417,7 @@ describe('TripsListPage — owner-wide archive', () => {
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).not.toBeInTheDocument());
     fireEvent.click(screen.getByTestId('trips-list-tab-all'));
     await screen.findByTestId('trips-list-card-okinawa');
+    expect(await screen.findByTestId('sidebar-trip-okinawa')).toBeInTheDocument();
   });
 
   it('does not expose archive to a collaborator, and failed mutation keeps the card', async () => {
