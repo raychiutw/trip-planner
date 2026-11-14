@@ -65,7 +65,7 @@ it('keeps profile available and labels stats unavailable when stats loading fail
   statsResponse = json({ error: { code: 'SYS_INTERNAL' } }, 503);
   showAccount();
   expect(await screen.findByText('Ray')).toBeVisible();
-  expect(await screen.findByRole('status')).toHaveTextContent('數據載入失敗');
+  expect(await screen.findByRole('alert')).toHaveTextContent('無法載入統計');
   const values = [...screen.getByTestId('account-hero').querySelectorAll('.tp-account-hero-stat-value')];
   expect(values.map((value) => value.textContent)).toEqual(['—', '—', '—']);
   expect(screen.getByTestId('account-row-delete-account')).toBeEnabled();

@@ -72,6 +72,17 @@ async function readErrorCode(res: Response): Promise<{ code: string; message: st
   return { code: 'UNKNOWN', message: `HTTP ${res.status}` };
 }
 
+/** 等 refresh 時對呼叫端的 signal 競速：abort 就以其原因 reject，但不取消 refresh 本身（single-flight 共用）。 */
+function refreshOrAbort(refresh: () => Promise<void>, signal?: AbortSignal | null): Promise<void> {
+  if (!signal) return refresh();
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener('abort', onAbort, { once: true });
+    refresh().then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 export function createAuthClient(opts: AuthClientOptions): AuthClient {
   const apiBase = opts.apiBase.replace(/\/+$/, '');
   const { storage } = opts;
@@ -218,7 +229,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
   async function apiFetch(input: string | URL, init: RequestInit = {}): Promise<Response> {
     const target = url(String(input));
     if (!accessToken) {
-      if (await storage.getRefreshToken()) await refresh();
+      if (await storage.getRefreshToken()) await refreshOrAbort(refresh, init.signal);
       else return failReauth('尚未登入');
     }
     const used = accessToken!;
@@ -226,7 +237,7 @@ export function createAuthClient(opts: AuthClientOptions): AuthClient {
     const first = await send(target, init, used, keyPair);
     if (first.status !== 401) return first;
     // 別的請求已經 refresh 過就直接重試，不再多輪替一次
-    if (accessToken === used) await refresh();
+    if (accessToken === used) await refreshOrAbort(refresh, init.signal);
     if (!accessToken) return failReauth('refresh 之後仍無 access token');
     return send(target, init, accessToken, (await getKeyPair())!);
   }

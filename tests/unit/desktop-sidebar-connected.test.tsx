@@ -46,7 +46,7 @@ describe('DesktopSidebarConnected', () => {
     expect(container.textContent).not.toContain('未登入');
   });
 
-  it('after fetch success renders user displayName (email row removed 2026-05-07)', async () => {
+  it('after fetch success renders user displayName + email row（#1689）', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
@@ -54,8 +54,8 @@ describe('DesktopSidebarConnected', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('My Name');
     });
-    // 2026-05-07：email 從 sidebar account card 移除（保留在 /account hero）
-    expect(container.textContent).not.toContain('me@example.com');
+    // #1689：帳號列同時顯示姓名與信箱（2026-05-07 的移除決定作廢）
+    expect(container.querySelector('.tp-account-email')?.textContent).toBe('me@example.com');
     expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeNull();
   });
 
@@ -66,8 +66,9 @@ describe('DesktopSidebarConnected', () => {
     const { container } = renderConnected();
     // displayName=null → email='me@example.com' → name='me' (local-part)，與 AccountPage hero 一致
     await waitFor(() => expect(container.textContent).toContain('me'));
-    // 不該再顯整 email
-    expect(container.textContent).not.toContain('me@example.com');
+    // 姓名欄是 local-part，完整 email 只出現在信箱欄
+    expect(container.querySelector('.tp-account-name')?.textContent).toBe('me');
+    expect(container.querySelector('.tp-account-email')?.textContent).toBe('me@example.com');
   });
 
   it('401 response → renders confirmed unauthed sidebar', async () => {

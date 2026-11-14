@@ -91,7 +91,6 @@ describe('毛玻璃面 module', () => {
 
 /** 每個玻璃面：class 掛在哪個檔、參數宣告在哪個檔（可能不同檔，例如 MapPage 的覆寫 → MapEntryCard 的 class）。 */
 const SITES: Array<{ name: string; classIn: string; paramsIn: string; alpha: string; filter: string }> = [
-  { name: 'DesktopSidebar', classIn: 'src/components/shell/DesktopSidebar.tsx', paramsIn: 'src/components/shell/DesktopSidebar.tsx', alpha: '72%', filter: 'blur(30px) saturate(180%)' },
   { name: 'StackPanelHeader', classIn: 'src/components/shell/StackPanelHeader.tsx', paramsIn: 'src/components/shell/StackPanelHeader.tsx', alpha: '88%', filter: 'blur(14px)' },
   { name: 'GooglePoiCard', classIn: 'src/components/trip/GooglePoiCard.tsx', paramsIn: 'src/components/trip/GooglePoiCard.tsx', alpha: '88%', filter: 'blur(20px) saturate(1.5)' },
   { name: 'MapEntryCard（參數在 MapPage）', classIn: 'src/components/trip/MapEntryCard.tsx', paramsIn: 'src/pages/MapPage.tsx', alpha: '88%', filter: 'none' }, // #1445 F6：卡片列不各自模糊（一次 N 層 blur）

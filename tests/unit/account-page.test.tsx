@@ -10,7 +10,7 @@
  *   - stats fetch /account/stats render values
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const apiFetchMock = vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>();
@@ -47,6 +47,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 import AccountPage from '../../src/pages/AccountPage';
+import { ApiError } from '../../src/lib/errors';
 
 function renderPage() {
   return render(
@@ -91,13 +92,38 @@ describe('AccountPage', () => {
     });
   });
 
-  it('stats 載入失敗 → 顯示「數據載入失敗」 status', async () => {
+  it('stats 非 ApiError（網路層）失敗 → 統計區警示列顯示「網路錯誤」文案與重試', async () => {
     apiFetchMock.mockReset();
     apiFetchMock.mockRejectedValue(new Error('boom'));
     renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/數據載入失敗/)).toBeTruthy();
-    });
+    const alert = await within(screen.getByRole('group', { name: '帳號統計' })).findByRole('alert');
+    expect(alert.textContent).toContain('網路錯誤，請稍後再試');
+    expect(alert.textContent).toContain('重試');
+  });
+
+  it('stats ApiError 失敗 → 統計區警示列顯示「無法載入統計」', async () => {
+    apiFetchMock.mockReset();
+    apiFetchMock.mockRejectedValue(new ApiError('SYS_INTERNAL', 500));
+    renderPage();
+    const alert = await within(screen.getByRole('group', { name: '帳號統計' })).findByRole('alert');
+    expect(alert.textContent).toContain('無法載入統計');
+  });
+
+  it('所有現有設定列都保留（以 origin/master 的列清單為準）', async () => {
+    apiFetchMock.mockReset();
+    apiFetchMock.mockImplementation(async (p) => (p === '/account' ? { hasPassword: true, tripsOwned: 1, collaboratorsAffected: 0 } : { tripCount: 0, totalDays: 0, collaboratorCount: 0 }));
+    renderPage();
+    const keys = {
+      application: ['appearance', 'notifications'],
+      collab: ['connected-apps', 'developer'],
+      account: ['change-password', 'sessions', 'privacy', 'logout', 'delete-account'],
+    };
+    await waitFor(() => expect(screen.getByTestId('account-row-change-password')).toBeTruthy());
+    for (const [group, rows] of Object.entries(keys)) {
+      const container = screen.getByTestId(`account-rows-${group}`);
+      for (const k of rows) expect(within(container).getByTestId(`account-row-${k}`)).toBeTruthy();
+      expect(container.querySelectorAll('[data-testid^="account-row-"]')).toHaveLength(rows.length);
+    }
   });
 
   it('render 3 group settings rows: 應用程式 / 共編 & 整合 / 帳號', () => {

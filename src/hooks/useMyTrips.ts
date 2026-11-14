@@ -18,6 +18,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { EVENT } from '../lib/events';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
+import { REQUEST_TIMEOUT_MS } from '../lib/requestTimeout';
 
 export interface MyTrip {
   tripId: string;
@@ -55,7 +56,7 @@ function refresh() {
   const request = ++requestId;
   state = { ...state, status: 'loading' };
   notify();
-  inflight = typedApi.get('/api/my-trips')
+  inflight = typedApi.get('/api/my-trips', { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
     .then((res) => {
       const data: unknown = unwrap(res);
       if (request !== requestId || owner !== ownerId) return;

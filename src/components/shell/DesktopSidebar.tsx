@@ -9,7 +9,7 @@
  *
  * Loading state：user / trips 還沒 resolve 時保持 neutral skeleton，避免 flicker。
  */
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import { getRememberedBranchLocation } from '../../lib/branchMemory';
@@ -20,10 +20,9 @@ import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
-  /* §10.3 vibrancy（owner 2026-07-19）：暖奶油半透明毛玻璃 — color-mix 主背景 + backdrop
-   * blur。走主 app token（--color-background/foreground/muted/hover/border）→ 自動
-   * light/dark adapt，取代舊固定深棕 --color-sidebar-* token（那組已無其他 consumer）。 */
-  --glass-alpha: 72%; --glass-filter: blur(30px) saturate(180%);   /* recipe：tokens.css 的 .tp-glass */
+  /* #1689（owner 2026-11-13 簽核 B）：macOS tint source list —— 實底 secondary（不半透明、
+   * 不 tp-glass）+ 右側 1px 分隔線；走主 app token → 自動 light/dark adapt。 */
+  background: var(--color-secondary);
   border-right: 1px solid var(--color-border);
   padding: 16px 12px 12px;
   display: flex; flex-direction: column;
@@ -41,25 +40,11 @@ const SCOPED_STYLES = `
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
-/* §10.1 primary nav（macOS sidebar 頂部 4-tab；桌機膠囊隱藏後的主導覽，
- * 與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS + isItemActive）。
- *
- * owner 2026-07-21（第二輪回報 #4）：這裡跟手機 GlobalBottomNav 的玻璃膠囊
- * 視覺不一致（那邊 tint+blur+rim+shadow 四件套，這裡完全沒有材質、只是純色
- * list item）。owner 要求共用 —— 不是重做一個新元件，是套用同一組已存在的
- * --tabbar-* token（GlobalBottomNav 已在用，見該檔 .tp-global-bottom-nav）。
- * 垂直列表跟水平膠囊的排列不同，但材質（半透明 tint + 高斯模糊 + 邊框 + 陰影）
- * 是同一套語言，這樣桌機側欄頂部跟手機底部膠囊才讀作「同一種 chrome」。 */
+/* §10.1 primary nav（macOS sidebar 頂部 4-tab，與 GlobalBottomNav 共用 PRIMARY_NAV_ITEMS +
+ * isItemActive）。#1689：不再包浮動框線卡片（tabbar 玻璃材質只給手機底部膠囊）。 */
 .tp-sidebar-nav {
   display: flex; flex-direction: column; gap: 2px;
   flex-shrink: 0; margin-bottom: 4px;
-  padding: 4px;
-  border-radius: var(--radius-lg);
-  background: var(--tabbar-tint);
-  backdrop-filter: var(--tabbar-filter);
-  -webkit-backdrop-filter: var(--tabbar-filter);
-  border: var(--tabbar-rim);
-  box-shadow: var(--tabbar-shadow);
 }
 .tp-sidebar-nav-item {
   display: flex; align-items: center; gap: 11px;
@@ -70,11 +55,10 @@ const SCOPED_STYLES = `
   min-height: 36px;
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
-.tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-accent); }
 .tp-sidebar-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
 .tp-sidebar-nav-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
-.tp-sidebar-nav-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
-.tp-sidebar-nav-item.is-active .svg-icon { color: var(--color-accent-foreground); }
+.tp-sidebar-nav-item.is-active { background: var(--color-accent-bg); color: var(--color-foreground); }
 
 .tp-sidebar-divider {
   height: 1px; background: var(--color-border);
@@ -82,12 +66,17 @@ const SCOPED_STYLES = `
 }
 
 .tp-sidebar-section-label {
-  padding: 0 8px; margin: 0 0 8px;
-  font-size: var(--font-size-caption2); font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 4px; width: 100%;
+  padding: 2px 8px; margin: 0 0 4px; min-height: 24px;
+  border: 0; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: var(--font-size-caption); font-weight: 600;
   color: var(--color-muted);
   flex-shrink: 0;
 }
+.tp-sidebar-section-label:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
+.tp-sidebar-section-label .svg-icon { width: 12px; height: 12px; transition: transform 150ms; transform: rotate(90deg); }
+.tp-sidebar-section-label[aria-expanded="false"] .svg-icon { transform: none; }
+.tp-sidebar-trips[hidden] { display: none; }
 .tp-sidebar-trips {
   display: flex; flex-direction: column; gap: 2px;
   overflow-y: auto; flex: 1; min-height: 0;
@@ -101,7 +90,7 @@ const SCOPED_STYLES = `
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
 .tp-trip-item:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-trip-item.is-active { background: var(--color-accent-fill); color: var(--color-accent-foreground); }
+.tp-trip-item.is-active { background: var(--color-accent-bg); color: var(--color-foreground); }
 .tp-sidebar-trips-empty {
   padding: 12px 8px; color: var(--color-muted);
   font-size: var(--font-size-footnote);
@@ -184,6 +173,10 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tp-account-card .tp-account-email {
+  font-size: var(--font-size-caption); color: var(--color-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 `;
 
 export interface SidebarUser {
@@ -211,12 +204,13 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
   const location = useLocation();
   const { pathname } = location;
   const navigate = useNavigate();
+  const [tripsOpen, setTripsOpen] = useState(true);
   const { openSheet } = useAccountSheet();
 
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-sidebar tp-glass" data-testid="desktop-sidebar">
+      <div className="tp-sidebar" data-testid="desktop-sidebar">
         <div className="tp-sidebar-brand">
           {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
         </div>
@@ -256,8 +250,17 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
         </nav>
         <div className="tp-sidebar-divider" />
 
-        <div className="tp-sidebar-section-label">我的行程</div>
-        <nav className="tp-sidebar-trips" aria-label="我的行程" data-testid="sidebar-trips">
+        <button
+          type="button"
+          className="tp-sidebar-section-label"
+          aria-expanded={tripsOpen}
+          aria-controls="sidebar-trips"
+          onClick={() => setTripsOpen((o) => !o)}
+        >
+          <Icon name="chevron-right" />
+          我的行程
+        </button>
+        <nav className="tp-sidebar-trips" id="sidebar-trips" hidden={!tripsOpen} aria-label="我的行程" data-testid="sidebar-trips">
           {tripsStatus === 'error' && trips === undefined ? (
             <div className="tp-sidebar-trips-empty" role="alert">載入行程失敗，請稍後再試</div>
           ) : trips === undefined ? (
@@ -314,6 +317,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
                   {displayName}
                 </div>
                 {/* 無障礙名稱 = 顯示名稱 + 後綴；不用 aria-label，否則 axe（WCAG 2.5.3）會把 aria-hidden 頭像的首字也算進可見文字而判不符。 */}
+                <div className="tp-account-email">{user.email}</div>
                 <span className="sr-only"> 帳號設定</span>
               </div>
             </Link>
