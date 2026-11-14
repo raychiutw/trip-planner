@@ -23,6 +23,7 @@ const PAGES: ReadonlyArray<[RegExp, string, boolean]> = [
   [/^\/trip\/[^/]+\/edit/, '編輯行程', true],
   [/^\/trip\/[^/]+\/add-stop/, '加入景點', true],
   [/^\/trip\/[^/]+\/add-entry/, '新增景點', true],
+  [/^\/trip\/[^/]+\/add-custom-stop/, '自訂景點', true],
   [/^\/trip\/[^/]+\/collab/, '共編', true],
   [/^\/trip\/[^/]+\/health/, '行程健檢', true],
   [/^\/trip\/[^/]+\/notes/, '筆記', true],
@@ -42,6 +43,12 @@ const PAGES: ReadonlyArray<[RegExp, string, boolean]> = [
   [/^\/s\//, '分享行程', false],
 ];
 
+/** 路徑 → [頁名, 是否帶行程名]；沒有對應回 null（標題退回 Tripline）。 */
+export function resolvePage(pathname: string): [string, boolean] | null {
+  const hit = PAGES.find(([re]) => re.test(pathname));
+  return hit ? [hit[1], hit[2]] : null;
+}
+
 export function useDocumentTitle() {
   const { pathname, search } = useLocation();
   const { user } = useCurrentUser();
@@ -54,9 +61,9 @@ export function useDocumentTitle() {
   const tripName = found ? (found.title || found.name) : '';
 
   useEffect(() => {
-    const hit = PAGES.find(([re]) => re.test(pathname));
+    const hit = resolvePage(pathname);
     if (!hit) { document.title = APP; return; }
-    const [, label, withTrip] = hit;
+    const [label, withTrip] = hit;
     document.title = `${label}${(withTrip || selectedTripId) && tripName ? ` · ${tripName}` : ''} — ${APP}`;
   }, [pathname, tripName, selectedTripId]);
 }
