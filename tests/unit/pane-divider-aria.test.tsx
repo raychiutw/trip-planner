@@ -37,3 +37,27 @@ describe('PaneDivider aria 範圍', () => {
     expect(sep.getAttribute('aria-valuenow')).toBe(sep.getAttribute('aria-valuemin'));
   });
 });
+
+describe('PaneDivider 指標行為', () => {
+  const press = (sep: Element, init: object) => {
+    sep.setPointerCapture = vi.fn();
+    fireEvent.pointerDown(sep, { pointerId: 1, clientX: 500, ...init });
+  };
+  it('非主鍵（右鍵）按下不進入拖曳', async () => {
+    mockWidths();
+    render(<AppShell sidebar={null} main={<div />} sheet={<div />} />);
+    const sep = await screen.findByRole('separator');
+    press(sep, { button: 2 });
+    expect(sep.getAttribute('data-dragging')).toBe('false');
+    press(sep, { button: 0 });
+    expect(sep.getAttribute('data-dragging')).toBe('true');
+  });
+  it('lostpointercapture 結束拖曳', async () => {
+    mockWidths();
+    render(<AppShell sidebar={null} main={<div />} sheet={<div />} />);
+    const sep = await screen.findByRole('separator');
+    press(sep, { button: 0 });
+    fireEvent.lostPointerCapture(sep, { pointerId: 1 });
+    expect(sep.getAttribute('data-dragging')).toBe('false');
+  });
+});

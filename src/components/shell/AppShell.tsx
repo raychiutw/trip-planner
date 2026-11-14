@@ -216,7 +216,8 @@ export const APP_SHELL_STYLES = `
     width: 3px;
     background: var(--color-accent);
   }
-  .app-shell-divider:focus-visible { outline: none; }
+  /* DESIGN.md 雙帶焦點環：外環 focus-ring + 內帶頁面底色（3px 線之外再加，不只靠變粗）。 */
+  .app-shell-divider:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
   /* rev2 §10.1（owner 2026-07-19）：桌機 primary nav 改回 macOS sidebar（DesktopSidebar
    * 頂部 4-tab）→ 桌機**隱藏**底部浮動膠囊。故無需膠囊置中，也無需為膠囊在 main 留
    * padding-bottom。手機（<720）維持底部膠囊常駐（見下方 max-width:719px 段）。 */
@@ -332,8 +333,6 @@ body.print-mode .app-shell-main {
   outline: none;
 }
 `;
-
-/** #1710 最小寬（owner 2026-11-14 簽核）：中欄 400／右欄 360；±2% 為鍵盤步進。 */
 
 export const APP_SHELL_LAYOUT_3PANE = '3pane';
 export const APP_SHELL_LAYOUT_2PANE = '2pane';

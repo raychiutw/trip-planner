@@ -28,7 +28,11 @@ export function usePaneDivider(mainRef: RefObject<HTMLElement | null>, sheetRef:
 
   // 側欄收合、視窗縮放都會改變兩欄總寬；ResizeObserver 不存在的環境退回 window resize。
   useLayoutEffect(() => {
-    const update = () => setTotal(measure());
+    const update = () => {
+      const t = measure();
+      setTotal(t);
+      if (t) { const b = paneBounds(t); setMainPct((p) => Math.min(Math.max(p, b.min), b.max)); }
+    };
     update();
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', update);
@@ -65,7 +69,7 @@ export function usePaneDivider(mainRef: RefObject<HTMLElement | null>, sheetRef:
     className: 'app-shell-divider',
     'data-testid': 'app-shell-divider',
     'data-dragging': dragging ? 'true' : 'false',
-    onPointerDown: (e: PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); },
+    onPointerDown: (e: PointerEvent<HTMLDivElement>) => { if (e.button !== 0) return; e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); },
     onPointerMove: (e: PointerEvent<HTMLDivElement>) => {
       if (!dragging || !mainRef.current) return;
       const t = measure();
@@ -74,6 +78,7 @@ export function usePaneDivider(mainRef: RefObject<HTMLElement | null>, sheetRef:
     },
     onPointerUp: () => setDragging(false),
     onPointerCancel: () => setDragging(false),
+    onLostPointerCapture: () => setDragging(false),
     onDoubleClick: () => setMainPct(50),
     onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
       const d = e.key === 'ArrowRight' ? KEY_STEP : e.key === 'ArrowLeft' ? -KEY_STEP : 0;
