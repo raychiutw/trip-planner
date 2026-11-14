@@ -9,6 +9,8 @@ import { useRef, type ReactNode } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { useRefreshRunner } from '../../contexts/RefreshContext';
 import { useSheetMode } from '../../contexts/SheetModeContext';
+import { useSidebarCollapsed } from '../../lib/sidebarCollapse';
+import SidebarToggle from './SidebarToggle';
 
 export const APP_SHELL_STYLES = `
 .app-shell {
@@ -172,6 +174,21 @@ export const APP_SHELL_STYLES = `
     grid-template-columns: var(--grid-2pane-desktop);
     grid-template-rows: 1fr;
   }
+  /* #1708 側欄整欄隱藏：第一欄寬度收成 0（推開內容，不做浮層）；sidebar 以 visibility 退出可見與 Tab 順序 */
+  .app-shell { transition: grid-template-columns 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .app-shell[data-sidebar-collapsed="true"][data-layout="3pane"] { grid-template-columns: 0px 1fr 1fr; }
+  .app-shell[data-sidebar-collapsed="true"][data-layout="2pane"] { grid-template-columns: 0px 1fr; }
+  .app-shell[data-sidebar-collapsed="true"] > .app-shell-sidebar {
+    visibility: hidden;
+    overflow: hidden;
+    transition: visibility 0s linear 220ms;
+  }
+  .app-shell[data-sidebar-collapsed="true"] { position: relative; }
+  .app-shell[data-sidebar-collapsed="true"] .app-shell-main .tp-titlebar { padding-left: 56px; }
+  .tp-sidebar-toggle.tp-sidebar-toggle-float {
+    position: absolute; top: 16px; left: 12px; z-index: 500;
+    background: var(--color-secondary); border: 1px solid var(--color-border);
+  }
   /* rev2 §10.1（owner 2026-07-19）：桌機 primary nav 改回 macOS sidebar（DesktopSidebar
    * 頂部 4-tab）→ 桌機**隱藏**底部浮動膠囊。故無需膠囊置中，也無需為膠囊在 main 留
    * padding-bottom。手機（<720）維持底部膠囊常駐（見下方 max-width:719px 段）。 */
@@ -184,6 +201,14 @@ export const APP_SHELL_STYLES = `
     display: none;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell { transition: none; }
+  .app-shell[data-sidebar-collapsed="true"] > .app-shell-sidebar { transition: none; }
+}
+.tp-sidebar-toggle.tp-sidebar-toggle-float { display: none; }
+@media (min-width: 1024px) { .tp-sidebar-toggle.tp-sidebar-toggle-float { display: grid; } }
+
 
 /* 寬版 720–1023px（#1713，owner 簽核 #1706 變體 A）：頂部全寬 bar（品牌＋4 個 root tab，
  * 由 DesktopSidebar 的 brand／nav 以 absolute 疊上去）＋左欄只放「我的行程」（240px）＋
@@ -305,6 +330,7 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   const { inSheet } = useSheetMode();
   const layout: AppShellLayout = (sheet || sheetPortalId) ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   const mainRef = useRef<HTMLElement>(null);
+  const sidebarCollapsed = useSidebarCollapsed();
   // owner 2026-07-20 起要求底部 tab「保持常駐，滾動不隱藏」——
   // 捲動隱藏的 navHidden / lastYRef 與其 scroll listener 已整個移除。
 
@@ -332,10 +358,11 @@ export default function AppShell({ sidebar, main, sheet, sheetPortalId, bottomNa
   return (
     <>
       <style>{APP_SHELL_STYLES}</style>
-      <div className="app-shell" data-layout={layout} data-has-bottom-nav={bottomNav ? 'true' : 'false'} data-testid="app-shell">
+      <div className="app-shell" data-layout={layout} data-has-bottom-nav={bottomNav ? 'true' : 'false'} data-sidebar-collapsed={sidebarCollapsed ? 'true' : 'false'} data-testid="app-shell">
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
         </aside>
+        {sidebarCollapsed && <SidebarToggle float />}
         <main
           ref={mainRef}
           className="app-shell-main"

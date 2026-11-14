@@ -5,7 +5,7 @@ import { useEffect } from 'react';
  *
  * 路由感知靠 DOM：頁面把「該動作的目標元素」標上 `data-shortcut="<action>"`（用 `shortcutAttrs`），
  * 沒標的頁面按了就不做事。新增快捷鍵 = 在 SHORTCUTS 加一列 + 把目標元素標上 attrs
- * （例：#1708 側欄切換鍵 `{ action: 'sidebar', keys: 'Alt+Shift+S', glyph: '⌥⇧S', match: … }`）。
+ * （例：`sidebar` ＝ #1708 側欄切換鈕）。
  *
  * 用 `e.code` 比對：Mac 上 Option 會把 `e.key` 變成 'ƒ'。
  * shortcut: Windows/Linux 以 Ctrl 取代 ⌘（Ctrl+Alt 在部分鍵盤等於 AltGr），有衝突再改鍵。
@@ -24,6 +24,7 @@ const cmd = (e: KeyboardEvent) => e.metaKey || e.ctrlKey;
 const SHORTCUTS: Shortcut[] = [
   { action: 'search', keys: 'Alt+Meta+F', glyph: '⌥⌘F', match: (e) => e.code === 'KeyF' && e.altKey && cmd(e) && !e.shiftKey },
   { action: 'new', keys: 'Alt+Shift+N', glyph: '⌥⇧N', match: (e) => e.code === 'KeyN' && e.altKey && e.shiftKey && !cmd(e) },
+  { action: 'sidebar', keys: 'Alt+Shift+S', glyph: '⌥⇧S', match: (e) => e.code === 'KeyS' && e.altKey && e.shiftKey && !cmd(e) },
 ];
 
 /** 目標元素的 props：標記動作 + 無障礙公告。 */
