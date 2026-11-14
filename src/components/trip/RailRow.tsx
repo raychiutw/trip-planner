@@ -13,6 +13,7 @@ import ConfirmModal from '../shared/ConfirmModal';
 import { showToast } from '../shared/Toast';
 import { useAutosave } from '../../hooks/useAutosave';
 import MarkdownText from '../shared/MarkdownText';
+import { useCanEditEntries } from '../../contexts/EntryEditAccessContext';
 import { useNavigate } from 'react-router-dom';
 import MapLinks from './MapLinks';
 import type { StopPoiOptionData, TimelineEntryData } from './TimelineEvent';
@@ -89,6 +90,8 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
   // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const headRef = useRef<HTMLDivElement>(null);
+  // #1695：沒有編輯權限（viewer / 匿名）不提供刪除；選單項與 Delete 鍵共用這一份判斷。
+  const canDelete = useCanEditEntries() && entryIdNum != null;
   const [deleting, setDeleting] = useState(false);
 
   // v2.33.108: note 改 auto-save — onBlur 立即 flush，Cmd+Enter 仍 flush。
@@ -290,7 +293,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
         : []),
     ],
     // 末組：刪除（destructive 紅，Apple 慣例獨立末組）
-    entryIdNum != null
+    canDelete
       ? [{ kind: 'item', label: '刪除景點', icon: 'trash', danger: true, testid: `timeline-rail-delete-${entry.id}`,
           onSelect: () => setShowDeleteConfirm(true) }]
       : [],
@@ -327,13 +330,6 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
           ref={headRef}
           className="tp-rail-head"
           onClick={handleHeadActivate}
-          onKeyDown={(e) => {
-            // #1694：Delete 開和選單「刪除景點」同一個確認框；輸入框內只刪字。
-            if (e.key !== 'Delete' || entryIdNum == null || sortMode) return;
-            if ((e.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) return;
-            e.preventDefault();
-            setShowDeleteConfirm(true);
-          }}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
           <span className="tp-rail-content">
@@ -397,6 +393,7 @@ export const RailRow = memo(function RailRow({ entry, index, expanded, onToggle,
                 label={entryDisplayTitle}
                 items={menuItems}
                 contextTargetRef={headRef}
+                onDeleteKey={canDelete && !sortMode ? () => setShowDeleteConfirm(true) : undefined}
                 testid={`timeline-rail-menu-${entry.id}`}
               />
             )}

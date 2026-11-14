@@ -31,6 +31,8 @@ export interface MyTrip {
   countries?: string | null;
   owner?: string;
   ownerUserId?: string | null;
+  /** 目前使用者在這個行程的角色（/api/my-trips 帶；viewer 不能改 entries，只有 owner 能刪行程）。 */
+  role?: 'owner' | 'member' | 'viewer';
   ownerDisplayName?: string | null;
   memberCount?: number;
   archivedAt?: string | null;
@@ -107,6 +109,11 @@ export function __clearMyTripsCache(): void {
  * @param userId auth gate and cache scope; 未登入不抓。
  * @returns `trips === undefined` = 尚未成功讀取；`[]` = 成功確認無行程。
  */
+/** 只有擁有者能刪行程、變更歸檔（旅伴不行）；選單項、右鍵與 Delete 鍵都走這一份判斷。 */
+export function isTripOwner(trip: MyTrip | undefined, userId: string | null | undefined): boolean {
+  return !!trip && (trip.role === 'owner' || (!!userId && trip.ownerUserId === userId));
+}
+
 export function useMyTrips(userId: string | null | undefined): MyTripsState {
   const current = useSyncExternalStore(subscribe, () => ownerId === userId ? state : PENDING, () => PENDING);
   useEffect(() => {

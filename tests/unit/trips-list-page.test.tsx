@@ -139,7 +139,8 @@ describe('TripsListPage', () => {
 
   it('刪除行程後已掛載的側欄同步移除該行程', async () => {
     __clearMyTripsCache();
-    let available = [...SAMPLE];
+    // 刪除行程 owner-only（#1695）：這筆要是自己的行程
+    let available = [{ ...SAMPLE[0], ownerUserId: 'u1' }, SAMPLE[1]];
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input);
       if (path === '/api/my-trips') return new Response(JSON.stringify(available), { status: 200 });

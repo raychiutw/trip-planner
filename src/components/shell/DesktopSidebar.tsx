@@ -9,13 +9,14 @@
  *
  * Loading state：user / trips 還沒 resolve 時保持 neutral skeleton，避免 flicker。
  */
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAccountSheet } from '../../contexts/AccountSheetContext';
 import { getRememberedBranchLocation } from '../../lib/branchMemory';
 import clsx from 'clsx';
 import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
+import TripCardMenu, { type TripCardMenuProps } from '../trip/TripCardMenu';
 import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
 
 const SCOPED_STYLES = `
@@ -184,6 +185,27 @@ export interface SidebarUser {
   email: string;
 }
 
+/** 行程列右鍵選單的動作（和行程卡 ⋯ 同一個 TripCardMenu）；回 null＝這列不開選單。 */
+export type SidebarTripMenu = (trip: MyTrip) => Omit<TripCardMenuProps, 'tripId' | 'contextTargetRef' | 'triggerless'> | null;
+
+function SidebarTripRow({ trip, active, menu }: { trip: MyTrip; active: boolean; menu: ReturnType<SidebarTripMenu> }) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  return (
+    <>
+      <Link
+        ref={ref}
+        to={`/trips?selected=${encodeURIComponent(trip.tripId)}`}
+        className={clsx('tp-trip-item', active && 'is-active')}
+        aria-current={active ? 'page' : undefined}
+        data-testid={`sidebar-trip-${trip.tripId}`}
+      >
+        {trip.name}
+      </Link>
+      {menu && <TripCardMenu tripId={trip.tripId} contextTargetRef={ref} triggerless {...menu} />}
+    </>
+  );
+}
+
 export interface DesktopSidebarProps {
   /** undefined = auth loading, null = confirmed unauthenticated */
   user?: SidebarUser | null | undefined;
@@ -194,9 +216,11 @@ export interface DesktopSidebarProps {
   activeTripId?: string | null;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
+  /** 行程列的右鍵 / Shift+F10 / Delete 選單（#1695）；不傳＝純導覽列。 */
+  tripMenu?: SidebarTripMenu;
 }
 
-export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId, brand, tripMenu }: DesktopSidebarProps) {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
   // v2.33.45 round 6b: Array.from CJK-safe slice。顯示字串同時是無障礙名稱的開頭（WCAG 2.5.3 Label in Name）。
   const nameChars = user ? Array.from(user.name) : [];
@@ -273,18 +297,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
             <div className="tp-sidebar-trips-empty">尚無行程</div>
           ) : (
             trips.map((t) => {
-              const active = t.tripId === activeTripId;
-              return (
-                <Link
-                  key={t.tripId}
-                  to={`/trips?selected=${encodeURIComponent(t.tripId)}`}
-                  className={clsx('tp-trip-item', active && 'is-active')}
-                  aria-current={active ? 'page' : undefined}
-                  data-testid={`sidebar-trip-${t.tripId}`}
-                >
-                  {t.name}
-                </Link>
-              );
+              return <SidebarTripRow key={t.tripId} trip={t} active={t.tripId === activeTripId} menu={tripMenu?.(t) ?? null} />;
             })
           )}
         </nav>

@@ -14,6 +14,52 @@ export type RailMenuItem =
       testid?: string;
     };
 
+/** 輸入框、選單內保留原生行為（複製貼上、文字刪除、Shift+F10 等）；checkbox / radio 不算輸入框。 */
+export function isEditableTarget(t: EventTarget | null): boolean {
+  return t instanceof HTMLElement
+    && !!t.closest('input:not([type="checkbox"]):not([type="radio"]),textarea,select,[contenteditable="true"],[role="menu"]');
+}
+
+/**
+ * 右鍵 / Shift+F10 / 選單鍵 / Delete 的共用綁定（#1694、#1695）：所有卡片的選單（RailRowMenu、TripCardMenu）
+ * 都走這一支，不各寫一套。`openAt` 收游標座標（鍵盤則為元素左側垂直置中）；`onDeleteKey` 沒傳＝沒有 Delete 行為。
+ */
+export function useContextMenuTrigger(
+  targetRef: React.RefObject<HTMLElement | null> | undefined,
+  openAt: (x: number, y: number) => void,
+  onDeleteKey?: () => void,
+) {
+  const openRef = useRef(openAt);
+  const deleteRef = useRef(onDeleteKey);
+  openRef.current = openAt;
+  deleteRef.current = onDeleteKey;
+  useEffect(() => {
+    const el = targetRef?.current;
+    if (!el) return;
+    const onCtx = (e: MouseEvent) => {
+      // 列內的連結保留瀏覽器原生選單；列本身就是連結（側欄行程列）則照開。
+      const link = (e.target as HTMLElement).closest('a[href]');
+      if (isEditableTarget(e.target) || (link && link !== el)) return;
+      e.preventDefault();
+      openRef.current(e.clientX, e.clientY);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+      if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
+        e.preventDefault();
+        const r = el.getBoundingClientRect();
+        openRef.current(r.left + 16, r.top + r.height / 2);
+      } else if (e.key === 'Delete' && deleteRef.current) {
+        e.preventDefault();
+        deleteRef.current();
+      }
+    };
+    el.addEventListener('contextmenu', onCtx);
+    el.addEventListener('keydown', onKey);
+    return () => { el.removeEventListener('contextmenu', onCtx); el.removeEventListener('keydown', onKey); };
+  }, [targetRef]);
+}
+
 /**
  * ⋯ context menu — rev2 mockup Section 02：把停留卡的動作從「展開明細一排 icon 鈕」
  * 收進單顆 ⋯（Apple 列表語彙，不在列上排 6 顆 icon）。
@@ -22,13 +68,17 @@ export type RailMenuItem =
  * z-index 戰爭）+ light-dismiss（點外面 / Esc 關閉 + 焦點歸還 trigger，免自寫 handler）。top-layer
  * 預設不跟 anchor 走，故開啟時（toggle→open）依 trigger rect 定位。
  */
-export function RailRowMenu({ menuId, label, items, testid, contextTargetRef }: {
+export function RailRowMenu({ menuId, label, items, testid, contextTargetRef, onDeleteKey, hideTrigger }: {
   menuId: string;
   label: string;
   items: RailMenuItem[];
   testid?: string;
   /** 給了就讓該元素支援右鍵 / Shift+F10 / 選單鍵從座標開同一個選單（#1694，行程卡、收藏卡等沿用）。 */
   contextTargetRef?: React.RefObject<HTMLElement | null>;
+  /** 給了就讓 contextTargetRef 內（非輸入框）按 Delete 呼叫它；沒權限時不要傳（右鍵與 Delete 同一份權限）。 */
+  onDeleteKey?: () => void;
+  /** 沒有常駐 ⋯（收藏卡）：只靠右鍵 / Shift+F10 開選單。 */
+  hideTrigger?: boolean;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -56,36 +106,17 @@ export function RailRowMenu({ menuId, label, items, testid, contextTargetRef }: 
     m.style.top = `${top}px`;
     m.style.left = `${left}px`;
   };
-  useEffect(() => {
-    const el = contextTargetRef?.current;
-    if (!el) return;
-    const openAt = (x: number, y: number) => {
-      pointRef.current = { x, y };
-      try { menuRef.current?.showPopover(); } catch { pointRef.current = null; /* 已開 / 不支援 */ }
-      positionMenu(); // 同步定位，避免 toggle 事件前閃在 (0,0)
-    };
-    // 輸入框內保留原生行為（複製貼上選單、Shift+F10 等）。
-    const inField = (t: EventTarget | null) => t instanceof HTMLElement && !!t.closest('input,textarea,select,[contenteditable="true"],[role="menu"]');
-    const onCtx = (e: MouseEvent) => {
-      if (inField(e.target) || (e.target as HTMLElement).closest('a[href]')) return;
-      e.preventDefault();
-      openAt(e.clientX, e.clientY);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (!((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') || inField(e.target)) return;
-      e.preventDefault();
-      const r = el.getBoundingClientRect();
-      openAt(r.left + 16, r.top + r.height / 2);
-    };
-    el.addEventListener('contextmenu', onCtx);
-    el.addEventListener('keydown', onKey);
-    return () => { el.removeEventListener('contextmenu', onCtx); el.removeEventListener('keydown', onKey); };
-  }, [contextTargetRef]);
+  useContextMenuTrigger(contextTargetRef, (x, y) => {
+    pointRef.current = { x, y };
+    try { menuRef.current?.showPopover(); } catch { pointRef.current = null; /* 已開 / 不支援 */ }
+    positionMenu(); // 同步定位，避免 toggle 事件前閃在 (0,0)
+  }, onDeleteKey);
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
+        style={hideTrigger ? { display: 'none' } : undefined}
         className="tp-rail-menu-trigger"
         popoverTarget={menuId}
         aria-haspopup="menu"

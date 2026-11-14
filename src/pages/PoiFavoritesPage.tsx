@@ -16,7 +16,7 @@
  *
  * 不含原 ExplorePage 的 search/region/heart toggle — 那些留在 /explore。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -24,6 +24,8 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import { RailRowMenu, type RailMenuItem } from '../components/trip/RailRowMenu';
+import { RAIL_MENU_STYLES } from '../components/trip/TimelineRail.styles';
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
 import AppShell from '../components/shell/AppShell';
@@ -334,6 +336,95 @@ const SCOPED_STYLES = `
 .favorites-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
+/** 收藏卡：自己持有 ref 給右鍵 / Shift+F10 / Delete（#1695）。選單沿用 RailRowMenu（沒有常駐 ⋯）。 */
+function FavoriteCard({ row, isSelected, deletingSelected, onToggle, onRequestDelete }: {
+  row: PoiFavoriteRow;
+  isSelected: boolean;
+  deletingSelected: boolean;
+  onToggle: (id: number) => void;
+  /** 對這張卡（已在選取中則對整組選取）開「移除收藏」確認。 */
+  onRequestDelete: (id: number) => void;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
+  const isDeleting = deletingSelected && isSelected;
+  const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
+  const canAct = !deletingSelected;
+  const items: RailMenuItem[] = canAct ? [
+    { kind: 'item', label: '加入行程', icon: 'plus', testid: `favorites-menu-add-${row.id}`, onSelect: () => navigate(`/favorites/${row.id}/add-to-trip`) },
+    { kind: 'sep' },
+    { kind: 'item', label: '移除收藏', icon: 'trash', danger: true, testid: `favorites-menu-remove-${row.id}`, onSelect: () => onRequestDelete(row.id) },
+  ] : [];
+  return (
+    <article
+      ref={ref}
+      className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
+      data-tone={poiTypeToTone(mapNominatimCategory(row.poiType))}
+      data-testid={`favorites-card-${row.id}`}
+      {...(isDeleting ? { 'aria-live': 'polite' } : {})}
+    >
+      <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(row.poiType)] ?? '景點'}</div>
+      <div className="poi-name">{row.poiName}</div>
+      {/* v2.31.19: backend poi-favorites SELECT 已含 rating（v2.31.17 補），
+        * card 跟 add-stop / change-poi favorites card 一致顯 ★ N.N · address。 */}
+      {(row.poiAddress || typeof row.poiRating === 'number') && (
+        <div className="poi-address">
+          {typeof row.poiRating === 'number' && (
+            <>
+              <span className="poi-rating">★ {row.poiRating.toFixed(1)}</span>
+              {row.poiAddress && <span className="poi-meta-sep"> · </span>}
+            </>
+          )}
+          {row.poiAddress}
+        </div>
+      )}
+      {usageCount > 0 && (
+        <div className="poi-usage-badge" data-testid={`favorites-usage-badge-${row.id}`}>
+          目前在 {usageCount} 個行程
+        </div>
+      )}
+      <div className="poi-actions">
+        {isDeleting ? (
+          <span className="poi-deleting-label">移除中…</span>
+        ) : (
+          <>
+            <label className="poi-select-label">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                disabled={deletingSelected}
+                onChange={() => onToggle(row.id)}
+                data-testid={`favorites-check-${row.id}`}
+                aria-label={`選取 ${row.poiName} 收藏`}
+              />
+              <span>{isSelected ? '已選' : '選取'}</span>
+            </label>
+            {deletingSelected ? <span className="poi-deleting-label">請稍候…</span> : (
+              <a
+                href={`/favorites/${row.id}/add-to-trip`}
+                className="poi-add-link"
+                data-testid={`favorites-add-to-trip-${row.id}`}
+              >
+                加入行程 →
+              </a>
+            )}
+          </>
+        )}
+      </div>
+      {items.length > 0 && (
+        <RailRowMenu
+          menuId={`fav-menu-${row.id}`}
+          label={row.poiName}
+          items={items}
+          contextTargetRef={ref}
+          onDeleteKey={() => onRequestDelete(row.id)}
+          hideTrigger
+        />
+      )}
+    </article>
+  );
+}
+
 export default function PoiFavoritesPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
@@ -439,6 +530,13 @@ export default function PoiFavoritesPage() {
     setRegionFilter('all');
   }
 
+  /** 右鍵 / Delete：卡片已在選取中就沿用整組選取，否則只選這一張（Finder 慣例）。 */
+  function requestDeleteOne(id: number) {
+    if (deletingSelected) return;
+    if (!selectedIds.has(id)) setSelectedIds(new Set([id]));
+    setDeleteFailureCount(0);
+    setDeleteConfirmOpen(true);
+  }
   function requestDeleteSelected() {
     if (selectedFavorites.length === 0 || deletingSelected) return;
     setDeleteFailureCount(0);
@@ -475,6 +573,7 @@ export default function PoiFavoritesPage() {
   const main = (
     <div className="favorites-shell">
       <style>{SCOPED_STYLES}</style>
+      <style>{RAIL_MENU_STYLES}</style>
       <TitleBar
         title="收藏"
         account={<AccountCircle />}
@@ -663,69 +762,16 @@ export default function PoiFavoritesPage() {
             ) : (
               <>
                 <div className="favorites-grid">
-                  {visibleFavorites.map((row) => {
-                    const isSelected = selectedIds.has(row.id);
-                    const isDeleting = deletingSelected && isSelected;
-                    const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
-                    return (
-                      <article
-                        className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
-                        key={row.id}
-                        data-tone={poiTypeToTone(mapNominatimCategory(row.poiType))}
-                        data-testid={`favorites-card-${row.id}`}
-                        {...(isDeleting ? { 'aria-live': 'polite' } : {})}
-                      >
-                        <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(row.poiType)] ?? '景點'}</div>
-                        <div className="poi-name">{row.poiName}</div>
-                        {/* v2.31.19: backend poi-favorites SELECT 已含 rating（v2.31.17 補），
-                          * card 跟 add-stop / change-poi favorites card 一致顯 ★ N.N · address。 */}
-                        {(row.poiAddress || typeof row.poiRating === 'number') && (
-                          <div className="poi-address">
-                            {typeof row.poiRating === 'number' && (
-                              <>
-                                <span className="poi-rating">★ {row.poiRating.toFixed(1)}</span>
-                                {row.poiAddress && <span className="poi-meta-sep"> · </span>}
-                              </>
-                            )}
-                            {row.poiAddress}
-                          </div>
-                        )}
-                        {usageCount > 0 && (
-                          <div className="poi-usage-badge" data-testid={`favorites-usage-badge-${row.id}`}>
-                            目前在 {usageCount} 個行程
-                          </div>
-                        )}
-                        <div className="poi-actions">
-                          {isDeleting ? (
-                            <span className="poi-deleting-label">移除中…</span>
-                          ) : (
-                            <>
-                              <label className="poi-select-label">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  disabled={deletingSelected}
-                                  onChange={() => toggleSelection(row.id)}
-                                  data-testid={`favorites-check-${row.id}`}
-                                  aria-label={`選取 ${row.poiName} 收藏`}
-                                />
-                                <span>{isSelected ? '已選' : '選取'}</span>
-                              </label>
-                              {deletingSelected ? <span className="poi-deleting-label">請稍候…</span> : (
-                                <a
-                                  href={`/favorites/${row.id}/add-to-trip`}
-                                  className="poi-add-link"
-                                  data-testid={`favorites-add-to-trip-${row.id}`}
-                                >
-                                  加入行程 →
-                                </a>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {visibleFavorites.map((row) => (
+                    <FavoriteCard
+                      key={row.id}
+                      row={row}
+                      isSelected={selectedIds.has(row.id)}
+                      deletingSelected={deletingSelected}
+                      onToggle={toggleSelection}
+                      onRequestDelete={requestDeleteOne}
+                    />
+                  ))}
                 </div>
 
                 {usePagination && (
