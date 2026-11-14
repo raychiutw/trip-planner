@@ -60,6 +60,8 @@ const SCOPED_STYLES = `
 }
 .tp-notes-pretrip-row:hover .tp-notes-pretrip-grip,
 .tp-notes-pretrip-row:focus-within .tp-notes-pretrip-grip { opacity: 1; }
+/* 觸控（無 hover）沒有 hover 可觸發，grip 常駐（#1698） */
+@media (hover: none) { .tp-notes-pretrip-grip { opacity: 1; } }
 .tp-notes-pretrip-grip:active { cursor: grabbing; }
 .tp-notes-pretrip-grip .svg-icon { width: 14px; height: 14px; }
 .tp-notes-pretrip-body { min-width: 0; }
