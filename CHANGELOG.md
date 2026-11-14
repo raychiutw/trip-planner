@@ -28,6 +28,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 
+## [2.57.139] - 2026-11-14
+
+### Fixed
+- **用舊連結 `/trip/:id` 打開行程不再重複抓資料（#1721）**：行程與每日資料原本各抓兩次（轉址前一次、轉址後一次，第一次的結果直接丟掉）。只做轉址的 `/trip/:tripId` 與 `/trip/:tripId/stop/:entryId` 移出 `TripLayout`，轉址前不再抓資料；mock 環境下行程出現時間約從 470ms 降到 200ms。
+
 ## [2.57.138] - 2026-11-14
 
 ### Fixed

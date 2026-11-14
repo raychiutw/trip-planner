@@ -54,7 +54,7 @@
 | `/trips/new` | NewTripPage | 已取證 | 2 | trips-new |
 | `/trip/:tripId` | TripLayout | 已取證 | 26 | trip-detail |
 | `map` | MapPage | 已取證（場景限制：地圖被擋，畫面是「地圖暫停服務」，不是真實地圖） | 19 | trip-map |
-| `stop/:entryId` | StopDetailRedirect | 已排除（轉址到 `/trips?selected=…&focus=…`，不是畫面） | 9 | — |
+| `/trip/:tripId/stop/:entryId` | StopDetailRedirect | 已排除（轉址到 `/trips?selected=…&focus=…`，不是畫面） | 9 | — |
 | `stop/:entryId/map` | MapPage | 缺口 | 0 | 無場景：與 `map` 同一元件，Google Maps 的 browser key 限制允許網址，localhost 一律 RefererNotAllowedMapError，場景只能拍到「地圖暫停服務」錯誤態，不是單點地圖的真實畫面；只能以真機或允許的網址取證 |
 | `print` | TripPrintPage | 已取證 | 1 | trip-print |
 | `edit` | EditTripPage | 已取證 | 9 | trip-edit |
