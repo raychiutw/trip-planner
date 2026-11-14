@@ -6,7 +6,7 @@
  * 1. ?day=all without entryId → TpMap receives focusId=undefined
  *    (so it fitBounds the whole trip, instead of flyTo the first pin)
  * 2. ?day=all → TpMap receives pinsByDay and dayNum=undefined
- * 3. handleTabClick — clicking 總覽 writes ?day=all; clicking DAY 02 writes ?day=2
+ * 3. handleTabClick — clicking 全部 writes ?day=all; clicking DAY 02 writes ?day=2
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -146,15 +146,15 @@ describe('MapPage overview runtime — handleTabClick URL sync', () => {
     tpMapCalls.length = 0;
   });
 
-  it('clicking 總覽 tab switches TpMap to overview props (pinsByDay set, dayNum undefined)', async () => {
+  it('clicking 全部 tab switches TpMap to overview props (pinsByDay set, dayNum undefined)', async () => {
     const { getByText } = await mountMapPage('/trip/test-trip/map?day=1');
     // Initially single-day
     const initial = tpMapCalls[tpMapCalls.length - 1]!;
     expect(initial.dayNum).toBe(1);
     expect(initial.pinsByDay).toBeUndefined();
 
-    // Click 總覽 tab
-    fireEvent.click(getByText('總覽'));
+    // Click 全部 tab
+    fireEvent.click(getByText('全部'));
 
     // After click: TpMap should now receive overview props
     const after = tpMapCalls[tpMapCalls.length - 1]!;
@@ -168,7 +168,7 @@ describe('MapPage overview runtime — handleTabClick URL sync', () => {
     expect(tpMapCalls[tpMapCalls.length - 1]!.pinsByDay).toBeInstanceOf(Map);
 
     // Click DAY 2
-    fireEvent.click(getByText(/DAY 2\b/i));
+    fireEvent.click(getByText(/Day 2\b/i));
 
     const after = tpMapCalls[tpMapCalls.length - 1]!;
     expect(after.pinsByDay).toBeUndefined();

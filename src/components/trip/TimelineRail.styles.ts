@@ -298,7 +298,8 @@ export const RAIL_MENU_STYLES = `
   .tp-rail-menu-trigger[aria-expanded="true"] { opacity: 1; }
 }
 .tp-rail-menu-trigger:focus-visible { opacity: 1; outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
-@media (hover: none) { .tp-rail-menu-trigger { opacity: 0.65; } }
+/* 觸控（無 hover）常駐：#1698，觸控大螢幕仍走桌機版 */
+@media (hover: none) { .tp-rail-menu-trigger { opacity: 1; } }
 
 /* ⋯ menu：原生 Popover API（top-layer 自動逃離 .tp-rail-content overflow:hidden、
  * light-dismiss 免自寫）。top-layer 不隨 anchor → 開啟時 JS 依 trigger rect 設 top/left。 */
