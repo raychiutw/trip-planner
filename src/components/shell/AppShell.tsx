@@ -176,6 +176,8 @@ export const APP_SHELL_STYLES = `
   }
   /* #1708 側欄整欄隱藏：第一欄寬度收成 0（推開內容，不做浮層）；sidebar 以 visibility 退出可見與 Tab 順序 */
   .app-shell { transition: grid-template-columns 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  /* #1710：3-pane 的欄比例會被分隔線即時改動（拖曳／方向鍵／雙擊），不能被 220ms 過場拖著跑 */
+  .app-shell[data-layout="3pane"] { transition: none; }
   .app-shell[data-sidebar-collapsed="true"][data-layout="3pane"] { grid-template-columns: 0px var(--grid-3pane-rest, 1fr 1fr); }
   .app-shell[data-sidebar-collapsed="true"][data-layout="2pane"] { grid-template-columns: 0px 1fr; }
   .app-shell[data-sidebar-collapsed="true"] > .app-shell-sidebar {
