@@ -1,7 +1,7 @@
 /**
  * AccountCircle — rev2 手機統一 header 右上帳號圓圈（owner 2026-07-17 mockup `.ph-avatar`）。
  *
- * 手機四個根 tab 頁（聊天/行程/地圖/收藏）的 header 右上顯示帳號圓圈（首字母）→ /account；
+ * 手機四個根 tab 頁（聊天/行程/地圖/收藏）的 header 右上顯示帳號圓圈（人像圖示，比照 App；#1701）→ /account；
  * 匿名 → 登入 icon → /login。桌機帳號入口是 sidebar 左下 chip → 本元件 CSS 桌機隱藏
  * （≥1024）。搭配底部 nav 由 5-tab 降 4-tab（帳號移出 tab slot）。
  */
@@ -58,8 +58,6 @@ export default function AccountCircle() {
     );
   }
 
-  const source = (user.displayName || user.email || '?').trim();
-  const letter = (source[0] || '?').toUpperCase();
   return (
     <>
       <style>{ACCOUNT_CIRCLE_STYLES}</style>
@@ -71,7 +69,7 @@ export default function AccountCircle() {
         data-testid="titlebar-account"
         onClick={() => openSheet(location)}
       >
-        <span className="tp-account-circle-avatar">{letter}</span>
+        <span className="tp-account-circle-avatar"><Icon name="nav-account" /></span>
       </Link>
     </>
   );

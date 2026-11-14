@@ -29,7 +29,7 @@ const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
 export const PRIMARY_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { key: 'chat',      label: '聊天', href: '/chat',      icon: 'nav-chat',  matchPrefixes: ['/chat'] },
-  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-trips', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'nav-suitcase', matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',       label: '地圖', href: '/map',       icon: 'nav-map',   matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'favorites', label: '收藏', href: '/favorites', icon: 'nav-fav',   matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
   // 帳號不在 tab（HIG 4-tab，grill v2 owner 2026-07-23，supersede #1120 五-tab）：
@@ -59,6 +59,18 @@ export function scrollBranchToTop(): void {
     (el) => el.scrollTop > 0,
   );
   for (const el of targets) el.scrollTo({ top: 0, behavior });
+}
+
+/**
+ * 切換 active trip 後要去哪頁（桌機側欄與 trip switcher 共用的唯一判斷）：
+ * 聊天 → 留在 /chat（對話跟著 active trip 換）、地圖 → 該行程地圖、其他 → 行程詳情。
+ */
+export function tripDestination(pathname: string, tripId: string): string {
+  const id = encodeURIComponent(tripId);
+  const key = PRIMARY_NAV_ITEMS.find((item) => isItemActive(pathname, item))?.key;
+  if (key === 'chat') return '/chat';
+  if (key === 'map') return `/trip/${id}/map`;
+  return `/trips?selected=${id}`;
 }
 
 export function isItemActive(pathname: string, item: NavItem): boolean {

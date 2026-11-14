@@ -17,7 +17,8 @@ import clsx from 'clsx';
 import type { MyTrip, MyTripsState } from '../../hooks/useMyTrips';
 import Icon from '../shared/Icon';
 import TripCardMenu, { type TripCardMenuProps } from '../trip/TripCardMenu';
-import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop } from './navItems';
+import { PRIMARY_NAV_ITEMS, isItemActive, scrollBranchToTop, tripDestination } from './navItems';
+import { useActiveTrip } from '../../contexts/ActiveTripContext';
 
 const SCOPED_STYLES = `
 .tp-sidebar {
@@ -188,14 +189,15 @@ export interface SidebarUser {
 /** 行程列右鍵選單的動作（和行程卡 ⋯ 同一個 TripCardMenu）；回 null＝這列不開選單。 */
 export type SidebarTripMenu = (trip: MyTrip) => Omit<TripCardMenuProps, 'tripId' | 'contextTargetRef' | 'triggerless'> | null;
 
-function SidebarTripRow({ trip, active, menu }: { trip: MyTrip; active: boolean; menu: ReturnType<SidebarTripMenu> }) {
+function SidebarTripRow({ trip, active, menu, to, onOpen }: { trip: MyTrip; active: boolean; menu: ReturnType<SidebarTripMenu>; to: string; onOpen: () => void }) {
   const ref = useRef<HTMLAnchorElement>(null);
   return (
     <>
       <Link
         ref={ref}
-        to={`/trips?selected=${encodeURIComponent(trip.tripId)}`}
+        to={to}
         className={clsx('tp-trip-item', active && 'is-active')}
+        onClick={onOpen}
         aria-current={active ? 'page' : undefined}
         data-testid={`sidebar-trip-${trip.tripId}`}
       >
@@ -230,6 +232,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
   const navigate = useNavigate();
   const [tripsOpen, setTripsOpen] = useState(true);
   const { openSheet } = useAccountSheet();
+  const { setActiveTrip } = useActiveTrip();
 
   return (
     <>
@@ -297,7 +300,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
             <div className="tp-sidebar-trips-empty">尚無行程</div>
           ) : (
             trips.map((t) => {
-              return <SidebarTripRow key={t.tripId} trip={t} active={t.tripId === activeTripId} menu={tripMenu?.(t) ?? null} />;
+              return <SidebarTripRow key={t.tripId} trip={t} active={t.tripId === activeTripId} menu={tripMenu?.(t) ?? null} to={tripDestination(pathname, t.tripId)} onOpen={() => setActiveTrip(t.tripId)} />;
             })
           )}
         </nav>

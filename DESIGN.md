@@ -276,6 +276,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - 這是**聊天專用**的角色色，不重啟已退場的 sage／pink 三色系統（V3 三色退場，v2.55.88）；靛藍 token 在 `css/tokens.css` 的 plain `:root`／`body.dark`。時間行只剩時間（名稱已搬到氣泡上方）。
 - 為什麼改：V3 三色退場把 `--color-accent-2-bg` 與 `--color-accent-3-bg` 收斂成同值，原本靠它們區分 AI 與旅伴的頭像變成同色；owner 2026-11-07 指示「不用頭像，比照 App」。`tests/unit/chat-role-colors-distinct.test.ts` 把 token 展開成實際色值，三種氣泡底色與三種標籤色都必須兩兩不同，且自己與 AI 的氣泡色差要夠大（RGB 差總和 ≥ 24，擋住「值不同但看起來一樣」）。
 - **聊天底部材質**：訊息區延伸到螢幕底，輸入 dock（`.tp-chat-dock` ＝ 擁有者授權提示條 ＋ composer〔`.tp-glass`〕）與手機 tab 膠囊浮在訊息上面；訊息區底部留白 = dock 高度（含提示條；ResizeObserver 量測，`--chat-composer-h`）+ `--nav-overlay-h` + safe-area。dock 長高（textarea 多行、提示條出現）時，若使用者本來就在底部，捲動位置會重新釘回底部，最新一則不會被蓋住；「跳到最新」按鈕以 dock 為定位容器，在提示條之上。玻璃要有東西可折射——曾經因為用 padding 把訊息擋在輸入列上方，底下只剩純色，blur 數值都對卻看起來是實心。`tests/e2e/chat-composer-glass.spec.js` 驗訊息區真的延伸到 composer 底下、留白隨輸入長高並涵蓋提示條、長高後仍貼底、手機上 composer 在膠囊之上、提示條貼在 composer 上方。
+- **聊天送出鍵（#1699，比照 App）**：輸入框 Return 換行，⌘Return（Windows／Linux 為 Ctrl+Return）送出；IME 組字中的 Return 不送出；送出鈕行為不變。取代舊的「Enter 送出、Shift+Enter 換行」。`tests/e2e/chat-composer-keys.spec.js` 驗證。
 
 **AI 聊天捲動（#1209，owner 核准 A）**：離底部 >80px 時，在 composer 上方 12px、聊天欄置中顯示 44×44px 中性描邊向下箭頭；≤80px 隱藏。按箭頭使用原生平滑捲動，減少動態效果時立即捲動。回到底部的邊界只刷新最新五筆一次；刷新 spinner／失敗重試佔用箭頭位置。距頂 ≤80px 載入較早訊息時，頂部中央以不改變訊息高度的 sticky 狀態顯示載入／失敗重試。獨立與嵌入聊天共用規則。五態原型：[Cloudflare preview](https://59a64497.trip-planner-dby.pages.dev/prototype-1209-chat-scroll.html)。
 
@@ -347,9 +348,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 ### Unified App Shell
 > **⚠️ rev2 owner 2026-07-19（桌機 macOS sidebar，§10.1；mockup `docs/design-sessions/2026-07-19-rev2-desktop-macos-sidebar.html` sign-off）**：桌機 primary nav（聊天/行程/地圖/收藏）**搬回左欄 sidebar 頂部**（macOS Music/Mail 形制），**桌機隱藏底部浮動玻璃膠囊**（`AppShell` @≥1024 `.app-shell-bottom-nav display:none`）。sidebar 結構＝品牌 → **4-tab 主導覽** → 「我的行程」清單 → 帳號 chip 左下。**sidebar 材質改 vibrancy 半透明毛玻璃**（暖奶油：`color-mix(--color-background 72%)` + `backdrop-filter: blur(30px)`，走主 app token 自動 light/dark adapt，取代舊固定深棕 `--color-sidebar-*`）〔2026-11-13 更正：材質已改實底 tint source list（#1689），現行描述見 §Desktop Sidebar〕。primary IA + active 判定抽到 `navItems.ts` 單一來源（`GlobalBottomNav` 手機膠囊 + `DesktopSidebar` 共用，無漂移）。三欄 grid `216px 1fr 1fr`（`--grid-3pane-desktop`）。
 - **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 —— **4-tab**（單一來源 `navItems.ts` `PRIMARY_NAV_ITEMS`，手機膠囊與桌機 sidebar 共用）。**帳號移出 tab slot**：手機 header 右上 `person.crop.circle` 圓圈 → 開有自己 Navigation Stack 的 **Account sheet**（關閉回原頁原狀態、deep-link 相容）；桌機 sidebar 左下 account chip → 同 Account sheet／popover。**桌機（≥1024）：primary nav 在左欄 sidebar 頂部**（§10.1，另有「我的行程」清單與左下 account chip）；**手機（<1024）：底部浮動玻璃膠囊**（`GlobalBottomNav`）。
-  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
+  - ✅ **帳號入口＝Account sheet（2026-07-23 grill v2 owner 拍板，鏡像 app #82）**：帳號**移出 tab**（4-tab），改 header `person.crop.circle` 圓圈 → Account sheet。圓圈內是人像圖示（`nav-account`，比照 App，不再顯示姓名首字），可及名稱維持「帳號」；桌機 sidebar 帳號列仍顯示姓名與信箱。「行程」root tab 圖示是行李箱（`nav-suitcase`，描邊；`nav-suitcase-fill` 實心版供選取樣式用，2026-11-14 #1701，比照 App），不再是房子。**此決策 supersede 同日稍早 #1120 的「帳號保留第 5 tab」裁定** —— owner 於 grill v2 選定 app #82 的 4-tab + sheet 模型（profile-circle 慣例、釋出 tab slot）。〔實作（W1）：`navItems.ts` 移除 `account` item（5→4）；`AccountCircle` 從導向 `/account` 改為開 Account sheet 容器（自有 nav stack）；圓圈 hit area 放大到 44 CSS px（原視覺尺寸 30×30 過小）。桌機 sidebar 左下 chip 同步指向 sheet。〕
 - **Operation drill-down（rev2，v2.55.97）:** 操作頁（見上 Operation stacking）桌機右欄 panel + **手機全頁下鑽**都用共用 `StackPanelHeader`（`‹` 前一頁 / `✕` 整個關閉，iOS Apple One `.dd-top`），非 TitleBar。完成鈕走標題列右側：`StackPanelHeader` 有右側 primary action slot（`primaryAction`，放在 `✕` 之前），見「Form Pages > 表單頁主要動作」。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`；history-aware fallback `/favorites`。
-- **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（實底 tint source list，#1689：品牌 → 4-tab 主導覽 → 可摺疊的我的行程清單 → 帳號列左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。
+- **Desktop shell（rev2 §10.1）:** 三欄 `216px 1fr 1fr` — 左欄 **macOS sidebar**（實底 tint source list，#1689：品牌 → 4-tab 主導覽 → 可摺疊的我的行程清單 → 帳號列左下）｜ 中欄行程 ｜ 右欄地圖 + 堆疊面板；**桌機無底部膠囊**（primary nav 在 sidebar）。 **側欄點行程（#1693）**：留在目前的 root tab——聊天→`/chat` 換成該行程的對話、地圖→該行程地圖、其他→行程詳情；判斷集中在 `navItems.ts` 的 `tripDestination`，與地圖頁 trip switcher 共用。
 - **子頁 toolbar 返回（rev2 §10.5）:** collab / explore 等從某頁進入的子頁，`TitleBar` 用 `backLabelVisible` → macOS toolbar 式「`‹` <backLabel>」可見文字返回（chevron + `--color-accent-text` 文字，`.tp-titlebar-back--labeled`；實作用同值的 `--color-accent-deep`）；行程詳情維持 icon-only 44×44 back（`backLabelVisible` 預設 false）。
 - **表單頁桌機版面（§10.4，帳號頁於 2026-11-13 改版；原 2026-07-19「hero 收窄置中、設定兩欄」作廢）:** account 桌機採**版面 A**——單欄；個人卡橫式（頭像、姓名信箱、三項統計）與各設定分區（含「帳號」群組）垂直堆疊、**同一個容器寬度**；容器 `max-width: 1040px`（Content Width，不新增 token）並填滿，視窗 ≥1440 不再攤開、<1440 隨視窗縮，手機仍直式單欄。統計區三態：載入中＝骨架（`aria-busy`、視覺隱藏「統計載入中」）、失敗＝統計區內的警示列＋「重試」、成功＝數字；統計與「我的行程」清單請求有 15 秒逾時（逾時轉失敗態）。new-trip 桌機加寬（線性表單不 full-bleed）。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。**底部 tab 常駐，捲動不隱藏**（owner 2026-07-20 / 07-21 兩次要求；捲動隱藏的 scroll-direction 邏輯已於 2026-07-21 整個移除，見 `AppShell.tsx:232`）。**唯一例外：手機軟鍵盤彈出時收起 root tab**（Apple HIG，v2.57.41）——`useKeyboardInset`（app root 全站掛一次）偵測 visualViewport inset > 120px（過濾 Safari URL bar 顯隱）→ documentElement 掛 `data-kb-open` → CSS 把浮動膠囊往下滑出畫面；鍵盤收起沿 transition 滑回。**底部互動元件讓位**：聊天 composer / 地圖 POI 卡用 `--nav-overlay-h`（80px = 膠囊 footprint 72 + 8px 呼吸間距）+ safe-area 讓位，與膠囊間距一致 8px（v2.57.41 從 88px 收緊）。**凡是手機整頁、底部有可互動內容的頁面都要讓出這段高度**（#1445：共編設定的「角色」選項、行程列表最後一張卡、收藏頁最後一張卡原本被蓋住）；膠囊本身 `max-width: 100vw − 16px` 且四個分頁可縮，手機 200% 縮放（195px）不再切掉聊天與收藏。
@@ -843,6 +844,8 @@ Alert（不可逆）MUST 具備三件事：
 | undo | `⌘Z` / 底部 toast |
 | 批次 | `⌘`／`⇧` 多選 + toolbar／選單刪除（僅永久刪除才再 Alert 確認） |
 
+**全域快捷鍵（#1697，`src/lib/globalShortcuts.ts`）**：聚焦搜尋 `⌥⌘F`、新增 `⌥⇧N`，一律帶修飾鍵避開瀏覽器保留鍵（`⌘N` 等）。頁面把目標元素標 `shortcutAttrs(action)`（`data-shortcut` + `aria-keyshortcuts`），沒標的頁面按了不做事；tooltip 用 `shortcutTitle` 寫「說明（快捷鍵）」。上表的 `⌘N` 與 `⌘Z` 不採用：`⌘N` 被瀏覽器保留，產品沒有 Undo。
+
 桌機 **MUST NOT** 使用 FAB（Material 浮動鈕）或 hamburger 選單，**MUST NOT** 依賴 iOS 滑動刪除手勢。
 
 > **FAB 條款的範圍限定在「CRUD 動作入口」。** 地圖頁右下的浮動控制（重新定位／定位我，`MapFabs`）不是 CRUD 入口，不受此條約束 —— 它們是地圖檢視控制，macOS 的地圖類 App 也把這類控制浮在圖面上。看到 `tp-map-fab` 不要當成違規。
@@ -1240,6 +1243,7 @@ email → user_id 完整切換。
 | Hero | `tp-page-eyebrow`「我的收藏」+ count meta「N 個收藏 POI」+ region pill row（`role="group"` + `aria-pressed`，reuse ExplorePage L470-885 邏輯）+ type filter row（餐廳 / 景點 / 飯店 / 購物 / 其他）+ search-within-favorites (`<input type="search">` client-side filter，200+ POIs 必須能搜) |
 | Body | 收藏 POI grid + 「目前在 N 個行程」usage badges + per-card「加入行程 →」link to `/favorites/:id/add-to-trip` |
 | Batch toolbar | sticky bottom toolbar（multi-select 啟動時顯示）：「全選 / 取消 / 刪除」三 action — **不支援 batch add-to-trip**（per-card link 才是加入行程入口，batch 僅刪除） |
+| 桌機多選（#1714） | 與 checkbox 共用同一份選取狀態：⌘／Ctrl-click 卡片加減單張、⇧-click 從最近一次勾選或 ⌘-click 的卡片（錨點）選到該卡；一般點擊不變。Mac 的 Ctrl-click 是右鍵，修飾鍵以 ⌘ 為準 |
 
 **Batch flow（DUC1 sign-off — delete-only）**
 

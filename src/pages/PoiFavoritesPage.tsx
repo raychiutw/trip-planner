@@ -17,6 +17,7 @@
  * 不含原 ExplorePage 的 search/region/heart toggle — 那些留在 /explore。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { useRequireAuth } from '../hooks/useRequireAuth';
@@ -28,6 +29,7 @@ import { RailRowMenu, type RailMenuItem } from '../components/trip/RailRowMenu';
 import { RAIL_MENU_STYLES } from '../components/trip/TimelineRail.styles';
 import PageErrorState from '../components/shared/PageErrorState';
 import EmptyState from '../components/shared/EmptyState';
+import { shortcutAttrs } from '../lib/globalShortcuts';
 import AppShell from '../components/shell/AppShell';
 import { useRegisterRefresh } from '../contexts/RefreshContext';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -337,11 +339,12 @@ const SCOPED_STYLES = `
 `;
 
 /** 收藏卡：自己持有 ref 給右鍵 / Shift+F10 / Delete（#1695）。選單沿用 RailRowMenu（沒有常駐 ⋯）。 */
-function FavoriteCard({ row, isSelected, deletingSelected, onToggle, onRequestDelete }: {
+function FavoriteCard({ row, isSelected, deletingSelected, onToggle, onCardClick, onRequestDelete }: {
   row: PoiFavoriteRow;
   isSelected: boolean;
   deletingSelected: boolean;
   onToggle: (id: number) => void;
+  onCardClick: (e: MouseEvent<HTMLElement>, id: number) => void;
   /** 對這張卡（已在選取中則對整組選取）開「移除收藏」確認。 */
   onRequestDelete: (id: number) => void;
 }) {
@@ -361,6 +364,8 @@ function FavoriteCard({ row, isSelected, deletingSelected, onToggle, onRequestDe
       className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
       data-tone={poiTypeToTone(mapNominatimCategory(row.poiType))}
       data-testid={`favorites-card-${row.id}`}
+      onClick={(e) => onCardClick(e, row.id)}
+      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault(); }}
       {...(isDeleting ? { 'aria-live': 'polite' } : {})}
     >
       <div className="poi-category">{POI_TYPE_LABELS[mapNominatimCategory(row.poiType)] ?? '景點'}</div>
@@ -434,6 +439,8 @@ export default function PoiFavoritesPage() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
+  // ⇧-click 範圍選取的錨點：最近一次勾選／⌘-click 的卡片 id
+  const anchorIdRef = useRef<number | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteFailureCount, setDeleteFailureCount] = useState(0);
   const [searchFilter, setSearchFilter] = useState('');
@@ -513,6 +520,7 @@ export default function PoiFavoritesPage() {
   useEffect(() => { setPage(1); }, [searchFilter, typeFilter, regionFilter]);
 
   function toggleSelection(id: number) {
+    anchorIdRef.current = id;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -520,7 +528,24 @@ export default function PoiFavoritesPage() {
       return next;
     });
   }
-  function clearSelection() { setSelectedIds(new Set()); }
+  function clearSelection() { anchorIdRef.current = null; setSelectedIds(new Set()); }
+  // 桌機 Finder 式多選：⌘／Ctrl-click 加減單張、⇧-click 從錨點選到該張（與 checkbox 共用 selectedIds）
+  function handleCardClick(e: MouseEvent<HTMLElement>, id: number) {
+    if (deletingSelected || (!e.metaKey && !e.ctrlKey && !e.shiftKey)) return;
+    e.preventDefault(); // 避免 ⌘-click 在「加入行程」連結上開新分頁
+    const anchor = anchorIdRef.current;
+    if (e.shiftKey && anchor !== null) {
+      const ids = visibleFavorites.map((r) => r.id);
+      const a = ids.indexOf(anchor), b = ids.indexOf(id);
+      if (a >= 0 && b >= 0) {
+        const range = ids.slice(Math.min(a, b), Math.max(a, b) + 1);
+        setSelectedIds((prev) => new Set([...prev, ...range]));
+        return;
+      }
+    }
+    if (e.shiftKey) { anchorIdRef.current = id; setSelectedIds((prev) => new Set(prev).add(id)); return; }
+    toggleSelection(id);
+  }
   function selectAllVisible() {
     setSelectedIds((prev) => new Set([...prev, ...visibleFavorites.map((r) => r.id)]));
   }
@@ -648,6 +673,7 @@ export default function PoiFavoritesPage() {
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="搜尋收藏（名稱 / 地址 / 備註）"
                 data-testid="favorites-search-input"
+                {...shortcutAttrs('search')}
                 aria-label="搜尋收藏"
               />
             </div>
@@ -769,6 +795,7 @@ export default function PoiFavoritesPage() {
                       isSelected={selectedIds.has(row.id)}
                       deletingSelected={deletingSelected}
                       onToggle={toggleSelection}
+                      onCardClick={handleCardClick}
                       onRequestDelete={requestDeleteOne}
                     />
                   ))}

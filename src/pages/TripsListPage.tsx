@@ -48,6 +48,7 @@ import TripPage, { type TripPageHandle } from './TripPage';
 import { useTripPageHandle } from '../contexts/TripPageHandleContext';
 import { useTripMainPortal } from '../contexts/TripMainPortalContext';
 import { TRIP_MAIN_PORTAL_ID } from '../lib/tripStackRoutes';
+import { shortcutAttrs, shortcutTitle } from '../lib/globalShortcuts';
 import { useTripSelection, refreshMyTrips, isTripOwner, type MyTrip } from '../hooks/useMyTrips';
 
 const SCOPED_STYLES = `
@@ -819,8 +820,9 @@ export default function TripsListPage() {
                 className="tp-titlebar-action"
                 onClick={openNewTrip}
                 aria-label="新增行程"
-                title="新增行程"
+                title={shortcutTitle('新增行程', 'new')}
                 data-testid="trips-list-new-trip-titlebar"
+                {...(showEmbeddedTrip ? {} : shortcutAttrs('new'))}
               >
                 <Icon name="plus" />
                 <span className="tp-titlebar-action-label">新增行程</span>
@@ -891,7 +893,9 @@ export default function TripsListPage() {
                     });
                   }}
                   aria-label={searchOpen ? '關閉搜尋' : '開啟搜尋'}
+                  title={searchOpen ? undefined : shortcutTitle('搜尋', 'search')}
                   data-testid="trips-list-search-toggle"
+                  {...(searchOpen ? {} : shortcutAttrs('search'))}
                 >
                   <Icon name={searchOpen ? 'x-mark' : 'search'} />
                 </button>
@@ -904,6 +908,7 @@ export default function TripsListPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       autoFocus
                       data-testid="trips-list-search-input"
+                      {...shortcutAttrs('search')}
                       aria-label="搜尋行程"
                     />
                     {searchTerm && (
@@ -1101,8 +1106,9 @@ export default function TripsListPage() {
               className="tp-titlebar-action tp-titlebar-action--icon-only"
               onClick={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/add-entry`)}
               aria-label="新增景點"
-              title="新增景點"
+              title={shortcutTitle('新增景點', 'new')}
               data-testid="trip-add-stop-trigger"
+              {...shortcutAttrs('new')}
             >
               <Icon name="plus" />
             </button>
