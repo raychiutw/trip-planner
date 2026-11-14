@@ -23,9 +23,9 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-test('行程清單：⌥⌘F 展開並聚焦搜尋、⌥⇧N 開新增行程', async ({ page }) => {
+test('行程清單：⌥⌘F 聚焦常駐搜尋、⌥⇧N 開新增行程', async ({ page }) => {
   await page.goto('/trips');
-  await expect(page.getByTestId('trips-list-search-toggle')).toBeVisible();
+  await expect(page.getByTestId('trips-list-search-input')).toBeVisible();
   await page.keyboard.press(SEARCH);
   await expect(page.getByTestId('trips-list-search-input')).toBeFocused();
   await page.keyboard.press(NEW);
@@ -37,7 +37,7 @@ test('行程清單按鈕帶 aria-keyshortcuts，tooltip 寫出快捷鍵', async 
   const add = page.getByTestId('trips-list-new-trip-titlebar');
   await expect(add).toHaveAttribute('aria-keyshortcuts', 'Alt+Shift+N');
   await expect(add).toHaveAttribute('title', /新增行程.*⌥⇧N/);
-  const search = page.getByTestId('trips-list-search-toggle');
+  const search = page.getByTestId('trips-list-search-input');
   await expect(search).toHaveAttribute('aria-keyshortcuts', 'Alt+Meta+F');
   await expect(search).toHaveAttribute('title', /搜尋.*⌥⌘F/);
 });
