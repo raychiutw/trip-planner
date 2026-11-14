@@ -377,7 +377,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 > ⚠️ **本行 2026-07-26 更正**：原寫「底部浮動玻璃膠囊 nav（primary nav 已由 sidebar **移膠囊**）」—— 方向剛好相反。rev2（owner 2026-07-19）是把 primary nav **搬回 sidebar 頂部**、桌機隱藏膠囊；膠囊只留在手機。同檔 §Unified App Shell 與 §Desktop Sidebar 一直是對的，只有本表這一行寫反。
 
-不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 的環境都走 compact。觸控大螢幕（例如 iPad 橫向）一樣走桌機版；凡是只在 hover 時才顯示的控制（timeline 列 ⋯、行程筆記 grip），在 `(hover: none)` 下一律常駐（#1698）。
+**寬版 720–1023px（#1713，owner 2026-11-14 簽核 #1706 變體 A，比照 App `regularNavigationWidth = 720`／ADR-0009）**：頂部全寬 bar（56px，`--topbar-height-wide`；品牌＋4 個 root tab 橫排，選中樣式沿用 #1707）＋左欄 240px（`--sidebar-width-wide`）只放「我的行程」清單與左下帳號列＋內容欄；**無右欄**（地圖維持 root tab「地圖」、操作頁維持整頁，右欄 stack 仍是 ≥1024）；隱藏底部浮動膠囊（`--nav-overlay-h` 歸零）與 header 帳號圓圈，Account sheet 沿用右側抽屜（寬 min(480px,100vw)）。CSS 在 `AppShell`（grid、bar 底 `::before`）與 `DesktopSidebar`（brand／nav 以 absolute 疊進 bar）；JS：`TripsListPage` 與 `TripPageHost`（僅 `/trips`）以 `(min-width: 720px)` 走「清單＋內容欄」，`TripMapRail`／`TripStackLayout`／`MobileOnlyRoute` 維持 1024／1023（它們管右欄與操作頁整頁，與 720–1023 無右欄一致）。跨 1024 時 root tab 由頂部回側欄、多出右欄，是已接受的一次重排。≤719px 即手機。`tests/e2e/wide-layout.spec.js`（720/768/1000/1023、1024 前後）守門。
+
+不再維護 tablet-specific 斷點。任何不是 `min-width: 720px` 的環境都走 compact（<720）；720–1023 為上述寬版，≥1024 為桌機。觸控大螢幕（例如 iPad 橫向）一樣走桌機版；凡是只在 hover 時才顯示的控制（timeline 列 ⋯、行程筆記 grip），在 `(hover: none)` 下一律常駐（#1698）。
 
 ### Border Radius
 | Token | Value | 用途 |

@@ -30,7 +30,7 @@ export const ACCOUNT_SHEET_STYLES = `
   overflow-y: auto; overscroll-behavior: contain;
   animation: account-sheet-slide var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2,0.8,0.2,1));
 }
-@media (max-width: 1023px) {
+@media (max-width: 719px) {
   .account-sheet-panel { width: 100vw; }
 }
 .account-sheet-close {

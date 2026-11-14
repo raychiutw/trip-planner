@@ -14,7 +14,7 @@ for (const width of [320, 375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/trips');
     await expect(page.getByTestId('trips-list-page')).toBeVisible();
-    const compact = width < 1024;
+    const compact = width < 720; // #1713：720–1023 為寬版（頂部 root tab）
     const tab = page.getByTestId(compact ? 'global-bottom-nav-trips' : 'sidebar-nav-trips');
     await expect(tab).toBeVisible();
     await expect(tab).toHaveAttribute('aria-current', 'page');
