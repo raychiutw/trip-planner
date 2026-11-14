@@ -1,5 +1,5 @@
 /** ⋯ context menu（#1262 自 TimelineRail 拆出）。樣式在 TimelineRail.styles.ts 的 RAIL_MENU_STYLES。 */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
@@ -22,30 +22,65 @@ export type RailMenuItem =
  * z-index 戰爭）+ light-dismiss（點外面 / Esc 關閉 + 焦點歸還 trigger，免自寫 handler）。top-layer
  * 預設不跟 anchor 走，故開啟時（toggle→open）依 trigger rect 定位。
  */
-export function RailRowMenu({ menuId, label, items, testid }: {
+export function RailRowMenu({ menuId, label, items, testid, contextTargetRef }: {
   menuId: string;
   label: string;
   items: RailMenuItem[];
   testid?: string;
+  /** 給了就讓該元素支援右鍵 / Shift+F10 / 選單鍵從座標開同一個選單（#1694，行程卡、收藏卡等沿用）。 */
+  contextTargetRef?: React.RefObject<HTMLElement | null>;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // native popover invoker 不自動反映可被 CSS / AT 讀取的 aria-expanded 屬性 → 手動追蹤開合
   // （讓 SR 念「已展開的選單按鈕」+ 讓 .tp-rail-menu-trigger[aria-expanded="true"] 開啟時保持可見）。
   const [open, setOpen] = useState(false);
+  // 右鍵 / 鍵盤開啟時的錨點座標；有值就貼座標，沒有就貼 trigger。
+  const pointRef = useRef<{ x: number; y: number } | null>(null);
   const positionMenu = () => {
     const t = triggerRef.current;
     const m = menuRef.current;
     if (!t || !m) return;
-    const r = t.getBoundingClientRect();
     const mh = m.offsetHeight || 300;
     const mw = m.offsetWidth || 216;
+    const pt = pointRef.current;
+    if (pt) {
+      m.style.top = `${Math.max(8, Math.min(pt.y, window.innerHeight - mh - 8))}px`;
+      m.style.left = `${Math.max(8, Math.min(pt.x, window.innerWidth - mw - 8))}px`;
+      return;
+    }
+    const r = t.getBoundingClientRect();
     // 下方空間夠 → 貼 trigger 下緣；否則往上翻。右對齊 trigger、夾在 viewport 內。
     const top = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
     const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
     m.style.top = `${top}px`;
     m.style.left = `${left}px`;
   };
+  useEffect(() => {
+    const el = contextTargetRef?.current;
+    if (!el) return;
+    const openAt = (x: number, y: number) => {
+      pointRef.current = { x, y };
+      try { menuRef.current?.showPopover(); } catch { pointRef.current = null; /* 已開 / 不支援 */ }
+      positionMenu(); // 同步定位，避免 toggle 事件前閃在 (0,0)
+    };
+    // 輸入框內保留原生行為（複製貼上選單、Shift+F10 等）。
+    const inField = (t: EventTarget | null) => t instanceof HTMLElement && !!t.closest('input,textarea,select,[contenteditable="true"],[role="menu"]');
+    const onCtx = (e: MouseEvent) => {
+      if (inField(e.target) || (e.target as HTMLElement).closest('a[href]')) return;
+      e.preventDefault();
+      openAt(e.clientX, e.clientY);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') || inField(e.target)) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      openAt(r.left + 16, r.top + r.height / 2);
+    };
+    el.addEventListener('contextmenu', onCtx);
+    el.addEventListener('keydown', onKey);
+    return () => { el.removeEventListener('contextmenu', onCtx); el.removeEventListener('keydown', onKey); };
+  }, [contextTargetRef]);
   return (
     <>
       <button
@@ -71,7 +106,7 @@ export function RailRowMenu({ menuId, label, items, testid }: {
         onToggle={(e) => {
           const isOpen = e.newState === 'open';
           setOpen(isOpen);
-          if (!isOpen) return;
+          if (!isOpen) { pointRef.current = null; return; }
           positionMenu();
           // 開啟時焦點移進 menu 首項（鍵盤導航）；native popover 已管 Esc / 點外面關閉 + 焦點歸還 trigger。
           menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
