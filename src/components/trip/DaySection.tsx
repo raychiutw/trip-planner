@@ -179,7 +179,7 @@ const DaySection = React.memo(function DaySection({
     [day?.timeline],
   );
 
-  const eyebrow = `DAY ${String(dayNum).padStart(2, '0')}`;
+  const eyebrow = `Day ${String(dayNum).padStart(2, '0')}`;
   const dateLabel = daySummary?.date
     ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
     : '';
