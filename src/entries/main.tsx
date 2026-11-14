@@ -337,13 +337,11 @@ if (el) {
               <Route path="/trips" element={<TripsListPage />} />
               {/* 2026-05-03 modal-to-fullpage migration: NewTripModal → /trips/new */}
               <Route path="/trips/new" element={<NewTripPage />} />
+              {/* 只做轉址的兩條放在 TripLayout 外：放裡面會先抓一次行程，轉到 /trips 後 TripPage 又抓一次。 */}
+              <Route path="/trip/:tripId" element={<TripIndexRedirect />} />
+              <Route path="/trip/:tripId/stop/:entryId" element={<StopDetailRedirect />} />
               <Route path="/trip/:tripId" element={<TripLayout />}>
-                {/* Index route /trip/:tripId redirects to /trips?selected=:id —
-                  * unified URL pattern. Stop sub-routes still resolve under
-                  * /trip/:tripId/* for now (deep links from TimelineEvent etc). */}
-                <Route index element={<TripIndexRedirect />} />
                 <Route path="map" element={<MapPage />} />
-                <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
                 {/* v2.36.0 列印文件 — 資料驅動全展開文件（取代 usePrintMode 收合列印） */}
                 <Route path="print" element={<TripPrintPage />} />
