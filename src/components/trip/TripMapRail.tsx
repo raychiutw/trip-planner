@@ -15,6 +15,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { lazyWithRetry } from '../../lib/lazyWithRetry';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { MQ_DESKTOP } from '../../lib/breakpoints';
 import { EVENT } from '../../lib/events';
 import type { MapPin } from '../../hooks/useMapData';
 import GooglePoiCard from './GooglePoiCard';
@@ -73,7 +74,7 @@ const SCOPED_STYLES = `
 `;
 
 export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: TripMapRailProps) {
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const isDesktop = useMediaQuery(MQ_DESKTOP);
   const navigate = useNavigate();
   const [panToCoord, setPanToCoord] = useState<{ lat: number; lng: number; zoom?: number } | undefined>();
   // v2.31.93：focusedEntryId 觸發 TpMap 換 marker 視覺（accent orange + 36px focused style）

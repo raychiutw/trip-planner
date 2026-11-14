@@ -62,6 +62,7 @@ import { usePoiSelection } from '../hooks/usePoiSelection';
 import { regionToApiParam } from '../lib/maps/region';
 // v2.31.94/98: 自訂 tab 用 shared <CustomPoiForm> component（同 ChangePoiPage）。
 import { CustomPoiForm } from '../components/trip/CustomPoiForm';
+import { MQ_BELOW_DESKTOP } from '../lib/breakpoints';
 import { EditableCategoryChip } from '../components/trip/EditableCategoryChip';
 import {
   selectDefaultCenter,
@@ -672,7 +673,7 @@ export default function AddStopPage() {
   useEffect(() => {
     if (tab !== 'custom' || !tripId || !Number.isFinite(dayNum)) return;
     if (typeof window === 'undefined' || !window.matchMedia) return;
-    if (!window.matchMedia('(max-width: 1023px)').matches) return;
+    if (!window.matchMedia(MQ_BELOW_DESKTOP).matches) return;
     navigate(
       `/trip/${encodeURIComponent(tripId)}/add-custom-stop?day=${dayNum}`,
       { replace: true },

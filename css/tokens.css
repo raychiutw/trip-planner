@@ -1,5 +1,8 @@
 /* ===== tokens.css — V2 Terracotta Design System (single-theme, Inter + Noto Sans TC) ===== */
 
+/* 斷點對應（CSS @media 不能用變數；JS 端單一來源是 src/lib/breakpoints.ts，改值時兩處＋DESIGN.md 一起改）：
+ * 720 寬版（BP_WIDE）· 1024 桌機（BP_DESKTOP）· 1200 側欄自動收合（BP_SIDEBAR_AUTO_COLLAPSE，max-width 用 1199.98）。 */
+
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
 /* #1445 F7：使用者在「外觀設定」手動選深色／淺色時，body 的 .dark 與系統設定可能不一致。

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { MQ_BELOW_SIDEBAR_AUTO_COLLAPSE } from './breakpoints';
 
 /**
  * 桌機側欄整欄隱藏（#1708，原型 #1704 變體 A）。
@@ -7,7 +8,7 @@ import { useSyncExternalStore } from 'react';
  *   跨過門檻就重設 —— 自動行為因此永遠不會覆寫手動偏好。
  */
 const KEY = 'tp-sidebar-collapsed';
-const QUERY = '(max-width: 1199.98px)';
+const QUERY = MQ_BELOW_SIDEBAR_AUTO_COLLAPSE;
 
 const mql = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(QUERY) : null;
 

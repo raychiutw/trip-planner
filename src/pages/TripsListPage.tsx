@@ -25,6 +25,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { MQ_WIDE } from '../lib/breakpoints';
 import { readTripView } from '../lib/tripViewState';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
@@ -594,7 +595,7 @@ export default function TripsListPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
   // #1713：≥720 就是「清單＋內容欄」版面（720–1023 無右欄），行程詳情走 TripPageHost 的中欄。
-  const isDesktop = useMediaQuery('(min-width: 720px)');
+  const isWide = useMediaQuery(MQ_WIDE);
   const [searchParams, setSearchParams] = useSearchParams();
   // v2.39.0: 分享連結 modal — 由 card ⋯ / 行程頁 ⋯ 的「分享連結」開啟。
   const [shareTripId, setShareTripId] = useState<string | null>(null);
@@ -617,7 +618,7 @@ export default function TripsListPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'collab' | 'archived'>('all');
   const [sortBy, setSortBy] = useState<'updated' | 'start' | 'name'>('updated');
   // #1712：≥720px 搜尋欄常駐在工具列最左（原型 #1705 變體 A）；窄螢幕維持點開才展開。
-  const searchPersistent = useMediaQuery('(min-width: 720px)');
+  const searchPersistent = useMediaQuery(MQ_WIDE);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const userEmail = (user?.email ?? '').toLowerCase();
@@ -735,7 +736,7 @@ export default function TripsListPage() {
   const didRestoreViewRef = useRef(false);
   useEffect(() => {
     if (didRestoreViewRef.current) return;
-    if (!isDesktop) return; // 手機不自動還原（見上）；resize 到桌機再跑
+    if (!isWide) return; // 手機不自動還原（見上）；resize 到桌機再跑
     if (selectedFromUrl) { didRestoreViewRef.current = true; return; }
     if (tripsStatus !== 'ready' || myTrips.length === 0) return;
     didRestoreViewRef.current = true;
@@ -749,7 +750,7 @@ export default function TripsListPage() {
     if (!restoreId) return;
     const hash = last && last.tripId === restoreId && last.dayNum > 0 ? `#day${last.dayNum}` : '';
     navigate(`/trips?selected=${encodeURIComponent(restoreId)}${hash}`, { replace: true });
-  }, [myTrips, selectedFromUrl, navigate, isDesktop, activeTripId, tripsStatus]);
+  }, [myTrips, selectedFromUrl, navigate, isWide, activeTripId, tripsStatus]);
 
   // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
   // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
@@ -768,7 +769,7 @@ export default function TripsListPage() {
   // 用該 ref；手機仍 inline render 自己的 <TripPage>，繼續用 localTripPageRef。
   const localTripPageRef = useRef<TripPageHandle>(null);
   const sharedTripPageRef = useTripPageHandle();
-  const tripPageRef = isDesktop ? sharedTripPageRef : localTripPageRef;
+  const tripPageRef = isWide ? sharedTripPageRef : localTripPageRef;
   // portal placeholder 的 callback ref —— TripPageHost 持有的 <TripPage> 靠這個
   // 知道「現在該把內容 portal 去哪」（push-based，見 TripMainPortalContext 註解）。
   const { setPortalNode } = useTripMainPortal();
@@ -964,7 +965,7 @@ export default function TripsListPage() {
           {visibleTrips.length > 0 && (
             <div className="tp-trips-grid">
               {visibleTrips.map((t) => {
-                const isActive = isDesktop && t.tripId === effectiveSelectedId;
+                const isActive = isWide && t.tripId === effectiveSelectedId;
                 const ownerEmail = (t.owner ?? '').trim();
                 const isOwnTrip = isOwnedByUser(t);
                 // 2026-05-07：avatar initial 一律用「帳號名稱」第一字母（不是 email）。
@@ -1121,7 +1122,7 @@ export default function TripsListPage() {
           TripsListPage 一起 unmount，但 TripPage 本身（掛在 TripPageHost，
           <Routes> 之上）不受影響，不會重新抓資料。手機沒有這個機制，維持
           原本 inline render（tripPageRef 此時是 localTripPageRef）。 */}
-      {isDesktop ? (
+      {isWide ? (
         <div ref={setPortalNode} data-testid={TRIP_MAIN_PORTAL_ID} />
       ) : (
         <TripPage ref={localTripPageRef} tripId={effectiveSelectedId!} noShell />

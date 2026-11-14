@@ -36,6 +36,7 @@
 import { Suspense, useMemo, useRef, useState, type ForwardRefExoticComponent, type ReactNode, type RefAttributes } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { MQ_DESKTOP, MQ_WIDE } from '../../lib/breakpoints';
 import { TripPageHandleContext } from '../../contexts/TripPageHandleContext';
 import { TripMainPortalContext } from '../../contexts/TripMainPortalContext';
 import { resolveDesktopMiddleColumnTripId } from '../../lib/tripStackRoutes';
@@ -63,10 +64,10 @@ export interface TripPageHostProps {
 
 export default function TripPageHost({ children }: TripPageHostProps) {
   const location = useLocation();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const isDesktop = useMediaQuery(MQ_DESKTOP);
   // #1713：720–1023 只有 /trips 的「清單＋內容欄」；操作頁（右欄 stack）要 ≥1024，
   // 否則該寬度的整頁操作頁沒有 placeholder 可 portal。
-  const isWide = useMediaQuery('(min-width: 720px)');
+  const isWide = useMediaQuery(MQ_WIDE);
   const tripPageRef = useRef<TripPageHandle>(null);
   const [portalNode, setPortalNode] = useState<Element | null>(null);
   // setPortalNode（useState setter）本身在 re-render 之間已保證 identity 穩定，
