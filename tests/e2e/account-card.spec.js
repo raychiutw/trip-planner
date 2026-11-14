@@ -27,8 +27,10 @@ test.describe('帳號置中卡片', () => {
     const p = await box(sheet.locator('.account-sheet-panel'));
     expect(Math.abs(p.w - 560)).toBeLessThan(1.5);
     expect(Math.abs(p.h - 720)).toBeLessThan(1.5);
-    expect(Math.abs((p.l + p.r) / 2 - 640)).toBeLessThan(1.5);
-    expect(Math.abs((p.t + p.b) / 2 - 450)).toBeLessThan(1.5);
+    // 相對外層 overlay 置中；經典捲軸（CI Linux）會讓 overlay 比 viewport 窄一條，不能直接拿 640 比
+    const o = await box(sheet);
+    expect(Math.abs((p.l + p.r) / 2 - (o.l + o.r) / 2)).toBeLessThan(1.5);
+    expect(Math.abs((p.t + p.b) / 2 - (o.t + o.b) / 2)).toBeLessThan(1.5);
     expect(await sheet.getByTestId('account-hero').evaluate((e) => getComputedStyle(e).flexDirection)).toBe('column');
     await page.keyboard.press('Escape');
     await expect(sheet).toHaveCount(0);

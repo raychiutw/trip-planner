@@ -17,6 +17,7 @@ async function installArchiveHttp(page, options = {}) {
     body: JSON.stringify(MOCK_TRIPS_LIST.map((trip) => ({
       ...trip,
       owner: trip.tripId === tripId ? MOCK_USER.email : 'friend@example.test',
+      role: trip.tripId === tripId ? 'owner' : 'member', // mock 預設兩筆都是 owner，旅伴那筆要明寫
       ownerUserId: trip.tripId === tripId ? MOCK_USER.id : 'other-user',
       archivedAt: trip.tripId === tripId ? archivedAt : null,
     }))),
