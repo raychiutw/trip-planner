@@ -1,7 +1,7 @@
 /**
  * AccountSheet — Account sheet 的 overlay 容器（W1 IA）。
  *
- * 覆蓋當前頁的側邊 sheet（桌機右側 480px form sheet / 手機全寬），內容＝帳號路由
+ * 覆蓋當前頁的 sheet（桌機 ≥720 置中 560×720 實心卡片 / 手機全螢幕），內容＝帳號路由
  * （由 `AccountModalRoutes` 傳入的 `<Routes>`）。包 `<SheetModeProvider>` → 內部 account
  * 頁的 `AppShell` 只 render 主內容（無 sidebar / 底部 nav / grid）。
  *
@@ -33,6 +33,17 @@ export const ACCOUNT_SHEET_STYLES = `
 @media (max-width: 1023px) {
   .account-sheet-panel { width: 100vw; }
 }
+/* 桌機置中實心卡片（#1711，#1705 變體 A；比照 App regular form sheet：maxWidth 560／maxHeight 720、置中）。
+ * <720 維持全螢幕。矮視窗縮到 100vh-48，內容超過在卡內捲動。 */
+@media (min-width: 720px) {
+  .account-sheet-root { display: grid; place-items: center; }
+  .account-sheet-panel {
+    position: relative; inset: auto;
+    width: 560px; height: min(720px, calc(100vh - 48px));
+    border-radius: 20px; box-shadow: 0 24px 64px rgba(42,31,24,.28);
+    animation: account-sheet-pop var(--transition-duration-normal, 250ms) var(--transition-timing-function-apple, cubic-bezier(0.2,0.8,0.2,1));
+  }
+}
 .account-sheet-close {
   /* AccountPage's sticky TitleBar overlaps the button at both viewport sizes. */
   position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); right: 12px;
@@ -45,6 +56,7 @@ export const ACCOUNT_SHEET_STYLES = `
 .account-sheet-close:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
 .account-sheet-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 @keyframes account-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes account-sheet-pop { from { transform: scale(0.97); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes account-sheet-slide { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .account-sheet-backdrop, .account-sheet-panel { animation: none; }
