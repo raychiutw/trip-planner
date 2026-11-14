@@ -49,21 +49,21 @@ describe('mockup-parity-qa-fixes AddStopPage region + filter + DAY format', () =
   it('footer counter 即使 N=0 也顯示「已選 0 個」格式（不再寫「請先選擇」）', () => {
     const counterBlock = SRC.match(/className="tp-add-stop-counter"[\s\S]*?<\/span>/);
     expect(counterBlock).not.toBeNull();
-    // v2.31.33: 簡化「將加入 DAY 01 · 7/29（三）」為「→ DAY 01」短 day index（mobile fit）
-    expect(counterBlock?.[0]).toMatch(/已選\s*<strong>\{totalSelected\}<\/strong>\s*個\s*→\s*DAY/);
+    // v2.31.33: 簡化「將加入 DAY 01 · 7/29（三）」為「→ Day 01」短 day index（mobile fit）
+    expect(counterBlock?.[0]).toMatch(/已選\s*<strong>\{totalSelected\}<\/strong>\s*個\s*→\s*Day/);
     expect(counterBlock?.[0]).not.toMatch(/從上方挑選或填寫一個項目/);
   });
 
-  it('deriveDayLabel 產生「DAY 03 · 7/31（五）」全大寫格式', () => {
+  it('deriveDayLabel 產生「Day 03 · 7/31（五）」（依 App，不轉大寫）', () => {
     // 2026-05-03 modal-to-fullpage migration: TripPage 原本 inline 算 dayLabel
     // 傳給 modal，現在改在 AddStopPage 裡 fetch days 後 deriveDayLabel 算。
     // v2.21.0 P2 fix: weekday 改讀 camelCase `day.dayOfWeek` (was day_of_week,
     // 對齊 _utils.json deepCamel — 真 API 回 camelCase)。
     expect(SRC).toMatch(/function deriveDayLabel/);
-    expect(SRC).toMatch(/DAY \$\{dayPad\}/);
+    expect(SRC).toMatch(/Day \$\{dayPad\}/);
     expect(SRC).toMatch(/padStart\(2,\s*'0'\)/);
     expect(SRC).toMatch(/day\.dayOfWeek/);
-    expect(SRC).toContain('DAY ${dayPad} · ${month}/${dom}');
+    expect(SRC).toContain('Day ${dayPad} · ${month}/${dom}');
     expect(SRC).toContain('（${weekdayChar}）');
   });
 

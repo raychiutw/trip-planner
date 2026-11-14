@@ -1,26 +1,28 @@
 /**
  * MapDayTab — Map page day-tab primitive.
  *
- * 單行「DAY N」膠囊；active = 實心 accent-fill（比照 root tab）。
+ * 單行「Day N」膠囊；active = 實心 accent-fill（比照 root tab）。
  * 色系統一（owner 2026-07-24「地圖模式 day tab 移除依日期不同顏色，回到統一色系」）：
  * eyebrow 不再依 dayColor 上色 —— idle muted、active accent-foreground，地圖與行程明細一致。
  * per-day 色只留地圖 polyline / entry card（見 DESIGN.md Day palette exception）。
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import MapDayTab from '../../src/components/trip/MapDayTab';
 
 describe('MapDayTab — 基本渲染', () => {
   it('傳 dayLabel：渲染單行 eyebrow', () => {
     const { getByText } = render(
-      <MapDayTab dayLabel="DAY 1" isActive={false} onClick={() => {}} />,
+      <MapDayTab dayLabel="Day 1" isActive={false} onClick={() => {}} />,
     );
-    expect(getByText('DAY 1')).not.toBeNull();
+    expect(getByText('Day 1')).not.toBeNull();
   });
 
   it('單行：不渲染日期副標 (.tp-map-day-tab-date)', () => {
     const { container } = render(
-      <MapDayTab dayLabel="DAY 1" isActive={false} onClick={() => {}} />,
+      <MapDayTab dayLabel="Day 1" isActive={false} onClick={() => {}} />,
     );
     expect(container.querySelector('.tp-map-day-tab-date')).toBeNull();
   });
@@ -28,9 +30,9 @@ describe('MapDayTab — 基本渲染', () => {
   it('idle eyebrow 用統一色（不再有 per-day inline color）', () => {
     // owner 2026-07-24：地圖 day tab 移除 per-day 顏色 → eyebrow 無 inline color，走 CSS muted。
     const { getByText } = render(
-      <MapDayTab dayLabel="DAY 3" isActive={false} onClick={() => {}} />,
+      <MapDayTab dayLabel="Day 3" isActive={false} onClick={() => {}} />,
     );
-    const eyebrow = getByText('DAY 3');
+    const eyebrow = getByText('Day 3');
     expect(eyebrow.getAttribute('style') || '').not.toMatch(/color:/i);
   });
 
@@ -46,7 +48,7 @@ describe('MapDayTab — 基本渲染', () => {
 describe('MapDayTab — active state', () => {
   it('isActive=true：button 有 is-active class + aria-current="true"', () => {
     const { container } = render(
-      <MapDayTab dayLabel="DAY 2" isActive={true} onClick={() => {}} />,
+      <MapDayTab dayLabel="Day 2" isActive={true} onClick={() => {}} />,
     );
     const button = container.querySelector('button')!;
     expect(button.classList.contains('is-active')).toBe(true);
@@ -55,7 +57,7 @@ describe('MapDayTab — active state', () => {
 
   it('isActive=false：button 無 is-active class + 無 aria-current', () => {
     const { container } = render(
-      <MapDayTab dayLabel="DAY 2" isActive={false} onClick={() => {}} />,
+      <MapDayTab dayLabel="Day 2" isActive={false} onClick={() => {}} />,
     );
     const button = container.querySelector('button')!;
     expect(button.classList.contains('is-active')).toBe(false);
@@ -67,7 +69,7 @@ describe('MapDayTab — interaction', () => {
   it('點擊 button 觸發 onClick callback', () => {
     const onClick = vi.fn();
     const { container } = render(
-      <MapDayTab dayLabel="DAY 4" isActive={false} onClick={onClick} />,
+      <MapDayTab dayLabel="Day 4" isActive={false} onClick={onClick} />,
     );
     (container.querySelector('button') as HTMLButtonElement).click();
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -80,5 +82,12 @@ describe('MapDayTab — interaction', () => {
     const button = container.querySelector('button')!;
     expect(button.getAttribute('role')).toBeNull();
     expect(button.getAttribute('type')).toBe('button');
+  });
+});
+
+describe('MapDayTab — 眉標大小寫（#1692）', () => {
+  it('eyebrow 不被 uppercase 轉成「DAY」（依 App 寫 Day N）', () => {
+    const css = readFileSync(join(__dirname, '../../css/tokens.css'), 'utf8');
+    expect(css).toMatch(/\.tp-map-day-tab-eyebrow \{[\s\S]*?text-transform: none;\s*\/\*[^*]*\*\/\s*font-variant-numeric/);
   });
 });
