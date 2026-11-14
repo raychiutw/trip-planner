@@ -70,8 +70,9 @@ const SCOPED_STYLES = `
   padding: 24px 16px calc(var(--nav-height-mobile, 88px) + 24px);
   display: flex; flex-direction: column; gap: 24px;
 }
+/* 卡片（.is-sheet，560px）寬度與視窗無關，不套這組全頁用的間距。 */
 @media (min-width: 768px) {
-  .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
+  .tp-account-shell:not(.is-sheet) .tp-account-inner { padding-top: 40px; padding-left: 24px; padding-right: 24px; gap: 32px; }
 }
 .tp-account-groups { display: flex; flex-direction: column; gap: 24px; }
 
