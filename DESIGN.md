@@ -276,6 +276,7 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 - 這是**聊天專用**的角色色，不重啟已退場的 sage／pink 三色系統（V3 三色退場，v2.55.88）；靛藍 token 在 `css/tokens.css` 的 plain `:root`／`body.dark`。時間行只剩時間（名稱已搬到氣泡上方）。
 - 為什麼改：V3 三色退場把 `--color-accent-2-bg` 與 `--color-accent-3-bg` 收斂成同值，原本靠它們區分 AI 與旅伴的頭像變成同色；owner 2026-11-07 指示「不用頭像，比照 App」。`tests/unit/chat-role-colors-distinct.test.ts` 把 token 展開成實際色值，三種氣泡底色與三種標籤色都必須兩兩不同，且自己與 AI 的氣泡色差要夠大（RGB 差總和 ≥ 24，擋住「值不同但看起來一樣」）。
 - **聊天底部材質**：訊息區延伸到螢幕底，輸入 dock（`.tp-chat-dock` ＝ 擁有者授權提示條 ＋ composer〔`.tp-glass`〕）與手機 tab 膠囊浮在訊息上面；訊息區底部留白 = dock 高度（含提示條；ResizeObserver 量測，`--chat-composer-h`）+ `--nav-overlay-h` + safe-area。dock 長高（textarea 多行、提示條出現）時，若使用者本來就在底部，捲動位置會重新釘回底部，最新一則不會被蓋住；「跳到最新」按鈕以 dock 為定位容器，在提示條之上。玻璃要有東西可折射——曾經因為用 padding 把訊息擋在輸入列上方，底下只剩純色，blur 數值都對卻看起來是實心。`tests/e2e/chat-composer-glass.spec.js` 驗訊息區真的延伸到 composer 底下、留白隨輸入長高並涵蓋提示條、長高後仍貼底、手機上 composer 在膠囊之上、提示條貼在 composer 上方。
+- **聊天送出鍵（#1699，比照 App）**：輸入框 Return 換行，⌘Return（Windows／Linux 為 Ctrl+Return）送出；IME 組字中的 Return 不送出；送出鈕行為不變。取代舊的「Enter 送出、Shift+Enter 換行」。`tests/e2e/chat-composer-keys.spec.js` 驗證。
 
 **AI 聊天捲動（#1209，owner 核准 A）**：離底部 >80px 時，在 composer 上方 12px、聊天欄置中顯示 44×44px 中性描邊向下箭頭；≤80px 隱藏。按箭頭使用原生平滑捲動，減少動態效果時立即捲動。回到底部的邊界只刷新最新五筆一次；刷新 spinner／失敗重試佔用箭頭位置。距頂 ≤80px 載入較早訊息時，頂部中央以不改變訊息高度的 sticky 狀態顯示載入／失敗重試。獨立與嵌入聊天共用規則。五態原型：[Cloudflare preview](https://59a64497.trip-planner-dby.pages.dev/prototype-1209-chat-scroll.html)。
 
