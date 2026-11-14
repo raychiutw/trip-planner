@@ -371,11 +371,11 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 | Mode | Rule | 版型 |
 |------|------|------|
 | compact | default | 手機與平板共用：titlebar + hamburger + bottom nav |
-| desktop | `@media (min-width: 1024px) and (pointer: fine)` | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄 sidebar（實底；**頂部 primary nav 4-tab** + 可摺疊我的行程清單 + 左下帳號列）+ 中欄 timeline + 右欄操作面板。**桌機隱藏底部浮動玻璃膠囊**（`AppShell` 對 `.app-shell-bottom-nav` 設 `display: none`） |
+| desktop | `@media (min-width: 1024px)`（只看寬度） | 桌機（rev2）：三欄 `216 / 1fr / 1fr` — 左欄 sidebar（實底；**頂部 primary nav 4-tab** + 可摺疊我的行程清單 + 左下帳號列）+ 中欄 timeline + 右欄操作面板。**桌機隱藏底部浮動玻璃膠囊**（`AppShell` 對 `.app-shell-bottom-nav` 設 `display: none`） |
 
 > ⚠️ **本行 2026-07-26 更正**：原寫「底部浮動玻璃膠囊 nav（primary nav 已由 sidebar **移膠囊**）」—— 方向剛好相反。rev2（owner 2026-07-19）是把 primary nav **搬回 sidebar 頂部**、桌機隱藏膠囊；膠囊只留在手機。同檔 §Unified App Shell 與 §Desktop Sidebar 一直是對的，只有本表這一行寫反。
 
-不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 且 `pointer: fine` 的環境都走 compact。
+不再維護 tablet-specific 斷點。任何不是 `min-width: 1024px` 的環境都走 compact。觸控大螢幕（例如 iPad 橫向）一樣走桌機版；凡是只在 hover 時才顯示的控制（timeline 列 ⋯、行程筆記 grip），在 `(hover: none)` 下一律常駐（#1698）。
 
 ### Border Radius
 | Token | Value | 用途 |
