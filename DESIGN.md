@@ -505,9 +505,9 @@ POI 類型 → tone，由 `deriveTypeMeta` 決定，驅動卡片同色系淡底 
 
 Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab>` 元件 + `.tp-map-day-tab*` CSS family。Trip detail 透過 `<DayNav>` wrapper 加上 sticky modifier；MapPage 直接用 plain wrapper（黏在底部 card-rail 上方）。
 
-**Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「DAY N / 總覽」，無日期副標（2026-07-17 移除）
+**Tab 規格 (`.tp-map-day-tab`)** — 單行 eyebrow「Day N / 全部」（2026-11-14 比照 App，取代「DAY N / 總覽」），無日期副標（2026-07-17 移除）
 - **統一色系（owner 2026-07-24；地圖與 Trip 明細頁一致，不套 dayColor）**：
-  - Idle: `DAY 01` eyebrow muted 文字、透明底
+  - Idle: `Day 1` eyebrow muted 文字、透明底
   - Active: **實心 accent-fill 膠囊 + accent-foreground eyebrow**，比照 root tab（`.tp-global-bottom-nav-btn.is-active`）——（沿革：2026-07-17「淡 tonal pill」→ 2026-07-24「比照 root tab 實心」；同批移除地圖 idle eyebrow 的 per-day 色）
 - Hover (idle): `color-foreground`
 - min-height 34px（扁平 strip，不搶垂直空間）；桌機（≥1024）每 tab 固定 88px、水平可捲

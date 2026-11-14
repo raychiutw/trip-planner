@@ -42,12 +42,12 @@ module.exports = {
     // 清單以 CI 為準；那顆按鈕換行本身是排版問題，另案修正，不屬取證範圍。
     "explore": ["搜尋景點、餐廳、住宿… 228x28"],
     "chat": [],
-    "map": ["DAY 1 68x34", "DAY 2 68x34", "DAY 3 68x34", "DAY 4 68x34", "DAY 5 68x34", "總覽 54x34"],
+    "map": ["Day 1 68x34", "Day 2 68x34", "Day 3 68x34", "Day 4 68x34", "Day 5 68x34", "全部 54x34"],
     "account": [],
     "developer-apps-new": ["dev-app-new-name 292x42", "dev-app-new-scope-email 13x13", "dev-app-new-scope-offlin 13x13", "dev-app-new-scope-openid 13x13", "dev-app-new-scope-profil 13x13", "dev-app-new-type-confide 13x13", "dev-app-new-type-public 13x13"],
     // 景點列的「展開景點」「更多動作」已於 #1638 放大到 44x44（hig-fixes.spec.js 直接量每一顆；hig-scenes 量測也不再只算視窗內）。
     "trip-detail": ["Day 1 — 7/1（三） — 那霸市區 68x34", "Day 2 — 7/2（四） — 美國村 68x34", "Day 3 — 7/3（五） — 海洋博公園 68x34", "Day 4 — 7/4（六） — 北谷・恩納 68x34", "Day 5 — 7/5（日） — 回程 68x34", "13 min · 6.6 km 286x32", "設定時間，編輯起訖時間 79x24"],
-    "trip-map": ["DAY 1 68x34", "DAY 2 68x34", "DAY 3 68x34", "DAY 4 68x34", "DAY 5 68x34", "總覽 54x34"],
+    "trip-map": ["Day 1 68x34", "Day 2 68x34", "Day 3 68x34", "Day 4 68x34", "Day 5 68x34", "全部 54x34"],
     "trip-notes": ["刪除航班：中華航空 CI 120 32x32", "拖移航班：中華航空 CI 120 24x24"],
     "trip-print": ["分享連結 106x40", "列印 78x40", "關閉 58x40"],
     "trip-collab": ["共編成員 89x33", "共編成員▾ 111x32", "檢視成員 89x33"],
