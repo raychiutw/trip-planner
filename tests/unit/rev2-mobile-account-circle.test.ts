@@ -27,7 +27,7 @@ describe('rev2 手機帳號圓圈 — 4 根頁 header', () => {
     expect(s).toMatch(/account=\{<AccountCircle \/>\}/);
   });
 
-  it('AccountCircle：authed → /account 首字母、anon → /login，桌機 CSS 隱藏', () => {
+  it('AccountCircle：authed → /account 人像圖示、anon → /login，桌機 CSS 隱藏', () => {
     const s = src('components/shell/AccountCircle.tsx');
     expect(s).toMatch(/to="\/account"/);
     expect(s).toMatch(/to="\/login"/);

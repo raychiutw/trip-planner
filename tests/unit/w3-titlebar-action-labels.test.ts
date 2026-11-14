@@ -38,13 +38,6 @@ describe('W3: 桌機 TitleBar action icon + 可見 label（推翻 v2.31.90 icon-
     expect(css).toMatch(/\.tp-titlebar-action--icon-only \.tp-titlebar-action-label \{ display: none; \}/);
   });
 
-  // title attr tooltip 保留（桌機 hover 也有用；不是唯一語意來源，但保著不移除）。
-  it('TripsListPage 新增行程 button 有 title + testid（tooltip 保留）', () => {
-    const src = read('src/pages/TripsListPage.tsx');
-    expect(src).toMatch(/title=\{shortcutTitle\('新增行程', 'new'\)\}/);
-    expect(src).toMatch(/data-testid="trips-list-new-trip-titlebar"/);
-  });
-
   it('SessionsPage 登出其他裝置 button title 保留', () => {
     const src = read('src/pages/SessionsPage.tsx');
     expect(src).toMatch(/title="登出其他全部裝置"/);

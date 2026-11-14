@@ -17,6 +17,7 @@ import { MemoryRouter } from 'react-router-dom';
 import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
+import { EntryEditAccessContext } from '../../src/contexts/EntryEditAccessContext';
 
 // γ.1：useTripSegments 會打 GET /api/trips/:id/segments，這個 test 套件 stub 全域
 // fetch 驗行為 — mock hook 回 empty 避免 segments fetch 干擾 fetchSpy。
@@ -51,7 +52,9 @@ function renderRail() {
   return render(
     <MemoryRouter>
       <TripIdContext.Provider value="okinawa-2026">
-        <TimelineRail events={[ENTRY]} />
+        <EntryEditAccessContext.Provider value>
+          <TimelineRail events={[ENTRY]} />
+        </EntryEditAccessContext.Provider>
       </TripIdContext.Provider>
     </MemoryRouter>,
   );

@@ -532,6 +532,8 @@ export default function PoiFavoritesPage() {
   // 桌機 Finder 式多選：⌘／Ctrl-click 加減單張、⇧-click 從錨點選到該張（與 checkbox 共用 selectedIds）
   function handleCardClick(e: MouseEvent<HTMLElement>, id: number) {
     if (deletingSelected || (!e.metaKey && !e.ctrlKey && !e.shiftKey)) return;
+    // 勾選框 / 其標籤自己的 onChange 已切一次；這裡再切會抵銷，也別 preventDefault 把勾選還原。
+    if ((e.target as HTMLElement).closest('.poi-select-label')) return;
     e.preventDefault(); // 避免 ⌘-click 在「加入行程」連結上開新分頁
     const anchor = anchorIdRef.current;
     if (e.shiftKey && anchor !== null) {

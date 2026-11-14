@@ -1,7 +1,9 @@
 /** ⋯ context menu（#1262 自 TimelineRail 拆出）。樣式在 TimelineRail.styles.ts 的 RAIL_MENU_STYLES。 */
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import { useContextMenuTrigger } from '../../hooks/useContextMenuTrigger';
+import { clampToViewport } from '../../lib/menuPosition';
 
 export type RailMenuItem =
   | { kind: 'sep' }
@@ -13,52 +15,6 @@ export type RailMenuItem =
       onSelect: () => void;
       testid?: string;
     };
-
-/** 輸入框、選單內保留原生行為（複製貼上、文字刪除、Shift+F10 等）；checkbox / radio 不算輸入框。 */
-export function isEditableTarget(t: EventTarget | null): boolean {
-  return t instanceof HTMLElement
-    && !!t.closest('input:not([type="checkbox"]):not([type="radio"]),textarea,select,[contenteditable="true"],[role="menu"]');
-}
-
-/**
- * 右鍵 / Shift+F10 / 選單鍵 / Delete 的共用綁定（#1694、#1695）：所有卡片的選單（RailRowMenu、TripCardMenu）
- * 都走這一支，不各寫一套。`openAt` 收游標座標（鍵盤則為元素左側垂直置中）；`onDeleteKey` 沒傳＝沒有 Delete 行為。
- */
-export function useContextMenuTrigger(
-  targetRef: React.RefObject<HTMLElement | null> | undefined,
-  openAt: (x: number, y: number) => void,
-  onDeleteKey?: () => void,
-) {
-  const openRef = useRef(openAt);
-  const deleteRef = useRef(onDeleteKey);
-  openRef.current = openAt;
-  deleteRef.current = onDeleteKey;
-  useEffect(() => {
-    const el = targetRef?.current;
-    if (!el) return;
-    const onCtx = (e: MouseEvent) => {
-      // 列內的連結保留瀏覽器原生選單；列本身就是連結（側欄行程列）則照開。
-      const link = (e.target as HTMLElement).closest('a[href]');
-      if (isEditableTarget(e.target) || (link && link !== el)) return;
-      e.preventDefault();
-      openRef.current(e.clientX, e.clientY);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
-      if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
-        e.preventDefault();
-        const r = el.getBoundingClientRect();
-        openRef.current(r.left + 16, r.top + r.height / 2);
-      } else if (e.key === 'Delete' && deleteRef.current) {
-        e.preventDefault();
-        deleteRef.current();
-      }
-    };
-    el.addEventListener('contextmenu', onCtx);
-    el.addEventListener('keydown', onKey);
-    return () => { el.removeEventListener('contextmenu', onCtx); el.removeEventListener('keydown', onKey); };
-  }, [targetRef]);
-}
 
 /**
  * ⋯ context menu — rev2 mockup Section 02：把停留卡的動作從「展開明細一排 icon 鈕」
@@ -88,21 +44,22 @@ export function RailRowMenu({ menuId, label, items, testid, contextTargetRef, on
   // 右鍵 / 鍵盤開啟時的錨點座標；有值就貼座標，沒有就貼 trigger。
   const pointRef = useRef<{ x: number; y: number } | null>(null);
   const positionMenu = () => {
-    const t = triggerRef.current;
     const m = menuRef.current;
-    if (!t || !m) return;
+    if (!m) return;
     const mh = m.offsetHeight || 300;
     const mw = m.offsetWidth || 216;
     const pt = pointRef.current;
-    if (pt) {
-      m.style.top = `${Math.max(8, Math.min(pt.y, window.innerHeight - mh - 8))}px`;
-      m.style.left = `${Math.max(8, Math.min(pt.x, window.innerWidth - mw - 8))}px`;
-      return;
+    const t = triggerRef.current;
+    // 貼座標（右鍵 / 鍵盤）；沒有座標就貼 trigger 下緣（下方空間不夠則往上翻），右對齊 trigger。
+    // 沒有 trigger（hideTrigger）又沒座標時無處可貼，不動。
+    if (!pt && !t) return;
+    let x: number, y: number;
+    if (pt) { x = pt.x; y = pt.y; } else {
+      const r = t!.getBoundingClientRect();
+      x = r.right - mw;
+      y = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
     }
-    const r = t.getBoundingClientRect();
-    // 下方空間夠 → 貼 trigger 下緣；否則往上翻。右對齊 trigger、夾在 viewport 內。
-    const top = window.innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - mh - 6);
-    const left = Math.max(8, Math.min(r.right - mw, window.innerWidth - mw - 8));
+    const { left, top } = clampToViewport(x, y, mw, mh, window.innerWidth, window.innerHeight);
     m.style.top = `${top}px`;
     m.style.left = `${left}px`;
   };
@@ -113,20 +70,21 @@ export function RailRowMenu({ menuId, label, items, testid, contextTargetRef, on
   }, onDeleteKey);
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        style={hideTrigger ? { display: 'none' } : undefined}
-        className="tp-rail-menu-trigger"
-        popoverTarget={menuId}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`更多動作：${label}`}
-        onClick={(e) => e.stopPropagation()}
-        data-testid={testid}
-      >
-        <Icon name="ellipsis" />
-      </button>
+      {!hideTrigger && (
+        <button
+          ref={triggerRef}
+          type="button"
+          className="tp-rail-menu-trigger"
+          popoverTarget={menuId}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`更多動作：${label}`}
+          onClick={(e) => e.stopPropagation()}
+          data-testid={testid}
+        >
+          <Icon name="ellipsis" />
+        </button>
+      )}
       <div
         ref={menuRef}
         id={menuId}

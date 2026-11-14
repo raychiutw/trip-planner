@@ -1,7 +1,7 @@
 /**
  * useDocumentTitle — 全站唯一設定瀏覽器分頁標題的地方（#1696）。
  * 格式「頁名 · 行程名 — Tripline」；首頁只寫「Tripline」。
- * 行程名：/trip/:id 取該行程，其餘有行程脈絡的頁（聊天、地圖）取 active trip；
+ * 行程名：/trip/:id 與 /trips?selected=X 取該行程，其餘有行程脈絡的頁（聊天、地圖）取 active trip；
  * 清單查不到（例如分享頁）就省略行程名。
  */
 import { useEffect } from 'react';
@@ -43,11 +43,13 @@ const PAGES: ReadonlyArray<[RegExp, string, boolean]> = [
 ];
 
 export function useDocumentTitle() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { user } = useCurrentUser();
   const { trips, activeTripId } = useTripSelection(user?.id, { fallback: false });
   const urlTripId = pathname.match(/^\/trip\/([^/]+)/)?.[1];
-  const tripId = urlTripId ?? activeTripId;
+  // 桌機行程詳情是 /trips?selected=X（沒有 :tripId 路徑段）
+  const selectedTripId = pathname.startsWith('/trips') ? new URLSearchParams(search).get('selected') : null;
+  const tripId = urlTripId ?? selectedTripId ?? activeTripId;
   const found = trips?.find((t) => t.tripId === tripId);
   const tripName = found ? (found.title || found.name) : '';
 
@@ -55,6 +57,6 @@ export function useDocumentTitle() {
     const hit = PAGES.find(([re]) => re.test(pathname));
     if (!hit) { document.title = APP; return; }
     const [, label, withTrip] = hit;
-    document.title = `${label}${withTrip && tripName ? ` · ${tripName}` : ''} — ${APP}`;
-  }, [pathname, tripName]);
+    document.title = `${label}${(withTrip || selectedTripId) && tripName ? ` · ${tripName}` : ''} — ${APP}`;
+  }, [pathname, tripName, selectedTripId]);
 }
