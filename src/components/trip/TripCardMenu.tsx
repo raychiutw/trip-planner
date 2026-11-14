@@ -12,7 +12,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from '../shared/Icon';
-import { useContextMenuTrigger } from './RailRowMenu';
+import { useContextMenuTrigger } from '../../hooks/useContextMenuTrigger';
+import { clampToViewport } from '../../lib/menuPosition';
 
 const SCOPED_STYLES = `
 .tp-card-menu-trigger {
@@ -89,17 +90,19 @@ export interface TripCardMenuProps {
   archived?: boolean;
   /** 預設關掉 menu 後 host 不需要做事。 */
   onClose?: () => void;
-  /** 該元素上右鍵 / Shift+F10 / 選單鍵從座標開同一個選單；有 onDelete 時 Delete 鍵開刪除確認（#1695，與 RailRowMenu 同一個 hook）。 */
+  /** 該元素上右鍵 / Shift+F10 / 選單鍵從座標開同一個選單（#1695，與 RailRowMenu 同一個 hook）。 */
   contextTargetRef?: React.RefObject<HTMLElement | null>;
-  /** 沒有常駐 ⋯（側欄行程列）：只靠右鍵 / 鍵盤開。 */
-  triggerless?: boolean;
+  /** 給了就讓 contextTargetRef 內（非輸入框）按 Delete 呼叫它；沒權限時不要傳（與選單的刪除項同一份權限）。與 RailRowMenu 同名同形。 */
+  onDeleteKey?: () => void;
+  /** 沒有常駐 ⋯（側欄行程列）：不渲染 trigger，只靠右鍵 / 鍵盤開。與 RailRowMenu 同名。 */
+  hideTrigger?: boolean;
 }
 
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 const BOTTOM_SAFE_AREA = 96;
 
-export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onArchive, archived, onClose, contextTargetRef, triggerless }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, onNotes, onShare, onDelete, onArchive, archived, onClose, contextTargetRef, onDeleteKey, hideTrigger }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -110,7 +113,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
   useContextMenuTrigger(contextTargetRef, (x, y) => {
     pointRef.current = { x, y };
     setOpen(true);
-  }, onDelete ? () => onDelete(tripId) : undefined);
+  }, onDeleteKey);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -128,10 +131,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
       const menuH = menuRef.current?.offsetHeight || 335;
       const pt = pointRef.current;
       if (pt) {
-        setPos({
-          top: Math.max(VIEWPORT_MARGIN, Math.min(pt.y, vh - menuH - VIEWPORT_MARGIN)),
-          left: Math.max(VIEWPORT_MARGIN, Math.min(pt.x, vw - MENU_WIDTH - VIEWPORT_MARGIN)),
-        });
+        setPos(clampToViewport(pt.x, pt.y, MENU_WIDTH, menuH, vw, vh, VIEWPORT_MARGIN));
         return;
       }
       if (!btn) return;
@@ -321,7 +321,7 @@ export default function TripCardMenu({ tripId, onCollab, onEdit, onHealthCheck, 
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      {!triggerless && (
+      {!hideTrigger && (
         <button
           ref={triggerRef}
           type="button"

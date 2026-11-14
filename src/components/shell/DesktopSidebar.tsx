@@ -187,7 +187,7 @@ export interface SidebarUser {
 }
 
 /** 行程列右鍵選單的動作（和行程卡 ⋯ 同一個 TripCardMenu）；回 null＝這列不開選單。 */
-export type SidebarTripMenu = (trip: MyTrip) => Omit<TripCardMenuProps, 'tripId' | 'contextTargetRef' | 'triggerless'> | null;
+export type SidebarTripMenu = (trip: MyTrip) => Omit<TripCardMenuProps, 'tripId' | 'contextTargetRef' | 'hideTrigger'> | null;
 
 function SidebarTripRow({ trip, active, menu, to, onOpen }: { trip: MyTrip; active: boolean; menu: ReturnType<SidebarTripMenu>; to: string; onOpen: () => void }) {
   const ref = useRef<HTMLAnchorElement>(null);
@@ -203,7 +203,7 @@ function SidebarTripRow({ trip, active, menu, to, onOpen }: { trip: MyTrip; acti
       >
         {trip.name}
       </Link>
-      {menu && <TripCardMenu tripId={trip.tripId} contextTargetRef={ref} triggerless {...menu} />}
+      {menu && <TripCardMenu tripId={trip.tripId} contextTargetRef={ref} hideTrigger {...menu} />}
     </>
   );
 }

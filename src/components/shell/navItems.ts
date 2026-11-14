@@ -63,12 +63,12 @@ export function scrollBranchToTop(): void {
 
 /**
  * 切換 active trip 後要去哪頁（桌機側欄與 trip switcher 共用的唯一判斷）：
- * 聊天 → 留在 /chat（對話跟著 active trip 換）、地圖 → 該行程地圖、其他 → 行程詳情。
+ * 聊天 → 留在 /chat 並帶 ?tripId（⌘-click 開新分頁也停在該行程）、地圖 → 該行程地圖、其他 → 行程詳情。
  */
 export function tripDestination(pathname: string, tripId: string): string {
   const id = encodeURIComponent(tripId);
   const key = PRIMARY_NAV_ITEMS.find((item) => isItemActive(pathname, item))?.key;
-  if (key === 'chat') return '/chat';
+  if (key === 'chat') return `/chat?tripId=${id}`;
   if (key === 'map') return `/trip/${id}/map`;
   return `/trips?selected=${id}`;
 }

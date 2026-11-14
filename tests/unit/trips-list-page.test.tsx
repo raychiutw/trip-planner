@@ -528,6 +528,29 @@ describe('TripsListPage — 刪除與歸檔的失敗與副作用（Trip mutation
     expect(screen.getByTestId('trips-list-card-seoul')).toBeInTheDocument();
   });
 
+  const stubOwn = () => vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => (
+    new Response(String(input) === '/api/my-trips' ? JSON.stringify([OWN]) : 'null', { status: 200 })
+)));
+
+  it('歸檔確認文案帶「你正在閱讀的詳情會保持開啟。」（清單頁旁邊可能開著詳情）', async () => {
+    stubOwn();
+    mount();
+    await screen.findByTestId('trips-list-card-okinawa');
+    fireEvent.click(screen.getByTestId('trip-card-menu-trigger-okinawa'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    expect(screen.getByText(/旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。/)).toBeInTheDocument();
+  });
+
+  it('嵌入模式（?selected=）從詳情選單歸檔：畫面上只有一個確認 dialog', async () => {
+    mockMatchMedia(false);
+    stubOwn();
+    mount('/trips?selected=okinawa');
+    fireEvent.click(await screen.findByTestId('trips-embedded-menu-trigger'));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '歸檔行程' }));
+    expect(screen.getAllByRole('alertdialog')).toHaveLength(1);
+    expect(screen.getByText(/你正在閱讀的詳情會保持開啟。/)).toBeInTheDocument();
+  });
+
   it('歸檔回 500 → 顯示失敗訊息、確認對話框保留、按鈕可再按', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input);

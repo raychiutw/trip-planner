@@ -14,7 +14,7 @@ import { writeTripView } from '../lib/tripViewState';
 import { EVENT } from '../lib/events';
 import { lsRenewAll } from '../lib/localStorage';
 import { EntryEditAccessContext } from '../contexts/EntryEditAccessContext';
-import { useTripSelection } from '../hooks/useMyTrips';
+import { useTripSelection, canEditTrip } from '../hooks/useMyTrips';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -238,8 +238,7 @@ function TripPageInner(
     ? effectiveUrlTripId : getQueryTrip();
   const { activeTripId, status: tripsStatus, trips: myTrips } = useTripSelection(currentUser?.id, { explicitTripId });
   // #1695：viewer / 匿名不提供刪除景點（與後端 hasWritePermission 的 role != 'viewer' 一致）。
-  const myRole = myTrips?.find((t) => t.tripId === activeTripId)?.role;
-  const canEditEntries = myRole === 'owner' || myRole === 'member';
+  const canEditEntries = canEditTrip(myTrips?.find((t) => t.tripId === activeTripId), currentUser?.id);
   const resolveState = useMemo<ResolveState>(() => activeTripId
     ? { status: 'resolved', tripId: activeTripId }
     : tripsStatus === 'ready' ? { status: 'unpublished' } : { status: 'loading' },

@@ -30,6 +30,12 @@ for (const [path, title] of cases) {
   });
 }
 
+test('桌機 /trips?selected=X 的標題帶選中行程名', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`/trips?selected=${B.tripId}`);
+  await expect(page).toHaveTitle(`行程 · ${B.title} — Tripline`);
+});
+
 test('聊天標題帶 active trip 名，離開行程頁後標題跟著更新', async ({ page }) => {
   await page.goto(`/trip/${A.tripId}`);
   await expect(page).toHaveTitle(`行程 · ${A.title} — Tripline`);

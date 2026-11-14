@@ -28,7 +28,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { readTripView } from '../lib/tripViewState';
 import { useNewTrip } from '../contexts/NewTripContext';
 import ImportTripButton from '../components/trips/ImportTripButton';
-import { archiveTrip, unarchiveTrip, deleteTrip } from '../lib/tripMutations';
+import { useTripLifecycleConfirm } from '../hooks/useTripLifecycleConfirm';
 import AppShell from '../components/shell/AppShell';
 import TripTitleSwitcher from '../components/shell/TripTitleSwitcher';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -40,8 +40,7 @@ import ShareLinkModal from '../components/share/ShareLinkModal';
 import TripActionsMenu from '../components/trip/TripActionsMenu';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
-import ToastContainer, { showToast } from '../components/shared/Toast';
-import ConfirmModal from '../components/shared/ConfirmModal';
+import ToastContainer from '../components/shared/Toast';
 import PageErrorState from '../components/shared/PageErrorState';
 import { TripSelect } from '../components/TripSelect';
 import TripPage, { type TripPageHandle } from './TripPage';
@@ -725,67 +724,36 @@ export default function TripsListPage() {
     [navigate],
   );
 
-  const [deleteTarget, setDeleteTarget] = useState<{ tripId: string; label: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [archiveTarget, setArchiveTarget] = useState<{ tripId: string; label: string; archived: boolean } | null>(null);
-  const [archiving, setArchiving] = useState(false);
+  const { requestDelete, requestArchive, dialog: lifecycleDialog } = useTripLifecycleConfirm((kind, tripId) => {
+    if (kind === 'delete') {
+      // Clear ?selected= if user just deleted the open trip
+      if (selectedFromUrl === tripId) {
+        const next = new URLSearchParams(searchParams);
+        next.delete('selected');
+        setSearchParams(next, { replace: true });
+      }
+      return;
+    }
+    requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(
+        selectedFromUrl ? '[data-testid="trips-embedded-menu-trigger"]' : '[data-testid="trips-list-tab-archived"]',
+      );
+      target?.focus();
+    });
+  }, '你正在閱讀的詳情會保持開啟。');
 
   const handleMenuArchive = useCallback((tripId: string) => {
     const trip = myTrips.find((candidate) => candidate.tripId === tripId);
     if (!trip || !isTripOwner(trip, user?.id)) return;
-    setArchiveTarget({ tripId, label: trip.title || trip.name || tripId, archived: trip.archivedAt != null });
-  }, [myTrips, user?.id]);
-
-  const handleConfirmArchive = useCallback(async () => {
-    if (!archiveTarget || archiving) return;
-    const { tripId, archived, label } = archiveTarget;
-    setArchiving(true);
-    try {
-      const result = archived ? await unarchiveTrip(tripId) : await archiveTrip(tripId);
-      if (!result.ok) { showToast(result.message, 'error'); return; }
-      setArchiveTarget(null);
-      showToast(`已${archived ? '取消歸檔' : '歸檔'}「${label}」`, 'success');
-      requestAnimationFrame(() => {
-        const target = document.querySelector<HTMLElement>(
-          selectedFromUrl ? '[data-testid="trips-embedded-menu-trigger"]' : '[data-testid="trips-list-tab-archived"]',
-        );
-        target?.focus();
-      });
-    } finally {
-      setArchiving(false);
-    }
-  }, [archiveTarget, archiving, selectedFromUrl]);
+    requestArchive(tripId, trip.title || trip.name || tripId, trip.archivedAt != null);
+  }, [myTrips, user?.id, requestArchive]);
 
   const handleMenuDelete = useCallback(
     (tripId: string) => {
       const trip = visibleTrips.find((t) => t.tripId === tripId);
-      const label = trip?.title || trip?.name || tripId;
-      setDeleteTarget({ tripId, label });
+      requestDelete(tripId, trip?.title || trip?.name || tripId);
     },
-    [visibleTrips],
-  );
-
-  const handleConfirmDelete = useCallback(
-    async () => {
-      if (!deleteTarget) return;
-      const { tripId, label } = deleteTarget;
-      setDeleting(true);
-      try {
-        const result = await deleteTrip(tripId);
-        if (!result.ok) { showToast(result.message, 'error'); return; }
-        showToast(`已刪除「${label}」`, 'success');
-        // Clear ?selected= if user just deleted the open trip
-        if (selectedFromUrl === tripId) {
-          const next = new URLSearchParams(searchParams);
-          next.delete('selected');
-          setSearchParams(next, { replace: true });
-        }
-        setDeleteTarget(null);
-      } finally {
-        setDeleting(false);
-      }
-    },
-    [deleteTarget, selectedFromUrl, searchParams, setSearchParams],
+    [visibleTrips, requestDelete],
   );
 
   const loading = tripsStatus === 'loading' && !sharedTrips;
@@ -799,15 +767,6 @@ export default function TripsListPage() {
 
   const cardGridMain = (
     <>
-      <ConfirmModal
-        open={deleteTarget !== null}
-        title="確定刪除行程？"
-        message={deleteTarget ? `即將刪除「${deleteTarget.label}」，此操作無法復原。` : ''}
-        confirmLabel="刪除"
-        busy={deleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
@@ -1006,6 +965,7 @@ export default function TripsListPage() {
                       onNotes={(id) => navigate(`/trip/${encodeURIComponent(id)}/notes`)}
                       onShare={(id) => setShareTripId(id)}
                       onDelete={isTripOwner(t, user?.id) ? handleMenuDelete : undefined}
+                      onDeleteKey={isTripOwner(t, user?.id) ? () => handleMenuDelete(t.tripId) : undefined}
                     />
                   )}>
                     <button
@@ -1144,18 +1104,7 @@ export default function TripsListPage() {
   return (
     <>
       <ToastContainer />
-      <ConfirmModal
-        open={archiveTarget !== null}
-        title={archiveTarget?.archived ? '取消歸檔行程？' : '歸檔行程？'}
-        message={archiveTarget?.archived
-          ? `「${archiveTarget.label}」會回到所有旅伴的「全部」清單。`
-          : `「${archiveTarget?.label ?? ''}」會移到所有旅伴的「已歸檔」；旅伴仍可開啟詳情。你正在閱讀的詳情會保持開啟。`}
-        confirmLabel={archiveTarget?.archived ? '取消歸檔' : '歸檔'}
-        confirmTone="primary"
-        busy={archiving}
-        onConfirm={handleConfirmArchive}
-        onCancel={() => setArchiveTarget(null)}
-      />
+      {lifecycleDialog}
       {/* SCOPED_STYLES 必須 hoist 到頂層 — embedded mode 不渲染 cardGridMain，
         * 注入在 cardGridMain 內就失效。 */}
       <style>{SCOPED_STYLES}</style>

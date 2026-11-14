@@ -63,3 +63,17 @@ test('Shift-click 沒有錨點時只選該卡', async ({ page }) => {
   await expect(page.getByText('已選 1 個')).toBeVisible();
   await expect(page).toHaveURL(/\/favorites$/);
 });
+
+test('⌘-click 勾選框本身只切一次（勾選框 onChange 與卡片 click 不互相抵銷）', async ({ page }) => {
+  await check(page, 2).click({ modifiers: ['Meta'] });
+  await expect(check(page, 2)).toBeChecked();
+  await expect(page.getByText('已選 1 個')).toBeVisible();
+  await check(page, 2).click({ modifiers: ['Meta'] });
+  await expect(check(page, 2)).not.toBeChecked();
+});
+
+test('⇧-click 勾選框同樣只切一次', async ({ page }) => {
+  await check(page, 3).click({ modifiers: ['Shift'] });
+  await expect(check(page, 3)).toBeChecked();
+  await expect(page.getByText('已選 1 個')).toBeVisible();
+});
