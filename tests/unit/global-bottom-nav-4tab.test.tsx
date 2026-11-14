@@ -108,10 +108,10 @@ describe('GlobalBottomNav — 4-tab IA（HIG 2026-07-23：帳號移出 tab → h
     expect(style, '仍是 flex 膠囊，非舊的 grid 滿版 bar').not.toMatch(/grid-template-columns/);
   });
 
-  it('active state = accent 實心 pill（非 2px top indicator）', () => {
+  it('active state = accent-bg 淡柔褐 pill（#1707；非 2px top indicator）', () => {
     const { container } = renderNav({ authed: true, pathname: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active\s*\{[^}]*background:\s*var\(--color-accent-fill\)/);
+    expect(style).toMatch(/\.tp-global-bottom-nav-btn\.is-active\s*\{[^}]*background:\s*var\(--color-accent-bg\)/);
     expect(style).not.toMatch(/is-active::before/);
   });
 });

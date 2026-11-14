@@ -57,10 +57,11 @@ const SCOPED_STYLES = `
   min-height: 36px;
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
-.tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-accent); }
+.tp-sidebar-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-muted); }
 .tp-sidebar-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
 .tp-sidebar-nav-item:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-background); }
-.tp-sidebar-nav-item.is-active { background: var(--color-accent-bg); color: var(--color-foreground); }
+.tp-sidebar-nav-item.is-active { background: var(--color-accent-bg); color: var(--color-selected-fg); }
+.tp-sidebar-nav-item.is-active .svg-icon { color: var(--color-selected-fg); }
 
 .tp-sidebar-divider {
   height: 1px; background: var(--color-border);
@@ -93,7 +94,7 @@ const SCOPED_STYLES = `
 .tp-sidebar-past-toggle { margin-top: 6px; }
 .tp-trip-item {
   flex-shrink: 0; /* #1704：列變高時不被 flex column 壓扁 */
-  display: block; padding: 9px 12px; border-radius: var(--radius-md);
+  position: relative; display: block; padding: 9px 12px; border-radius: var(--radius-md);
   color: var(--color-muted);
   font-size: var(--font-size-footnote); font-weight: 600;
   text-decoration: none; cursor: pointer;
@@ -101,7 +102,12 @@ const SCOPED_STYLES = `
   transition: background 150ms var(--transition-timing-function-apple), color 150ms;
 }
 .tp-trip-item:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-trip-item.is-active { background: var(--color-accent-bg); color: var(--color-foreground); }
+/* #1707（#1703 B）：目前行程是脈絡、為次 —— 無底，只有字重 700 + 左側 3px 柔褐短條；主位是上面的 root tab 膠囊。 */
+.tp-trip-item.is-active { color: var(--color-foreground); font-weight: 700; }
+.tp-trip-item.is-active::before {
+  content: ''; position: absolute; left: 2px; top: 8px; bottom: 8px; width: 3px;
+  border-radius: var(--radius-full); background: var(--color-accent);
+}
 .tp-sidebar-trips-empty {
   padding: 12px 8px; color: var(--color-muted);
   font-size: var(--font-size-footnote);
@@ -294,7 +300,7 @@ export default function DesktopSidebar({ user, trips, tripsStatus, activeTripId,
                   }
                 }}
               >
-                <Icon name={item.icon} />
+                <Icon name={active ? item.iconActive : item.icon} />
                 <span>{item.label}</span>
               </Link>
             );

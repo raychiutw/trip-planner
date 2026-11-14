@@ -40,6 +40,10 @@ body:not(.dark) { color-scheme: light; }
     /* 填色面專用：「實心填色 + accent-foreground 白字」（主要按鈕、側欄 active、底部 tab
      * 選中膠囊…），白字 5.51 ✅。深色維持 #D0A576（深字 7.56 已通過；2026-11-14 #1702 起對齊 App 單一值）。 */
     --color-accent-fill: #8A6038;
+    /* #1707（owner 2026-11-14 簽核 #1703 B）：「選中」前景（root tab／Day tab／側欄選中的 icon 與 label）。
+     * 底是 --color-accent-bg 淡柔褐（不再實心 accent-fill + 白字）；#8A6038 疊在 accent-bg 只有 4.55，
+     * 11px label 太緊，所以前景改這個更深的值：on accent-bg 6.31／頁面底 7.42。#8A6038 只當底色。 */
+    --color-selected-fg: #6F4C2C;
     /* v2.55.88 V3 三色退場：語意分類色（sage 交通 / 粉 收藏活動）收斂成單一柔褐 accent。
      * 消費者（data-tone / --tone-*）不變，只是 accent-2/-3 的值統一成 accent，全站不再彩虹。
      * 卡片改 neutral surface 是 Phase 2（此版仍走柔褐 tint，先退掉多色）。design.md §2.3。 */
@@ -1071,6 +1075,8 @@ body.dark {
         --color-accent-text-on-tonal: #E5C39F;
         /* 深色填色鈕維持 #D0A576（深字 #1C1C1E 疊其上 = 7.56 ✅，本就通過，不需壓深）。 */
         --color-accent-fill: #D0A576;
+        /* #1707：深色選中前景 #D0A576 on accent-bg #3A3020 = 5.74。 */
+        --color-selected-fg: #D0A576;
         /* v2.55.88 V3 三色退場：accent-2/-3 收斂成柔褐 accent（dark 版）。 */
         --color-accent-2: #D0A576;
         --color-accent-2-deep: #E5C39F;
@@ -1647,13 +1653,11 @@ body.dark .tp-toast { background: var(--color-secondary); }
 }
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
-  /* #1140 item 3（owner 2026-07-24「Day tab 比照 root tab」，overturns 2026-07-17 淡 tonal
-   * sign-off）：active 改實心 accent-fill 膠囊，與 root tab（.tp-global-bottom-nav-btn.is-active，
-   * GlobalBottomNav.tsx）同一形制與 token。per-day polyline 對應改由 idle eyebrow 顏色承載
-   * （見 MapDayTab），不再進 active 底色 —— 避免 amber/lime 等淺色天在實心底上白字對比不足
-   * （day palette 本就不進 UI chrome，見 DESIGN.md DV / dayPalette.ts）。 */
-  color: var(--color-accent-foreground);
-  background: var(--color-accent-fill);
+  /* #1707（owner 2026-11-14 簽核 #1703 B；取代 2026-07-24「比照 root tab 實心」）：
+   * 淡柔褐 accent-bg 不透明底 + selected-fg 前景，與 root tab 同一形制。底是不透明色，
+   * 所以前景對比（6.31／深色 5.74）與底下的玻璃、地圖內容無關。 */
+  color: var(--color-selected-fg);
+  background: var(--color-accent-bg);
 }
 .tp-map-day-tab:focus-visible {
   outline: 2px solid var(--color-focus-ring);
