@@ -12,6 +12,7 @@ import { useAccountPreview } from '../hooks/useAccountPreview';
 import { useCurrentUser, type CurrentUser } from '../hooks/useCurrentUser';
 import { typedApi, unwrap } from '../lib/api/typed';
 import { logoutSession } from '../lib/logout';
+import { resetCurrentUserCache } from '../lib/currentUserCache';
 import { ApiError } from '../lib/errors';
 import { REQUEST_TIMEOUT_MS } from '../lib/requestTimeout';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -374,6 +375,7 @@ export default function AccountPage() {
     try {
       const saved = unwrap(await typedApi.patch('/api/account/profile', { body: { displayName: trimmed.length === 0 ? null : trimmed } }));
       setConfirmedName({ value: saved.displayName, userAtSave: user });
+      resetCurrentUserCache(); // 個資已變：共享的使用者（30 秒 TTL）不能再給後 mount 的元件
       reloadUser();
       setEditingName(false);
       // v2.33.142: 成功 silent (user feedback 「右上角不用顯示狀態」一脈相承)。
