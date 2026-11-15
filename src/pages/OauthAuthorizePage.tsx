@@ -129,6 +129,8 @@ export default function OauthAuthorizePage() {
   const pw = usePasswordVisibility();
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const hint = sp.get('biometric_hint') ?? '';
   const bioLabel = Object.prototype.hasOwnProperty.call(BIOMETRIC_LABEL, hint) ? BIOMETRIC_LABEL[hint] : null;
   // 按專門鈕登入 = 使用者要開啟生物辨識登入；等「繼續」時才送意圖（ADR-0018）。一般登入鈕不記。
@@ -187,7 +189,11 @@ export default function OauthAuthorizePage() {
 
   async function onBioLogin() {
     if (busy) return;
-    if (!email.trim() || !password) { setBioMissing(true); return; }
+    if (!email.trim() || !password) {
+      setBioMissing(true);
+      (email.trim() ? passwordRef : emailRef).current?.focus();
+      return;
+    }
     await doLogin(true);
   }
 
@@ -276,6 +282,7 @@ export default function OauthAuthorizePage() {
   }
 
   const credentialInvalid = view.kind === 'login' && view.credential === true;
+  const describedBy = credentialInvalid ? 'authz-login-error' : bioMissing ? 'authz-bio-required' : undefined;
   return (
     <main className="tp-authz-shell" data-testid="oauth-authorize-page">
       <style>{SCOPED_STYLES}</style>
@@ -292,13 +299,13 @@ export default function OauthAuthorizePage() {
             <form className="tp-authz-card" onSubmit={onLogin} data-testid="authz-login-form">
               {view.error && <ErrorBanner message={view.error} testId="authz-login-error" />}
               <label className="tp-authz-field"><span className="tp-authz-label">電子郵件</span>
-                <input className="tp-authz-input" type="email" autoComplete="username" required value={email}
+                <input ref={emailRef} className="tp-authz-input" type="email" autoComplete="username" required value={email}
                   onChange={(e) => setEmail(e.target.value)} data-testid="authz-email"
-                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={describedBy} /></label>
               <label className="tp-authz-field"><span className="tp-authz-label">密碼</span>
-                <input className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
+                <input ref={passwordRef} className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
                   onChange={(e) => setPassword(e.target.value)} data-testid="authz-password"
-                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={describedBy} /></label>
               <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
               {bioLabel && !reauthTitle && (

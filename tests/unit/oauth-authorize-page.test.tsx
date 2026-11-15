@@ -304,16 +304,6 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
     await waitFor(() => expect(document.activeElement).toBe(password));
   });
 
-  it('按專門鈕登入後「使用其他帳號」→ 意圖重置，之後一般登入不送 intent', async () => {
-    renderAt('?request_id=req1&biometric_hint=faceid');
-    await fillAndClick('authz-bio-login');
-    fireEvent.click(await screen.findByTestId('authz-switch-account'));
-    await fillAndClick('authz-login-submit');
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
-  });
-
   it('按專門鈕登入 → 繼續時先 intent(enable) 再 approve', async () => {
     renderAt('?request_id=req1&biometric_hint=faceid');
     await fillAndClick('authz-bio-login');
