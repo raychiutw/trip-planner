@@ -249,3 +249,78 @@ describe('授權頁登入表單密碼顯示切換（#1560）', () => {
     expect(fake.login).not.toHaveBeenCalled();
   });
 });
+
+describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
+  const bioBtn = () => screen.queryByTestId('authz-bio-login');
+  const fillAndClick = async (testId: string) => {
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId(testId));
+  };
+  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
+
+  it('沒有 biometric_hint → 完全不顯示專門鈕', async () => {
+    renderAt('?request_id=req1');
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()).toBeNull();
+  });
+
+  it('biometric_hint 不是白名單值 → 不顯示專門鈕', async () => {
+    renderAt('?request_id=req1&biometric_hint=retina');
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()).toBeNull();
+  });
+
+  it.each([
+    ['faceid', '用 Face ID 登入'],
+    ['touchid', '用 Touch ID 登入'],
+    ['generic', '用生物辨識登入'],
+  ])('biometric_hint=%s → 顯示「%s」', async (hint, label) => {
+    renderAt(`?request_id=req1&biometric_hint=${hint}`);
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()?.textContent).toContain(label);
+  });
+
+  it('帳密未填就按專門鈕 → 就地顯示必填錯誤，不送出登入', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.click(await screen.findByTestId('authz-bio-login'));
+    expect(await screen.findByTestId('authz-bio-required')).toBeTruthy();
+    expect(fake.login).not.toHaveBeenCalled();
+  });
+
+  it('按專門鈕登入 → 繼續時先 intent(enable) 再 approve', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-bio-login');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    const intent = fake.apiFetch.mock.calls.find(([u]) => String(u).endsWith('/intent'));
+    expect(intent?.[0]).toBe('/api/oauth/authorize/requests/req1/intent');
+    expect((intent?.[1] as RequestInit).method).toBe('POST');
+    expect(JSON.parse(String((intent?.[1] as RequestInit).body))).toEqual({ intent: 'enable' });
+    const order = calls().filter((u) => u.endsWith('/intent') || u.endsWith('/approve'));
+    expect(order).toEqual([
+      '/api/oauth/authorize/requests/req1/intent',
+      '/api/oauth/authorize/requests/req1/approve',
+    ]);
+  });
+
+  it('按一般登入鈕 → 即使有專門鈕也不呼叫 intent', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-login-submit');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
+  });
+
+  it('intent 失敗 → 不擋登入，照常 approve 並導回，且不顯示錯誤', async () => {
+    const base = fake.apiFetch.getMockImplementation()!;
+    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
+      String(input).endsWith('/intent') ? json({ error: { code: 'DATA_VALIDATION', message: 'x' } }, 400) : base(input, init));
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-bio-login');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(calls().some((u) => u.endsWith('/approve'))).toBe(true);
+    expect(screen.queryByTestId('authz-error')).toBeNull();
+  });
+});

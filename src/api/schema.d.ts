@@ -5557,7 +5557,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -5686,6 +5686,8 @@ export interface paths {
                     code_challenge?: string;
                     code_challenge_method?: string;
                     prompt?: string;
+                    /** @description App 發起授權時帶：faceid｜touchid｜generic；其他值當作沒帶 */
+                    biometric_hint?: string;
                 };
                 header?: never;
                 path?: never;
@@ -5693,7 +5695,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
+                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`，僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -5886,6 +5888,79 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ApiError"] | components["schemas"]["OauthMisc_OAuthError"];
+                    };
+                };
+                /** @description 沒有有效 bearer */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+                /** @description service token 沒有使用者身份（PERM_DENIED） */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/oauth/authorize/requests/{id}/intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 記下生物辨識意圖（批准時由 server 在 redirect_to 加 biometric_intent） */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description null 清除意圖
+                         * @enum {string|null}
+                         */
+                        intent: "enable" | "disable" | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description 已記下（綁定目前使用者；null 為清除） */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 授權請求不存在、已過期或已使用，或 intent 值不合法（DATA_VALIDATION） */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description 沒有有效 bearer */
@@ -7391,7 +7466,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -9466,7 +9541,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求 */
+                /** @description 沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求 */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -10222,7 +10297,7 @@ export interface components {
             /** @description 接受時間（UTC ISO 8601）；none／withdrawn 為 null */
             acceptedAt: string | null;
             text: components["schemas"]["Account_AiDataConsentText"];
-            /** @description 三個受管制入口目前是否真的檢查同意（旗標開且文字已填妥） */
+            /** @description 一律為 true（旗標已移除，保留欄位給舊版 client 相容） */
             enforced: boolean;
         };
         /** @description 目前版本的說明文字（web 與 Flutter 只顯示這份） */
@@ -11075,6 +11150,13 @@ export interface components {
             needs_consent: boolean;
             /** @description ISO 8601 */
             expires_at: string;
+            /** @description App 以 biometric_hint 發起的授權為 true；舊版 App 與一般請求為 false */
+            from_app: boolean;
+            /**
+             * @description 按鈕名稱提示；generic、未帶、未知值皆為 null
+             * @enum {string|null}
+             */
+            biometric_hint: "faceid" | "touchid" | null;
         };
         OauthMisc_RedirectTo: {
             redirect_to: string;
