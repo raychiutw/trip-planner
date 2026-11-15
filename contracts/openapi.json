@@ -84,7 +84,7 @@
           },
           "enforced": {
             "type": "boolean",
-            "description": "三個受管制入口目前是否真的檢查同意（旗標開且文字已填妥）"
+            "description": "一律為 true（旗標已移除，保留欄位給舊版 client 相容）"
           }
         },
         "required": [
@@ -3252,13 +3252,29 @@
           "expires_at": {
             "type": "string",
             "description": "ISO 8601"
+          },
+          "from_app": {
+            "type": "boolean",
+            "description": "App 以 biometric_hint 發起的授權為 true；舊版 App 與一般請求為 false"
+          },
+          "biometric_hint": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "faceid",
+              "touchid",
+              null
+            ],
+            "description": "按鈕名稱提示；generic、未帶、未知值皆為 null"
           }
         },
         "required": [
           "client",
           "scopes",
           "needs_consent",
-          "expires_at"
+          "expires_at",
+          "from_app",
+          "biometric_hint"
         ]
       },
       "OauthMisc_RedirectTo": {
@@ -13280,7 +13296,7 @@
             }
           },
           "403": {
-            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求",
+            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求",
             "content": {
               "application/json": {
                 "schema": {
@@ -13477,11 +13493,21 @@
             "required": false,
             "name": "prompt",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "App 發起授權時帶：faceid｜touchid｜generic；其他值當作沒帶"
+            },
+            "required": false,
+            "description": "App 發起授權時帶：faceid｜touchid｜generic；其他值當作沒帶",
+            "name": "biometric_hint",
+            "in": "query"
           }
         ],
         "responses": {
           "302": {
-            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）"
+            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`，僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）"
           },
           "400": {
             "description": "client／redirect_uri 有問題（不可導回 client）；mobile client（tripline-mobile／-uat／-dev）與環境或精確 callback 不符（unauthorized_client）；或 WEB_ORIGIN／PUBLIC_ORIGIN 未設定（server_error）",
@@ -13669,6 +13695,86 @@
                       "$ref": "#/components/schemas/OauthMisc_OAuthError"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "沒有有效 bearer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "service token 沒有使用者身份（PERM_DENIED）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth/authorize/requests/{id}/intent": {
+      "post": {
+        "summary": "記下生物辨識意圖（批准時由 server 在 redirect_to 加 biometric_intent）",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "intent": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "enable",
+                      "disable",
+                      null
+                    ],
+                    "description": "null 清除意圖"
+                  }
+                },
+                "required": [
+                  "intent"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "已記下（綁定目前使用者；null 為清除）"
+          },
+          "400": {
+            "description": "授權請求不存在、已過期或已使用，或 intent 值不合法（DATA_VALIDATION）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }
@@ -15236,7 +15342,7 @@
             }
           },
           "403": {
-            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求",
+            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求",
             "content": {
               "application/json": {
                 "schema": {
@@ -17358,7 +17464,7 @@
             }
           },
           "403": {
-            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足（旗標開且文案填妥才會發生）：送出者未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status），且不建立請求",
+            "description": "沒有此行程的寫入權限（PERM_DENIED）；或 AI 資料同意未滿足：行程擁有者自己送出但未同意 AI_CONSENT_REQUIRED（error 帶 requiredVersion 與送出者的 status）、旅伴送出但行程擁有者未同意 AI_CONSENT_OWNER_REQUIRED（只帶 requiredVersion，不帶 status；旅伴自己不需同意），且不建立請求",
             "content": {
               "application/json": {
                 "schema": {
