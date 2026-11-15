@@ -124,7 +124,7 @@ export default function OauthAuthorizePage() {
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
   const hint = sp.get('biometric_hint') ?? '';
-  const bioLabel = Object.hasOwn(BIOMETRIC_LABEL, hint) ? BIOMETRIC_LABEL[hint] : null;
+  const bioLabel = Object.prototype.hasOwnProperty.call(BIOMETRIC_LABEL, hint) ? BIOMETRIC_LABEL[hint] : null;
   // 按專門鈕登入 = 使用者要開啟生物辨識登入；等「繼續」時才送意圖（ADR-0018）。一般登入鈕不記。
   const [wantBio, setWantBio] = useState(false);
   const [bioMissing, setBioMissing] = useState(false);

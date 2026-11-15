@@ -58,12 +58,12 @@ describe('Google 登入已整個移除', () => {
 
 });
 
-describe('契約快照同步到 production 現況（114 路徑）', () => {
+describe('契約快照同步到 production 現況（115 路徑，含 api 整合分支新增的 intent 端點）', () => {
   const spec = JSON.parse(readFileSync(join(ROOT, 'contracts/openapi.json'), 'utf8')) as { paths: Record<string, unknown> };
   const paths = Object.keys(spec.paths);
 
-  it('路徑數 114', () => {
-    expect(paths).toHaveLength(114);
+  it('路徑數 115', () => {
+    expect(paths).toHaveLength(115);
   });
 
   it('不含 Google 登入與 delete-reauth 路徑', () => {
