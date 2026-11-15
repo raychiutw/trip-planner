@@ -5903,7 +5903,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description service token 沒有使用者身份（PERM_DENIED）；重新驗證模式：不是剛用密碼登入（OAUTH_REAUTH_REQUIRED，請求保留）或帳號與 App 目前帳號不同（OAUTH_REAUTH_ACCOUNT_MISMATCH，請求已消耗） */
+                /** @description service token 沒有使用者身份（PERM_DENIED） */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -5958,7 +5958,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description 授權請求不存在、已過期或已使用，或 intent 值不合法（DATA_VALIDATION） */
+                /** @description 授權請求不存在、已過期或已使用，或 intent 值不合法；重新驗證模式的請求不可變更意圖（DATA_VALIDATION） */
                 400: {
                     headers: {
                         [name: string]: unknown;
