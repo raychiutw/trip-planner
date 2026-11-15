@@ -43,6 +43,7 @@ const BIOMETRIC: Record<string, { text: string; faceId: boolean }> = {
 const REAUTH_TITLE: Record<string, string> = {
   enable: '開啟生物辨識登入，請重新輸入密碼',
   disable: '關閉生物辨識登入，請重新輸入密碼',
+  login: '請重新輸入密碼登入',
 };
 
 const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -260,10 +261,6 @@ export default function OauthAuthorizePage() {
           await clearApiCache();
           approving.current = false; // 重新登入後要能再 approve
           setView({ kind: 'login', error: '登入已逾時，請重新輸入密碼。' });
-          return;
-        }
-        if (code === 'OAUTH_REAUTH_ACCOUNT_MISMATCH') {
-          setView({ kind: 'error', message: '登入的帳號與 App 目前的帳號不同，請回 App 重新發起。' });
           return;
         }
         setView({ kind: 'error', message: '授權失敗：請求已過期或已使用，請回到 App 重新發起登入。' });

@@ -341,7 +341,7 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
   });
 });
 
-describe('重新驗證模式（#1725，reauth=enable|disable）', () => {
+describe('重新驗證模式（#1725，reauth=enable|disable|login）', () => {
   const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
   const submit = async () => {
     fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
@@ -358,6 +358,7 @@ describe('重新驗證模式（#1725，reauth=enable|disable）', () => {
   it.each([
     ['enable', '開啟生物辨識登入，請重新輸入密碼'],
     ['disable', '關閉生物辨識登入，請重新輸入密碼'],
+    ['login', '請重新輸入密碼登入'],
   ])('reauth=%s → 即使本機有登入也不還原，直接顯示登入表單與文案', async (v, text) => {
     fake.state.restoreOk = true;
     fake.state.authed = true;
@@ -377,16 +378,16 @@ describe('重新驗證模式（#1725，reauth=enable|disable）', () => {
     expect(fake.restoreSession).toHaveBeenCalled();
   });
 
-  it('reauth 模式不顯示專門鈕、不呼叫 intent', async () => {
-    renderAt('?request_id=req1&reauth=enable&biometric_hint=faceid');
+  it.each(['enable', 'login'])('reauth=%s 不顯示專門鈕、不呼叫 intent', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}&biometric_hint=faceid`);
     await submit();
     await waitFor(() => expect(assign).toHaveBeenCalled());
     expect(screen.queryByTestId('authz-bio-login')).toBeNull();
     expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
   });
 
-  it('登入成功 → 直接 approve 並導向，不停在「繼續」', async () => {
-    renderAt('?request_id=req1&reauth=enable');
+  it.each(['enable', 'login'])('reauth=%s 登入成功 → 直接 approve 並導向，不停在「繼續」', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}`);
     await submit();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1'));
     expect(calls().filter((u) => u.endsWith('/approve'))).toEqual(['/api/oauth/authorize/requests/req1/approve']);
@@ -407,15 +408,14 @@ describe('重新驗證模式（#1725，reauth=enable|disable）', () => {
     expect(approves).toEqual(Array(2).fill('/api/oauth/authorize/requests/req1/approve'));
   });
 
-  it('approve 回 OAUTH_REAUTH_ACCOUNT_MISMATCH → 顯示明確錯誤，不重試、不導向、無登入表單', async () => {
-    approveWith(() => forbidden('OAUTH_REAUTH_ACCOUNT_MISMATCH'));
+  it('帳號不符：approve 回 200 帶 error callback → 導向該 redirect_to，不顯示錯誤頁、不重試', async () => {
+    const cb = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?error=reauth_account_mismatch&state=st1';
+    approveWith(() => json({ redirect_to: cb }));
     renderAt('?request_id=req1&reauth=enable');
     await submit();
-    const err = await screen.findByTestId('authz-error');
-    expect(err.textContent).toContain('登入的帳號與 App 目前的帳號不同，請回 App 重新發起');
-    expect(screen.queryByTestId('authz-login-form')).toBeNull();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(cb));
+    expect(screen.queryByTestId('authz-error')).toBeNull();
     expect(calls().filter((u) => u.endsWith('/approve'))).toHaveLength(1);
-    expect(assign).not.toHaveBeenCalled();
   });
 
   it('一般授權的 403 OAUTH_REAUTH_REQUIRED 不做特殊處理（仍是一般失敗錯誤）', async () => {
