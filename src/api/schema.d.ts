@@ -5688,6 +5688,10 @@ export interface paths {
                     prompt?: string;
                     /** @description App 發起授權時帶：faceid｜touchid｜generic；其他值當作沒帶 */
                     biometric_hint?: string;
+                    /** @description 重新驗證模式（需 prompt=login 與 expected_account）：enable｜disable；其他值當作沒帶 */
+                    biometric_intent?: string;
+                    /** @description App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request */
+                    expected_account?: string;
                 };
                 header?: never;
                 path?: never;
@@ -5695,7 +5699,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`，僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
+                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -5834,7 +5838,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description service token 沒有使用者身份（PERM_DENIED） */
+                /** @description service token 沒有使用者身份（PERM_DENIED）；重新驗證模式：不是剛用密碼登入（OAUTH_REAUTH_REQUIRED，請求保留）或帳號與 App 目前帳號不同（OAUTH_REAUTH_ACCOUNT_MISMATCH，請求已消耗） */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -5899,7 +5903,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description service token 沒有使用者身份（PERM_DENIED） */
+                /** @description service token 沒有使用者身份（PERM_DENIED）；重新驗證模式：不是剛用密碼登入（OAUTH_REAUTH_REQUIRED，請求保留）或帳號與 App 目前帳號不同（OAUTH_REAUTH_ACCOUNT_MISMATCH，請求已消耗） */
                 403: {
                     headers: {
                         [name: string]: unknown;
