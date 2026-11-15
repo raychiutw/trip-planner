@@ -30,6 +30,12 @@ const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
 /** 網址 biometric_hint（api 白名單值）→ 專門鈕名稱；只供顯示，不是安全依據，未知值一律不顯示。 */
 const BIOMETRIC_LABEL: Record<string, string> = { faceid: 'Face ID', touchid: 'Touch ID', generic: '生物辨識' };
 
+/** reauth 網址值（api 白名單）→ 登入頁文案；其餘值一律當沒有（一般授權）。 */
+const REAUTH_TITLE: Record<string, string> = {
+  enable: '開啟生物辨識登入，請重新輸入密碼',
+  disable: '關閉生物辨識登入，請重新輸入密碼',
+};
+
 const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 interface AuthRequestView {
@@ -126,6 +132,8 @@ export default function OauthAuthorizePage() {
   const hint = sp.get('biometric_hint') ?? '';
   const bioLabel = Object.prototype.hasOwnProperty.call(BIOMETRIC_LABEL, hint) ? BIOMETRIC_LABEL[hint] : null;
   // 按專門鈕登入 = 使用者要開啟生物辨識登入；等「繼續」時才送意圖（ADR-0018）。一般登入鈕不記。
+  const reauthParam = sp.get('reauth') ?? '';
+  const reauthTitle = Object.prototype.hasOwnProperty.call(REAUTH_TITLE, reauthParam) ? REAUTH_TITLE[reauthParam] : null;
   const [wantBio, setWantBio] = useState(false);
   const [bioMissing, setBioMissing] = useState(false);
 
@@ -157,6 +165,11 @@ export default function OauthAuthorizePage() {
         return;
       }
       try {
+        // 重新驗證模式：不還原、不沿用已登入狀態，一定要重新輸入密碼
+        if (reauthTitle) {
+          if (!cancelled) setView({ kind: 'login' });
+          return;
+        }
         const restored = auth.isAuthenticated() || (await auth.restoreSession());
         const next: View = restored ? await loadRequest() : { kind: 'login' };
         if (!cancelled) setView(next);
@@ -165,7 +178,7 @@ export default function OauthAuthorizePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [requestId, loadRequest]);
+  }, [requestId, loadRequest, reauthTitle]);
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -190,8 +203,14 @@ export default function OauthAuthorizePage() {
       setBusy(false);
       return;
     }
+    setPassword('');
+    if (reauthTitle) {
+      // 伺服器只認登入後 60 秒內的批准，不能停在確認步驟
+      setBusy(false);
+      await onContinue();
+      return;
+    }
     try {
-      setPassword('');
       setView(await loadRequest());
     } catch {
       setView({ kind: 'error', message: '無法連線，請稍後再試。' });
@@ -205,7 +224,7 @@ export default function OauthAuthorizePage() {
     approving.current = true;
     setBusy(true);
     try {
-      if (wantBio) {
+      if (wantBio && !reauthTitle) {
         // 意圖失敗不擋登入：只是沒開啟，不顯示誤導訊息
         try {
           await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/intent`, {
@@ -217,6 +236,21 @@ export default function OauthAuthorizePage() {
       }
       const res = await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/approve`, { method: 'POST' });
       if (!res.ok) {
+        const code = reauthTitle && res.status === 403
+          ? ((await res.json().catch(() => null)) as { error?: { code?: string } } | null)?.error?.code
+          : undefined;
+        if (code === 'OAUTH_REAUTH_REQUIRED') {
+          // 請求還在：清掉本機登入，讓使用者重新登入後對同一 request_id 再 approve
+          await getAuthorizeAuth().logout();
+          await clearApiCache();
+          approving.current = false; // 重新登入後要能再 approve
+          setView({ kind: 'login', error: '登入已逾時，請重新輸入密碼。' });
+          return;
+        }
+        if (code === 'OAUTH_REAUTH_ACCOUNT_MISMATCH') {
+          setView({ kind: 'error', message: '登入的帳號與 App 目前的帳號不同，請回 App 重新發起。' });
+          return;
+        }
         setView({ kind: 'error', message: '授權失敗：請求已過期或已使用，請回到 App 重新發起登入。' });
         return;
       }
@@ -254,7 +288,7 @@ export default function OauthAuthorizePage() {
 
         {view.kind === 'login' && (
           <>
-            <h1 className="tp-authz-title">登入以繼續使用 Tripline App</h1>
+            <h1 className="tp-authz-title">{reauthTitle ?? '登入以繼續使用 Tripline App'}</h1>
             <form className="tp-authz-card" onSubmit={onLogin} data-testid="authz-login-form">
               {view.error && <ErrorBanner message={view.error} testId="authz-login-error" />}
               <label className="tp-authz-field"><span className="tp-authz-label">電子郵件</span>
@@ -267,7 +301,7 @@ export default function OauthAuthorizePage() {
                   aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
               <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
-              {bioLabel && (
+              {bioLabel && !reauthTitle && (
                 <>
                   <div className="tp-authz-or" aria-hidden="true">或</div>
                   <button className="tp-authz-btn tp-authz-btn-out" type="button" onClick={onBioLogin} disabled={busy} data-testid="authz-bio-login">
