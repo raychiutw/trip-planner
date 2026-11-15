@@ -27,8 +27,17 @@ const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   'trips:write': { name: '修改行程', description: '建立／修改您的行程' },
 };
 
-/** 網址 biometric_hint（api 白名單值）→ 專門鈕名稱；只供顯示，不是安全依據，未知值一律不顯示。 */
-const BIOMETRIC_LABEL: Record<string, string> = { faceid: 'Face ID', touchid: 'Touch ID', generic: '生物辨識' };
+/** 只查自有 key 的白名單查表；網址值不在表內（含 'constructor' 等原型鏈屬性）一律回 null。 */
+function lookup<T>(map: Record<string, T>, key: string): T | null {
+  return Object.prototype.hasOwnProperty.call(map, key) ? (map[key] ?? null) : null;
+}
+
+/** 網址 biometric_hint（api 白名單值）→ 專門鈕文字與圖示；只供顯示，不是安全依據，未知值一律不顯示。 */
+const BIOMETRIC: Record<string, { text: string; faceId: boolean }> = {
+  faceid: { text: '用 Face ID 登入', faceId: true },
+  touchid: { text: '用 Touch ID 登入', faceId: false },
+  generic: { text: '用生物辨識登入', faceId: false },
+};
 
 /** reauth 網址值（api 白名單）→ 登入頁文案；其餘值一律當沒有（一般授權）。 */
 const REAUTH_TITLE: Record<string, string> = {
@@ -129,11 +138,13 @@ export default function OauthAuthorizePage() {
   const pw = usePasswordVisibility();
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const hint = sp.get('biometric_hint') ?? '';
-  const bioLabel = Object.prototype.hasOwnProperty.call(BIOMETRIC_LABEL, hint) ? BIOMETRIC_LABEL[hint] : null;
+  const bio = lookup(BIOMETRIC, hint);
   // 按專門鈕登入 = 使用者要開啟生物辨識登入；等「繼續」時才送意圖（ADR-0018）。一般登入鈕不記。
   const reauthParam = sp.get('reauth') ?? '';
-  const reauthTitle = Object.prototype.hasOwnProperty.call(REAUTH_TITLE, reauthParam) ? REAUTH_TITLE[reauthParam] : null;
+  const reauthTitle = lookup(REAUTH_TITLE, reauthParam);
   const [wantBio, setWantBio] = useState(false);
   const [bioMissing, setBioMissing] = useState(false);
 
@@ -187,7 +198,11 @@ export default function OauthAuthorizePage() {
 
   async function onBioLogin() {
     if (busy) return;
-    if (!email.trim() || !password) { setBioMissing(true); return; }
+    if (!email.trim() || !password) {
+      setBioMissing(true);
+      (email.trim() ? passwordRef : emailRef).current?.focus();
+      return;
+    }
     await doLogin(true);
   }
 
@@ -276,6 +291,7 @@ export default function OauthAuthorizePage() {
   }
 
   const credentialInvalid = view.kind === 'login' && view.credential === true;
+  const describedBy = credentialInvalid ? 'authz-login-error' : bioMissing ? 'authz-bio-required' : undefined;
   return (
     <main className="tp-authz-shell" data-testid="oauth-authorize-page">
       <style>{SCOPED_STYLES}</style>
@@ -292,20 +308,20 @@ export default function OauthAuthorizePage() {
             <form className="tp-authz-card" onSubmit={onLogin} data-testid="authz-login-form">
               {view.error && <ErrorBanner message={view.error} testId="authz-login-error" />}
               <label className="tp-authz-field"><span className="tp-authz-label">電子郵件</span>
-                <input className="tp-authz-input" type="email" autoComplete="username" required value={email}
+                <input ref={emailRef} className="tp-authz-input" type="email" autoComplete="username" required value={email}
                   onChange={(e) => setEmail(e.target.value)} data-testid="authz-email"
-                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={describedBy} /></label>
               <label className="tp-authz-field"><span className="tp-authz-label">密碼</span>
-                <input className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
+                <input ref={passwordRef} className="tp-authz-input" type={pw.type} autoComplete="current-password" required value={password}
                   onChange={(e) => setPassword(e.target.value)} data-testid="authz-password"
-                  aria-invalid={credentialInvalid || undefined} aria-describedby={credentialInvalid ? 'authz-login-error' : undefined} /></label>
+                  aria-invalid={credentialInvalid || undefined} aria-describedby={describedBy} /></label>
               <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
-              {bioLabel && !reauthTitle && (
+              {bio && !reauthTitle && (
                 <>
                   <div className="tp-authz-or" aria-hidden="true">或</div>
                   <button className="tp-authz-btn tp-authz-btn-out" type="button" onClick={onBioLogin} disabled={busy} data-testid="authz-bio-login">
-                    <BioIcon faceId={hint === 'faceid'} /><span>{bioLabel === '生物辨識' ? '用生物辨識登入' : `用 ${bioLabel} 登入`}</span>
+                    <BioIcon faceId={bio.faceId} /><span>{bio.text}</span>
                   </button>
                   {bioMissing && <ErrorBanner message="請先輸入電子郵件與密碼，再用此方式登入。" testId="authz-bio-required" />}
                 </>
