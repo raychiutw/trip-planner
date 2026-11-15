@@ -255,7 +255,7 @@ const SCOPED_STYLES = `
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--color-foreground);
-    background: rgba(255, 251, 245, 0.92);
+    background: var(--color-secondary);
     padding: 4px 8px;
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
