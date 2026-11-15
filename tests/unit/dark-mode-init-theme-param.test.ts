@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { lsGet } from '../../src/lib/localStorage';
 
 const SCRIPT = readFileSync(path.resolve(__dirname, '../../public/dark-mode-init.js'), 'utf8');
 
@@ -59,5 +60,17 @@ describe('dark-mode-init.js theme 參數', () => {
     runInit('', 'dark');
     expect(document.body.classList.contains('dark')).toBe(true);
     expect(stored()).toBeNull();
+  });
+
+  it('腳本寫入的值能被 useDarkMode 用的 lsGet 讀回（格式相容）', () => {
+    runInit('?theme=dark');
+    expect(lsGet<string>('color-mode')).toBe('dark');
+  });
+
+  it('重複 theme 參數：與 api 一致，視為沒帶（忽略，沿用已存的 light）', () => {
+    seed('light');
+    runInit('?theme=dark&theme=light');
+    expect(document.body.classList.contains('dark')).toBe(false);
+    expect(stored()).toBe('light');
   });
 });
