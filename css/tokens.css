@@ -423,7 +423,6 @@ body.dark {
         min-height: var(--spacing-tap-min);
         outline: none;
         transition: border-color 120ms, background-color 120ms, box-shadow 120ms;
-        color-scheme: light;
         -webkit-appearance: none;
         appearance: none;
     }
@@ -482,7 +481,6 @@ body.dark {
         width: 100%;
         min-width: 0;
         min-height: 32px;
-        color-scheme: light;
         -webkit-appearance: none;
         appearance: none;
     }
@@ -506,7 +504,6 @@ body.dark {
         min-height: var(--spacing-tap-min);
         outline: none;
         transition: border-color 120ms, box-shadow 120ms;
-        color-scheme: light;
         -webkit-appearance: none;
         appearance: none;
     }
@@ -577,7 +574,7 @@ body.dark {
 
     /* v2.33.11: 全域 native date/time/datetime input 保護
      * 修 iOS Safari 在系統 dark mode 下把 input[type=date/time] 渲染成黑底黑字
-     * 的問題（user 真機 v2.33.8 prod 截圖回報）。明確 color-scheme: light +
+     * 的問題（user 真機 v2.33.8 prod 截圖回報）。color-scheme 繼承 body（深色跟深，#1733）+
      * background + color，並 remove native appearance 統一 cross-browser。
      *
      * Note: 8 處 callsite 都 inherit 此 base（NewTripPage / AddPoiFavoriteToTrip /
@@ -588,7 +585,6 @@ body.dark {
     input[type="datetime-local"],
     input[type="month"],
     input[type="week"] {
-        color-scheme: light;
         -webkit-appearance: none;
         appearance: none;
         background-color: var(--color-background);

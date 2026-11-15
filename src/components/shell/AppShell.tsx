@@ -106,7 +106,7 @@ export const APP_SHELL_STYLES = `
   padding: 4px 12px;
   border-radius: var(--radius-full);
   background: var(--color-priority-high-bg, #fde2e2);
-  color: var(--color-priority-high-text, #8b2828);
+  color: var(--color-priority-high-dot);
   font-size: var(--font-size-caption);
   pointer-events: none;
   white-space: nowrap;

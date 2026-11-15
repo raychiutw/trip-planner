@@ -33,7 +33,6 @@ export const TRIP_SELECT_STYLES = `
   text-align: left;
   cursor: pointer;
   transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
-  color-scheme: light;
   -webkit-appearance: none;
   appearance: none;
 }

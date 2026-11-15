@@ -21,7 +21,17 @@
       }
       return 'auto';
     }
+    // App 開啟 web 時帶 ?theme=light|dark：套用並持久化；其他值（含大小寫不符）一律忽略
     var mode = readMode();
+    var ts = new URLSearchParams(location.search).getAll('theme');
+    var t = ts.length === 1 ? ts[0] : null; // 與 api 一致：重複視為沒帶
+    if (t === 'light' || t === 'dark') {
+      mode = t;
+      try {
+        // 格式須與 src/lib/localStorage.ts 的 lsSet 一致（6 個月 TTL）
+        localStorage.setItem('tp-color-mode', JSON.stringify({ v: t, exp: Date.now() + 180 * 86400000 }));
+      } catch (_) {}
+    }
     var dark = mode === 'dark' ||
       (mode === 'auto' && window.matchMedia &&
         window.matchMedia('(prefers-color-scheme: dark)').matches);

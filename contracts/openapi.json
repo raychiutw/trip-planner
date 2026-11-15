@@ -13526,6 +13526,20 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "light",
+                "dark"
+              ],
+              "description": "App 目前顯示的明暗；light／dark 會原樣帶進 web 授權頁網址，其他值或重複參數當作沒帶"
+            },
+            "required": false,
+            "description": "App 目前顯示的明暗；light／dark 會原樣帶進 web 授權頁網址，其他值或重複參數當作沒帶",
+            "name": "theme",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request"
             },
             "required": false,
@@ -13536,7 +13550,7 @@
         ],
         "responses": {
           "302": {
-            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）"
+            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）"
           },
           "400": {
             "description": "client／redirect_uri 有問題（不可導回 client）；mobile client（tripline-mobile／-uat／-dev）與環境或精確 callback 不符（unauthorized_client）；或 WEB_ORIGIN／PUBLIC_ORIGIN 未設定（server_error）",

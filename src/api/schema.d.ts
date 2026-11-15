@@ -5690,6 +5690,8 @@ export interface paths {
                     biometric_hint?: "faceid" | "touchid" | "generic";
                     /** @description 重新驗證模式（需 prompt=login 與 expected_account）；其他值當作沒帶 */
                     biometric_intent?: "enable" | "disable";
+                    /** @description App 目前顯示的明暗；light／dark 會原樣帶進 web 授權頁網址，其他值或重複參數當作沒帶 */
+                    theme?: "light" | "dark";
                     /** @description App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request */
                     expected_account?: string;
                 };
@@ -5699,7 +5701,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
+                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
                 302: {
                     headers: {
                         [name: string]: unknown;
