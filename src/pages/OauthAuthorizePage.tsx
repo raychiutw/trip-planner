@@ -9,14 +9,15 @@
  *   3. 「繼續」→ POST approve → 導向 api 回傳的 redirect_to（server 端存的、驗過的 callback；這裡只再擋掉非 https／loopback）。
  *   「使用其他帳號」→ 登出本機憑證回到登入表單。沒有「拒絕」按鈕（設計稿決定：不是本人要求就直接關閉頁面）。
  *
+ * 流程（狀態機、登入、批准）在 hooks/useAuthorizeFlow，這裡只負責呈現；網址參數白名單見 lib/auth/authorizeContract。
  * 只需要 VITE_API_BASE_URL（見 getAuthorizeAuth）。
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
-import { AuthError, getAuthorizeAuth } from '../lib/auth';
-import { clearApiCache } from '../lib/logout';
+import { useAuthorizeFlow } from '../hooks/useAuthorizeFlow';
+import { BIOMETRIC_BUTTON, REAUTH_TITLE, parseBiometricHint, parseReauth } from '../lib/auth/authorizeContract';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
@@ -26,49 +27,6 @@ const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   'trips:read': { name: '查看行程', description: '讀取您的行程資料' },
   'trips:write': { name: '修改行程', description: '建立／修改您的行程' },
 };
-
-/** 只查自有 key 的白名單查表；網址值不在表內（含 'constructor' 等原型鏈屬性）一律回 null。 */
-function lookup<T>(map: Record<string, T>, key: string): T | null {
-  return Object.prototype.hasOwnProperty.call(map, key) ? (map[key] ?? null) : null;
-}
-
-/** 網址 biometric_hint（api 白名單值）→ 專門鈕文字與圖示；只供顯示，不是安全依據，未知值一律不顯示。 */
-const BIOMETRIC: Record<string, { text: string; faceId: boolean }> = {
-  faceid: { text: '用 Face ID 登入', faceId: true },
-  touchid: { text: '用 Touch ID 登入', faceId: false },
-  generic: { text: '用生物辨識登入', faceId: false },
-};
-
-/** reauth 網址值（api 白名單）→ 登入頁文案；其餘值一律當沒有（一般授權）。 */
-const REAUTH_TITLE: Record<string, string> = {
-  enable: '開啟生物辨識登入，請重新輸入密碼',
-  disable: '關閉生物辨識登入，請重新輸入密碼',
-  login: '請重新輸入密碼登入',
-};
-
-const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
-
-interface AuthRequestView {
-  appName: string;
-  scopes: string[];
-}
-
-type View =
-  | { kind: 'init' }
-  | { kind: 'login'; error?: string; credential?: boolean }
-  | { kind: 'confirm'; request: AuthRequestView; email: string }
-  | { kind: 'error'; message: string };
-
-/** redirect_to 由 api 組成；這裡是 defense in depth：只接受 https，或本機 loopback 的 http（行動端開發用）。 */
-function isSafeRedirect(raw: string): boolean {
-  try {
-    const u = new URL(raw);
-    if (u.protocol === 'https:') return true;
-    return u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === 'localhost');
-  } catch {
-    return false;
-  }
-}
 
 const SCOPED_STYLES = `
 .tp-authz-shell { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 32px 20px; background: var(--color-background); color: var(--color-foreground); }
@@ -114,83 +72,26 @@ const BioIcon = ({ faceId }: { faceId: boolean }) => (
   </svg>
 );
 
-const CREDENTIAL_ERROR = '電子郵件或密碼錯誤。';
-
-function isCredentialError(e: unknown): boolean {
-  return e instanceof AuthError && (e.code === 'LOGIN_INVALID' || e.status === 401);
-}
-
-function loginErrorMessage(e: unknown): string {
-  if (e instanceof AuthError) {
-    if (isCredentialError(e)) return CREDENTIAL_ERROR;
-    if (e.status === 429 || e.code === 'LOGIN_RATE_LIMITED') {
-      return e.retryAfter ? `嘗試次數過多，請 ${Math.ceil(e.retryAfter / 60)} 分鐘後再試。` : '嘗試次數過多，請稍後再試。';
-    }
-  }
-  return '登入失敗，請稍後再試。';
-}
-
 export default function OauthAuthorizePage() {
   const [sp] = useSearchParams();
   const requestId = sp.get('request_id') ?? '';
-  const [view, setView] = useState<View>({ kind: 'init' });
+  const hint = parseBiometricHint(sp.get('biometric_hint'));
+  const bio = hint ? BIOMETRIC_BUTTON[hint] : null;
+  const reauth = parseReauth(sp.get('reauth'));
+  const reauthTitle = reauth ? REAUTH_TITLE[reauth] : null;
+  const { view, busy, login, approve: onContinue, switchAccount: onSwitchAccount } = useAuthorizeFlow({ requestId, reauth });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const pw = usePasswordVisibility();
-  const [busy, setBusy] = useState(false);
-  const approving = useRef(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const hint = sp.get('biometric_hint') ?? '';
-  const bio = lookup(BIOMETRIC, hint);
-  // 按專門鈕登入 = 使用者要開啟生物辨識登入；等「繼續」時才送意圖（ADR-0018）。一般登入鈕不記。
-  const reauthParam = sp.get('reauth') ?? '';
-  const reauthTitle = lookup(REAUTH_TITLE, reauthParam);
-  const [wantBio, setWantBio] = useState(false);
   const [bioMissing, setBioMissing] = useState(false);
 
-  const loadRequest = useCallback(async (): Promise<View> => {
-    const auth = getAuthorizeAuth();
-    const reqRes = await auth.apiFetch(`/api/oauth/authorize/requests/${requestId}`);
-    if (!reqRes.ok) return { kind: 'error', message: '授權請求不存在、已過期或已使用，請回到 App 重新發起登入。' };
-    const body = await reqRes.json() as { client?: { app_name?: string }; scopes?: string[] };
-    const appName = body.client?.app_name?.trim();
-    if (!appName || !Array.isArray(body.scopes)) return { kind: 'error', message: '無法確認應用程式資訊，請稍後再試。' };
-    const meRes = await auth.apiFetch('/api/oauth/userinfo');
-    if (!meRes.ok) return { kind: 'login' };
-    const me = await meRes.json() as { email?: string };
-    return { kind: 'confirm', request: { appName, scopes: body.scopes }, email: me.email ?? '' };
-  }, [requestId]);
-
-  useEffect(() => {
-    if (!REQUEST_ID.test(requestId)) {
-      setView({ kind: 'error', message: '授權連結不完整，請回到 App 重新發起登入。' });
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      let auth;
-      try {
-        auth = getAuthorizeAuth();
-      } catch {
-        if (!cancelled) setView({ kind: 'error', message: '目前無法使用瀏覽器登入，請稍後再試。' });
-        return;
-      }
-      try {
-        // 重新驗證模式：不還原、不沿用已登入狀態，一定要重新輸入密碼
-        if (reauthTitle) {
-          if (!cancelled) setView({ kind: 'login' });
-          return;
-        }
-        const restored = auth.isAuthenticated() || (await auth.restoreSession());
-        const next: View = restored ? await loadRequest() : { kind: 'login' };
-        if (!cancelled) setView(next);
-      } catch {
-        if (!cancelled) setView({ kind: 'error', message: '無法連線，請稍後再試。' });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [requestId, loadRequest, reauthTitle]);
+  async function doLogin(enableBio: boolean) {
+    if (busy) return;
+    setBioMissing(false);
+    if (await login(email, password, enableBio)) setPassword('');
+  }
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -205,91 +106,6 @@ export default function OauthAuthorizePage() {
       return;
     }
     await doLogin(true);
-  }
-
-  async function doLogin(enableBio: boolean) {
-    if (busy) return;
-    setBioMissing(false);
-    setWantBio(enableBio);
-    setBusy(true);
-    try {
-      await getAuthorizeAuth().login(email.trim(), password);
-    } catch (err) {
-      setView({ kind: 'login', error: loginErrorMessage(err), credential: isCredentialError(err) });
-      setBusy(false);
-      return;
-    }
-    setPassword('');
-    if (reauthTitle) {
-      // 伺服器只認登入後 60 秒內的批准，不能停在確認步驟
-      setBusy(false);
-      await onContinue();
-      return;
-    }
-    try {
-      setView(await loadRequest());
-    } catch {
-      setView({ kind: 'error', message: '無法連線，請稍後再試。' });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onContinue() {
-    if (approving.current) return;
-    approving.current = true;
-    setBusy(true);
-    try {
-      if (wantBio && !reauthTitle) {
-        // 意圖失敗不擋登入：只是沒開啟，不顯示誤導訊息。
-        // 網路錯誤與 5xx 最多共試 3 次（間隔 300ms）；4xx 是確定性拒絕，不重試。
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            const r = await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/intent`, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ intent: 'enable' }),
-            });
-            if (r.status < 500) break;
-          } catch { /* 網路錯誤：視同可重試 */ }
-          if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-      }
-      const res = await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/approve`, { method: 'POST' });
-      if (!res.ok) {
-        const code = reauthTitle && res.status === 403
-          ? ((await res.json().catch(() => null)) as { error?: { code?: string } } | null)?.error?.code
-          : undefined;
-        if (code === 'OAUTH_REAUTH_REQUIRED') {
-          // 請求還在：清掉本機登入，讓使用者重新登入後對同一 request_id 再 approve
-          await getAuthorizeAuth().logout();
-          await clearApiCache();
-          approving.current = false; // 重新登入後要能再 approve
-          setView({ kind: 'login', error: '登入已逾時，請重新輸入密碼。' });
-          return;
-        }
-        setView({ kind: 'error', message: '授權失敗：請求已過期或已使用，請回到 App 重新發起登入。' });
-        return;
-      }
-      const { redirect_to } = await res.json() as { redirect_to?: string };
-      if (!redirect_to || !isSafeRedirect(redirect_to)) {
-        setView({ kind: 'error', message: '授權完成但無法回到 App，請回到 App 重新發起登入。' });
-        return;
-      }
-      window.location.assign(redirect_to);
-    } catch {
-      setView({ kind: 'error', message: '無法連線，請稍後再試。' });
-    } finally {
-      // 成功導向後不再解鎖（避免頁面還在時被連點）；失敗已切到錯誤畫面
-      setBusy(false);
-    }
-  }
-
-  async function onSwitchAccount() {
-    await getAuthorizeAuth().logout();
-    await clearApiCache();
-    setWantBio(false);
-    setView({ kind: 'login' });
   }
 
   const credentialInvalid = view.kind === 'login' && view.credential === true;
