@@ -15,7 +15,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { jsonData, typedApiRaw } from '../lib/api/typed';
-import { AuthError, getNewApiAuth } from '../lib/auth';
+import { getNewApiAuth } from '../lib/auth';
+import { classifyLoginError, type LoginErrorKind } from '../lib/auth/loginError';
 import { resetCurrentUserCache } from '../lib/currentUserCache';
 import { sanitizeRedirectAfter } from '../lib/redirect';
 
@@ -269,23 +270,17 @@ export default function LoginPage() {
     try { sessionStorage.removeItem('tp_login_fail_count'); } catch { /* ignore */ }
   }
 
-  /**
-   * 送出帳密：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。
-   * 網路層錯誤照舊 throw，由呼叫端 catch 顯示「網路連線失敗」。
-   */
+  /** 送出帳密：新 api 第一方登入（PKCE＋DPoP，token 存放見 lib/auth）。失敗回分類結果，文案由本頁配。 */
   async function submitCredentials(
     trimmedEmail: string,
     pwd: string,
-  ): Promise<{ ok: true } | { ok: false; code: string; retryAfter: string | null }> {
+  ): Promise<{ ok: true } | { ok: false; error: LoginErrorKind }> {
     try {
       await getNewApiAuth().login(trimmedEmail, pwd);
       resetCurrentUserCache(); // 換了身分：不可沿用登入前共享的使用者
       return { ok: true };
     } catch (err) {
-      if (err instanceof AuthError && err.code !== 'AUTH_NETWORK') {
-        return { ok: false, code: err.code, retryAfter: err.retryAfter != null ? String(err.retryAfter) : null };
-      }
-      throw err;
+      return { ok: false, error: classifyLoginError(err) };
     }
   }
 
@@ -317,25 +312,19 @@ export default function LoginPage() {
         return;
       }
 
-      const code = outcome.code;
-      switch (code) {
-        case 'LOGIN_INVALID_INPUT':
-          setBannerError('請輸入電子郵件與密碼', true);
-          break;
-        case 'LOGIN_INVALID':
-          bumpFailure();
-          setBannerError('電子郵件或密碼錯誤', true);
-          break;
-        case 'LOGIN_RATE_LIMITED': {
-          const retryAfter = outcome.retryAfter;
-          setLockedRetryAfter(retryAfter ? Number(retryAfter) : 1800);
-          break;
-        }
-        default:
-          setBannerError('登入失敗，請稍後再試');
+      const { error } = outcome;
+      if (error.kind === 'invalid') {
+        bumpFailure();
+        setBannerError('電子郵件或密碼錯誤', true);
+      } else if (error.kind === 'rate-limited') {
+        setLockedRetryAfter(error.retryAfter || 1800);
+      } else if (error.kind === 'network') {
+        setBannerError('網路連線失敗，請檢查後再試');
+      } else if (error.code === 'LOGIN_INVALID_INPUT') {
+        setBannerError('請輸入電子郵件與密碼', true);
+      } else {
+        setBannerError('登入失敗，請稍後再試');
       }
-    } catch {
-      setBannerError('網路連線失敗，請檢查後再試');
     } finally {
       setSubmitting(false);
     }
