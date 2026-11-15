@@ -249,3 +249,190 @@ describe('授權頁登入表單密碼顯示切換（#1560）', () => {
     expect(fake.login).not.toHaveBeenCalled();
   });
 });
+
+describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
+  const bioBtn = () => screen.queryByTestId('authz-bio-login');
+  const fillAndClick = async (testId: string) => {
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId(testId));
+  };
+  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
+
+  it('沒有 biometric_hint → 完全不顯示專門鈕', async () => {
+    renderAt('?request_id=req1');
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()).toBeNull();
+  });
+
+  it('biometric_hint 不是白名單值 → 不顯示專門鈕', async () => {
+    renderAt('?request_id=req1&biometric_hint=retina');
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()).toBeNull();
+  });
+
+  it.each([
+    ['faceid', '用 Face ID 登入'],
+    ['touchid', '用 Touch ID 登入'],
+    ['generic', '用生物辨識登入'],
+  ])('biometric_hint=%s → 顯示「%s」', async (hint, label) => {
+    renderAt(`?request_id=req1&biometric_hint=${hint}`);
+    await screen.findByTestId('authz-login-form');
+    expect(bioBtn()?.textContent).toContain(label);
+  });
+
+  it('帳密未填就按專門鈕 → 就地顯示必填錯誤，不送出登入', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.click(await screen.findByTestId('authz-bio-login'));
+    expect(await screen.findByTestId('authz-bio-required')).toBeTruthy();
+    expect(fake.login).not.toHaveBeenCalled();
+  });
+
+  it('帳密未填的錯誤連到欄位（aria-describedby），焦點移到第一個空欄位', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.click(await screen.findByTestId('authz-bio-login'));
+    const err = await screen.findByTestId('authz-bio-required');
+    expect(err.id).toBe('authz-bio-required');
+    const email = screen.getByTestId('authz-email');
+    const password = screen.getByTestId('authz-password');
+    expect(email.getAttribute('aria-describedby')).toBe('authz-bio-required');
+    expect(password.getAttribute('aria-describedby')).toBe('authz-bio-required');
+    expect(document.activeElement).toBe(email);
+    // 只缺密碼時，焦點到密碼欄
+    fireEvent.change(email, { target: { value: 'ray@example.com' } });
+    fireEvent.click(screen.getByTestId('authz-bio-login'));
+    await waitFor(() => expect(document.activeElement).toBe(password));
+  });
+
+  it('按專門鈕登入 → 繼續時先 intent(enable) 再 approve', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-bio-login');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    const intent = fake.apiFetch.mock.calls.find(([u]) => String(u).endsWith('/intent'));
+    expect(intent?.[0]).toBe('/api/oauth/authorize/requests/req1/intent');
+    expect((intent?.[1] as RequestInit).method).toBe('POST');
+    expect(JSON.parse(String((intent?.[1] as RequestInit).body))).toEqual({ intent: 'enable' });
+    const order = calls().filter((u) => u.endsWith('/intent') || u.endsWith('/approve'));
+    expect(order).toEqual([
+      '/api/oauth/authorize/requests/req1/intent',
+      '/api/oauth/authorize/requests/req1/approve',
+    ]);
+  });
+
+  it('按一般登入鈕 → 即使有專門鈕也不呼叫 intent', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-login-submit');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
+  });
+
+  it('intent 失敗 → 不擋登入，照常 approve 並導回，且不顯示錯誤', async () => {
+    const base = fake.apiFetch.getMockImplementation()!;
+    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
+      String(input).endsWith('/intent') ? json({ error: { code: 'DATA_VALIDATION', message: 'x' } }, 400) : base(input, init));
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-bio-login');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(calls().some((u) => u.endsWith('/approve'))).toBe(true);
+    expect(screen.queryByTestId('authz-error')).toBeNull();
+  });
+});
+
+describe('重新驗證模式（#1725，reauth=enable|disable|login）', () => {
+  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
+  const submit = async () => {
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+  };
+  const approveWith = (res: () => Response) => {
+    const base = fake.apiFetch.getMockImplementation()!;
+    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
+      String(input).endsWith('/approve') ? res() : base(input, init));
+  };
+  const forbidden = (code: string) => json({ error: { code, message: 'x' } }, 403);
+
+  it.each([
+    ['enable', '開啟生物辨識登入，請重新輸入密碼'],
+    ['disable', '關閉生物辨識登入，請重新輸入密碼'],
+    ['login', '請重新輸入密碼登入'],
+  ])('reauth=%s → 即使本機有登入也不還原，直接顯示登入表單與文案', async (v, text) => {
+    fake.state.restoreOk = true;
+    fake.state.authed = true;
+    renderAt(`?request_id=req1&reauth=${v}`);
+    const form = await screen.findByTestId('authz-login-form');
+    expect(form).toBeTruthy();
+    expect(document.body.textContent).toContain(text);
+    expect(fake.restoreSession).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('authz-continue')).toBeNull();
+    expect(fake.apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('reauth 值不在白名單 → 當作一般授權（會還原登入）', async () => {
+    fake.state.restoreOk = true;
+    renderAt('?request_id=req1&reauth=bogus');
+    await screen.findByTestId('authz-continue');
+    expect(fake.restoreSession).toHaveBeenCalled();
+  });
+
+  it.each(['enable', 'login'])('reauth=%s 不顯示專門鈕、不呼叫 intent', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}&biometric_hint=faceid`);
+    await submit();
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(screen.queryByTestId('authz-bio-login')).toBeNull();
+    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
+  });
+
+  it.each(['enable', 'login'])('reauth=%s 登入成功 → 直接 approve 並導向，不停在「繼續」', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}`);
+    await submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1'));
+    expect(calls().filter((u) => u.endsWith('/approve'))).toEqual(['/api/oauth/authorize/requests/req1/approve']);
+    expect(screen.queryByTestId('authz-continue')).toBeNull();
+  });
+
+  it('approve 回 OAUTH_REAUTH_REQUIRED → 清登入狀態、重顯登入表單；再登入後對同一 request_id 再 approve', async () => {
+    let n = 0;
+    approveWith(() => (n++ === 0 ? forbidden('OAUTH_REAUTH_REQUIRED') : json({ redirect_to: 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=ok&state=st1' })));
+    renderAt('?request_id=req1&reauth=enable');
+    await submit();
+    await waitFor(() => expect(fake.logout).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
+    expect(assign).not.toHaveBeenCalled();
+    await submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=ok&state=st1'));
+    const approves = calls().filter((u) => u.endsWith('/approve'));
+    expect(approves).toEqual(Array(2).fill('/api/oauth/authorize/requests/req1/approve'));
+  });
+
+  it('帳號不符：approve 回 200 帶 error callback → 導向該 redirect_to，不顯示錯誤頁、不重試', async () => {
+    const cb = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?error=reauth_account_mismatch&state=st1';
+    approveWith(() => json({ redirect_to: cb }));
+    renderAt('?request_id=req1&reauth=enable');
+    await submit();
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(cb));
+    expect(screen.queryByTestId('authz-error')).toBeNull();
+    expect(calls().filter((u) => u.endsWith('/approve'))).toHaveLength(1);
+  });
+
+  it('一般授權的 403 OAUTH_REAUTH_REQUIRED 不做特殊處理（仍是一般失敗錯誤）', async () => {
+    fake.state.restoreOk = true;
+    approveWith(() => forbidden('OAUTH_REAUTH_REQUIRED'));
+    renderAt('?request_id=req1');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    expect(await screen.findByTestId('authz-error')).toBeTruthy();
+    expect(fake.logout).not.toHaveBeenCalled();
+  });
+
+  it('一般授權登入後仍停在「繼續」確認步驟、不自動 approve，也沒有 reauth 文案', async () => {
+    renderAt('?request_id=req1');
+    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('請重新輸入密碼');
+    await submit();
+    await screen.findByTestId('authz-continue');
+    expect(calls().some((u) => u.endsWith('/approve'))).toBe(false);
+  });
+});
