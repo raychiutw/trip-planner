@@ -23,7 +23,8 @@
     }
     // App 開啟 web 時帶 ?theme=light|dark：套用並持久化；其他值（含大小寫不符）一律忽略
     var mode = readMode();
-    var t = new URLSearchParams(location.search).get('theme');
+    var ts = new URLSearchParams(location.search).getAll('theme');
+    var t = ts.length === 1 ? ts[0] : null; // 與 api 一致：重複視為沒帶
     if (t === 'light' || t === 'dark') {
       mode = t;
       try {
