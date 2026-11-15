@@ -280,7 +280,7 @@ export default function LoginPage() {
       resetCurrentUserCache(); // 換了身分：不可沿用登入前共享的使用者
       return { ok: true };
     } catch (err) {
-      return { ok: false, error: classifyLoginError(err) };
+      return { ok: false, error: classifyLoginError(err, { statusFallback: false }) };
     }
   }
 
@@ -317,7 +317,7 @@ export default function LoginPage() {
         bumpFailure();
         setBannerError('電子郵件或密碼錯誤', true);
       } else if (error.kind === 'rate-limited') {
-        setLockedRetryAfter(error.retryAfter || 1800);
+        setLockedRetryAfter(error.retryAfter ?? 1800);
       } else if (error.kind === 'network') {
         setBannerError('網路連線失敗，請檢查後再試');
       } else if (error.code === 'LOGIN_INVALID_INPUT') {
