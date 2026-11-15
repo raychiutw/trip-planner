@@ -1,12 +1,12 @@
 /**
  * /oauth/authorize —— 新 api 的第一方 App「瀏覽器登入」授權頁（設計稿 C：帳號晶片＋單一按鈕）。
- * 走 auth client 的邊界（login／restoreSession／apiFetch／logout 以 fake 取代）；頁面對新 api 的三個呼叫：
+ * 只測呈現與無障礙（流程見 use-authorize-flow.test.tsx）。走 auth client 的邊界（login／restoreSession／apiFetch／logout 以 fake 取代）；頁面對新 api 的三個呼叫：
  *   GET  /api/oauth/authorize/requests/:id        → { client:{app_name}, scopes, needs_consent }
  *   GET  /api/oauth/userinfo                      → { email }
  *   POST /api/oauth/authorize/requests/:id/approve → { redirect_to }
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const fake = vi.hoisted(() => ({
@@ -76,66 +76,26 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('缺少或不合法的授權請求', () => {
-  it('沒有 request_id → 顯示錯誤，不呼叫任何 API', async () => {
+describe('錯誤畫面', () => {
+  it('授權連結不完整 → 顯示錯誤橫幅（流程判斷見 use-authorize-flow.test）', async () => {
     renderAt('');
     expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(fake.apiFetch).not.toHaveBeenCalled();
-    expect(fake.restoreSession).not.toHaveBeenCalled();
   });
 
-  it('request_id 格式不合法（含路徑字元）→ 顯示錯誤，不呼叫任何 API', async () => {
-    renderAt('?request_id=../../etc');
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(fake.apiFetch).not.toHaveBeenCalled();
-  });
-
-  it('沒有設定新 api 網址（getAuthorizeAuth 丟錯）→ 顯示無法使用', async () => {
-    fake.getAuthorizeAuth.mockImplementation(() => { throw new Error('VITE_API_BASE_URL'); });
-    renderAt('?request_id=req1');
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-  });
-
-  it('授權請求已過期或已使用（api 400）→ 顯示錯誤，不顯示繼續按鈕', async () => {
+  it('一般 403 PERM_DENIED → 顯示權限說明，不是「請求已過期」', async () => {
     fake.state.restoreOk = true;
-    fake.apiFetch.mockImplementation(async (input: string) =>
-      String(input).includes('/api/oauth/userinfo') ? json({ email: 'ray@example.com' }) : json({ error: { code: 'DATA_VALIDATION', message: 'x' } }, 400));
+    const base = fake.apiFetch.getMockImplementation()!;
+    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
+      String(input).endsWith('/approve') ? json({ error: { code: 'PERM_DENIED', message: 'x' } }, 403) : base(input, init));
     renderAt('?request_id=req1');
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(screen.queryByTestId('authz-continue')).toBeNull();
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    const err = await screen.findByTestId('authz-error');
+    expect(err.textContent).toContain('沒有權限完成這次授權');
+    expect(err.textContent).not.toContain('請求已過期');
   });
 });
 
 describe('未登入', () => {
-  it('還原不到登入 → 顯示登入表單，登入前不讀授權請求', async () => {
-    renderAt('?request_id=req1');
-    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
-    expect(fake.apiFetch).not.toHaveBeenCalled();
-  });
-
-  it('登入成功 → 讀授權請求與帳號 → 顯示「以 ray 的身分繼續？」與帳號 email', async () => {
-    renderAt('?request_id=req1');
-    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
-    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
-    fireEvent.click(screen.getByTestId('authz-login-submit'));
-    await screen.findByTestId('authz-continue');
-    expect(fake.login).toHaveBeenCalledWith('ray@example.com', 'pw-pw-pw-pw');
-    expect(screen.getByTestId('authz-title').textContent).toContain('ray');
-    expect(screen.getByTestId('authz-account').textContent).toContain('ray@example.com');
-    expect(fake.apiFetch).toHaveBeenCalledWith('/api/oauth/authorize/requests/req1');
-  });
-
-  it('密碼錯誤 → 顯示錯誤並留在登入表單', async () => {
-    fake.state.loginError = { code: 'LOGIN_INVALID' };
-    renderAt('?request_id=req1');
-    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
-    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'bad' } });
-    fireEvent.click(screen.getByTestId('authz-login-submit'));
-    expect(await screen.findByTestId('authz-login-error')).toBeTruthy();
-    expect(screen.getByTestId('authz-login-form')).toBeTruthy();
-    expect(screen.queryByTestId('authz-continue')).toBeNull();
-  });
-
   it('密碼錯誤 → 兩欄標為無效並指向有文字的錯誤元素；無錯時屬性不存在（#1561）', async () => {
     fake.state.loginError = { code: 'LOGIN_INVALID' };
     renderAt('?request_id=req1');
@@ -189,30 +149,22 @@ describe('已登入', () => {
     expect((post?.[1] as RequestInit).method).toBe('POST');
   });
 
-  it('redirect_to 不是 https／本機 loopback（例如 javascript:）→ 不導向，顯示錯誤', async () => {
-    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) => {
-      const url = String(input);
-      if (url.endsWith('/api/oauth/userinfo')) return json({ email: 'ray@example.com' });
-      if (url.endsWith('/approve') && init?.method === 'POST') return json({ redirect_to: 'javascript:alert(1)' });
-      return json(REQ);
-    });
+  it('確認畫面：「以 ray 的身分繼續？」與帳號 email', async () => {
     renderAt('?request_id=req1');
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(assign).not.toHaveBeenCalled();
+    await screen.findByTestId('authz-continue');
+    expect(screen.getByTestId('authz-title').textContent).toContain('ray');
+    expect(screen.getByTestId('authz-account').textContent).toContain('ray@example.com');
   });
 
-  it('approve 失敗（api 400）→ 顯示錯誤，不導向', async () => {
-    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) => {
+  it('email 沒有 @ 前段 → 標題顯示「此帳號」', async () => {
+    fake.apiFetch.mockImplementation(async (input: string) => {
       const url = String(input);
-      if (url.endsWith('/api/oauth/userinfo')) return json({ email: 'ray@example.com' });
-      if (url.endsWith('/approve') && init?.method === 'POST') return json({ error: { code: 'DATA_VALIDATION', message: 'x' } }, 400);
+      if (url.endsWith('/api/oauth/userinfo')) return json({ email: '@example.com' });
       return json(REQ);
     });
     renderAt('?request_id=req1');
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(assign).not.toHaveBeenCalled();
+    await screen.findByTestId('authz-continue');
+    expect(screen.getByTestId('authz-title').textContent).toContain('以 此帳號 的身分繼續？');
   });
 
   it('「使用其他帳號」→ 登出本機憑證並回到登入表單', async () => {
@@ -222,14 +174,6 @@ describe('已登入', () => {
     expect(fake.logout).toHaveBeenCalledTimes(1);
   });
 
-  it('連點「繼續」只送出一次 approve', async () => {
-    renderAt('?request_id=req1');
-    const btn = await screen.findByTestId('authz-continue');
-    // 同一個 act 內連點兩次：React 還沒重新 render（按鈕尚未 disabled），只剩 ref 防護能擋
-    act(() => { btn.click(); btn.click(); });
-    await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(fake.apiFetch.mock.calls.filter(([u]) => String(u).endsWith('/approve'))).toHaveLength(1);
-  });
 });
 
 describe('授權頁登入表單密碼顯示切換（#1560）', () => {
@@ -304,20 +248,13 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
     await waitFor(() => expect(document.activeElement).toBe(password));
   });
 
-  it('按專門鈕登入 → 繼續時先 intent(enable) 再 approve', async () => {
+  // 以下兩則只守「哪顆鈕帶 enableBio」的接線；意圖的順序、內容與重試見 use-authorize-flow／authorize-approve 測試
+  it('按專門鈕登入 → 繼續時會送 intent(enable)（接線）', async () => {
     renderAt('?request_id=req1&biometric_hint=faceid');
     await fillAndClick('authz-bio-login');
     fireEvent.click(await screen.findByTestId('authz-continue'));
     await waitFor(() => expect(assign).toHaveBeenCalled());
-    const intent = fake.apiFetch.mock.calls.find(([u]) => String(u).endsWith('/intent'));
-    expect(intent?.[0]).toBe('/api/oauth/authorize/requests/req1/intent');
-    expect((intent?.[1] as RequestInit).method).toBe('POST');
-    expect(JSON.parse(String((intent?.[1] as RequestInit).body))).toEqual({ intent: 'enable' });
-    const order = calls().filter((u) => u.endsWith('/intent') || u.endsWith('/approve'));
-    expect(order).toEqual([
-      '/api/oauth/authorize/requests/req1/intent',
-      '/api/oauth/authorize/requests/req1/approve',
-    ]);
+    expect(calls().some((u) => u.endsWith('/intent'))).toBe(true);
   });
 
   it('按一般登入鈕 → 即使有專門鈕也不呼叫 intent', async () => {
@@ -327,123 +264,28 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
     await waitFor(() => expect(assign).toHaveBeenCalled());
     expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
   });
-
-  it('intent 失敗 → 不擋登入，照常 approve 並導回，且不顯示錯誤', async () => {
-    const base = fake.apiFetch.getMockImplementation()!;
-    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
-      String(input).endsWith('/intent') ? json({ error: { code: 'DATA_VALIDATION', message: 'x' } }, 400) : base(input, init));
-    renderAt('?request_id=req1&biometric_hint=faceid');
-    await fillAndClick('authz-bio-login');
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(calls().some((u) => u.endsWith('/approve'))).toBe(true);
-    expect(screen.queryByTestId('authz-error')).toBeNull();
-  });
 });
 
-describe('intent 呼叫重試（只重試網路錯誤與 5xx，最多共 3 次）', () => {
-  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
-  const count = (suffix: string) => calls().filter((u) => u.endsWith(suffix)).length;
-  // intentResults 依序回應：Error 代表網路失敗，數字代表 HTTP 狀態；用完後固定 200
-  const setIntent = (results: Array<number | Error>) => {
-    const base = fake.apiFetch.getMockImplementation()!;
-    let i = 0;
-    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) => {
-      if (!String(input).endsWith('/intent')) return base(input, init);
-      const r = results[i++] ?? 200;
-      if (r instanceof Error) throw r;
-      return json(r === 200 ? { ok: true } : { error: { code: 'X', message: 'x' } }, r);
-    });
-  };
-  const run = async () => {
-    renderAt('?request_id=req1&biometric_hint=faceid');
-    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
-    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
-    fireEvent.click(screen.getByTestId('authz-bio-login'));
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    // 退避間隔用 fake timers 推進，測試不真的等
-    await vi.advanceTimersByTimeAsync(5000);
-    await waitFor(() => expect(assign).toHaveBeenCalled());
-  };
-  beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
-  afterEach(() => { vi.useRealTimers(); });
-
-  it('第一次網路失敗、第二次成功 → intent 共 2 次，之後才 approve，approve 只 1 次', async () => {
-    setIntent([new TypeError('Failed to fetch')]);
-    await run();
-    expect(count('/intent')).toBe(2);
-    expect(count('/approve')).toBe(1);
-    const order = calls().filter((u) => u.endsWith('/intent') || u.endsWith('/approve'));
-    expect(order.map((u) => u.split('/').pop())).toEqual(['intent', 'intent', 'approve']);
-  });
-
-  it('5xx 也重試：500 後成功 → intent 共 2 次', async () => {
-    setIntent([500]);
-    await run();
-    expect(count('/intent')).toBe(2);
-    expect(count('/approve')).toBe(1);
-  });
-
-  it('連續 3 次失敗 → 放棄重試，仍 approve 並導回，intent 剛好 3 次，不顯示錯誤', async () => {
-    setIntent([new TypeError('x'), 503, new TypeError('x'), 500]);
-    await run();
-    expect(count('/intent')).toBe(3);
-    expect(count('/approve')).toBe(1);
-    expect(screen.queryByTestId('authz-error')).toBeNull();
-  });
-
-  it.each([400, 401, 403])('%i → 不重試，intent 只 1 次就 approve', async (status) => {
-    setIntent([status, status, status]);
-    await run();
-    expect(count('/intent')).toBe(1);
-    expect(count('/approve')).toBe(1);
-  });
-
-  it('一次就成功 → 不重試', async () => {
-    await run();
-    expect(count('/intent')).toBe(1);
-  });
-
-  it('一般登入（沒有 wantBio）→ 不呼叫 intent', async () => {
-    renderAt('?request_id=req1&biometric_hint=faceid');
-    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
-    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
-    fireEvent.click(screen.getByTestId('authz-login-submit'));
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    await vi.advanceTimersByTimeAsync(5000);
-    await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(count('/intent')).toBe(0);
-  });
-});
-
-describe('重新驗證模式（#1725，reauth=enable|disable|login）', () => {
-  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
-  const submit = async () => {
-    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
-    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
-    fireEvent.click(screen.getByTestId('authz-login-submit'));
-  };
-  const approveWith = (res: () => Response) => {
-    const base = fake.apiFetch.getMockImplementation()!;
-    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) =>
-      String(input).endsWith('/approve') ? res() : base(input, init));
-  };
-  const forbidden = (code: string) => json({ error: { code, message: 'x' } }, 403);
-
+describe('重新驗證模式（#1725，reauth=enable|disable|login）呈現', () => {
   it.each([
     ['enable', '開啟生物辨識登入，請重新輸入密碼'],
     ['disable', '關閉生物辨識登入，請重新輸入密碼'],
     ['login', '請重新輸入密碼登入'],
-  ])('reauth=%s → 即使本機有登入也不還原，直接顯示登入表單與文案', async (v, text) => {
-    fake.state.restoreOk = true;
-    fake.state.authed = true;
+  ])('reauth=%s → 顯示登入表單與文案，不顯示「繼續」', async (v, text) => {
     renderAt(`?request_id=req1&reauth=${v}`);
-    const form = await screen.findByTestId('authz-login-form');
-    expect(form).toBeTruthy();
+    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
     expect(document.body.textContent).toContain(text);
-    expect(fake.restoreSession).not.toHaveBeenCalled();
     expect(screen.queryByTestId('authz-continue')).toBeNull();
-    expect(fake.apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('reauth 登入成功後、批准尚未回應前就清掉密碼欄（不多保留一個 render）', async () => {
+    fake.apiFetch.mockImplementation((input: string) => (String(input).endsWith('/approve') ? new Promise<Response>(() => {}) : Promise.resolve(json(REQ))));
+    renderAt('?request_id=req1&reauth=enable');
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+    await waitFor(() => expect(fake.apiFetch.mock.calls.some(([u]) => String(u).endsWith('/approve'))).toBe(true));
+    expect((screen.getByTestId('authz-password') as HTMLInputElement).value).toBe('');
   });
 
   it('reauth 值不在白名單 → 當作一般授權（會還原登入）', async () => {
@@ -453,61 +295,15 @@ describe('重新驗證模式（#1725，reauth=enable|disable|login）', () => {
     expect(fake.restoreSession).toHaveBeenCalled();
   });
 
-  it.each(['enable', 'login'])('reauth=%s 不顯示專門鈕、不呼叫 intent', async (v) => {
+  it.each(['enable', 'login'])('reauth=%s → 不顯示專門鈕', async (v) => {
     renderAt(`?request_id=req1&reauth=${v}&biometric_hint=faceid`);
-    await submit();
-    await waitFor(() => expect(assign).toHaveBeenCalled());
+    await screen.findByTestId('authz-login-form');
     expect(screen.queryByTestId('authz-bio-login')).toBeNull();
-    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
   });
 
-  it.each(['enable', 'login'])('reauth=%s 登入成功 → 直接 approve 並導向，不停在「繼續」', async (v) => {
-    renderAt(`?request_id=req1&reauth=${v}`);
-    await submit();
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1'));
-    expect(calls().filter((u) => u.endsWith('/approve'))).toEqual(['/api/oauth/authorize/requests/req1/approve']);
-    expect(screen.queryByTestId('authz-continue')).toBeNull();
-  });
-
-  it('approve 回 OAUTH_REAUTH_REQUIRED → 清登入狀態、重顯登入表單；再登入後對同一 request_id 再 approve', async () => {
-    let n = 0;
-    approveWith(() => (n++ === 0 ? forbidden('OAUTH_REAUTH_REQUIRED') : json({ redirect_to: 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=ok&state=st1' })));
-    renderAt('?request_id=req1&reauth=enable');
-    await submit();
-    await waitFor(() => expect(fake.logout).toHaveBeenCalledTimes(1));
-    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
-    expect(assign).not.toHaveBeenCalled();
-    await submit();
-    await waitFor(() => expect(assign).toHaveBeenCalledWith('https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=ok&state=st1'));
-    const approves = calls().filter((u) => u.endsWith('/approve'));
-    expect(approves).toEqual(Array(2).fill('/api/oauth/authorize/requests/req1/approve'));
-  });
-
-  it('帳號不符：approve 回 200 帶 error callback → 導向該 redirect_to，不顯示錯誤頁、不重試', async () => {
-    const cb = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?error=reauth_account_mismatch&state=st1';
-    approveWith(() => json({ redirect_to: cb }));
-    renderAt('?request_id=req1&reauth=enable');
-    await submit();
-    await waitFor(() => expect(assign).toHaveBeenCalledWith(cb));
-    expect(screen.queryByTestId('authz-error')).toBeNull();
-    expect(calls().filter((u) => u.endsWith('/approve'))).toHaveLength(1);
-  });
-
-  it('一般授權的 403 OAUTH_REAUTH_REQUIRED 不做特殊處理（仍是一般失敗錯誤）', async () => {
-    fake.state.restoreOk = true;
-    approveWith(() => forbidden('OAUTH_REAUTH_REQUIRED'));
-    renderAt('?request_id=req1');
-    fireEvent.click(await screen.findByTestId('authz-continue'));
-    expect(await screen.findByTestId('authz-error')).toBeTruthy();
-    expect(fake.logout).not.toHaveBeenCalled();
-  });
-
-  it('一般授權登入後仍停在「繼續」確認步驟、不自動 approve，也沒有 reauth 文案', async () => {
+  it('一般授權的登入表單沒有 reauth 文案', async () => {
     renderAt('?request_id=req1');
     expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
     expect(document.body.textContent).not.toContain('請重新輸入密碼');
-    await submit();
-    await screen.findByTestId('authz-continue');
-    expect(calls().some((u) => u.endsWith('/approve'))).toBe(false);
   });
 });
