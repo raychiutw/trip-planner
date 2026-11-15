@@ -123,7 +123,7 @@ describe('登入', () => {
     ['限流無 Retry-After', new AuthError('LOGIN_RATE_LIMITED', 'x', { status: 429 }), '嘗試次數過多，請稍後再試。', false],
     ['5xx', new AuthError('SERVER_BOOM', 'x', { status: 500 }), '登入失敗，請稍後再試。', false],
     ['網路', new AuthError('AUTH_NETWORK', 'net'), '登入失敗，請稍後再試。', false],
-  ])('登入失敗（%s）→ 留在 login，文案「%s」，credential=%s', async (_n, err, message, credential) => {
+  ])('登入失敗（%s）→ 留在 login，帶對應文案與 credential 旗標', async (_n, err, message, credential) => {
     fake.login.mockImplementation(async () => { throw err; });
     const { result } = start();
     await waitFor(() => expect(result.current.view.kind).toBe('login'));
