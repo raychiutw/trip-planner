@@ -90,7 +90,7 @@ export default function OauthAuthorizePage() {
   async function doLogin(enableBio: boolean) {
     if (busy) return;
     setBioMissing(false);
-    if (await login(email, password, enableBio)) setPassword('');
+    await login(email, password, enableBio, () => setPassword(''));
   }
 
   async function onLogin(e: React.FormEvent) {

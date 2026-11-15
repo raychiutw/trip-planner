@@ -20,4 +20,11 @@ describe('classifyLoginError', () => {
   ])('%s', (_name, err, expected) => {
     expect(classifyLoginError(err)).toEqual(expected);
   });
+
+  it('statusFallback: false → 只認錯誤碼，401／429 未知碼歸 other（LoginPage 用）', () => {
+    const off = { statusFallback: false };
+    expect(classifyLoginError(new AuthError('UNKNOWN', 'x', { status: 401 }), off)).toEqual({ kind: 'other', code: 'UNKNOWN' });
+    expect(classifyLoginError(new AuthError('UNKNOWN', 'x', { status: 429 }), off)).toEqual({ kind: 'other', code: 'UNKNOWN' });
+    expect(classifyLoginError(new AuthError('LOGIN_INVALID', 'x', { status: 401 }), off)).toEqual({ kind: 'invalid' });
+  });
 });

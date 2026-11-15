@@ -113,8 +113,8 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
     }
   }, [requestId, reauth]);
 
-  /** 回傳帳密是否通過（頁面據此清掉密碼欄）。 */
-  const login = useCallback(async (email: string, password: string, enableBio: boolean): Promise<boolean> => {
+  /** 帳密通過後、批准／讀請求之前呼叫 onAuthenticated（頁面據此清掉密碼欄）；回傳帳密是否通過。 */
+  const login = useCallback(async (email: string, password: string, enableBio: boolean, onAuthenticated?: () => void): Promise<boolean> => {
     if (busy) return false;
     wantBio.current = enableBio;
     setBusy(true);
@@ -125,6 +125,7 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
       setBusy(false);
       return false;
     }
+    onAuthenticated?.();
     if (reauth) {
       // 伺服器只認登入後 60 秒內的批准，不能停在確認步驟
       setBusy(false);

@@ -149,6 +149,24 @@ describe('已登入', () => {
     expect((post?.[1] as RequestInit).method).toBe('POST');
   });
 
+  it('確認畫面：「以 ray 的身分繼續？」與帳號 email', async () => {
+    renderAt('?request_id=req1');
+    await screen.findByTestId('authz-continue');
+    expect(screen.getByTestId('authz-title').textContent).toContain('ray');
+    expect(screen.getByTestId('authz-account').textContent).toContain('ray@example.com');
+  });
+
+  it('email 沒有 @ 前段 → 標題顯示「此帳號」', async () => {
+    fake.apiFetch.mockImplementation(async (input: string) => {
+      const url = String(input);
+      if (url.endsWith('/api/oauth/userinfo')) return json({ email: '@example.com' });
+      return json(REQ);
+    });
+    renderAt('?request_id=req1');
+    await screen.findByTestId('authz-continue');
+    expect(screen.getByTestId('authz-title').textContent).toContain('以 此帳號 的身分繼續？');
+  });
+
   it('「使用其他帳號」→ 登出本機憑證並回到登入表單', async () => {
     renderAt('?request_id=req1');
     fireEvent.click(await screen.findByTestId('authz-switch-account'));
@@ -258,6 +276,16 @@ describe('重新驗證模式（#1725，reauth=enable|disable|login）呈現', ()
     expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
     expect(document.body.textContent).toContain(text);
     expect(screen.queryByTestId('authz-continue')).toBeNull();
+  });
+
+  it('reauth 登入成功後、批准尚未回應前就清掉密碼欄（不多保留一個 render）', async () => {
+    fake.apiFetch.mockImplementation((input: string) => (String(input).endsWith('/approve') ? new Promise<Response>(() => {}) : Promise.resolve(json(REQ))));
+    renderAt('?request_id=req1&reauth=enable');
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+    await waitFor(() => expect(fake.apiFetch.mock.calls.some(([u]) => String(u).endsWith('/approve'))).toBe(true));
+    expect((screen.getByTestId('authz-password') as HTMLInputElement).value).toBe('');
   });
 
   it('reauth 值不在白名單 → 當作一般授權（會還原登入）', async () => {
