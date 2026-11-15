@@ -5686,10 +5686,10 @@ export interface paths {
                     code_challenge?: string;
                     code_challenge_method?: string;
                     prompt?: string;
-                    /** @description App 發起授權時帶：faceid｜touchid｜generic；其他值當作沒帶 */
-                    biometric_hint?: string;
-                    /** @description 重新驗證模式（需 prompt=login 與 expected_account）：enable｜disable；其他值當作沒帶 */
-                    biometric_intent?: string;
+                    /** @description App 發起授權時帶；其他值當作沒帶 */
+                    biometric_hint?: "faceid" | "touchid" | "generic";
+                    /** @description 重新驗證模式（需 prompt=login 與 expected_account）；其他值當作沒帶 */
+                    biometric_intent?: "enable" | "disable";
                     /** @description App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request */
                     expected_account?: string;
                 };
