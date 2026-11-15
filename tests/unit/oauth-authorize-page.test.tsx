@@ -288,6 +288,32 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
     expect(fake.login).not.toHaveBeenCalled();
   });
 
+  it('帳密未填的錯誤連到欄位（aria-describedby），焦點移到第一個空欄位', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.click(await screen.findByTestId('authz-bio-login'));
+    const err = await screen.findByTestId('authz-bio-required');
+    expect(err.id).toBe('authz-bio-required');
+    const email = screen.getByTestId('authz-email');
+    const password = screen.getByTestId('authz-password');
+    expect(email.getAttribute('aria-describedby')).toBe('authz-bio-required');
+    expect(password.getAttribute('aria-describedby')).toBe('authz-bio-required');
+    expect(document.activeElement).toBe(email);
+    // 只缺密碼時，焦點到密碼欄
+    fireEvent.change(email, { target: { value: 'ray@example.com' } });
+    fireEvent.click(screen.getByTestId('authz-bio-login'));
+    await waitFor(() => expect(document.activeElement).toBe(password));
+  });
+
+  it('按專門鈕登入後「使用其他帳號」→ 意圖重置，之後一般登入不送 intent', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    await fillAndClick('authz-bio-login');
+    fireEvent.click(await screen.findByTestId('authz-switch-account'));
+    await fillAndClick('authz-login-submit');
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(calls().some((u) => u.endsWith('/intent'))).toBe(false);
+  });
+
   it('按專門鈕登入 → 繼續時先 intent(enable) 再 approve', async () => {
     renderAt('?request_id=req1&biometric_hint=faceid');
     await fillAndClick('authz-bio-login');
