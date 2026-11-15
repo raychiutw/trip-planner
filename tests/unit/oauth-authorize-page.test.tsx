@@ -341,6 +341,81 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
   });
 });
 
+describe('intent 呼叫重試（只重試網路錯誤與 5xx，最多共 3 次）', () => {
+  const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
+  const count = (suffix: string) => calls().filter((u) => u.endsWith(suffix)).length;
+  // intentResults 依序回應：Error 代表網路失敗，數字代表 HTTP 狀態；用完後固定 200
+  const setIntent = (results: Array<number | Error>) => {
+    const base = fake.apiFetch.getMockImplementation()!;
+    let i = 0;
+    fake.apiFetch.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (!String(input).endsWith('/intent')) return base(input, init);
+      const r = results[i++] ?? 200;
+      if (r instanceof Error) throw r;
+      return json(r === 200 ? { ok: true } : { error: { code: 'X', message: 'x' } }, r);
+    });
+  };
+  const run = async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId('authz-bio-login'));
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    // 退避間隔用 fake timers 推進，測試不真的等
+    await vi.advanceTimersByTimeAsync(5000);
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+  };
+  beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('第一次網路失敗、第二次成功 → intent 共 2 次，之後才 approve，approve 只 1 次', async () => {
+    setIntent([new TypeError('Failed to fetch')]);
+    await run();
+    expect(count('/intent')).toBe(2);
+    expect(count('/approve')).toBe(1);
+    const order = calls().filter((u) => u.endsWith('/intent') || u.endsWith('/approve'));
+    expect(order.map((u) => u.split('/').pop())).toEqual(['intent', 'intent', 'approve']);
+  });
+
+  it('5xx 也重試：500 後成功 → intent 共 2 次', async () => {
+    setIntent([500]);
+    await run();
+    expect(count('/intent')).toBe(2);
+    expect(count('/approve')).toBe(1);
+  });
+
+  it('連續 3 次失敗 → 放棄重試，仍 approve 並導回，intent 剛好 3 次，不顯示錯誤', async () => {
+    setIntent([new TypeError('x'), 503, new TypeError('x'), 500]);
+    await run();
+    expect(count('/intent')).toBe(3);
+    expect(count('/approve')).toBe(1);
+    expect(screen.queryByTestId('authz-error')).toBeNull();
+  });
+
+  it.each([400, 401, 403])('%i → 不重試，intent 只 1 次就 approve', async (status) => {
+    setIntent([status, status, status]);
+    await run();
+    expect(count('/intent')).toBe(1);
+    expect(count('/approve')).toBe(1);
+  });
+
+  it('一次就成功 → 不重試', async () => {
+    await run();
+    expect(count('/intent')).toBe(1);
+  });
+
+  it('一般登入（沒有 wantBio）→ 不呼叫 intent', async () => {
+    renderAt('?request_id=req1&biometric_hint=faceid');
+    fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
+    fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
+    fireEvent.click(screen.getByTestId('authz-login-submit'));
+    fireEvent.click(await screen.findByTestId('authz-continue'));
+    await vi.advanceTimersByTimeAsync(5000);
+    await waitFor(() => expect(assign).toHaveBeenCalled());
+    expect(count('/intent')).toBe(0);
+  });
+});
+
 describe('重新驗證模式（#1725，reauth=enable|disable|login）', () => {
   const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
   const submit = async () => {

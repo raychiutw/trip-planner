@@ -241,14 +241,19 @@ export default function OauthAuthorizePage() {
     setBusy(true);
     try {
       if (wantBio && !reauthTitle) {
-        // 意圖失敗不擋登入：只是沒開啟，不顯示誤導訊息
-        try {
-          await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/intent`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ intent: 'enable' }),
-          });
-        } catch { /* 忽略 */ }
+        // 意圖失敗不擋登入：只是沒開啟，不顯示誤導訊息。
+        // 網路錯誤與 5xx 最多共試 3 次（間隔 300ms）；4xx 是確定性拒絕，不重試。
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const r = await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/intent`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ intent: 'enable' }),
+            });
+            if (r.status < 500) break;
+          } catch { /* 網路錯誤：視同可重試 */ }
+          if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 300));
+        }
       }
       const res = await getAuthorizeAuth().apiFetch(`/api/oauth/authorize/requests/${requestId}/approve`, { method: 'POST' });
       if (!res.ok) {
