@@ -32,4 +32,4 @@
 
 ## 目前快照
 
-`contracts/openapi.json` 取自 production `GET https://trip-planner-api-production.lean-lean.workers.dev/openapi.json`（2026-11-08，114 條路徑；Google 登入與 delete-reauth 已隨 trip-planner-api#63 移除，#1643）。更新指令：`curl -sS <上述網址> -o /tmp/o.json && node -e "const fs=require('fs');fs.writeFileSync('contracts/openapi.json',JSON.stringify(JSON.parse(fs.readFileSync('/tmp/o.json','utf8')),null,2)+'\\n')" && npm run gen:api`，再跑 `npm run check:api-contract` 與測試。
+`contracts/openapi.json` 取自 trip-planner-api 分支 `integration/faceid-revoke`（83044ea）本機 `createApp().request('/openapi.json')` 的匯出（2026-11-16，115 條路徑；授權流程的重新驗證模式已隨 trip-planner-api#98 移除，#1744）；部署後要再對 production `GET https://trip-planner-api-production.lean-lean.workers.dev/openapi.json` 用 `--against` 比對一次。從 production 更新的指令：`curl -sS <上述網址> -o /tmp/o.json && node -e "const fs=require('fs');fs.writeFileSync('contracts/openapi.json',JSON.stringify(JSON.parse(fs.readFileSync('/tmp/o.json','utf8')),null,2)+'\\n')" && npm run gen:api`，再跑 `npm run check:api-contract` 與測試。

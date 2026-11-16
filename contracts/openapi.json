@@ -13488,9 +13488,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "OIDC prompt（none／login／consent／select_account；其他值回 invalid_request）。consent 強制重新同意；login 不再觸發重新驗證（已移除），與沒帶相同"
             },
             "required": false,
+            "description": "OIDC prompt（none／login／consent／select_account；其他值回 invalid_request）。consent 強制重新同意；login 不再觸發重新驗證（已移除），與沒帶相同",
             "name": "prompt",
             "in": "query"
           },
@@ -13513,20 +13515,6 @@
             "schema": {
               "type": "string",
               "enum": [
-                "enable",
-                "disable"
-              ],
-              "description": "重新驗證模式（需 prompt=login 與 expected_account）；其他值當作沒帶"
-            },
-            "required": false,
-            "description": "重新驗證模式（需 prompt=login 與 expected_account）；其他值當作沒帶",
-            "name": "biometric_intent",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
                 "light",
                 "dark"
               ],
@@ -13536,21 +13524,11 @@
             "description": "App 目前顯示的明暗；light／dark 會原樣帶進 web 授權頁網址，其他值或重複參數當作沒帶",
             "name": "theme",
             "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request"
-            },
-            "required": false,
-            "description": "App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request",
-            "name": "expected_account",
-            "in": "query"
           }
         ],
         "responses": {
           "302": {
-            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）"
+            "description": "通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）。舊版 App 帶的 prompt=login、biometric_intent、expected_account 一律忽略（重新驗證模式已移除），不報錯也不帶進 Location"
           },
           "400": {
             "description": "client／redirect_uri 有問題（不可導回 client）；mobile client（tripline-mobile／-uat／-dev）與環境或精確 callback 不符（unauthorized_client）；或 WEB_ORIGIN／PUBLIC_ORIGIN 未設定（server_error）",
@@ -13647,7 +13625,7 @@
         ],
         "responses": {
           "200": {
-            "description": "同意：回帶 code 或 error 的 redirect_to（由 server 端存的 redirect_uri 組成）；重新驗證模式帳號與 App 目前帳號不同時，比照拒絕：不發 code，redirect_to 帶 error=reauth_account_mismatch 與 state（請求已消耗）",
+            "description": "同意：回帶 code 或 error 的 redirect_to（由 server 端存的 redirect_uri 組成）",
             "content": {
               "application/json": {
                 "schema": {
@@ -13684,7 +13662,7 @@
             }
           },
           "403": {
-            "description": "service token 沒有使用者身份（PERM_DENIED）；重新驗證模式或 prompt=login：不是剛用密碼登入（OAUTH_REAUTH_REQUIRED，請求保留）",
+            "description": "service token 沒有使用者身份（PERM_DENIED）",
             "content": {
               "application/json": {
                 "schema": {
@@ -13795,7 +13773,6 @@
                     "nullable": true,
                     "enum": [
                       "enable",
-                      "disable",
                       null
                     ],
                     "description": "null 清除意圖"
@@ -13813,7 +13790,7 @@
             "description": "已記下（綁定目前使用者；null 為清除）"
           },
           "400": {
-            "description": "授權請求不存在、已過期或已使用，或 intent 值不合法；重新驗證模式的請求不可變更意圖（DATA_VALIDATION）",
+            "description": "授權請求不存在、已過期或已使用，或 intent 值不合法（只收 enable 或 null）（DATA_VALIDATION）",
             "content": {
               "application/json": {
                 "schema": {

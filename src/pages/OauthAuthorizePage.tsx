@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import PasswordToggle, { usePasswordVisibility } from '../components/auth/PasswordToggle';
 import { useAuthorizeFlow } from '../hooks/useAuthorizeFlow';
-import { BIOMETRIC_BUTTON, REAUTH_TITLE, parseBiometricHint, parseReauth } from '../lib/auth/authorizeContract';
+import { BIOMETRIC_BUTTON, parseBiometricHint } from '../lib/auth/authorizeContract';
 
 const SCOPE_NAMES: Record<string, { name: string; description: string }> = {
   openid: { name: '身分識別', description: '識別您的身分（唯一 ID）' },
@@ -77,9 +77,7 @@ export default function OauthAuthorizePage() {
   const requestId = sp.get('request_id') ?? '';
   const hint = parseBiometricHint(sp.get('biometric_hint'));
   const bio = hint ? BIOMETRIC_BUTTON[hint] : null;
-  const reauth = parseReauth(sp.get('reauth'));
-  const reauthTitle = reauth ? REAUTH_TITLE[reauth] : null;
-  const { view, busy, login, approve: onContinue, switchAccount: onSwitchAccount } = useAuthorizeFlow({ requestId, reauth });
+  const { view, busy, login, approve: onContinue, switchAccount: onSwitchAccount } = useAuthorizeFlow({ requestId });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const pw = usePasswordVisibility();
@@ -122,7 +120,7 @@ export default function OauthAuthorizePage() {
 
         {view.kind === 'login' && (
           <>
-            <h1 className="tp-authz-title">{reauthTitle ?? '登入以繼續使用 Tripline App'}</h1>
+            <h1 className="tp-authz-title">登入以繼續使用 Tripline App</h1>
             <form className="tp-authz-card" onSubmit={onLogin} data-testid="authz-login-form">
               {view.error && <ErrorBanner message={view.error} testId="authz-login-error" />}
               <label className="tp-authz-field"><span className="tp-authz-label">電子郵件</span>
@@ -135,7 +133,7 @@ export default function OauthAuthorizePage() {
                   aria-invalid={credentialInvalid || undefined} aria-describedby={describedBy} /></label>
               <PasswordToggle {...pw.toggleProps} testId="authz-password-toggle" />
               <button className="tp-authz-btn" type="submit" disabled={busy} data-testid="authz-login-submit">登入</button>
-              {bio && !reauthTitle && (
+              {bio && (
                 <>
                   <div className="tp-authz-or" aria-hidden="true">或</div>
                   <button className="tp-authz-btn tp-authz-btn-out" type="button" onClick={onBioLogin} disabled={busy} data-testid="authz-bio-login">

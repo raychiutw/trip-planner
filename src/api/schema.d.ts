@@ -5685,15 +5685,12 @@ export interface paths {
                     state?: string;
                     code_challenge?: string;
                     code_challenge_method?: string;
+                    /** @description OIDC prompt（none／login／consent／select_account；其他值回 invalid_request）。consent 強制重新同意；login 不再觸發重新驗證（已移除），與沒帶相同 */
                     prompt?: string;
                     /** @description App 發起授權時帶；其他值當作沒帶 */
                     biometric_hint?: "faceid" | "touchid" | "generic";
-                    /** @description 重新驗證模式（需 prompt=login 與 expected_account）；其他值當作沒帶 */
-                    biometric_intent?: "enable" | "disable";
                     /** @description App 目前顯示的明暗；light／dark 會原樣帶進 web 授權頁網址，其他值或重複參數當作沒帶 */
                     theme?: "light" | "dark";
-                    /** @description App 目前帳號的 user id（id_token 的 sub），1～64 字元 [A-Za-z0-9_-]；有 biometric_intent 時必填，缺少或格式不符回 invalid_request */
-                    expected_account?: string;
                 };
                 header?: never;
                 path?: never;
@@ -5701,7 +5698,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；重新驗證模式多帶 `&reauth=enable|disable`、單獨 `prompt=login` 多帶 `&reauth=login`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容） */
+                /** @description 通過驗證：Location 為 `${WEB_ORIGIN}/oauth/authorize?request_id=<id>`（biometric_hint 為白名單值時多帶 `&biometric_hint=<值>`；theme 為 light／dark 時多帶 `&theme=<值>`；皆僅顯示用）；可導回 client 的驗證錯誤：Location 為 redirect_uri?error=...&error_description=...&state=...（無 JSON 內容）。舊版 App 帶的 prompt=login、biometric_intent、expected_account 一律忽略（重新驗證模式已移除），不報錯也不帶進 Location */
                 302: {
                     headers: {
                         [name: string]: unknown;
@@ -5813,7 +5810,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description 同意：回帶 code 或 error 的 redirect_to（由 server 端存的 redirect_uri 組成）；重新驗證模式帳號與 App 目前帳號不同時，比照拒絕：不發 code，redirect_to 帶 error=reauth_account_mismatch 與 state（請求已消耗） */
+                /** @description 同意：回帶 code 或 error 的 redirect_to（由 server 端存的 redirect_uri 組成） */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -5840,7 +5837,7 @@ export interface paths {
                         "application/json": components["schemas"]["ApiError"];
                     };
                 };
-                /** @description service token 沒有使用者身份（PERM_DENIED）；重新驗證模式或 prompt=login：不是剛用密碼登入（OAUTH_REAUTH_REQUIRED，請求保留） */
+                /** @description service token 沒有使用者身份（PERM_DENIED） */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -5948,7 +5945,7 @@ export interface paths {
                          * @description null 清除意圖
                          * @enum {string|null}
                          */
-                        intent: "enable" | "disable" | null;
+                        intent: "enable" | null;
                     };
                 };
             };
@@ -5960,7 +5957,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description 授權請求不存在、已過期或已使用，或 intent 值不合法；重新驗證模式的請求不可變更意圖（DATA_VALIDATION） */
+                /** @description 授權請求不存在、已過期或已使用，或 intent 值不合法（只收 enable 或 null）（DATA_VALIDATION） */
                 400: {
                     headers: {
                         [name: string]: unknown;

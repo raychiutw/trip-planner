@@ -266,44 +266,34 @@ describe('生物辨識專門鈕（#1724，ADR-0018）', () => {
   });
 });
 
-describe('重新驗證模式（#1725，reauth=enable|disable|login）呈現', () => {
-  it.each([
-    ['enable', '開啟生物辨識登入，請重新輸入密碼'],
-    ['disable', '關閉生物辨識登入，請重新輸入密碼'],
-    ['login', '請重新輸入密碼登入'],
-  ])('reauth=%s → 顯示登入表單與文案，不顯示「繼續」', async (v, text) => {
+describe('重新驗證模式已移除（#1744，ADR-0019）：網址帶 reauth 一律當一般授權', () => {
+  it.each(['enable', 'disable', 'login'])('reauth=%s → 照常還原登入，直接顯示「繼續」', async (v) => {
+    fake.state.restoreOk = true;
     renderAt(`?request_id=req1&reauth=${v}`);
-    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
-    expect(document.body.textContent).toContain(text);
-    expect(screen.queryByTestId('authz-continue')).toBeNull();
+    expect(await screen.findByTestId('authz-continue')).toBeTruthy();
+    expect(fake.restoreSession).toHaveBeenCalled();
   });
 
-  it('reauth 登入成功後、批准尚未回應前就清掉密碼欄（不多保留一個 render）', async () => {
-    fake.apiFetch.mockImplementation((input: string) => (String(input).endsWith('/approve') ? new Promise<Response>(() => {}) : Promise.resolve(json(REQ))));
+  it.each(['enable', 'disable', 'login'])('reauth=%s → 登入表單是一般標題，沒有「請重新輸入密碼」文案', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}`);
+    await screen.findByTestId('authz-login-form');
+    expect(document.body.textContent).toContain('登入以繼續使用 Tripline App');
+    expect(document.body.textContent).not.toContain('請重新輸入密碼');
+  });
+
+  it.each(['enable', 'login'])('reauth=%s 不影響專門鈕：有 biometric_hint 照常顯示', async (v) => {
+    renderAt(`?request_id=req1&reauth=${v}&biometric_hint=faceid`);
+    await screen.findByTestId('authz-login-form');
+    expect(screen.queryByTestId('authz-bio-login')?.textContent).toContain('用 Face ID 登入');
+  });
+
+  it('reauth=enable 登入後停在確認、不自動批准', async () => {
     renderAt('?request_id=req1&reauth=enable');
     fireEvent.change(await screen.findByTestId('authz-email'), { target: { value: 'ray@example.com' } });
     fireEvent.change(screen.getByTestId('authz-password'), { target: { value: 'pw-pw-pw-pw' } });
     fireEvent.click(screen.getByTestId('authz-login-submit'));
-    await waitFor(() => expect(fake.apiFetch.mock.calls.some(([u]) => String(u).endsWith('/approve'))).toBe(true));
-    expect((screen.getByTestId('authz-password') as HTMLInputElement).value).toBe('');
-  });
-
-  it('reauth 值不在白名單 → 當作一般授權（會還原登入）', async () => {
-    fake.state.restoreOk = true;
-    renderAt('?request_id=req1&reauth=bogus');
-    await screen.findByTestId('authz-continue');
-    expect(fake.restoreSession).toHaveBeenCalled();
-  });
-
-  it.each(['enable', 'login'])('reauth=%s → 不顯示專門鈕', async (v) => {
-    renderAt(`?request_id=req1&reauth=${v}&biometric_hint=faceid`);
-    await screen.findByTestId('authz-login-form');
-    expect(screen.queryByTestId('authz-bio-login')).toBeNull();
-  });
-
-  it('一般授權的登入表單沒有 reauth 文案', async () => {
-    renderAt('?request_id=req1');
-    expect(await screen.findByTestId('authz-login-form')).toBeTruthy();
-    expect(document.body.textContent).not.toContain('請重新輸入密碼');
+    expect(await screen.findByTestId('authz-continue')).toBeTruthy();
+    expect(fake.apiFetch.mock.calls.some(([u]) => String(u).endsWith('/approve'))).toBe(false);
+    expect(assign).not.toHaveBeenCalled();
   });
 });

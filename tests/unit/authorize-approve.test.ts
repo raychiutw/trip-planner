@@ -1,5 +1,5 @@
 /**
- * approveAuthorization：批准授權（含生物辨識意圖與重試）。回 redirect | reauth-required | failed。
+ * approveAuthorization：批准授權（含生物辨識意圖與重試）。回 redirect | failed。
  * 邊界是 getAuthorizeAuth().apiFetch（以 fake 取代）。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -14,7 +14,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const calls = () => fake.apiFetch.mock.calls.map(([u]) => String(u));
 const count = (suffix: string) => calls().filter((u) => u.endsWith(suffix)).length;
-const plain = { wantBio: false, reauth: false };
+const plain = { wantBio: false };
 
 let approveRes: () => Response | Promise<Response>;
 // intentResults 依序回應：Error 代表網路失敗，數字代表 HTTP 狀態；用完後固定 204
@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
-const run = async (opts: { wantBio: boolean; reauth: boolean }) => {
+const run = async (opts: { wantBio: boolean }) => {
   const p = approveAuthorization('req1', opts);
   await vi.advanceTimersByTimeAsync(5000);
   return p;
@@ -73,24 +73,19 @@ describe('批准結果', () => {
 describe('403', () => {
   const forbidden = (code: string) => json({ error: { code, message: 'x' } }, 403);
 
-  it('reauth 模式的 OAUTH_REAUTH_REQUIRED → reauth-required', async () => {
-    approveRes = () => forbidden('OAUTH_REAUTH_REQUIRED');
-    expect(await run({ wantBio: false, reauth: true })).toEqual({ kind: 'reauth-required' });
-  });
-
-  it('一般授權的 OAUTH_REAUTH_REQUIRED 不做特殊處理 → failed forbidden', async () => {
+  it('OAUTH_REAUTH_REQUIRED（api 已移除的舊碼）不做特殊處理 → failed forbidden', async () => {
     approveRes = () => forbidden('OAUTH_REAUTH_REQUIRED');
     expect(await run(plain)).toEqual({ kind: 'failed', reason: 'forbidden' });
   });
 
-  it.each([true, false])('一般 403 PERM_DENIED（reauth=%s）→ failed forbidden，不是「請求已過期」', async (reauth) => {
+  it('一般 403 PERM_DENIED → failed forbidden，不是「請求已過期」', async () => {
     approveRes = () => forbidden('PERM_DENIED');
-    expect(await run({ wantBio: false, reauth })).toEqual({ kind: 'failed', reason: 'forbidden' });
+    expect(await run(plain)).toEqual({ kind: 'failed', reason: 'forbidden' });
   });
 });
 
 describe('intent 呼叫（只重試網路錯誤與 5xx，最多共 3 次）', () => {
-  const bio = { wantBio: true, reauth: false };
+  const bio = { wantBio: true };
 
   it('送 POST { intent: "enable" }，且先於 approve', async () => {
     await run(bio);
@@ -135,11 +130,6 @@ describe('intent 呼叫（只重試網路錯誤與 5xx，最多共 3 次）', ()
 
   it('wantBio=false → 不呼叫 intent', async () => {
     await run(plain);
-    expect(count('/intent')).toBe(0);
-  });
-
-  it('reauth 模式即使 wantBio 也不呼叫 intent', async () => {
-    await run({ wantBio: true, reauth: true });
     expect(count('/intent')).toBe(0);
   });
 });
