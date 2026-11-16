@@ -1,13 +1,13 @@
 /**
  * 授權頁（/oauth/authorize）的流程：view 狀態機（init／login／confirm／error）、登入、
- * 生物辨識意圖（wantBio）、批准與兩種 403 的分支。元件只負責呈現。
+ * 生物辨識意圖（wantBio）、批准。元件只負責呈現。
  *
  * seam 是 `getAuthorizeAuth()`；批准本身見 lib/auth/authorizeApprove。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAuthorizeAuth } from '../lib/auth';
 import { approveAuthorization, type ApproveResult } from '../lib/auth/authorizeApprove';
-import { REQUEST_ID, USERINFO_PATH, authorizePath, type ReauthValue } from '../lib/auth/authorizeContract';
+import { REQUEST_ID, USERINFO_PATH, authorizePath } from '../lib/auth/authorizeContract';
 import { classifyLoginError } from '../lib/auth/loginError';
 import { clearApiCache } from '../lib/logout';
 
@@ -40,7 +40,7 @@ function loginFailure(err: unknown): AuthorizeView {
   return { kind: 'login', error: '登入失敗，請稍後再試。', credential: false };
 }
 
-export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; reauth: ReauthValue | null }) {
+export function useAuthorizeFlow({ requestId }: { requestId: string }) {
   const [view, setView] = useState<AuthorizeView>({ kind: 'init' });
   const [busy, setBusy] = useState(false);
   const approving = useRef(false);
@@ -75,11 +75,6 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
         return;
       }
       try {
-        // 重新驗證模式：不還原、不沿用已登入狀態，一定要重新輸入密碼
-        if (reauth) {
-          if (!cancelled) setView({ kind: 'login' });
-          return;
-        }
         const restored = auth.isAuthenticated() || (await auth.restoreSession());
         const next: AuthorizeView = restored ? await loadRequest() : { kind: 'login' };
         if (!cancelled) setView(next);
@@ -88,22 +83,16 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
       }
     })();
     return () => { cancelled = true; };
-  }, [requestId, loadRequest, reauth]);
+  }, [requestId, loadRequest]);
 
   const approve = useCallback(async () => {
     if (approving.current) return;
     approving.current = true;
     setBusy(true);
     try {
-      const r = await approveAuthorization(requestId, { wantBio: wantBio.current, reauth: reauth !== null });
+      const r = await approveAuthorization(requestId, { wantBio: wantBio.current });
       if (r.kind === 'redirect') {
         window.location.assign(r.url);
-      } else if (r.kind === 'reauth-required') {
-        // 請求還在：清掉本機登入，讓使用者重新登入後對同一 request_id 再 approve
-        await getAuthorizeAuth().logout();
-        await clearApiCache();
-        approving.current = false; // 重新登入後要能再 approve
-        setView({ kind: 'login', error: '登入已逾時，請重新輸入密碼。' });
       } else {
         setView({ kind: 'error', message: FAILURE_MESSAGE[r.reason] });
       }
@@ -111,7 +100,7 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
       // 成功導向後不再解鎖 approving（避免頁面還在時被連點）；失敗已切到錯誤畫面
       setBusy(false);
     }
-  }, [requestId, reauth]);
+  }, [requestId]);
 
   /** 帳密通過後、批准／讀請求之前呼叫 onAuthenticated（頁面據此清掉密碼欄）；回傳帳密是否通過。 */
   const login = useCallback(async (email: string, password: string, enableBio: boolean, onAuthenticated?: () => void): Promise<boolean> => {
@@ -126,12 +115,6 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
       return false;
     }
     onAuthenticated?.();
-    if (reauth) {
-      // 伺服器只認登入後 60 秒內的批准，不能停在確認步驟
-      setBusy(false);
-      await approve();
-      return true;
-    }
     try {
       setView(await loadRequest());
     } catch {
@@ -140,7 +123,7 @@ export function useAuthorizeFlow({ requestId, reauth }: { requestId: string; rea
       setBusy(false);
     }
     return true;
-  }, [busy, reauth, approve, loadRequest]);
+  }, [busy, loadRequest]);
 
   const switchAccount = useCallback(async () => {
     await getAuthorizeAuth().logout();

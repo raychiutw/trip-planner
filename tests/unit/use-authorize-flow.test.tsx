@@ -1,5 +1,5 @@
 /**
- * useAuthorizeFlow：授權頁流程（view 狀態機、登入、wantBio、批准、兩種 403 分支、防重入）。
+ * useAuthorizeFlow：授權頁流程（view 狀態機、登入、wantBio、批准、403 分支、防重入）。
  * seam 是 getAuthorizeAuth()（login／restoreSession／apiFetch／logout 以 fake 取代）；畫面呈現見 oauth-authorize-page.test.tsx。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -14,7 +14,6 @@ vi.mock('../../src/lib/auth', async (orig) => ({ ...(await orig<typeof import('.
 
 import { useAuthorizeFlow } from '../../src/hooks/useAuthorizeFlow';
 import { AuthError } from '../../src/lib/auth';
-import type { ReauthValue } from '../../src/lib/auth/authorizeContract';
 
 const CB = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?code=abc&state=st1';
 const REQ = { client: { client_id: 'tripline-mobile', app_name: 'Tripline' }, scopes: ['openid', 'profile'], needs_consent: true };
@@ -27,8 +26,8 @@ const forbidden = (code: string) => json({ error: { code, message: 'x' } }, 403)
 let assign: ReturnType<typeof vi.fn>;
 let approveRes: () => Response;
 
-function start(opts: { requestId?: string; reauth?: ReauthValue | null } = {}) {
-  return renderHook(() => useAuthorizeFlow({ requestId: opts.requestId ?? 'req1', reauth: opts.reauth ?? null }));
+function start(opts: { requestId?: string } = {}) {
+  return renderHook(() => useAuthorizeFlow({ requestId: opts.requestId ?? 'req1' }));
 }
 
 beforeEach(() => {
@@ -97,14 +96,6 @@ describe('初始化', () => {
     expect(result.current.view).toEqual({ kind: 'confirm', request: { appName: 'Tripline', scopes: ['openid', 'profile'] }, email: 'ray@example.com' });
   });
 
-  it.each(['enable', 'disable', 'login'] as const)('reauth=%s → 即使本機有登入也不還原，直接 login', async (reauth) => {
-    fake.state.restoreOk = true;
-    fake.state.authed = true;
-    const { result } = start({ reauth });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    expect(fake.restoreSession).not.toHaveBeenCalled();
-    expect(fake.apiFetch).not.toHaveBeenCalled();
-  });
 });
 
 describe('登入', () => {
@@ -150,9 +141,9 @@ describe('登入', () => {
 });
 
 describe('批准', () => {
-  const toConfirm = async (opts: { reauth?: ReauthValue | null } = {}) => {
+  const toConfirm = async () => {
     fake.state.restoreOk = true;
-    const hook = start(opts);
+    const hook = start();
     await waitFor(() => expect(hook.result.current.view.kind).toBe('confirm'));
     return hook;
   };
@@ -188,7 +179,7 @@ describe('批准', () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
-  it('一般授權的 403 OAUTH_REAUTH_REQUIRED 不做特殊處理：不登出，是 error', async () => {
+  it('403 OAUTH_REAUTH_REQUIRED（api 已移除的舊碼）不做特殊處理：不登出，是 error', async () => {
     approveRes = () => forbidden('OAUTH_REAUTH_REQUIRED');
     const { result } = await toConfirm();
     await act(() => result.current.approve());
@@ -248,57 +239,5 @@ describe('生物辨識意圖（wantBio）', () => {
     await act(() => result.current.login('ray@example.com', 'pw', false));
     await act(() => result.current.approve());
     expect(count('/intent')).toBe(0);
-  });
-});
-
-describe('重新驗證模式（reauth）', () => {
-  it.each(['enable', 'login'] as const)('reauth=%s 登入成功 → 直接 approve 並導向，不停在 confirm', async (reauth) => {
-    const { result } = start({ reauth });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    await act(() => result.current.login('ray@example.com', 'pw', false));
-    expect(assign).toHaveBeenCalledWith(CB);
-    expect(calls().filter((u) => u.endsWith('/approve'))).toEqual(['/api/oauth/authorize/requests/req1/approve']);
-    expect(result.current.view.kind).toBe('login');
-  });
-
-  it('reauth 模式即使 enableBio 也不送 intent', async () => {
-    const { result } = start({ reauth: 'enable' });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    await act(() => result.current.login('ray@example.com', 'pw', true));
-    expect(count('/intent')).toBe(0);
-  });
-
-  it('approve 回 OAUTH_REAUTH_REQUIRED → 登出、重顯登入表單；再登入後對同一 request_id 再 approve', async () => {
-    let n = 0;
-    approveRes = () => (n++ === 0 ? forbidden('OAUTH_REAUTH_REQUIRED') : json({ redirect_to: CB }));
-    const { result } = start({ reauth: 'enable' });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    await act(() => result.current.login('ray@example.com', 'pw', false));
-    expect(fake.logout).toHaveBeenCalledTimes(1);
-    expect(result.current.view).toEqual({ kind: 'login', error: '登入已逾時，請重新輸入密碼。' });
-    expect(assign).not.toHaveBeenCalled();
-    await act(() => result.current.login('ray@example.com', 'pw', false));
-    expect(assign).toHaveBeenCalledWith(CB);
-    expect(calls().filter((u) => u.endsWith('/approve'))).toEqual(Array(2).fill('/api/oauth/authorize/requests/req1/approve'));
-  });
-
-  it('帳號不符：approve 回 200 帶 error callback → 導向該 redirect_to，不顯示錯誤、不重試', async () => {
-    const cb = 'https://trip-planner-dby.pages.dev/mobile/oauth/callback?error=reauth_account_mismatch&state=st1';
-    approveRes = () => json({ redirect_to: cb });
-    const { result } = start({ reauth: 'enable' });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    await act(() => result.current.login('ray@example.com', 'pw', false));
-    expect(assign).toHaveBeenCalledWith(cb);
-    expect(result.current.view.kind).toBe('login');
-    expect(count('/approve')).toBe(1);
-  });
-
-  it('reauth 模式的一般 403 PERM_DENIED → error 權限說明', async () => {
-    approveRes = () => forbidden('PERM_DENIED');
-    const { result } = start({ reauth: 'login' });
-    await waitFor(() => expect(result.current.view.kind).toBe('login'));
-    await act(() => result.current.login('ray@example.com', 'pw', false));
-    expect(result.current.view).toEqual({ kind: 'error', message: '這個帳號沒有權限完成這次授權，請回 App 換用其他帳號或重新發起登入。' });
-    expect(fake.logout).not.toHaveBeenCalled();
   });
 });

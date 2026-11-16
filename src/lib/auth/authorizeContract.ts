@@ -9,9 +9,6 @@ type AuthorizeQuery = NonNullable<paths['/api/oauth/authorize']['get']['paramete
 /** 網址 biometric_hint（api 的 enum）。 */
 export type BiometricHint = NonNullable<AuthorizeQuery['biometric_hint']>;
 
-/** 網址 reauth：OpenAPI 只有 biometric_intent（enable｜disable）的 schema；`login`（單獨 prompt=login）只寫在 authorize 的回應描述文字裡，沒有 schema，web 自己補。 */
-export type ReauthValue = NonNullable<AuthorizeQuery['biometric_intent']> | 'login';
-
 /** intent 呼叫送出的值（api 的 enum；null 是清除，web 不用）。 */
 export type IntentValue = NonNullable<
   paths['/api/oauth/authorize/requests/{id}/intent']['post']['requestBody']['content']['application/json']['intent']
@@ -24,24 +21,12 @@ export const BIOMETRIC_BUTTON: Record<BiometricHint, { text: string; faceId: boo
   generic: { text: '用生物辨識登入', faceId: false },
 };
 
-/** reauth → 登入頁標題。 */
-export const REAUTH_TITLE: Record<ReauthValue, string> = {
-  enable: '開啟生物辨識登入，請重新輸入密碼',
-  disable: '關閉生物辨識登入，請重新輸入密碼',
-  login: '請重新輸入密碼登入',
-};
-
 const has = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
 
 /** 網址值不在白名單（含 'constructor' 等原型鏈屬性）一律回 null，當作沒帶。 */
 export function parseBiometricHint(raw: string | null): BiometricHint | null {
   const isHint = (v: string): v is BiometricHint => has(BIOMETRIC_BUTTON, v);
   return raw !== null && isHint(raw) ? raw : null;
-}
-
-export function parseReauth(raw: string | null): ReauthValue | null {
-  const isReauth = (v: string): v is ReauthValue => has(REAUTH_TITLE, v);
-  return raw !== null && isReauth(raw) ? raw : null;
 }
 
 export const REQUEST_ID = /^[A-Za-z0-9_-]{1,128}$/;
