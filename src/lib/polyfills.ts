@@ -7,7 +7,8 @@
  * Array.prototype.at（Chrome 92 / Safari 15.4 / Firefox 90）：
  * Sentry 11 帶進來的 web-vitals 6 在 LayoutShiftManager 呼叫 `.at(-1)`，
  * Chrome 90 量 CLS 時丟 `this.o.at is not a function`（Sentry 7851675247）。
- * 專案宣告支援 chrome >= 87 / safari >= 14（見 vite.config.ts 的 babelPresetEnvTargets）。
+ * repo 沒有 build.target / browserslist；目前唯一寫下的支援範圍是 vite.config.ts 中
+ * VitePWA workbox 的 babelPresetEnvTargets（chrome >= 87 / safari >= 14），以此為準。
  */
 export function installArrayAtPolyfill(): void {
   if (typeof (Array.prototype as { at?: unknown }).at === 'function') return;
