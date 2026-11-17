@@ -1,3 +1,4 @@
+import '../lib/polyfills';
 import { initSentry } from '../lib/sentry';
 import { flushPendingReports } from '../components/shared/ErrorPlaceholder';
 initSentry();
