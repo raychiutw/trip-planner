@@ -87,6 +87,10 @@ return {
       output: {
         manualChunks(id) {
           const moduleId = id.replace(/\\/g, '/');
+          // 內建方法 polyfill 獨立成 chunk：內聯進 index 的話，ES module 會先執行
+          // sentry / pdf 等 static import 才輪到 polyfill。獨立 chunk 且是 main.tsx 第一個
+          // import，才保證比所有第三方 chunk 先執行。
+          if (moduleId.endsWith('/src/lib/polyfills.ts')) return 'polyfills';
           if (moduleId.includes('node_modules/react-dom') || moduleId.includes('node_modules/react/') || moduleId.includes('node_modules/react-router')) return 'vendor';
           if (moduleId.includes('node_modules/@sentry')) return 'sentry';
           // v2.33.60 round 14: heavy deps 各自 chunk，避免 lazy-route load 拖整 sibling

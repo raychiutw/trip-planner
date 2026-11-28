@@ -28,6 +28,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 測試：新增 `tests/setup-auth-passthrough.ts`（全域把 `src/lib/auth` 換成穿透版，讓只驗畫面的測試維持 `fetch('/api/...')`；測認證本身的檔案以 `vi.unmock` 用真實作）。e2e 與 HIG 的主站建置另建 `dist-e2e`，以 `E2E_AUTH_PASSTHROUGH=1`（vite.config.ts 的 `authPassthrough` 外掛）換成穿透版；真 auth 的流程由 `playwright.newapi.config.js` 對本機假 api 驗證。
 - `web-api-contract.test.ts` 的 `KNOWN_GAPS` 清空（`POST /api/oauth/login` 的舊入口分支已刪）。`env-production.test.ts` 改為斷言旗標不再出現在 `.env.production` 與 `src/`。
 
+## [2.57.140] - 2026-11-18
+
+### Fixed
+- **Chrome 90 等舊瀏覽器量版面位移時不再丟 `this.o.at is not a function`（Sentry 7851675247）**：Sentry 11 帶進來的 web-vitals 6 直接呼叫 `Array.prototype.at`（Chrome 92+ 才有）。新增 `src/lib/polyfills.ts`，在 `main.tsx` 第一個載入，並切成獨立 chunk 確保比 Sentry 等第三方 chunk 先執行。
+
 ## [2.57.139] - 2026-11-14
 
 ### Fixed
